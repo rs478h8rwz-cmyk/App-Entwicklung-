@@ -6,31 +6,32 @@
 <title>Frühauf Energy – Wirtschaftlichkeitsrechner</title>
 <meta name="description" content="Wirtschaftlichkeitsberechnungen für Photovoltaik und Wärmepumpen">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#F5F7FA">
+<meta name="theme-color" content="#0A0E13">
+<meta name="color-scheme" content="dark light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Frühauf Rechner">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link id="gfonts" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<link id="gfonts" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
   theme: {
     extend: {
-      fontFamily: { sans: ['var(--fb)', 'system-ui', 'sans-serif'], head: ['var(--fh)', 'Georgia', 'serif'] },
+      fontFamily: { sans: ['var(--fb)', 'system-ui', 'sans-serif'], head: ['var(--fh)', 'Georgia', 'serif'], mono: ['var(--fm)', 'ui-monospace', 'monospace'] },
       colors: {
         p: 'rgb(var(--p-rgb) / <alpha-value>)',
         s: 'rgb(var(--s-rgb) / <alpha-value>)',
         pd: 'var(--p-dark)', pl: 'var(--p-light)',
         ink: 'var(--ink)', ink2: 'var(--ink2)', ink3: 'var(--ink3)', ink4: 'var(--ink3)',
-        bg: 'var(--bg)', raised: 'var(--raised)', line: 'var(--line)', line2: 'var(--line2)',
-        blue: 'var(--acc)', ember: 'var(--old)', ember2: 'var(--old)',
-        tred: 'var(--t-red)', tyel: 'var(--t-yel)'
+        bg: 'var(--bg)', card: 'var(--card)', raised: 'var(--raised)', field: 'var(--field)', line: 'var(--line)', line2: 'var(--line2)',
+        blue: 'var(--acc)', ember: 'var(--old)', ember2: 'var(--old)', gold: 'var(--gold)',
+        tred: 'var(--t-red)', tyel: 'var(--t-yel)', tgrn: 'var(--p-light)', 'yel-ink': 'var(--yel-ink)', 'red-ink': 'var(--red-ink)'
       }
     }
   }
@@ -38,24 +39,28 @@ tailwind.config = {
 </script>
 <style>
 :root{
-  --p:#0E7C66; --p-rgb:14 124 102; --s:#F5A524; --s-rgb:245 165 36; --acc:#1E4C86; --old:#D9482B;
-  --pc:#ffffff; --p-light:#E2F0ED; --p-50:#F1F8F6; --p-dark:#0A5C4C; --s-light:#FFF4DC; --s-dark:#9A6206;
-  --ink:#0F2A3D; --ink2:#3D5568; --ink3:#64788A; --bg:#F5F7FA; --raised:#EEF2F6; --line:rgba(15,42,61,.09); --line2:rgba(15,42,61,.15);
-  --t-red:#FDEEE8; --t-yel:#FFF4DC; --tile:#F3F7FA;
-  --fb:"Plus Jakarta Sans"; --fh:"Fraunces"; --hw:500; --r:16px; --rb:10px; --dr:3.5mm;
-  --hl:#0E7C66; --hl-num:#FFE3A3; --ease:cubic-bezier(0.22,1,0.36,1);
+  --p:#0E7C66; --p-rgb:14 124 102; --s:#F5A524; --s-rgb:245 165 36; --acc:#1E4C86; --old:#D9482B; --gold:#F2C46B;
+  --p-light:rgba(14,124,102,.16); --p-dark:#0A5C4C; --s-dark:#F5A524; --yel-ink:#F2C46B; --red-ink:#F08A6E;
+  --ink:#ECEFF3; --ink2:#A7B2BE; --ink3:#76828F; --bg:#0A0E13; --card:#10161D; --raised:#171E27; --field:#0C1117;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12); --t-red:rgba(217,72,43,.14); --t-yel:rgba(245,165,36,.13); --tile:#171E27;
+  --btn:#ECEFF3; --btn-ink:#0A0E13; --btn-h:#ffffff; --hl:#0F2E2A; --hl-num:#F2C46B; --header:rgba(10,14,19,.78);
+  --fb:"Geist"; --fh:"Instrument Serif"; --fm:"Geist Mono"; --hw:400; --r:14px; --rb:10px; --dr:3mm;
+  --ease:cubic-bezier(0.22,1,0.36,1);
 }
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
-body{background:var(--bg);color:var(--ink);font-family:var(--fb),system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:var(--fb),system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
 input,select,textarea,button{font-family:inherit}
+select option{background:var(--card);color:var(--ink)}
 @media (pointer:coarse){ input,select,textarea{font-size:16px!important} }
-.h-font{font-family:var(--fh),Georgia,serif;font-weight:var(--hw);letter-spacing:-0.015em}
+.h-font{font-family:var(--fh),Georgia,serif;font-weight:var(--hw);letter-spacing:-0.01em}
+.mono{font-family:var(--fm),ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .no-scrollbar::-webkit-scrollbar{display:none}
 .no-scrollbar{scrollbar-width:none}
-input[type=range]{accent-color:var(--p)}
-input[type=checkbox]{accent-color:var(--p);width:18px;height:18px}
-:focus-visible{outline:2px solid rgb(var(--p-rgb)/.55);outline-offset:2px}
-.fade-in{animation:fi .32s var(--ease)}
+input[type=range]{accent-color:rgb(var(--p-rgb))}
+input[type=checkbox]{accent-color:rgb(var(--p-rgb));width:18px;height:18px}
+input[type=date]{color-scheme:var(--scheme,dark)}
+:focus-visible{outline:2px solid rgb(var(--p-rgb)/.6);outline-offset:2px}
+.fade-in{animation:fi .36s var(--ease)}
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .spin{animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -63,63 +68,75 @@ details>summary{list-style:none;cursor:pointer}
 details>summary::-webkit-details-marker{display:none}
 details[open] .chev{transform:rotate(180deg)}
 .num{font-variant-numeric:tabular-nums}
-/* ===== Kundendokument ===== */
+.hair-top{box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+
+/* ===== Kundendokument =====
+   Eigene Farbvariablen, unabhängig vom App-Thema. Keine Tabellenziffern und kein
+   Zeichenabstand: html2canvas zeichnet sonst Lücken vor €, % und Klammern. */
 #print-root{position:absolute;left:-12000px;top:0;width:210mm}
-.page{width:210mm;height:297mm;background:#fff;position:relative;overflow:hidden;color:var(--ink);font-family:var(--fb),Arial,sans-serif;font-size:9.2pt;line-height:1.45;box-sizing:border-box;font-variant-numeric:tabular-nums}
-.page *{box-sizing:border-box}
+.page{
+  --p:var(--d-p); --p-rgb:var(--d-p-rgb); --ink:var(--d-ink); --ink2:var(--d-ink2); --ink3:var(--d-ink3); --line:var(--d-line); --line2:var(--d-line2);
+  --tile:var(--d-tile); --t-red:var(--d-t-red); --t-yel:var(--d-t-yel); --p-light:var(--d-p-light); --hl:var(--d-hl); --hl-num:var(--d-hl-num);
+  --bg:var(--d-bg); --th:var(--d-th); --s-dark:var(--d-s-dark); --band:var(--d-band);
+  width:210mm;height:297mm;background:var(--d-bg);position:relative;overflow:hidden;color:var(--ink);font-family:var(--fb),Arial,sans-serif;font-size:9.2pt;line-height:1.45;box-sizing:border-box;
+  font-variant-numeric:normal;letter-spacing:0;font-feature-settings:normal}
+.page *{box-sizing:border-box;letter-spacing:0!important;font-variant-numeric:normal!important}
+.page.dk{--ink:#EEF2F6; --ink2:#B2BDC9; --ink3:#828E9B; --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.16); --tile:#141B24; --t-red:rgba(217,72,43,.18);
+  --t-yel:rgba(245,165,36,.15); --p-light:var(--d-p-light-dk); --bg:#0B1118; --th:#18212B; --s-dark:var(--s); --hl:#13222B; background:#0B1118}
 .page .ph{height:22mm;display:flex;align-items:center;justify-content:space-between;padding:0 14mm}
-.page .ph.sky{background:linear-gradient(180deg,#E8F2FB 0%,#ffffff 100%)}
-.page .ph.line{background:#fff;border-bottom:0.3mm solid var(--line)}
-.page .ph.band{background:var(--p);color:#fff}
-.page .ph.band .tt span{color:rgba(255,255,255,.8)}
-.page .ph.band .lg{background:#fff;border-radius:10mm;padding:1.5mm 4mm;height:auto}
-.page .ph .lg{height:10mm;display:flex;align-items:center;gap:2.5mm;font-weight:600;font-size:10.5pt}
-.page .ph .lg img{max-height:9mm;max-width:50mm;width:auto;height:auto}
+.page .ph.sky{background:linear-gradient(180deg,var(--d-sky) 0%,var(--bg) 100%)}
+.page .ph.line{border-bottom:0.25mm solid var(--line)}
+.page .ph.band{background:var(--band);color:#EEF2F6}
+.page .ph.band .tt span{color:rgba(238,242,246,.7)}
+.page .ph .lg{height:10mm;display:flex;align-items:center;gap:2.5mm;font-weight:500;font-size:10.5pt}
+.page .ph .lg img{max-height:8.5mm;max-width:50mm;width:auto;height:auto}
+.page .ph.band .lg img,.page.dk .ph .lg img{background:#fff;border-radius:2mm;padding:1mm 2mm;max-height:9mm}
 .page .ph .tt{text-align:right;line-height:1.3}
-.page .ph .tt b{display:block;font-size:9pt;font-weight:600}
-.page .ph .tt span{font-size:8pt;color:var(--ink3)}
-.page .pb{position:absolute;left:14mm;right:14mm;top:28mm;bottom:20mm}
+.page .ph .tt b{display:block;font-size:8.8pt;font-weight:500}
+.page .ph .tt span{font-size:7.8pt;color:var(--ink3)}
+.page .pb{position:absolute;left:14mm;right:14mm;top:29mm;bottom:20mm}
 .page .pf{position:absolute;left:14mm;right:14mm;bottom:6mm;border-top:0.25mm solid var(--line);padding-top:2mm;font-size:6.6pt;color:var(--ink3);line-height:1.45;display:flex;justify-content:space-between;gap:4mm}
-.page .pf .pn{white-space:nowrap;font-weight:600;color:var(--ink2);align-self:flex-end}
-.page .km{margin-bottom:2mm;height:5mm;display:flex;align-items:flex-end}
-.page h1{font-family:var(--fh),Georgia,serif;font-size:21pt;font-weight:var(--hw);line-height:1.12;margin:0 0 1.8mm;letter-spacing:-0.015em}
-.page h2{font-family:var(--fh),Georgia,serif;font-size:12.5pt;font-weight:var(--hw);margin:0 0 2mm;line-height:1.2}
-.page h3{font-size:9.6pt;font-weight:600;margin:0 0 1.2mm}
+.page .pf .pn{white-space:nowrap;color:var(--ink2);align-self:flex-end;font-family:var(--fm),monospace}
+.page .km{margin-bottom:2.5mm;height:5mm;display:flex;align-items:flex-end}
+.page h1{font-family:var(--fh),Georgia,serif;font-size:25pt;font-weight:var(--hw);line-height:1.08;margin:0 0 2mm}
+.page h2{font-family:var(--fh),Georgia,serif;font-size:14pt;font-weight:var(--hw);margin:0 0 2mm;line-height:1.2}
+.page h3{font-size:9.4pt;font-weight:600;margin:0 0 1.2mm}
 .page p{margin:0 0 2mm}
-.page .lead{color:var(--ink2);font-size:9.8pt;margin-bottom:5mm;max-width:150mm}
+.page .lead{color:var(--ink2);font-size:9.8pt;margin-bottom:5.5mm;max-width:150mm}
 .page .muted{color:var(--ink3)}
 .page .small{font-size:7.6pt;color:var(--ink3)}
+.page .lab{font-family:var(--fm),monospace;font-size:6.8pt;color:var(--ink3)}
 .page .tile{background:var(--tile);border-radius:var(--dr);padding:3.6mm 4mm}
 .page .tile .k{font-size:7.6pt;color:var(--ink3);font-weight:500}
-.page .tile .v{font-size:14.5pt;font-weight:600;line-height:1.2;margin-top:0.8mm;letter-spacing:-0.01em}
+.page .tile .v{font-size:14.5pt;font-weight:500;line-height:1.2;margin-top:0.8mm}
 .page .tile .u{font-size:7.4pt;color:var(--ink3);margin-top:0.6mm}
-.page .grad{background:var(--hl);color:#fff}
-.page .grad .k,.page .grad .u{color:rgba(255,255,255,.82)}
+.page .grad{background:var(--hl);color:#EEF2F6}
+.page .grad .k,.page .grad .u{color:rgba(238,242,246,.75)}
 .page .tred{background:var(--t-red)}.page .tyel{background:var(--t-yel)}.page .tgrn{background:var(--p-light)}
 .page .g2{display:grid;grid-template-columns:1fr 1fr;gap:3.5mm}
 .page .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3.5mm}
 .page .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3mm}
 .page .sec{margin-top:6mm}
 .page table.t{width:100%;border-collapse:separate;border-spacing:0;font-size:8pt}
-.page table.t th{background:#EEF4F9;font-weight:600;text-align:right;padding:1.8mm 2mm;color:var(--ink2);font-size:7.4pt}
-.page table.t th:first-child{text-align:left;border-radius:calc(var(--dr) * .6) 0 0 calc(var(--dr) * .6)}
-.page table.t th:last-child{border-radius:0 calc(var(--dr) * .6) calc(var(--dr) * .6) 0}
+.page table.t th{background:var(--th);font-weight:500;text-align:right;padding:1.8mm 2mm;color:var(--ink2);font-size:7.4pt}
+.page table.t th:first-child{text-align:left;border-radius:1.6mm 0 0 1.6mm}
+.page table.t th:last-child{border-radius:0 1.6mm 1.6mm 0}
 .page table.t td{padding:1.45mm 2mm;text-align:right;border-bottom:0.25mm solid var(--line)}
-.page table.t td:first-child{text-align:left;font-weight:500}
+.page table.t td:first-child{text-align:left}
 .page table.t tr.hl td{background:var(--t-yel);font-weight:600}
-.page .row{display:flex;justify-content:space-between;align-items:center;padding:2.2mm 3mm;border-bottom:0.25mm solid var(--line)}
-.page .pill{display:inline-block;border-radius:10mm;padding:0.8mm 3mm;font-size:7.4pt;font-weight:600}
+.page .row{display:flex;justify-content:space-between;align-items:center;padding:2.3mm 3mm;border-bottom:0.25mm solid var(--line)}
+.page .pill{display:inline-block;border-radius:10mm;padding:1mm 3mm;font-size:7.4pt;font-weight:500;line-height:1.5}
 .page .chk{display:inline-block;width:4mm;height:4mm;border:0.35mm solid var(--ink2);border-radius:0.8mm;vertical-align:-0.8mm;margin-right:2mm}
 .page ul.dl{margin:0;padding:0;list-style:none;columns:2;column-gap:6mm;font-size:7.6pt;color:var(--ink2)}
 .page ul.dl li{break-inside:avoid;padding:0.7mm 0 0.7mm 3mm;position:relative}
 .page ul.dl li:before{content:"";position:absolute;left:0;top:2.3mm;width:1.2mm;height:1.2mm;border-radius:1mm;background:var(--p)}
-.page .fig{font-size:22pt;font-weight:600;letter-spacing:-0.02em;line-height:1.05}
+.page .fig{font-size:21pt;font-weight:500;line-height:1.15}
 .page .hair{border-top:0.25mm solid var(--line)}
 .page svg{display:block}
 .page .att{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff}
 .page .att img{max-width:100%;max-height:100%}
-.page .att .lab{position:absolute;top:4mm;right:5mm;background:rgba(255,255,255,.92);border-radius:10mm;padding:1mm 3mm;font-size:7.4pt;font-weight:600;color:var(--ink2);box-shadow:0 0 0 0.3mm var(--line2)}
-.docpv .page{box-shadow:0 1px 2px rgba(15,42,61,.06),0 12px 32px -12px rgba(15,42,61,.18);border-radius:4px;margin:0 auto 24px}
+.page .att .lab{position:absolute;top:4mm;right:5mm;background:rgba(255,255,255,.94);border-radius:10mm;padding:1mm 3mm;font-size:7.2pt;color:#3D5568;box-shadow:0 0 0 0.3mm #DCE6EE}
+.docpv .page{box-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 48px -24px rgba(0,0,0,.6);border-radius:4px;margin:0 auto 24px}
 @media print{
   @page{size:A4;margin:0}
   html,body{background:#fff!important}
@@ -132,37 +149,38 @@ details[open] .chev{transform:rotate(180deg)}
 </style>
 <style type="text/tailwindcss">
 @layer components{
-  .card{@apply bg-white rounded-[var(--r)] border border-line shadow-[0_1px_2px_rgba(15,42,61,0.04)];}
-  .btn{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,color,border-color,transform] duration-150 select-none whitespace-nowrap active:scale-[.98] disabled:opacity-50;}
-  .btn-p{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,transform] duration-150 select-none whitespace-nowrap bg-p text-white hover:bg-pd active:scale-[.98] disabled:opacity-50;}
-  .btn-s{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,transform] duration-150 select-none whitespace-nowrap bg-white text-ink border border-line2 hover:bg-raised active:scale-[.98];}
-  .btn-g{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-3 h-9 font-medium text-[13px] transition-colors duration-150 text-ink2 hover:bg-raised hover:text-ink;}
+  .card{@apply bg-card rounded-[var(--r)] border border-line;box-shadow:inset 0 1px 0 rgba(255,255,255,var(--hi,.03));}
+  .btn{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,color,border-color,transform] duration-150 select-none whitespace-nowrap active:scale-[.98] disabled:opacity-40;}
+  .btn-p{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,transform] duration-150 select-none whitespace-nowrap active:scale-[.98] disabled:opacity-40;background:var(--btn);color:var(--btn-ink);}
+  .btn-p:hover{background:var(--btn-h)}
+  .btn-s{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,transform] duration-150 select-none whitespace-nowrap bg-raised text-ink border border-line2 hover:border-ink3 active:scale-[.98];}
+  .btn-g{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-3 h-9 font-medium text-[13px] transition-colors duration-150 text-ink2 hover:bg-raised hover:text-ink disabled:opacity-30;}
   .btn-sm{@apply h-9 px-4 text-[13px];}
   .lbl{@apply block text-[13px] font-medium text-ink2 mb-2;}
-  .inp{@apply w-full h-11 rounded-[var(--rb)] bg-white border border-line2 px-4 text-[15px] text-ink outline-none transition-[border-color,box-shadow] duration-150 focus:border-p focus:ring-4 focus:ring-p/15 placeholder:text-ink3;}
-  .inp-from{@apply bg-p/5 border-p/30;}
-  .inp-req{@apply border-ember bg-tred ring-4 ring-[rgba(217,72,43,0.12)];}
+  .inp{@apply w-full h-11 rounded-[var(--rb)] bg-field border border-line2 px-4 text-[15px] text-ink outline-none transition-[border-color,box-shadow] duration-150 focus:border-p focus:ring-4 focus:ring-p/15 placeholder:text-ink3;}
+  .inp-from{@apply border-p/40 bg-p/5;}
+  .inp-req{@apply border-ember bg-tred ring-4 ring-[rgba(217,72,43,0.14)];}
   textarea.inp{@apply h-auto py-3 leading-relaxed;}
   .hint{@apply text-[12px] text-ink3 mt-2 leading-snug;}
   .badge{@apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium;}
-  .chip{@apply inline-flex items-center gap-1.5 rounded-[var(--rb)] px-3 h-8 text-[13px] font-medium bg-white border border-line2 text-ink2 transition-colors duration-150 hover:border-p hover:text-p;}
-  .seg{@apply inline-flex p-1 rounded-[var(--rb)] bg-raised gap-1;}
-  .seg>button{@apply rounded-[calc(var(--rb)-3px)] px-4 h-9 text-[13px] font-medium text-ink3 transition-colors duration-150 whitespace-nowrap;}
-  .seg>button.on{@apply bg-white text-ink shadow-[0_1px_2px_rgba(15,42,61,0.12)];}
-  .tgl{@apply relative inline-flex shrink-0 w-11 h-6 rounded-full bg-[#C9D4DE] transition-colors duration-150 cursor-pointer;}
+  .chip{@apply inline-flex items-center gap-1.5 rounded-[var(--rb)] px-3 h-8 text-[13px] font-medium bg-raised border border-line2 text-ink2 transition-colors duration-150 hover:border-p hover:text-ink;}
+  .seg{@apply inline-flex p-1 rounded-[var(--rb)] bg-field border border-line gap-1;}
+  .seg>button{@apply rounded-[calc(var(--rb)-3px)] px-4 h-9 text-[13px] font-medium text-ink3 transition-colors duration-150 whitespace-nowrap hover:text-ink2;}
+  .seg>button.on{@apply bg-raised text-ink;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px var(--line2);}
+  .tgl{@apply relative inline-flex shrink-0 w-11 h-6 rounded-full bg-line2 transition-colors duration-150 cursor-pointer;}
   .tgl:after{content:"";@apply absolute top-[3px] left-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-150;}
   .tgl.on{@apply bg-p;}
   .tgl.on:after{@apply translate-x-5;}
-  .sec-t{@apply text-[17px] text-ink leading-snug;font-family:var(--fh),Georgia,serif;font-weight:var(--hw);}
+  .sec-t{@apply text-[20px] text-ink leading-tight;font-family:var(--fh),Georgia,serif;font-weight:var(--hw);}
   .kpi{@apply rounded-[calc(var(--r)-4px)] bg-raised p-4;}
-  .kpi-k{@apply text-[13px] font-medium text-ink3;}
-  .kpi-v{@apply text-[26px] font-semibold text-ink mt-1 leading-tight tracking-[-0.01em];}
-  .navl{@apply inline-flex items-center gap-2 rounded-[var(--rb)] px-3 h-9 text-[14px] font-medium text-ink2 transition-colors duration-150 hover:bg-raised whitespace-nowrap;}
-  .navl.on{@apply bg-p/10 text-p;}
-  .tab{@apply flex items-center gap-3 rounded-[var(--rb)] px-3 h-10 text-[14px] font-medium text-ink2 transition-colors duration-150 hover:bg-raised whitespace-nowrap;}
-  .tab.on{@apply bg-p/10 text-p;}
+  .kpi-k{@apply text-[12px] text-ink3;font-family:var(--fm),monospace;}
+  .kpi-v{@apply text-[26px] font-medium text-ink mt-1.5 leading-tight tracking-[-0.01em];}
+  .navl{@apply inline-flex items-center gap-2 rounded-[var(--rb)] px-3 h-9 text-[14px] font-medium text-ink2 transition-colors duration-150 hover:text-ink hover:bg-raised whitespace-nowrap;}
+  .navl.on{@apply bg-raised text-ink;box-shadow:0 0 0 1px var(--line2);}
+  .tab{@apply flex items-center gap-3 rounded-[var(--rb)] px-3 h-10 text-[14px] font-medium text-ink2 transition-colors duration-150 hover:bg-raised hover:text-ink whitespace-nowrap;}
+  .tab.on{@apply bg-raised text-ink;box-shadow:0 0 0 1px var(--line2);}
   .tab svg{@apply shrink-0;}
-  .icon-box{@apply w-9 h-9 rounded-[calc(var(--rb))] bg-raised text-ink2 grid place-items-center shrink-0;}
+  .icon-box{@apply w-9 h-9 rounded-[var(--rb)] bg-raised border border-line text-ink2 grid place-items-center shrink-0;}
 }
 </style>
 </head>
@@ -234,36 +252,78 @@ function mix(h1, h2, w) { const a = hexToRgb(h1), b = hexToRgb(h2); return rgbTo
 function lum(h) { const c = hexToRgb(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
 const contrastOn = h => (lum(h) > 0.45 ? '#0F2A3D' : '#ffffff');
 const FONTS = {
-  'Plus Jakarta Sans': 'Plus+Jakarta+Sans:wght@400;500;600;700', 'Inter': 'Inter:wght@400;500;600;700', 'DM Sans': 'DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700',
-  'Figtree': 'Figtree:wght@400;500;600;700', 'Instrument Sans': 'Instrument+Sans:wght@400;500;600;700', 'Manrope': 'Manrope:wght@400;500;600;700',
-  'Bricolage Grotesque': 'Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700',
-  'Fraunces': 'Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700', 'Newsreader': 'Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600',
-  'Instrument Serif': 'Instrument+Serif', 'DM Serif Display': 'DM+Serif+Display'
+  'Geist': 'Geist:wght@400;500;600;700', 'Inter': 'Inter:wght@400;500;600;700', 'Plus Jakarta Sans': 'Plus+Jakarta+Sans:wght@400;500;600;700', 'DM Sans': 'DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700',
+  'Figtree': 'Figtree:wght@400;500;600;700', 'Instrument Sans': 'Instrument+Sans:wght@400;500;600;700', 'Manrope': 'Manrope:wght@400;500;600;700', 'IBM Plex Sans': 'IBM+Plex+Sans:wght@400;500;600;700',
+  'Instrument Serif': 'Instrument+Serif', 'Fraunces': 'Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600', 'Newsreader': 'Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600', 'DM Serif Display': 'DM+Serif+Display',
+  'Geist Mono': 'Geist+Mono:wght@400;500', 'IBM Plex Mono': 'IBM+Plex+Mono:wght@400;500', 'JetBrains Mono': 'JetBrains+Mono:wght@400;500'
 };
-const SERIFS = ['Fraunces', 'Newsreader', 'Instrument Serif', 'DM Serif Display'];
+const SERIFS = ['Instrument Serif', 'Fraunces', 'Newsreader', 'DM Serif Display'];
+const MONOS = ['Geist Mono', 'IBM Plex Mono', 'JetBrains Mono'];
+let THEME_CTX = 'app';
+const appDark = () => S.design.mode !== 'light';
+const docDark = () => S.design.pdfTheme === 'dark';
+const rgbStr = h => hexToRgb(h).join(' ');
+const rgba = (h, a) => `rgba(${hexToRgb(h).join(',')},${a})`;
 function applyTheme() {
-  const d = S.design, p = d.primary, s = d.secondary, r = document.documentElement.style;
-  r.setProperty('--p', p); r.setProperty('--p-rgb', hexToRgb(p).join(' '));
-  r.setProperty('--s', s); r.setProperty('--s-rgb', hexToRgb(s).join(' '));
-  r.setProperty('--pc', contrastOn(p)); r.setProperty('--sc', contrastOn(s));
-  r.setProperty('--p-light', mix(p, '#ffffff', 0.88)); r.setProperty('--p-50', mix(p, '#ffffff', 0.94));
-  r.setProperty('--p-dark', mix(p, '#000000', 0.22)); r.setProperty('--s-light', mix(s, '#ffffff', 0.85)); r.setProperty('--s-dark', mix(s, '#000000', 0.38));
-  r.setProperty('--acc', d.accent); r.setProperty('--old', d.old); r.setProperty('--ink', d.ink);
-  r.setProperty('--ink2', mix(d.ink, '#ffffff', 0.22)); r.setProperty('--ink3', mix(d.ink, '#ffffff', 0.4));
-  r.setProperty('--bg', d.bg); r.setProperty('--raised', mix(d.bg, d.ink, 0.035));
-  const ir = hexToRgb(d.ink).join(','); r.setProperty('--line', `rgba(${ir},.09)`); r.setProperty('--line2', `rgba(${ir},.16)`);
-  r.setProperty('--t-red', mix(d.old, '#ffffff', 0.9)); r.setProperty('--t-yel', mix(s, '#ffffff', 0.86)); r.setProperty('--tile', mix(d.bg, '#ffffff', 0.35));
-  r.setProperty('--r', d.radius + 'px'); r.setProperty('--rb', (d.buttons === 'pill' ? 999 : Math.max(4, Math.round(d.radius * 0.6))) + 'px');
-  r.setProperty('--dr', (d.radius / 4.6).toFixed(2) + 'mm');
-  r.setProperty('--hl', d.highlight === 'gradient' ? `linear-gradient(125deg,${p} 0%,${d.accent} 100%)` : p);
-  r.setProperty('--hl-num', mix(s, '#ffffff', 0.45));
-  r.setProperty('--fb', `"${d.fontBody}"`); r.setProperty('--fh', `"${d.fontHead}"`); r.setProperty('--hw', d.headWeight);
-  const fams = [...new Set([d.fontBody, d.fontHead])].filter(f => FONTS[f]).map(f => 'family=' + FONTS[f]).join('&');
+  const d = S.design, dark = appDark(), r = document.documentElement.style, set = (k, v) => r.setProperty(k, v);
+  const P = dark ? mix(d.primary, '#ffffff', 0.28) : d.primary;
+  set('--p', P); set('--p-rgb', rgbStr(P)); set('--s', d.secondary); set('--s-rgb', rgbStr(d.secondary));
+  set('--acc', d.accent); set('--old', d.old); set('--gold', mix(d.secondary, '#ffffff', 0.35));
+  set('--p-dark', mix(d.primary, '#000000', 0.22));
+  if (dark) {
+    const base = d.night, ink = '#ECEFF3';
+    set('--bg', base); set('--card', mix(base, '#ffffff', 0.035)); set('--raised', mix(base, '#ffffff', 0.07)); set('--field', mix(base, '#000000', 0.15));
+    set('--ink', ink); set('--ink2', '#A7B2BE'); set('--ink3', '#7A8692');
+    set('--line', 'rgba(255,255,255,.07)'); set('--line2', 'rgba(255,255,255,.13)');
+    set('--p-light', rgba(P, 0.15)); set('--t-red', rgba(d.old, 0.15)); set('--t-yel', rgba(d.secondary, 0.13)); set('--tile', mix(base, '#ffffff', 0.07));
+    set('--yel-ink', mix(d.secondary, '#ffffff', 0.35)); set('--red-ink', mix(d.old, '#ffffff', 0.4)); set('--s-dark', mix(d.secondary, '#ffffff', 0.3));
+    set('--btn', d.buttonStyle === 'color' ? P : ink); set('--btn-ink', d.buttonStyle === 'color' ? contrastOn(P) : base); set('--btn-h', d.buttonStyle === 'color' ? mix(P, '#ffffff', 0.1) : '#ffffff');
+    set('--hl', d.highlight === 'gradient' ? `linear-gradient(125deg,${mix(d.primary, base, 0.35)} 0%,${mix(d.accent, base, 0.4)} 100%)` : mix(d.primary, base, 0.62));
+    set('--header', rgba(base, 0.78)); set('--hi', '.035'); set('--scheme', 'dark'); set('--hero-fade', rgba(base, 0.82)); set('--hero-fade2', rgba(base, 0.45));
+  } else {
+    const base = d.bg, ink = d.ink;
+    set('--bg', base); set('--card', '#ffffff'); set('--raised', mix(base, ink, 0.035)); set('--field', '#ffffff');
+    set('--ink', ink); set('--ink2', mix(ink, '#ffffff', 0.22)); set('--ink3', mix(ink, '#ffffff', 0.42));
+    set('--line', rgba(ink, 0.09)); set('--line2', rgba(ink, 0.16));
+    set('--p-light', mix(d.primary, '#ffffff', 0.88)); set('--t-red', mix(d.old, '#ffffff', 0.9)); set('--t-yel', mix(d.secondary, '#ffffff', 0.86)); set('--tile', mix(base, '#ffffff', 0.35));
+    set('--yel-ink', mix(d.secondary, '#000000', 0.45)); set('--red-ink', mix(d.old, '#000000', 0.25)); set('--s-dark', mix(d.secondary, '#000000', 0.4));
+    set('--btn', d.buttonStyle === 'light' ? ink : d.primary); set('--btn-ink', '#ffffff'); set('--btn-h', mix(d.buttonStyle === 'light' ? ink : d.primary, '#000000', 0.15));
+    set('--hl', d.highlight === 'gradient' ? `linear-gradient(125deg,${d.primary} 0%,${d.accent} 100%)` : d.primary);
+    set('--header', rgba(base, 0.85)); set('--hi', '0'); set('--scheme', 'light'); set('--hero-fade', rgba(base, 0.85)); set('--hero-fade2', rgba(base, 0.5));
+  }
+  set('--hl-num', mix(d.secondary, '#ffffff', 0.4));
+  set('--r', d.radius + 'px'); set('--rb', (d.buttons === 'pill' ? 999 : Math.max(4, Math.round(d.radius * 0.65))) + 'px'); set('--dr', (d.radius / 4.8).toFixed(2) + 'mm');
+  set('--fb', `"${d.fontBody}"`); set('--fh', `"${d.fontHead}"`); set('--fm', `"${d.fontMono}"`); set('--hw', d.headWeight);
+  // Kundendokument
+  const dd = docDark(), mixed = d.pdfTheme === 'mixed', night = '#0B1118';
+  set('--d-p', d.primary); set('--d-p-rgb', rgbStr(d.primary)); set('--d-p-light-dk', rgba(mix(d.primary, '#ffffff', 0.2), 0.18));
+  set('--d-ink', d.ink); set('--d-ink2', mix(d.ink, '#ffffff', 0.22)); set('--d-ink3', mix(d.ink, '#ffffff', 0.42));
+  set('--d-line', rgba(d.ink, 0.1)); set('--d-line2', rgba(d.ink, 0.17)); set('--d-bg', '#ffffff'); set('--d-tile', mix(d.bg, '#ffffff', 0.25)); set('--d-th', mix(d.bg, d.ink, 0.04));
+  set('--d-t-red', mix(d.old, '#ffffff', 0.9)); set('--d-t-yel', mix(d.secondary, '#ffffff', 0.86)); set('--d-p-light', mix(d.primary, '#ffffff', 0.88));
+  set('--d-s-dark', mix(d.secondary, '#000000', 0.42)); set('--d-sky', mix(d.accent, '#ffffff', 0.9));
+  set('--d-hl', mixed || dd ? (d.highlight === 'gradient' ? `linear-gradient(125deg,${mix(d.primary, night, 0.45)} 0%,${night} 100%)` : mix(d.primary, night, 0.7)) : (d.highlight === 'gradient' ? `linear-gradient(125deg,${d.primary} 0%,${d.accent} 100%)` : d.primary));
+  set('--d-hl-num', mix(d.secondary, '#ffffff', 0.35)); set('--d-band', mixed || dd ? night : d.primary);
+  const fams = [...new Set([d.fontBody, d.fontHead, d.fontMono])].filter(f => FONTS[f]).map(f => 'family=' + FONTS[f]).join('&');
   const href = `https://fonts.googleapis.com/css2?${fams}&display=swap`, link = $('#gfonts');
   if (link && link.href !== href) link.href = href;
-  const m = $('meta[name=theme-color]'); if (m) m.content = d.bg;
+  const m = $('meta[name=theme-color]'); if (m) m.content = dark ? d.night : d.bg;
 }
-const C = () => ({ p: S.design.primary, s: S.design.secondary, pl: mix(S.design.primary, '#ffffff', 0.88), pd: mix(S.design.primary, '#000000', 0.22), ink: S.design.ink, ink3: mix(S.design.ink, '#ffffff', 0.4), ink4: mix(S.design.ink, '#ffffff', 0.5), line: '#E6EDF3', red: S.design.old, red2: mix(S.design.old, '#ffffff', 0.08), blue: S.design.accent });
+/* Diagrammfarben – abhängig davon, ob für App oder Dokument gezeichnet wird */
+function C() {
+  const d = S.design, dark = THEME_CTX === 'doc' ? docDark() : appDark();
+  const P = dark ? mix(d.primary, '#ffffff', THEME_CTX === 'doc' ? 0.15 : 0.28) : d.primary;
+  const ink = dark ? '#ECEFF3' : d.ink, surf = dark ? (THEME_CTX === 'doc' ? '#141B24' : mix(d.night, '#ffffff', 0.07)) : '#ffffff';
+  return {
+    dark, p: P, s: d.secondary, pl: dark ? rgba(P, 0.18) : mix(d.primary, '#ffffff', 0.88), pd: mix(d.primary, '#000000', 0.22),
+    ink, ink2: dark ? '#A7B2BE' : mix(ink, '#ffffff', 0.22), ink3: dark ? '#7F8B98' : mix(ink, '#ffffff', 0.42), ink4: dark ? '#6A7683' : mix(ink, '#ffffff', 0.5),
+    grid: dark ? 'rgba(255,255,255,.07)' : rgba(ink, 0.08), track: dark ? 'rgba(255,255,255,.08)' : rgba(ink, 0.06), stroke: dark ? 'rgba(255,255,255,.16)' : rgba(ink, 0.18),
+    surface: surf, neutral: dark ? 'rgba(255,255,255,.14)' : mix(ink, '#ffffff', 0.84),
+    tBlue: dark ? rgba(d.accent, 0.22) : mix(d.accent, '#ffffff', 0.9), tRed: dark ? rgba(d.old, 0.2) : mix(d.old, '#ffffff', 0.9), tYel: dark ? rgba(d.secondary, 0.18) : mix(d.secondary, '#ffffff', 0.86),
+    tGrn: dark ? rgba(P, 0.2) : mix(d.primary, '#ffffff', 0.88), tGray: dark ? 'rgba(255,255,255,.07)' : rgba(ink, 0.05), yelInk: dark ? mix(d.secondary, '#ffffff', 0.35) : mix(d.secondary, '#000000', 0.45),
+    line: dark ? 'rgba(255,255,255,.1)' : rgba(ink, 0.1), red: d.old, red2: dark ? mix(d.old, '#ffffff', 0.12) : mix(d.old, '#ffffff', 0.08), blue: dark ? mix(d.accent, '#ffffff', 0.35) : d.accent,
+    salmon: dark ? rgba(d.old, 0.45) : mix(d.old, '#ffffff', 0.62)
+  };
+}
 
 /* ---------- Zoom unterbinden ---------- */
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
@@ -386,15 +446,15 @@ async function needPdfMaker() {
 /* ---------- Toasts & Dialoge ---------- */
 function toast(msg, kind = 'ok', ms = 3200) {
   const el = document.createElement('div');
-  const col = kind === 'err' ? 'bg-tred text-[#9E2F14] ring-[#F6C9B8]' : kind === 'warn' ? 'bg-tyel text-[#7A4D05] ring-s/30' : 'bg-white text-ink ring-line';
-  el.className = `pointer-events-auto fade-in rounded-[calc(var(--r)-4px)] px-4 py-3 text-[14px] font-semibold shadow-[0_14px_34px_-12px_rgba(15,42,61,.35)] ring-1 ${col} flex items-center gap-2`;
+  const col = kind === 'err' ? 'bg-card text-red-ink ring-line2' : kind === 'warn' ? 'bg-card text-yel-ink ring-line2' : 'bg-card text-ink ring-line2';
+  el.className = `pointer-events-auto fade-in rounded-[calc(var(--r)-4px)] px-4 py-3 text-[14px] font-semibold shadow-[0_16px_40px_-12px_rgba(0,0,0,.5)] ring-1 ${col} flex items-center gap-2`;
   el.innerHTML = (kind === 'ok' ? `<span class="text-p">${ic('check', 18)}</span>` : kind === 'err' ? ic('alert', 18) : ic('info', 18)) + `<span>${esc(msg)}</span>`;
   $('#toasts').appendChild(el);
   setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 320); }, ms);
 }
 function modal(html, opts = {}) {
   const root = $('#modal');
-  root.innerHTML = `<div class="fixed inset-0 z-[70] bg-[#0F2A3D]/35 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" data-modal-bg>
+  root.innerHTML = `<div class="fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" data-modal-bg>
     <div class="card w-full ${opts.wide ? 'max-w-3xl' : 'max-w-lg'} p-6 sm:p-7 fade-in my-8 relative">
       <button class="absolute right-4 top-4 w-9 h-9 rounded-full grid place-items-center text-ink3 hover:bg-bg" data-a="modal-close" aria-label="Schließen">${ic('x', 18)}</button>
       ${html}
@@ -405,7 +465,7 @@ function closeModal() { $('#modal').innerHTML = ''; }
 function confirmDlg(title, text, okLabel = 'Löschen', danger = true) {
   return new Promise(res => {
     modal(`<h3 class="text-[19px] font-semibold pr-8">${esc(title)}</h3><p class="text-ink2 mt-2 text-[15px]">${esc(text)}</p>
-      <div class="flex justify-end gap-2 mt-6"><button class="btn-s" id="cd-no">Abbrechen</button><button class="${danger ? 'btn bg-ember2 text-white' : 'btn-p'}" id="cd-ok">${esc(okLabel)}</button></div>`);
+      <div class="flex justify-end gap-2 mt-6"><button class="btn-s" id="cd-no">Abbrechen</button><button class="${danger ? 'btn bg-ember text-white hover:brightness-110' : 'btn-p'}" id="cd-ok">${esc(okLabel)}</button></div>`);
     $('#cd-no').onclick = () => { closeModal(); res(false); };
     $('#cd-ok').onclick = () => { closeModal(); res(true); };
   });
@@ -435,11 +495,12 @@ const DEFAULT_PRICES = {
 };
 
 const DEFAULT_SETTINGS = {
-  company: { name: 'Frühauf Energy', ceo: '', register: '', street: '', zip: '', city: '', phone: '', email: '', web: '', taxNo: '', vatId: '', bank: '', iban: '', bic: '', logoFile: '', logoUrl: '', advisors: [] },
+  company: { name: 'Frühauf Energy', ceo: '', register: '', street: '', zip: '', city: '', phone: '', email: '', web: '', taxNo: '', vatId: '', bank: '', iban: '', bic: '', logoFile: '', logoUrl: '', advisors: [], defaultAdvisor: '' },
   design: {
-    primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA',
-    fontBody: 'Plus Jakarta Sans', fontHead: 'Fraunces', headWeight: 500, radius: 16, buttons: 'round', highlight: 'solid',
-    chapter: 'sun', pdfHeader: 'sky', coverStyle: 'illu',
+    v: 3, mode: 'dark', pdfTheme: 'mixed',
+    primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA', night: '#0A0E13',
+    fontBody: 'Geist', fontHead: 'Instrument Serif', fontMono: 'Geist Mono', headWeight: 400, radius: 14, buttons: 'round', buttonStyle: 'light', highlight: 'solid',
+    chapter: 'sun', pdfHeader: 'band', coverStyle: 'illu',
     cover: { use: false, file: '', showCustomer: true, whiteBox: true, dark: true, pos: 62 },
     coverLogo: { source: 'company', file: '', x: 6, y: 6, size: 14, whiteBg: true }
   },
@@ -512,11 +573,11 @@ const WOLF = { '07': { kw: 7, sw: 52, day: 58, night: 49, spl: 32 }, '10': { kw:
 
 const ICON_CHOICES = [['home', 'Haus'], ['sun', 'Sonne'], ['gift', 'Geschenk'], ['users', 'Personen'], ['leaf', 'Blatt'], ['bolt', 'Blitz'], ['clock', 'Uhr'], ['heart', 'Herz'], ['check', 'Haken'], ['scale', 'Waage'], ['euro', 'Euro'], ['fan', 'Wärmepumpe']];
 const THEME_PRESETS = [
-  { name: 'Frühauf Grün', primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA' },
-  { name: 'Morgenhimmel', primary: '#1D5FA8', secondary: '#F2B33D', accent: '#0E7C66', old: '#D9482B', ink: '#0E2235', bg: '#F4F7FB' },
-  { name: 'Münsterland', primary: '#3F7D3A', secondary: '#E9A23B', accent: '#2B5D7D', old: '#C2401F', ink: '#1C2A1E', bg: '#F6F6F1' },
-  { name: 'Ziegelrot', primary: '#B4472C', secondary: '#F0B03F', accent: '#2F4A63', old: '#8F2D16', ink: '#2A1E1A', bg: '#F8F5F1' },
-  { name: 'Graphit', primary: '#1F2A37', secondary: '#F5A524', accent: '#0E7C66', old: '#D9482B', ink: '#111827', bg: '#F5F6F7' }
+  { name: 'Vor Sonnenaufgang', primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA', night: '#0A0E13' },
+  { name: 'Nachtblau', primary: '#2F6FB5', secondary: '#F2B33D', accent: '#0E7C66', old: '#D9482B', ink: '#0E2235', bg: '#F4F7FB', night: '#080D18' },
+  { name: 'Waldrand', primary: '#3F7D3A', secondary: '#E9A23B', accent: '#2B5D7D', old: '#C2401F', ink: '#1C2A1E', bg: '#F6F6F1', night: '#0B0F0C' },
+  { name: 'Glut', primary: '#C0532F', secondary: '#F0B03F', accent: '#2F4A63', old: '#9E3418', ink: '#2A1E1A', bg: '#F8F5F1', night: '#110D0B' },
+  { name: 'Graphit', primary: '#4B5563', secondary: '#F5A524', accent: '#0E7C66', old: '#D9482B', ink: '#111827', bg: '#F5F6F7', night: '#0B0B0C' }
 ];
 
 /* ---------- Zustand ---------- */
@@ -531,12 +592,13 @@ function currentStand(date = isoToday()) {
   for (const s of st) if (s.from <= date) cur = s;
   return cur;
 }
+function defAdv() { const l = (S.company && S.company.advisors) || []; return l.find(a => a.id === S.company.defaultAdvisor) || { id: '', name: '' }; }
 function newProject(type) {
   const c = S.calc, today = isoToday();
   return {
     id: uid('p'), type, created: Date.now(), updated: Date.now(), step: 1,
     customer: { salutation: 'Familie', name: '', street: '', zip: '', city: '', email: '', phone: '' },
-    offer: { gross: null, grossWP: null, grossPV: null, total: null, number: '', date: today, advisor: '', title: 'Individuelle Wirtschaftlichkeits- und Energiekonzept-Berechnung' },
+    offer: { gross: null, grossWP: null, grossPV: null, total: null, number: '', date: today, advisor: defAdv().name, advisorId: defAdv().id, title: 'Individuelle Wirtschaftlichkeits- und Energiekonzept-Berechnung' },
     from: {},
     heating: { fuel: 'gas', gasType: 'central', year: null, cons: null, price: c.gasPrice, maint: c.gasMaint, base: c.gasBase, eff: c.efficiency, replace: false, replaceCost: null },
     hp: { model: '', kw: null, jaz: null, tariff: c.hpTariff, heat: null, power: null, dims: '', weight: null, base: c.hpBase, maint: c.hpMaint, sw: 53, swDay: 60, swNight: 51, spl: 34, splDist: 3, p14a: 0 },
@@ -574,7 +636,13 @@ async function loadAll() {
   PROJECTS = (await DB.all('projects')) || [];
   if (!st && !PROJECTS.length) await migrateLegacy();
   const st2 = st || (await DB.get('kv', 'settings'));
-  if (st2) { S = deepMerge(clone(DEFAULT_SETTINGS), st2); if (st2.design && !st2.design.coverStyle && st2.design.cover && st2.design.cover.use) S.design.coverStyle = 'image'; }
+  if (st2) {
+    S = deepMerge(clone(DEFAULT_SETTINGS), st2);
+    if (!st2.design || st2.design.v !== 3) { // neue Designsprache: Stil zurücksetzen, Farben, Logos und Deckblatt behalten
+      const keep = { primary: S.design.primary, secondary: S.design.secondary, cover: S.design.cover, coverLogo: S.design.coverLogo, coverStyle: st2.design && st2.design.cover && st2.design.cover.use ? 'image' : 'illu' };
+      S.design = { ...clone(DEFAULT_SETTINGS.design), ...keep };
+    }
+  }
   const pr2 = pr || (await DB.get('kv', 'products'));
   PRODUCTS = Array.isArray(pr2) ? pr2 : clone(SAMPLE_PRODUCTS);
   if (!pr2) saveProductsNow();
@@ -1202,7 +1270,8 @@ function applyRecognition(p, doc, r) {
       const nums = p.docs.filter(d => d.role === 'offerWP' || d.role === 'offerPV').sort((a, b) => (a.role === 'offerWP' ? -1 : 1)).map(d => p.rec[d.id] && p.rec[d.id].number).filter(Boolean);
       if (nums.length) setFrom(p, 'offer.number', [...new Set(nums)].join(' / '));
     } else { setFrom(p, 'offer.gross', r.gross); setFrom(p, 'offer.number', r.number); }
-    setFrom(p, 'offer.date', r.date); setFrom(p, 'offer.advisor', r.advisor);
+    setFrom(p, 'offer.date', r.date);
+    if (r.advisor) { const m = (S.company.advisors || []).find(a => a.name && (a.name.toLowerCase() === r.advisor.toLowerCase() || a.name.toLowerCase().includes(r.advisor.toLowerCase()) || r.advisor.toLowerCase().includes(a.name.toLowerCase()))); setFrom(p, 'offer.advisor', m ? m.name : r.advisor); p.offer.advisorId = m ? m.id : ''; }
     if (r.date) { p.discount.until = addDays(r.date > isoToday() ? r.date : isoToday(), S.discount.days); }
     if (hasPV(p)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.bat', r.bat); setFrom(p, 'pv.modules', r.modules); }
   }
@@ -1225,54 +1294,62 @@ async function removeDoc(p, id, silent) {
    ========================================================= */
 function houseSVG(o = {}) {
   const p = o.p || S.design.primary, s = o.s || S.design.secondary, sky = o.sky !== false;
-  const W = 600, H = o.h || 400;
-  // Dachfläche (Trapez) mit 3 × 6 Modulen
-  const top = { y: 150, l: 205, r: 395 }, bot = { y: 228, l: 150, r: 450 };
-  const lerp = (a, b, t) => a + (b - a) * t;
+  const dawn = o.dawn !== undefined ? o.dawn : (THEME_CTX === 'doc' ? S.design.pdfTheme !== 'light' : appDark());
+  const wide = !!o.wide, W = wide ? 1200 : 600, dx = wide ? 590 : 0, uid2 = (dawn ? 'd' : 'l') + (wide ? 'w' : 'n') + (o.cover ? 'c' : '');
+  const id = n => n + uid2;
+  const top = { y: 150, l: 205, r: 395 }, bot = { y: 228, l: 150, r: 450 }, lerp = (a, b, t) => a + (b - a) * t;
+  const K = dawn
+    ? { sky1: '#060B16', sky2: '#13213D', sky3: '#3A3550', hor: '#E59A5C', hill1a: '#132A22', hill1b: '#0E2019', hill2a: '#0F241B', hill2b: '#0A1913', wall1: '#2C3644', wall2: '#222B37', wallS: '#3A4656', roof1: '#4A2219', roof2: '#5C2C21', eave: '#3A1A13', win: '#FFC870', winS: '#FFE2A8', mod1: '#1D3354', mod2: '#0F1E36', modS: '#3C5A86', hp: '#3B4756', hpS: '#566577', fan: '#2C3644', tree: '#163A26', cloud: '#E9A27A' }
+    : { sky1: '#A9D4F5', sky2: '#CFE7FA', sky3: '#E8F4FD', hor: '#F4FAFF', hill1a: '#A9DCA0', hill1b: '#86C98A', hill2a: '#8FD08F', hill2b: '#6BB979', wall1: '#FFFFFF', wall2: '#EEF3F7', wallS: '#DCE6EE', roof1: '#C8553D', roof2: '#D9694F', eave: '#A9432E', win: '#CFE6F8', winS: '#ffffff', mod1: '#2B5C93', mod2: '#173B66', modS: '#9EC3E6', hp: '#F7FAFC', hpS: '#C9D6E1', fan: '#E3EBF2', tree: '#5FAE6E', cloud: '#ffffff' };
   let mods = '';
   for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) {
-    const pad = 0.035;
-    const t0 = 0.1 + r * 0.27 + 0.012, t1 = t0 + 0.255;
+    const pad = 0.035, t0 = 0.1 + r * 0.27 + 0.012, t1 = t0 + 0.255;
     const y0 = lerp(top.y, bot.y, t0), y1 = lerp(top.y, bot.y, t1);
     const l0 = lerp(top.l, bot.l, t0) + 14, r0 = lerp(top.r, bot.r, t0) - 14, l1 = lerp(top.l, bot.l, t1) + 14, r1 = lerp(top.r, bot.r, t1) - 14;
     const a0 = c / 6 + pad / 6, a1 = (c + 1) / 6 - pad / 6;
     const pts = [[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]];
-    mods += `<polygon points="${pts.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#mod)" stroke="#9EC3E6" stroke-width="0.8"/>`;
+    mods += `<polygon points="${pts.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/>`;
   }
+  // Sonne: tagsüber hoch oben, in der Dämmerung knapp über dem Horizont
+  const sx = dawn ? (wide ? 700 : 120) : 480 + dx, sy = dawn ? 268 : 78;
   let rays = '';
-  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; rays += `<line x1="${480 + Math.cos(a) * 52}" y1="${78 + Math.sin(a) * 52}" x2="${480 + Math.cos(a) * 68}" y2="${78 + Math.sin(a) * 68}" stroke="${s}" stroke-width="5" stroke-linecap="round" opacity=".85"/>`; }
-  const vb = o.cover ? `0 14 ${W} 371.4` : `0 0 ${W} 400`, sz = o.cover ? 'width="1300" height="805"' : 'width="100%" height="100%"';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="xMidYMid slice">
+  if (!dawn) for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; rays += `<line x1="${sx + Math.cos(a) * 52}" y1="${sy + Math.sin(a) * 52}" x2="${sx + Math.cos(a) * 68}" y2="${sy + Math.sin(a) * 68}" stroke="${s}" stroke-width="5" stroke-linecap="round" opacity=".85"/>`; }
+  let stars = '';
+  if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
+  const hills = `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="url(#${id('h1')})"/>${dawn ? `<path d="M0 300 C120 255 230 265 330 290 S520 262 600 278" fill="none" stroke="${s}" stroke-opacity=".35" stroke-width="1.2"/>` : ''}<path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="url(#${id('h2')})"/></g>`;
+  const vb = o.cover ? `0 14 ${W} 371.4` : `0 0 ${W} 400`, sz = o.cover ? `width="${W === 600 ? 1300 : 2600}" height="805"` : 'width="100%" height="100%"';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice">
 <defs>
-<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFE0FA"/><stop offset="1" stop-color="#F4FAFF"/></linearGradient>
-<radialGradient id="glow" cx="0.8" cy="0.18" r="0.5"><stop offset="0" stop-color="${s}" stop-opacity=".55"/><stop offset=".5" stop-color="${s}" stop-opacity=".12"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
-<linearGradient id="mod" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B5C93"/><stop offset="1" stop-color="#173B66"/></linearGradient>
-<linearGradient id="hill1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9DCA0"/><stop offset="1" stop-color="#86C98A"/></linearGradient>
-<linearGradient id="hill2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FD08F"/><stop offset="1" stop-color="#6BB979"/></linearGradient>
-<linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EEF3F7"/></linearGradient>
+<linearGradient id="${id('sky')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.sky1}"/><stop offset=".45" stop-color="${K.sky2}"/><stop offset=".68" stop-color="${K.sky3}"/><stop offset=".78" stop-color="${K.hor}"/></linearGradient>
+<radialGradient id="${id('glow')}" cx="${(sx / W).toFixed(3)}" cy="${(sy / 400).toFixed(3)}" r="${dawn ? 0.55 : 0.5}" gradientTransform="translate(${(sx / W).toFixed(3)} ${(sy / 400).toFixed(3)}) scale(${(400 / W).toFixed(3)} 1) translate(${(-sx / W).toFixed(3)} ${(-sy / 400).toFixed(3)})"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
+<linearGradient id="${id('mod')}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${K.mod1}"/><stop offset="1" stop-color="${K.mod2}"/></linearGradient>
+<linearGradient id="${id('h1')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill1a}"/><stop offset="1" stop-color="${K.hill1b}"/></linearGradient>
+<linearGradient id="${id('h2')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill2a}"/><stop offset="1" stop-color="${K.hill2b}"/></linearGradient>
+<linearGradient id="${id('wall')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.wall1}"/><stop offset="1" stop-color="${K.wall2}"/></linearGradient>
 </defs>
-${sky ? `<rect width="${W}" height="400" fill="url(#sky)"/>` : ''}
-<rect width="${W}" height="400" fill="url(#glow)"/>
-${rays}<circle cx="480" cy="78" r="40" fill="${s}"/><circle cx="480" cy="78" r="30" fill="#FFD36B" opacity=".7"/>
-<g fill="#fff" opacity=".95"><ellipse cx="120" cy="80" rx="46" ry="16"/><ellipse cx="150" cy="70" rx="30" ry="18"/><ellipse cx="96" cy="74" rx="22" ry="12"/>
-<ellipse cx="330" cy="58" rx="34" ry="11"/><ellipse cx="352" cy="51" rx="20" ry="12"/></g>
-<path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="url(#hill1)"/>
-<path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="url(#hill2)"/>
-<ellipse cx="300" cy="333" rx="190" ry="10" fill="#4E9A61" opacity=".25"/>
-<rect x="168" y="222" width="264" height="110" rx="4" fill="url(#wall)" stroke="#DCE6EE"/>
-<polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="#C8553D"/>
-<polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="#D9694F"/>
-${mods}
-<rect x="${bot.l - 10}" y="${bot.y}" width="${bot.r - bot.l + 20}" height="6" rx="3" fill="#A9432E"/>
-<g><rect x="190" y="248" width="52" height="40" rx="4" fill="#CFE6F8" stroke="#fff" stroke-width="4"/><line x1="216" y1="248" x2="216" y2="288" stroke="#fff" stroke-width="3"/>
-<rect x="358" y="248" width="52" height="40" rx="4" fill="#CFE6F8" stroke="#fff" stroke-width="4"/><line x1="384" y1="248" x2="384" y2="288" stroke="#fff" stroke-width="3"/></g>
-<rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="#fff" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="#fff" opacity=".18"/>
-<g transform="translate(446 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/>
-<circle cx="25" cy="23" r="15" fill="#E3EBF2" stroke="#B8C7D4" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="#B8C7D4" stroke-width="1.6"/>
-<rect x="49" y="9" width="17" height="4" rx="2" fill="#C9D6E1"/><rect x="49" y="17" width="17" height="4" rx="2" fill="#C9D6E1"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
-<rect x="6" y="46" width="8" height="4" fill="#9FB1C1"/><rect x="60" y="46" width="8" height="4" fill="#9FB1C1"/></g>
-<path d="M432 300 H446" stroke="#B8C7D4" stroke-width="3"/>
-<g fill="#5FAE6E"><circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/><circle cx="540" cy="336" r="13"/></g>
+${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}
+<rect width="${W}" height="400" fill="url(#${id('glow')})"/>
+${rays}<circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}
+<g fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
+${hills}
+<g transform="translate(${dx} 0)">
+<ellipse cx="300" cy="333" rx="190" ry="10" fill="#000" opacity="${dawn ? 0.3 : 0.08}"/>
+<rect x="168" y="222" width="264" height="110" rx="4" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
+<polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="${K.roof1}"/>
+<polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="${K.roof2}"/>
+${mods}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
+<rect x="${bot.l - 10}" y="${bot.y}" width="${bot.r - bot.l + 20}" height="6" rx="3" fill="${K.eave}"/>
+<g>${dawn ? `<rect x="182" y="240" width="68" height="56" rx="10" fill="${K.win}" opacity=".18"/><rect x="350" y="240" width="68" height="56" rx="10" fill="${K.win}" opacity=".18"/>` : ''}
+<rect x="190" y="248" width="52" height="40" rx="4" fill="${K.win}" stroke="${K.winS}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="216" y1="248" x2="216" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/>
+<rect x="358" y="248" width="52" height="40" rx="4" fill="${K.win}" stroke="${K.winS}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="384" y1="248" x2="384" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/></g>
+<rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${dawn ? K.win : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${dawn ? K.win : '#fff'}" opacity="${dawn ? 0.55 : 0.18}"/>
+<g transform="translate(446 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
+<circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/>
+<rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
+<rect x="6" y="46" width="8" height="4" fill="${K.hpS}"/><rect x="60" y="46" width="8" height="4" fill="${K.hpS}"/></g>
+<path d="M432 300 H446" stroke="${K.hpS}" stroke-width="3"/>
+<g fill="${K.tree}"><circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/><circle cx="540" cy="336" r="13"/></g></g>
+${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
 </svg>`;
 }
 const svgDataUri = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -1287,11 +1364,11 @@ function groupBars(groups, o = {}) {
   const max = niceMax(Math.max(...groups.flatMap(g => g.vals.map(v => v.v)), 1));
   const iw = W - pl - pr, ih = H - pt - pb, gw = iw / groups.length, n = groups[0].vals.length, bw = Math.min(30, gw * 0.7 / n);
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
-  for (let i = 0; i <= 4; i++) { const y = pt + ih - ih * i / 4; s += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="#E6EDF3"/>` + T(pl - 8, y + 4, num(max * i / 4) + ' €', { a: 'end', fs: 10 }); }
+  for (let i = 0; i <= 4; i++) { const y = pt + ih - ih * i / 4; s += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="${C().grid}"/>` + T(pl - 8, y + 4, num(max * i / 4) + ' €', { a: 'end', fs: 10 }); }
   groups.forEach((g, gi) => {
     const cx = pl + gw * gi + gw / 2, x0 = cx - (n * bw + (n - 1) * 6) / 2;
-    g.vals.forEach((v, k) => { const h = ih * Math.max(0, v.v) / max, x = x0 + k * (bw + 6); s += `<rect x="${x}" y="${pt + ih - h}" width="${bw}" height="${Math.max(h, 0.5)}" rx="5" fill="${v.c}"/>` + T(x + bw / 2, pt + ih - h - 5, num(v.v), { a: 'middle', fs: 9.5, fw: 700, c: '#3D5568' }); });
-    s += T(cx, H - 12, g.label, { a: 'middle', fs: 11, fw: 700, c: '#3D5568' });
+    g.vals.forEach((v, k) => { const h = ih * Math.max(0, v.v) / max, x = x0 + k * (bw + 6); s += `<rect x="${x}" y="${pt + ih - h}" width="${bw}" height="${Math.max(h, 0.5)}" rx="5" fill="${v.c}"/>` + T(x + bw / 2, pt + ih - h - 5, num(v.v), { a: 'middle', fs: 9.5, fw: 700, c: C().ink2 }); });
+    s += T(cx, H - 12, g.label, { a: 'middle', fs: 11, fw: 700, c: C().ink2 });
   });
   return s + '</svg>';
 }
@@ -1302,9 +1379,9 @@ function hBars(items, o = {}) {
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
   items.forEach((it, i) => {
     const y = i * rowH + 6, w = (W - lw - tw) * Math.max(0, it.v) / max;
-    s += T(0, y + rowH / 2 - 2, it.label, { fs: 12, fw: 700, c: '#0F2A3D' }) + (it.sub ? T(0, y + rowH / 2 + 12, it.sub, { fs: 9.5 }) : '');
-    s += `<rect x="${lw}" y="${y + 6}" width="${W - lw - tw}" height="${rowH - 16}" rx="${(rowH - 16) / 2}" fill="#F0F5F9"/><rect x="${lw}" y="${y + 6}" width="${Math.max(w, rowH - 16)}" height="${rowH - 16}" rx="${(rowH - 16) / 2}" fill="${it.c}"/>`;
-    s += T(lw + Math.max(w, rowH - 16) + 10, y + rowH / 2 + 4, it.txt, { fs: 13, fw: 800, c: '#0F2A3D' });
+    s += T(0, y + rowH / 2 - 2, it.label, { fs: 12, fw: 700, c: C().ink }) + (it.sub ? T(0, y + rowH / 2 + 12, it.sub, { fs: 9.5 }) : '');
+    s += `<rect x="${lw}" y="${y + 6}" width="${W - lw - tw}" height="${rowH - 16}" rx="${(rowH - 16) / 2}" fill="${C().track}"/><rect x="${lw}" y="${y + 6}" width="${Math.max(w, rowH - 16)}" height="${rowH - 16}" rx="${(rowH - 16) / 2}" fill="${it.c}"/>`;
+    s += T(lw + Math.max(w, rowH - 16) + 10, y + rowH / 2 + 4, it.txt, { fs: 13, fw: 800, c: C().ink });
   });
   return s + '</svg>';
 }
@@ -1312,9 +1389,9 @@ function hBars(items, o = {}) {
 function ring(v, label, color, size = 120) {
   const r = size / 2 - 10, cf = 2 * Math.PI * r, f = clamp(v, 0, 1);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#EAF1F6" stroke-width="12"/>
+<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${C().track}" stroke-width="12"/>
 <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(cf * f).toFixed(1)} ${cf.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
-${T(size / 2, size / 2 + 3, pct(f * 100), { a: 'middle', fs: size / 6, fw: 800, c: '#0F2A3D' })}${T(size / 2, size / 2 + size / 7, label, { a: 'middle', fs: size / 12, fw: 600 })}</svg>`;
+${T(size / 2, size / 2 + 3, pct(f * 100), { a: 'middle', fs: size / 6, fw: 800, c: C().ink })}${T(size / 2, size / 2 + size / 7, label, { a: 'middle', fs: size / 12, fw: 600 })}</svg>`;
 }
 /* Amortisationsdiagramm */
 function amortChart(R, o = {}) {
@@ -1324,13 +1401,13 @@ function amortChart(R, o = {}) {
   const iw = W - pl - pr, ih = H - pt - pb, y = v => pt + ih * (mx - v) / (mx - mn), bw = iw / rows.length;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
   const steps = 5;
-  for (let i = 0; i <= steps; i++) { const v = mn + (mx - mn) * i / steps; s += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="#E6EDF3"/>` + T(pl - 8, y(v) + 4, num(v / 1000, Math.abs(mx - mn) < 10000 ? 1 : 0) + ' T€', { a: 'end', fs: 9.5 }); }
-  rows.forEach((r, i) => { const x = pl + i * bw + bw * 0.16, v = r.saldo, y0 = y(0), y1 = y(v); s += `<rect x="${x}" y="${Math.min(y0, y1)}" width="${bw * 0.68}" height="${Math.max(Math.abs(y1 - y0), 0.8)}" rx="3" fill="${v >= 0 ? c.p : '#F2B8A6'}"/>`; if (r.t === 1 || r.t % 5 === 0) s += T(x + bw * 0.34, H - 12, String(r.t), { a: 'middle', fs: 10 }); });
-  s += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="#3D5568" stroke-width="1"/>`;
-  s += `<polyline fill="none" stroke="#1E4C86" stroke-width="2" stroke-dasharray="5 4" points="${rows.map((r, i) => `${(pl + i * bw + bw / 2).toFixed(1)},${y(r.saldoStatic).toFixed(1)}`).join(' ')}"/>`;
+  for (let i = 0; i <= steps; i++) { const v = mn + (mx - mn) * i / steps; s += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="${C().grid}"/>` + T(pl - 8, y(v) + 4, num(v / 1000, Math.abs(mx - mn) < 10000 ? 1 : 0) + ' T€', { a: 'end', fs: 9.5 }); }
+  rows.forEach((r, i) => { const x = pl + i * bw + bw * 0.16, v = r.saldo, y0 = y(0), y1 = y(v); s += `<rect x="${x}" y="${Math.min(y0, y1)}" width="${bw * 0.68}" height="${Math.max(Math.abs(y1 - y0), 0.8)}" rx="3" fill="${v >= 0 ? c.p : C().salmon}"/>`; if (r.t === 1 || r.t % 5 === 0) s += T(x + bw * 0.34, H - 12, String(r.t), { a: 'middle', fs: 10 }); });
+  s += `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="${C().ink2}" stroke-width="1"/>`;
+  s += `<polyline fill="none" stroke="${C().blue}" stroke-width="2" stroke-dasharray="5 4" points="${rows.map((r, i) => `${(pl + i * bw + bw / 2).toFixed(1)},${y(r.saldoStatic).toFixed(1)}`).join(' ')}"/>`;
   const right = (R.amortStatic || 0) >= (R.amortRise || 0);
-  const mark = (t, col, lab, up) => { if (t === null || t > rows.length) return ''; const x = pl + (t - 0.5) * bw; return `<line x1="${x}" x2="${x}" y1="${pt}" y2="${pt + ih}" stroke="${col}" stroke-width="1.5" stroke-dasharray="2 3"/><circle cx="${x}" cy="${y(0)}" r="5.5" fill="#fff" stroke="${col}" stroke-width="3"/>` + T(x + (up ? 6 : -6), up ? pt + 12 : pt + 28, lab, { a: up ? 'start' : 'end', fs: 10, fw: 800, c: col }); };
-  s += mark(R.amortStatic, '#1E4C86', amortTxt(R.amortStatic) + ' J. gleichbleibend', right);
+  const mark = (t, col, lab, up) => { if (t === null || t > rows.length) return ''; const x = pl + (t - 0.5) * bw; return `<line x1="${x}" x2="${x}" y1="${pt}" y2="${pt + ih}" stroke="${col}" stroke-width="1.5" stroke-dasharray="2 3"/><circle cx="${x}" cy="${y(0)}" r="5.5" fill="${C().surface}" stroke="${col}" stroke-width="3"/>` + T(x + (up ? 6 : -6), up ? pt + 12 : pt + 28, lab, { a: up ? 'start' : 'end', fs: 10, fw: 800, c: col }); };
+  s += mark(R.amortStatic, C().blue, amortTxt(R.amortStatic) + ' J. gleichbleibend', right);
   s += mark(R.amortRise, c.pd, amortTxt(R.amortRise) + ' J. steigend', !right);
   return s + T(pl - 8, H - 12, 'Jahr', { a: 'end', fs: 10 }) + '</svg>';
 }
@@ -1347,8 +1424,8 @@ function priceChart(key, o = {}) {
   const X = yy => pl + (W - pl - pr) * (yy - x0) / (x1 - x0), Y = v => pt + (H - pt - pb) * (1 - v / mx);
   const col = o.color || c.p;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
-  s += `<rect x="${X(curPt[0] - 0.5)}" y="${pt}" width="${X(curPt[0] + 0.5) - X(curPt[0] - 0.5) + 6}" height="${H - pt - pb}" fill="${S.design.secondary}" opacity=".16" rx="3"/>` + T(X(curPt[0]) + 3, pt + 10, 'heute', { a: 'middle', fs: 9, fw: 700, c: '#8A5A06' });
-  for (let i = 0; i <= 4; i++) { const v = mx * i / 4; s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#E6EDF3"/>` + T(pl - 6, Y(v) + 4, num(v), { a: 'end', fs: 9.5 }); }
+  s += `<rect x="${X(curPt[0] - 0.5)}" y="${pt}" width="${X(curPt[0] + 0.5) - X(curPt[0] - 0.5) + 6}" height="${H - pt - pb}" fill="${S.design.secondary}" opacity=".16" rx="3"/>` + T(X(curPt[0]) + 3, pt + 10, 'heute', { a: 'middle', fs: 9, fw: 700, c: C().yelInk });
+  for (let i = 0; i <= 4; i++) { const v = mx * i / 4; s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C().grid}"/>` + T(pl - 6, Y(v) + 4, num(v), { a: 'end', fs: 9.5 }); }
   [2006, 2010, 2015, 2020, 2025, 2030, 2035, 2040].forEach(yy => { s += T(X(yy), H - 9, String(yy), { a: 'middle', fs: 9.5 }); });
   const hp = hist.concat([curPt]).filter((a, i, arr) => arr.findIndex(b => b[0] === a[0]) === i);
   if (hp.length) {
@@ -1356,7 +1433,7 @@ function priceChart(key, o = {}) {
     s += `<polyline fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" points="${hp.map(a => `${X(a[0]).toFixed(1)},${Y(a[1]).toFixed(1)}`).join(' ')}"/>`;
   }
   s += `<polyline fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="6 5" points="${fc.map(a => `${X(a[0]).toFixed(1)},${Y(a[1]).toFixed(1)}`).join(' ')}"/>`;
-  s += `<circle cx="${X(curPt[0])}" cy="${Y(curPt[1])}" r="4.5" fill="#fff" stroke="${col}" stroke-width="2.5"/>`;
+  s += `<circle cx="${X(curPt[0])}" cy="${Y(curPt[1])}" r="4.5" fill="${C().surface}" stroke="${col}" stroke-width="2.5"/>`;
   const last = fc[fc.length - 1]; if (fc.length > 1) s += `<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="3.5" fill="${col}"/>`;
   return s + T(pl, pt - 2 + 0, d.unit, { fs: 9, fw: 700 }) + '</svg>';
 }
@@ -1365,9 +1442,9 @@ function co2Columns() {
   const c = C(), d = S.prices.co2, W = 300, H = 150, ys = Object.keys(d).map(Number).sort();
   const mx = niceMax(Math.max(...Object.values(d)) * 1.2), bw = (W - 20) / (ys.length + 1);
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
-  ys.forEach((y, i) => { const h = (H - 40) * d[y] / mx, x = 10 + i * bw + bw * 0.15; s += `<rect x="${x}" y="${H - 22 - h}" width="${bw * 0.7}" height="${h}" rx="4" fill="${mix(c.p, '#ffffff', 0.55 - i * 0.07)}"/>` + T(x + bw * 0.35, H - 26 - h, d[y], { a: 'middle', fs: 9.5, fw: 800, c: '#0F2A3D' }) + T(x + bw * 0.35, H - 8, String(y), { a: 'middle', fs: 9 }); });
+  ys.forEach((y, i) => { const h = (H - 40) * d[y] / mx, x = 10 + i * bw + bw * 0.15; s += `<rect x="${x}" y="${H - 22 - h}" width="${bw * 0.7}" height="${h}" rx="4" fill="${mix(c.p, '#ffffff', 0.55 - i * 0.07)}"/>` + T(x + bw * 0.35, H - 26 - h, d[y], { a: 'middle', fs: 9.5, fw: 800, c: C().ink }) + T(x + bw * 0.35, H - 8, String(y), { a: 'middle', fs: 9 }); });
   const x = 10 + ys.length * bw + bw * 0.15, h = H - 50;
-  s += `<rect x="${x}" y="${H - 22 - h}" width="${bw * 0.7}" height="${h}" rx="4" fill="#FFF4DC" stroke="${S.design.secondary}" stroke-width="1.5" stroke-dasharray="4 3"/>` + T(x + bw * 0.35, H - 22 - h / 2 + 6, '?', { a: 'middle', fs: 20, fw: 800, c: '#B9760B' }) + T(x + bw * 0.35, H - 8, 'ab 2028', { a: 'middle', fs: 8.5, fw: 700 });
+  s += `<rect x="${x}" y="${H - 22 - h}" width="${bw * 0.7}" height="${h}" rx="4" fill="${C().tYel}" stroke="${S.design.secondary}" stroke-width="1.5" stroke-dasharray="4 3"/>` + T(x + bw * 0.35, H - 22 - h / 2 + 6, '?', { a: 'middle', fs: 20, fw: 800, c: '#B9760B' }) + T(x + bw * 0.35, H - 8, 'ab 2028', { a: 'middle', fs: 8.5, fw: 700 });
   return s + '</svg>';
 }
 /* Spirale Gasnetz */
@@ -1375,45 +1452,45 @@ function gasSpiral() {
   const c = C(), W = 300, H = 170, cx = 150, cy = 85, rx = 112, ry = 60;
   const nodes = [['Weniger', 'Gaskunden', 0], ['Netzkosten bleiben', 'gleich hoch', 90], ['Netzentgelt', 'pro Kunde steigt', 180], ['Noch mehr', 'wechseln', 270]];
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%"><defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="${c.red}"/></marker></defs>`;
-  s += `<ellipse cx="${cx}" cy="${cy}" rx="${rx - 30}" ry="${ry - 18}" fill="none" stroke="#F2B8A6" stroke-width="2.5" stroke-dasharray="7 5"/>`;
+  s += `<ellipse cx="${cx}" cy="${cy}" rx="${rx - 30}" ry="${ry - 18}" fill="none" stroke="${C().salmon}" stroke-width="2.5" stroke-dasharray="7 5"/>`;
   [45, 135, 225, 315].forEach(a => { const r = a * Math.PI / 180, x = cx + Math.cos(r) * (rx - 30), y = cy + Math.sin(r) * (ry - 18), dx = -Math.sin(r) * 6, dy = Math.cos(r) * 6 * (ry / rx); s += `<line x1="${x - dx}" y1="${y - dy}" x2="${x + dx}" y2="${y + dy}" stroke="${c.red}" stroke-width="2.5" marker-end="url(#ah)"/>`; });
-  nodes.forEach(([a, b, deg]) => { const r = (deg - 90) * Math.PI / 180, x = cx + Math.cos(r) * rx * 0.98, y = cy + Math.sin(r) * ry * 1.02; s += `<rect x="${x - 56}" y="${y - 17}" width="112" height="34" rx="10" fill="#fff" stroke="#E6EDF3"/>` + T(x, y - 3, a, { a: 'middle', fs: 9.5, fw: 800, c: '#0F2A3D' }) + T(x, y + 10, b, { a: 'middle', fs: 9 }); });
-  s += T(cx, cy - 4, '2,3 ct', { a: 'middle', fs: 11, fw: 700, c: '#5A7184' }) + T(cx, cy + 12, '→ ca. 22 ct/kWh', { a: 'middle', fs: 11, fw: 800, c: c.red });
+  nodes.forEach(([a, b, deg]) => { const r = (deg - 90) * Math.PI / 180, x = cx + Math.cos(r) * rx * 0.98, y = cy + Math.sin(r) * ry * 1.02; s += `<rect x="${x - 56}" y="${y - 17}" width="112" height="34" rx="10" fill="${C().surface}" stroke="${C().grid}"/>` + T(x, y - 3, a, { a: 'middle', fs: 9.5, fw: 800, c: C().ink }) + T(x, y + 10, b, { a: 'middle', fs: 9 }); });
+  s += T(cx, cy - 4, '2,3 ct', { a: 'middle', fs: 11, fw: 700, c: C().ink3 }) + T(cx, cy + 12, '→ ca. 22 ct/kWh', { a: 'middle', fs: 11, fw: 800, c: c.red });
   return s + '</svg>';
 }
 /* Wärmepumpen-Kreislauf */
 function hpCycleSVG() {
   const c = C(), p = c.p;
-  const box = (x, y, w, h, n, t1, t2, fill, stroke) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>` + (n ? `<circle cx="${x + 18}" cy="${y + 18}" r="11" fill="${p}"/>` + T(x + 18, y + 22, n, { a: 'middle', fs: 11, fw: 800, c: '#fff' }) : '') + T(x + w / 2 + (n ? 8 : 0), y + h / 2 - 2, t1, { a: 'middle', fs: 12, fw: 800, c: '#0F2A3D' }) + T(x + w / 2 + (n ? 8 : 0), y + h / 2 + 14, t2, { a: 'middle', fs: 10 });
+  const box = (x, y, w, h, n, t1, t2, fill, stroke) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>` + (n ? `<circle cx="${x + 18}" cy="${y + 18}" r="11" fill="${p}"/>` + T(x + 18, y + 22, n, { a: 'middle', fs: 11, fw: 800, c: '#fff' }) : '') + T(x + w / 2 + (n ? 8 : 0), y + h / 2 - 2, t1, { a: 'middle', fs: 12, fw: 800, c: C().ink }) + T(x + w / 2 + (n ? 8 : 0), y + h / 2 + 14, t2, { a: 'middle', fs: 10 });
   const arr = (x1, y1, x2, y2, col) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="3" marker-end="url(#a-${col.slice(1)})"/>`;
   const mk = col => `<marker id="a-${col.slice(1)}" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="${col}"/></marker>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 250" width="100%"><defs>${mk('#5DA9E9')}${mk('#E4572E')}${mk(p)}${mk('#F5A524')}</defs>
-${box(4, 95, 110, 60, '', 'Außenluft', 'auch bei −20 °C', '#EAF4FD', '#CFE3F5')}
-${box(150, 20, 150, 62, '1', 'Verdampfer', 'nimmt Wärme auf', '#fff', '#DCE6EE')}
-${box(340, 20, 150, 62, '2', 'Verdichter', 'erhöht Temperatur', '#fff', '#DCE6EE')}
-${box(340, 168, 150, 62, '3', 'Verflüssiger', 'gibt Wärme ab', '#fff', '#DCE6EE')}
-${box(150, 168, 150, 62, '4', 'Expansionsventil', 'entspannt, kühlt ab', '#fff', '#DCE6EE')}
-${box(526, 95, 110, 60, '', 'Ihr Haus', 'Heizung & Wasser', '#FDEEE8', '#F6C9B8')}
+${box(4, 95, 110, 60, '', 'Außenluft', 'auch bei −20 °C', C().tBlue, C().stroke)}
+${box(150, 20, 150, 62, '1', 'Verdampfer', 'nimmt Wärme auf', C().surface, C().stroke)}
+${box(340, 20, 150, 62, '2', 'Verdichter', 'erhöht Temperatur', C().surface, C().stroke)}
+${box(340, 168, 150, 62, '3', 'Verflüssiger', 'gibt Wärme ab', C().surface, C().stroke)}
+${box(150, 168, 150, 62, '4', 'Expansionsventil', 'entspannt, kühlt ab', C().surface, C().stroke)}
+${box(526, 95, 110, 60, '', 'Ihr Haus', 'Heizung & Wasser', C().tRed, C().stroke)}
 ${arr(114, 112, 148, 62, '#5DA9E9')}${arr(300, 51, 336, 51, '#5DA9E9')}${arr(415, 82, 415, 164, '#E4572E')}${arr(340, 199, 304, 199, '#E4572E')}${arr(225, 168, 225, 86, '#5DA9E9')}${arr(490, 199, 528, 148, '#E4572E')}
 <g transform="translate(398 0)"><circle cx="17" cy="0" r="0"/></g>
-<rect x="510" y="22" width="88" height="40" rx="12" fill="#FFF4DC"/>${T(554, 40, 'Strom', { a: 'middle', fs: 11, fw: 800, c: '#7A4D05' })}${T(554, 54, 'treibt an', { a: 'middle', fs: 9.5, c: '#7A4D05' })}${arr(510, 42, 494, 46, '#F5A524')}
+<rect x="510" y="22" width="88" height="40" rx="12" fill="${C().tYel}"/>${T(554, 40, 'Strom', { a: 'middle', fs: 11, fw: 800, c: C().yelInk })}${T(554, 54, 'treibt an', { a: 'middle', fs: 9.5, c: C().yelInk })}${arr(510, 42, 494, 46, '#F5A524')}
 </svg>`;
 }
 /* PV-Energiefluss */
 function pvFlowSVG(R) {
   const c = C(), p = c.p, s = S.design.secondary;
   const mk = col => `<marker id="b-${col.slice(1)}" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="${col}"/></marker>`;
-  const box = (x, y, w, h, n, t1, t2, fill, stroke) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>` + (n ? `<circle cx="${x + 18}" cy="${y + 18}" r="11" fill="${p}"/>` + T(x + 18, y + 22, n, { a: 'middle', fs: 11, fw: 800, c: '#fff' }) : '') + T(x + w / 2 + (n ? 8 : 0), y + h / 2 - 2, t1, { a: 'middle', fs: 12, fw: 800, c: '#0F2A3D' }) + T(x + w / 2 + (n ? 8 : 0), y + h / 2 + 14, t2, { a: 'middle', fs: 10 });
+  const box = (x, y, w, h, n, t1, t2, fill, stroke) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>` + (n ? `<circle cx="${x + 18}" cy="${y + 18}" r="11" fill="${p}"/>` + T(x + 18, y + 22, n, { a: 'middle', fs: 11, fw: 800, c: '#fff' }) : '') + T(x + w / 2 + (n ? 8 : 0), y + h / 2 - 2, t1, { a: 'middle', fs: 12, fw: 800, c: C().ink }) + T(x + w / 2 + (n ? 8 : 0), y + h / 2 + 14, t2, { a: 'middle', fs: 10 });
   const arr = (x1, y1, x2, y2, col) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="3" marker-end="url(#b-${col.slice(1)})"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 230" width="100%"><defs>${mk(s)}${mk(p)}${mk('#1E4C86')}</defs>
-<circle cx="50" cy="60" r="28" fill="${s}"/><circle cx="50" cy="60" r="20" fill="#FFD36B"/>${T(50, 112, 'Sonne', { a: 'middle', fs: 11, fw: 800, c: '#0F2A3D' })}
-${box(118, 30, 130, 60, '', 'Solarmodule', `${num(R.kwp, 1)} kWp`, '#EAF1FA', '#CFDDEE')}
-${box(290, 30, 130, 60, '', 'Wechselrichter', 'Gleich- zu Wechselstrom', '#fff', '#DCE6EE')}
-${box(470, 4, 166, 54, '1', 'Ihr Haus', 'direkt verbraucht', '#E8F5F1', '#C6E4DB')}
-${box(470, 86, 166, 54, '2', 'Speicher', R.bat ? `${num(R.bat, 1)} kWh` : 'optional', '#FFF4DC', '#F7DFA6')}
-${box(470, 168, 166, 54, '3', 'Netz', 'Überschuss einspeisen', '#EEF2F8', '#D3DCE8')}
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 230" width="100%"><defs>${mk(s)}${mk(p)}${mk(C().blue)}</defs>
+<circle cx="50" cy="60" r="28" fill="${s}"/><circle cx="50" cy="60" r="20" fill="#FFD36B"/>${T(50, 112, 'Sonne', { a: 'middle', fs: 11, fw: 800, c: C().ink })}
+${box(118, 30, 130, 60, '', 'Solarmodule', `${num(R.kwp, 1)} kWp`, C().tBlue, C().stroke)}
+${box(290, 30, 130, 60, '', 'Wechselrichter', 'Gleich- zu Wechselstrom', C().surface, C().stroke)}
+${box(470, 4, 166, 54, '1', 'Ihr Haus', 'direkt verbraucht', C().tGrn, C().stroke)}
+${box(470, 86, 166, 54, '2', 'Speicher', R.bat ? `${num(R.bat, 1)} kWh` : 'optional', C().tYel, C().stroke)}
+${box(470, 168, 166, 54, '3', 'Netz', 'Überschuss einspeisen', C().tGray, C().stroke)}
 ${arr(80, 60, 113, 60, s)}${arr(248, 60, 285, 60, s)}
-${arr(420, 52, 465, 34, p)}${arr(420, 64, 465, 110, s)}${arr(420, 76, 465, 186, '#1E4C86')}
+${arr(420, 52, 465, 34, p)}${arr(420, 64, 465, 110, s)}${arr(420, 76, 465, 186, C().blue)}
 </svg>`;
 }
 /* Tagesverlauf 6 bis 6 Uhr */
@@ -1429,11 +1506,11 @@ function dayProfileSVG(R) {
   let sv = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
   sv += `<path d="${path(gen, true)}" fill="${s}" opacity=".28"/>`;
   sv += `<path d="${path(direct, true)}" fill="${c.p}" opacity=".5"/>`;
-  if (R.bat) { let d = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d += ` L${X(h).toFixed(1)},${Y(direct(h) + charge(h)).toFixed(1)}`; sv += `<path d="${d} L${X(30)},${Y(0)} Z" fill="#F5C76A" opacity=".55"/><path d="${path(direct, true)}" fill="${c.p}" opacity=".55"/>`; let d2 = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d2 += ` L${X(h).toFixed(1)},${Y(fromBat(h)).toFixed(1)}`; sv += `<path d="${d2} L${X(30)},${Y(0)} Z" fill="#1E4C86" opacity=".28"/>`; }
-  sv += `<path d="${path(use, false)}" fill="none" stroke="#0F2A3D" stroke-width="2" stroke-dasharray="5 4"/>`;
-  sv += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="#B8C7D4"/>`;
+  if (R.bat) { let d = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d += ` L${X(h).toFixed(1)},${Y(direct(h) + charge(h)).toFixed(1)}`; sv += `<path d="${d} L${X(30)},${Y(0)} Z" fill="#F5C76A" opacity=".55"/><path d="${path(direct, true)}" fill="${c.p}" opacity=".55"/>`; let d2 = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d2 += ` L${X(h).toFixed(1)},${Y(fromBat(h)).toFixed(1)}`; sv += `<path d="${d2} L${X(30)},${Y(0)} Z" fill="${C().blue}" opacity=".28"/>`; }
+  sv += `<path d="${path(use, false)}" fill="none" stroke="${C().ink}" stroke-width="2" stroke-dasharray="5 4"/>`;
+  sv += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C().stroke}"/>`;
   [6, 9, 12, 15, 18, 21, 24, 27, 30].forEach(h => { sv += T(X(h), H - 10, String(h % 24).padStart(2, '0') + ' Uhr', { a: 'middle', fs: 9.5 }); });
-  if (R.bat) sv += T(X(26.5), Y(0.62), 'Speicher versorgt Sie', { a: 'middle', fs: 10, fw: 800, c: '#1E4C86' }) + T(X(26.5), Y(0.62) + 13, 'bis zum Morgen', { a: 'middle', fs: 10, fw: 800, c: '#1E4C86' });
+  if (R.bat) sv += T(X(26.5), Y(0.62), 'Speicher versorgt Sie', { a: 'middle', fs: 10, fw: 800, c: C().blue }) + T(X(26.5), Y(0.62) + 13, 'bis zum Morgen', { a: 'middle', fs: 10, fw: 800, c: C().blue });
   return sv + '</svg>';
 }
 const legendDot = (col, txt, dashed) => `<span style="display:inline-flex;align-items:center;gap:1.5mm;margin-right:4mm"><span style="display:inline-block;width:${dashed ? '5mm' : '3mm'};height:${dashed ? '0' : '3mm'};border-radius:1mm;background:${dashed ? 'none' : col};border-top:${dashed ? '0.6mm dashed ' + col : 'none'}"></span>${txt}</span>`;
@@ -1442,8 +1519,8 @@ function soundScaleSVG(val) {
   const W = 640, H = 122, x0 = 20, x1 = 620, X = v => x0 + (x1 - x0) * (v - 20) / 50, by = 40;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%"><defs><linearGradient id="sg" x1="0" x2="1"><stop offset="0" stop-color="#5CC27A"/><stop offset=".45" stop-color="#F5C34A"/><stop offset=".75" stop-color="#F08A3E"/><stop offset="1" stop-color="#D9482B"/></linearGradient></defs>`;
   s += `<rect x="${x0}" y="${by}" width="${x1 - x0}" height="14" rx="7" fill="url(#sg)"/>`;
-  [[20, 'Blätterrauschen'], [30, 'Flüstern'], [40, 'Bibliothek'], [50, 'Kühlschrank'], [60, 'Gespräch'], [70, 'Staubsauger']].forEach(([v, l], i, arr) => { const a = i === 0 ? 'start' : i === arr.length - 1 ? 'end' : 'middle'; s += `<line x1="${X(v)}" x2="${X(v)}" y1="${by + 16}" y2="${by + 22}" stroke="#7A8D9C"/>` + T(X(v), by + 34, v + ' dB', { a, fs: 9.5, fw: 700, c: '#3D5568' }) + T(X(v), by + 47, l, { a, fs: 9 }); });
-  s += `<line x1="${X(35)}" x2="${X(35)}" y1="${by - 4}" y2="${by + 66}" stroke="#0F2A3D" stroke-width="1.5" stroke-dasharray="3 2"/>` + T(X(35) + 5, by + 76, 'Richtwert 35 dB(A) nachts – reines Wohngebiet (TA Lärm)', { fs: 9.5, fw: 700, c: '#0F2A3D' });
+  [[20, 'Blätterrauschen'], [30, 'Flüstern'], [40, 'Bibliothek'], [50, 'Kühlschrank'], [60, 'Gespräch'], [70, 'Staubsauger']].forEach(([v, l], i, arr) => { const a = i === 0 ? 'start' : i === arr.length - 1 ? 'end' : 'middle'; s += `<line x1="${X(v)}" x2="${X(v)}" y1="${by + 16}" y2="${by + 22}" stroke="${C().ink3}"/>` + T(X(v), by + 34, v + ' dB', { a, fs: 9.5, fw: 700, c: C().ink2 }) + T(X(v), by + 47, l, { a, fs: 9 }); });
+  s += `<line x1="${X(35)}" x2="${X(35)}" y1="${by - 4}" y2="${by + 66}" stroke="${C().ink}" stroke-width="1.5" stroke-dasharray="3 2"/>` + T(X(35) + 5, by + 76, 'Richtwert 35 dB(A) nachts – reines Wohngebiet (TA Lärm)', { fs: 9.5, fw: 700, c: C().ink });
   if (isNum(val)) { const x = X(clamp(val, 20, 70)); s += `<path d="M${x - 7},${by - 14} L${x + 7},${by - 14} L${x},${by - 3} Z" fill="${S.design.primary}"/><rect x="${x - 8}" y="${by - 3}" width="16" height="20" rx="6" fill="none" stroke="${S.design.primary}" stroke-width="3"/>` + T(x > 420 ? x + 8 : x - 8, by - 20, `Ihre Wärmepumpe nachts: ${num(val, 1)} dB(A)`, { a: x > 420 ? 'end' : 'start', fs: 10.5, fw: 800, c: S.design.primary }); }
   return s + '</svg>';
 }
@@ -1473,9 +1550,9 @@ function annualChart(A, o = {}) {
   const c = C(), W = o.w || 640, H = o.h || 250, pl = 46, pr = 10, pt = 14, pb = 28;
   const mx = niceMax(Math.max(...A.months.map(m => Math.max(m.demand, m.pv)), 1) * 1.05);
   const iw = W - pl - pr, ih = H - pt - pb, bw = iw / 12, Y = v => pt + ih * (1 - v / mx);
-  const neutral = mix(c.ink, '#ffffff', 0.84);
+  const neutral = c.neutral;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
-  for (let i = 0; i <= 4; i++) { const v = mx * i / 4; s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c.ink}" stroke-opacity=".07"/>` + T(pl - 8, Y(v) + 4, num(v), { a: 'end', fs: 9.5 }); }
+  for (let i = 0; i <= 4; i++) { const v = mx * i / 4; s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c.grid}"/>` + T(pl - 8, Y(v) + 4, num(v), { a: 'end', fs: 9.5 }); }
   s += T(pl - 8, pt - 4, 'kWh', { a: 'end', fs: 9 });
   const pts = A.months.map((m, i) => [pl + bw * i + bw / 2, Y(m.pv)]);
   s += `<path d="${smoothPath(pts)} L${pts[11][0]},${Y(0)} L${pts[0][0]},${Y(0)} Z" fill="${c.s}" fill-opacity=".16"/>`;
@@ -1486,13 +1563,13 @@ function annualChart(A, o = {}) {
     s += T(x + w / 2, H - 9, m.m, { a: 'middle', fs: 10 });
   });
   s += `<path d="${smoothPath(pts)}" fill="none" stroke="${mix(c.s, '#000000', 0.12)}" stroke-width="2.5" stroke-linecap="round"/>`;
-  pts.forEach(q => { s += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="#fff" stroke="${mix(c.s, '#000000', 0.12)}" stroke-width="1.6"/>`; });
+  pts.forEach(q => { s += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="${c.surface}" stroke="${mix(c.s, '#000000', 0.12)}" stroke-width="1.6"/>`; });
   s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${c.ink}" stroke-opacity=".25"/>`;
   return s + '</svg>';
 }
 function annualLegend(A, px) {
   const c = C(), dot = (col, t, line) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${px ? '16px' : '4mm'}"><span style="display:inline-block;width:${line ? (px ? '16px' : '5mm') : (px ? '10px' : '3mm')};height:${line ? '0' : (px ? '10px' : '3mm')};border-radius:2px;background:${line ? 'none' : col};border-top:${line ? `2.5px solid ${col}` : 'none'}"></span>${t}</span>`;
-  return dot(mix(c.ink, '#ffffff', 0.84), A.mode === 'hp' ? 'Strombedarf Wärmepumpe' : 'Strombedarf Haushalt') + dot(c.p, 'davon mit Solarstrom gedeckt') + dot(mix(c.s, '#000000', 0.12), A.pot ? `Solarstrom einer ${num(A.kwp, 1)}-kWp-Anlage` : 'Ihr Solarstrom', true);
+  return dot(c.neutral, A.mode === 'hp' ? 'Strombedarf Wärmepumpe' : 'Strombedarf Haushalt') + dot(c.p, 'davon mit Solarstrom gedeckt') + dot(mix(c.s, '#000000', 0.12), A.pot ? `Solarstrom einer ${num(A.kwp, 1)}-kWp-Anlage` : 'Ihr Solarstrom', true);
 }
 
 /* Kapitelmarke */
@@ -1511,15 +1588,15 @@ function roadmapHtml(p, mm = true) {
   if (hasPV(p)) lanes.push({ key: 'pv', title: 'Photovoltaik', icon: 'sun', steps: RM.pv, col: mix(c.s, '#000000', 0.18) });
   if (hasWP(p)) lanes.push({ key: 'wp', title: 'Wärmepumpe', icon: 'fan', steps: RM.wp, col: c.p });
   const two = lanes.length > 1;
-  const node = (t, txt, dark) => `<div style="display:flex;justify-content:center"><div style="max-width:${u(two ? 120 : 110)};text-align:center;background:${dark ? 'var(--hl)' : 'var(--tile)'};color:${dark ? '#fff' : 'var(--ink)'};border-radius:${u(4)};padding:${u(3)} ${u(6)}"><div style="font-family:var(--fh),Georgia,serif;font-weight:var(--hw);font-size:${f(13)}">${esc(t)}</div><div style="font-size:${f(8)};line-height:1.4;margin-top:${u(0.8)};color:${dark ? 'rgba(255,255,255,.85)' : 'var(--ink2)'}">${esc(txt)}</div></div></div>`;
+  const node = (t, txt, dark) => `<div style="display:flex;justify-content:center"><div style="max-width:${u(two ? 120 : 110)};text-align:center;background:${dark ? 'var(--hl)' : 'var(--tile)'};color:${dark ? '#EEF2F6' : 'var(--ink)'};${dark ? '' : 'box-shadow:0 0 0 1px var(--line)'};border-radius:${u(4)};padding:${u(3)} ${u(6)}"><div style="font-family:var(--fh),Georgia,serif;font-weight:var(--hw);font-size:${f(13)}">${esc(t)}</div><div style="font-size:${f(8)};line-height:1.4;margin-top:${u(0.8)};color:${dark ? 'rgba(255,255,255,.85)' : 'var(--ink2)'}">${esc(txt)}</div></div></div>`;
   const lane = L => `<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:${u(2)};margin-bottom:${u(3)}"><span style="display:inline-flex;width:${u(7)};height:${u(7)};border-radius:50%;background:${L.col};align-items:center;justify-content:center">${icC(L.icon, mm ? 15 : 16, '#ffffff', 2)}</span><b style="font-size:${f(10.5)}">${L.title}</b></div>
     ${L.steps.map((s, i) => `<div style="display:flex;gap:${u(3)};position:relative;padding-bottom:${u(i === L.steps.length - 1 ? 0 : 3.2)}">
       ${i < L.steps.length - 1 ? `<div style="position:absolute;left:${u(2.9)};top:${u(6.2)};bottom:0;width:${u(0.5)};background:${L.col};opacity:.35"></div>` : ''}
-      <span style="flex-shrink:0;display:inline-flex;width:${u(6.3)};height:${u(6.3)};border-radius:50%;border:${u(0.5)} solid ${L.col};background:#fff;color:${L.col};font-weight:600;font-size:${f(8)};align-items:center;justify-content:center">${i + 1}</span>
+      <span style="flex-shrink:0;display:inline-flex;width:${u(6.3)};height:${u(6.3)};border-radius:50%;border:${u(0.5)} solid ${L.col};background:var(--bg);color:${L.col};font-weight:600;font-size:${f(8)};align-items:center;justify-content:center">${i + 1}</span>
       <div style="min-width:0;padding-top:${u(0.6)}"><div style="font-weight:600;font-size:${f(9)};line-height:1.3">${esc(s.title)}${s.dur ? ` <span style="font-weight:500;color:var(--ink3);font-size:${f(7.4)}">· ${esc(s.dur)}</span>` : ''}</div><div style="font-size:${f(7.8)};color:var(--ink2);line-height:1.4;margin-top:${u(0.4)}">${esc(s.text)}</div></div></div>`).join('')}</div>`;
   const conn = merge => two
     ? `<svg viewBox="0 0 400 40" width="100%" height="${mm ? '10mm' : '38px'}" preserveAspectRatio="none" style="display:block"><path d="${merge ? 'M100,0 C100,24 200,16 200,40 M300,0 C300,24 200,16 200,40' : 'M200,0 C200,24 100,16 100,40 M200,0 C200,24 300,16 300,40'}" fill="none" stroke="${c.ink}" stroke-opacity=".28" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/></svg>`
-    : `<div style="display:flex;justify-content:center"><div style="width:0;height:${u(7)};border-left:${u(0.5)} dashed rgba(15,42,61,.3)"></div></div>`;
+    : `<div style="display:flex;justify-content:center"><div style="width:0;height:${u(7)};border-left:${u(0.5)} dashed var(--line2)"></div></div>`;
   return `<div>${node(RM.start.title, RM.start.text, true)}${conn(false)}<div style="display:flex;gap:${u(8)};${two ? '' : `max-width:${u(120)};margin:0 auto`}">${lanes.map(lane).join('')}</div>${conn(true)}${node(RM.finish.title, RM.finish.text, false)}</div>`;
 }
 
@@ -1567,9 +1644,9 @@ function toggleRow(label, b, hint = '', o = {}) {
   return `<div class="flex items-start justify-between gap-4 py-3 ${o.cls || ''}"><div><div class="text-[14px] font-semibold text-ink">${label}</div>${hint ? `<div class="hint !mt-0.5">${hint}</div>` : ''}</div>${tgl(o.action ? '' : b, on, o.action ? `data-a="${o.action}" ${o.data || ''}` : '')}</div>`;
 }
 const seg = (b, opts, o = {}) => { const v = bval(b); return `<div class="seg ${o.cls || ''}">${opts.map(([k, l]) => `<button type="button" class="${String(v) === String(k) ? 'on' : ''}" data-seg="${esc(b)}" data-v="${esc(JSON.stringify(k))}">${l}</button>`).join('')}</div>`; };
-const typeBadge = t => t === 'pv' ? '<span class="badge bg-[#FFF1C9] text-[#7A4D05]"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>PV</span>' : t === 'wp' ? '<span class="badge bg-[#FDE3DA] text-[#9E2F14]"><span class="w-1.5 h-1.5 rounded-full bg-ember"></span>WP</span>' : '<span class="badge bg-p/10 text-pd"><span class="w-1.5 h-1.5 rounded-full bg-p"></span>PV + WP</span>';
+const typeBadge = t => t === 'pv' ? '<span class="badge bg-tyel text-yel-ink"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>PV</span>' : t === 'wp' ? '<span class="badge bg-tred text-red-ink"><span class="w-1.5 h-1.5 rounded-full bg-ember"></span>WP</span>' : '<span class="badge bg-p/10 text-pd"><span class="w-1.5 h-1.5 rounded-full bg-p"></span>PV + WP</span>';
 const cardHead = (icon, title, sub = '', right = '') => `<div class="flex items-start gap-3 mb-5"><div class="icon-box">${ic(icon, 18)}</div><div class="flex-1 min-w-0"><h3 class="sec-t">${title}</h3>${sub ? `<p class="text-[13px] text-ink3 mt-0.5">${sub}</p>` : ''}</div>${right}</div>`;
-const det = (key, title, body, sub = '') => `<details class="mt-4 rounded-[calc(var(--r)-4px)] border border-line bg-[#FAFCFD]" data-det="${key}" ${UI.open && UI.open[key] ? 'open' : ''}><summary class="flex items-center justify-between px-4 h-12 text-[14px] font-semibold text-ink2">${title}${sub ? `<span class="text-ink4 font-medium ml-2 hidden sm:inline">${sub}</span>` : ''}<span class="chev ml-auto transition text-ink4">${ic('chevD', 18)}</span></summary><div class="px-4 pb-4">${body}</div></details>`;
+const det = (key, title, body, sub = '') => `<details class="mt-4 rounded-[calc(var(--r)-4px)] border border-line bg-field" data-det="${key}" ${UI.open && UI.open[key] ? 'open' : ''}><summary class="flex items-center justify-between px-4 h-12 text-[14px] font-semibold text-ink2">${title}${sub ? `<span class="text-ink4 font-medium ml-2 hidden sm:inline">${sub}</span>` : ''}<span class="chev ml-auto transition text-ink4">${ic('chevD', 18)}</span></summary><div class="px-4 pb-4">${body}</div></details>`;
 UI.open = {};
 
 /* =========================================================
@@ -1584,7 +1661,7 @@ function shell(inner) {
   const nav = [['kunden', 'Kunden', 'users'], ['produkte', 'Produkte', 'box'], ['einstellungen', 'Einstellungen', 'gear']];
   const active = UI.route === 'projekt' ? 'kunden' : UI.route;
   const links = cls => nav.map(([k, l, i]) => `<a href="#/${k}" class="navl ${cls} ${active === k ? 'on' : ''}">${ic(i, 17)}${l}</a>`).join('');
-  return `<header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-line">
+  return `<header class="sticky top-0 z-40 backdrop-blur-md border-b border-line" style="background:var(--header)">
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
     <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3">Wirtschaftlichkeitsrechner</div></div></a>
     <nav class="hidden md:flex items-center gap-1 ml-6">${links('')}</nav>
@@ -1595,7 +1672,7 @@ function shell(inner) {
 <main class="pb-32">${inner}</main>`;
 }
 function newDialog() {
-  const opt = (t, icon, title, text) => `<button class="w-full text-left card !shadow-none p-4 flex items-center gap-4 hover:ring-p hover:ring-2 transition" data-a="create" data-type="${t}"><div class="w-12 h-12 rounded-[calc(var(--r)-4px)] grid place-items-center shrink-0" style="background:${t === 'pv' ? '#FFF1C9' : t === 'wp' ? '#FDE3DA' : 'var(--p-light)'};color:${t === 'pv' ? '#B9760B' : t === 'wp' ? '#C2401F' : 'var(--p)'}">${icon}</div><div><div class="font-semibold text-[16px]">${title}</div><div class="text-[13px] text-ink3">${text}</div></div><span class="ml-auto text-ink4">${ic('arrowR', 18)}</span></button>`;
+  const opt = (t, icon, title, text) => `<button class="w-full text-left card !shadow-none p-4 flex items-center gap-4 hover:ring-p hover:ring-2 transition" data-a="create" data-type="${t}"><div class="w-12 h-12 rounded-[calc(var(--r)-4px)] grid place-items-center shrink-0" style="background:${t === 'pv' ? 'var(--t-yel)' : t === 'wp' ? 'var(--t-red)' : 'var(--p-light)'};color:${t === 'pv' ? 'var(--yel-ink)' : t === 'wp' ? 'var(--red-ink)' : 'rgb(var(--p-rgb))'}">${icon}</div><div><div class="font-semibold text-[16px]">${title}</div><div class="text-[13px] text-ink3">${text}</div></div><span class="ml-auto text-ink4">${ic('arrowR', 18)}</span></button>`;
   modal(`<h3 class="text-[21px] font-semibold pr-8">Neue Berechnung</h3><p class="text-ink3 text-[14px] mt-1 mb-5">Wofür möchten Sie rechnen?</p>
   <div class="space-y-3">${opt('wp', ic('fan', 24), 'Wärmepumpe', 'Heizungstausch mit BEG-Förderung')}${opt('pv', ic('sun', 24), 'Photovoltaik', 'Solaranlage, optional mit Speicher')}${opt('pvwp', `<span class="flex">${ic('sun', 18)}${ic('fan', 18)}</span>`, 'PV + Wärmepumpe', 'Das Komplettpaket – zwei Angebote möglich')}</div>`);
 }
@@ -1612,27 +1689,30 @@ function viewKunden() {
   const avgAm = am.length ? am.reduce((a, b) => a + b, 0) / am.length : null;
   const card = p => {
     const R = compute(p, 'real'), c = p.customer, nd = p.docs.length;
-    return `<div class="card p-5 flex flex-col hover:ring-p/40 hover:ring-2 transition cursor-pointer" data-a="open" data-id="${p.id}">
+    return `<div class="card p-5 flex flex-col hover:border-line2 transition-colors cursor-pointer" data-a="open" data-id="${p.id}">
       <div class="flex items-start gap-3"><div class="w-12 h-12 rounded-full grid place-items-center text-white font-semibold shrink-0" style="background:linear-gradient(135deg,var(--p),var(--acc))">${esc(initials(c.name))}</div>
       <div class="min-w-0 flex-1"><div class="font-semibold text-[16px] truncate">${esc(c.name ? (c.salutation && c.salutation !== 'Firma' ? '' : '') + c.name : 'Neuer Kunde')}</div><div class="text-[13px] text-ink3 truncate">${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Noch keine Anschrift')}</div>
       <div class="flex flex-wrap gap-1.5 mt-2">${typeBadge(p.type)}${nd ? `<span class="badge bg-bg text-ink3 border border-line">${ic('file', 12)} ${nd} ${nd === 1 ? 'Dokument' : 'Dokumente'}</span>` : ''}${p.offer.number ? `<span class="badge bg-bg text-ink3 border border-line">Nr. ${esc(p.offer.number)}</span>` : ''}</div></div></div>
-      <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-line text-[12px]"><div><div class="text-ink4 font-semibold">Investition</div><div class="font-semibold text-[14px] text-ink mt-0.5">${R.gross ? eur(R.gross) : '–'}</div></div><div><div class="text-ink4 font-semibold">Ersparnis/Jahr</div><div class="font-semibold text-[14px] text-p mt-0.5">${R.gross || R.saving1 ? eur(R.avg) : '–'}</div></div><div><div class="text-ink4 font-semibold">Stand</div><div class="font-bold text-[13px] text-ink2 mt-0.5">${new Date(p.updated).toLocaleDateString('de-DE')}</div></div></div>
+      <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-line text-[12px]"><div><div class="text-ink3 mono text-[11px]">Investition</div><div class="font-semibold text-[14px] text-ink mt-0.5">${R.gross ? eur(R.gross) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Ersparnis/Jahr</div><div class="font-semibold text-[14px] text-p mt-0.5">${R.gross || R.saving1 ? eur(R.avg) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Stand</div><div class="font-bold text-[13px] text-ink2 mt-0.5">${new Date(p.updated).toLocaleDateString('de-DE')}</div></div></div>
       <div class="flex gap-1 mt-3 -mb-1 -mx-2"><button class="btn-g" data-a="dup" data-id="${p.id}">${ic('copy', 15)}Duplizieren</button><button class="btn-g hover:!text-ember2" data-a="del" data-id="${p.id}">${ic('trash', 15)}Löschen</button><span class="ml-auto btn-g !text-p">Öffnen ${ic('arrowR', 15)}</span></div></div>`;
   };
-  return `<section class="relative overflow-hidden" style="background:linear-gradient(180deg,#E3EFF9 0%,var(--bg) 100%)">
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 sm:pt-16 pb-12 sm:pb-16 grid lg:grid-cols-[1fr_1.1fr] gap-10 items-center">
-      <div><span class="badge bg-white text-ink2 border border-line !px-3 !py-1"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
-      <h1 class="h-font text-[40px] sm:text-[60px] leading-[1.03] mt-5">Sonnige Zahlen für Ihre Kunden.</h1>
-      <p class="text-[17px] sm:text-[19px] text-ink2 mt-5 max-w-[34rem] leading-relaxed">Angebot hochladen, Daten prüfen, fertig: In wenigen Minuten entsteht eine Wirtschaftlichkeitsberechnung, die Ihre Kunden verstehen.</p>
-      <div class="flex flex-wrap gap-3 mt-8"><button class="btn-p !h-12 !px-6 !text-[15px]" data-a="new">${ic('plus', 18)}Neue Berechnung</button><a href="#/einstellungen/design" class="btn-s !h-12 !px-5 !text-[15px]">Design anpassen</a></div></div>
-      <div class="rounded-[var(--r)] overflow-hidden border border-white aspect-[3/2] shadow-[0_8px_24px_rgba(15,42,61,0.08)]">${houseSVG({ sky: true })}</div>
-    </div></section>
-  <section class="max-w-7xl mx-auto px-4 -mt-2">
+  return `<section class="relative overflow-hidden border-b border-line">
+    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax' })}</div>
+    <div class="hidden sm:block absolute inset-0" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 sm:pt-0 pb-8 sm:pb-0 sm:min-h-[600px] flex items-center">
+      <div class="max-w-[36rem]"><span class="mono text-[12px] text-ink2 inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
+      <h1 class="h-font text-[46px] sm:text-[76px] leading-[0.98] mt-5">Sonnige Zahlen für Ihre Kunden.</h1>
+      <p class="text-[17px] sm:text-[19px] text-ink2 mt-6 leading-relaxed">Angebot hochladen, Daten prüfen, fertig: In wenigen Minuten entsteht eine Wirtschaftlichkeitsberechnung, die Ihre Kunden verstehen.</p>
+      <div class="flex flex-wrap gap-3 mt-9"><button class="btn-p !h-12 !px-6 !text-[15px]" data-a="new">${ic('plus', 18)}Neue Berechnung</button><a href="#/einstellungen/design" class="btn-s !h-12 !px-5 !text-[15px]">Design anpassen</a></div></div>
+    </div>
+    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({})}</div>
+  </section>
+  <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     <div class="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]">${v}</div></div>`).join('')}</div>
     </div>
-    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-white" placeholder="Kunde, Ort oder Angebots-Nr. suchen" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>
+    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde, Ort oder Angebots-Nr. suchen" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>
     <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5" id="cust-list">${list.length ? list.map(card).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('users', 26)}</div><div class="font-semibold text-[17px] mt-3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div><p class="text-ink3 text-[14px] mt-1">${q ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Starten Sie mit Ihrer ersten Wirtschaftlichkeitsberechnung.'}</p>${q ? '' : `<button class="btn-p mt-5" data-a="new">${ic('plus', 17)}Neue Berechnung</button>`}</div>`}</div>
   </section>`;
 }
@@ -1643,7 +1723,7 @@ function viewKunden() {
 const STEPS = ['Angebot', 'Kunde', 'Daten', 'Ergebnis'];
 function progressBar(step) {
   return `<div class="flex items-center">${STEPS.map((s, i) => { const n = i + 1, done = n < step, on = n === step;
-    return `${i ? `<div class="flex-1 h-[2px] rounded-full mx-1 sm:mx-2 ${n <= step ? 'bg-p' : 'bg-line2'}"></div>` : ''}<button class="flex items-center gap-2 shrink-0" data-a="step" data-n="${n}"><span class="w-8 h-8 rounded-full grid place-items-center text-[13px] font-semibold transition-colors ${done ? 'bg-p text-white' : on ? 'bg-white text-p ring-2 ring-p' : 'bg-white text-ink3 ring-1 ring-line2'}">${done ? ic('check', 17) : n}</span><span class="text-[13.5px] font-bold hidden sm:inline ${on ? 'text-ink' : 'text-ink3'}">${s}</span></button>`; }).join('')}</div>`;
+    return `${i ? `<div class="flex-1 h-[2px] rounded-full mx-1 sm:mx-2 ${n <= step ? 'bg-p' : 'bg-line2'}"></div>` : ''}<button class="flex items-center gap-2 shrink-0" data-a="step" data-n="${n}"><span class="w-8 h-8 rounded-full grid place-items-center text-[13px] font-semibold transition-colors ${done ? 'bg-p text-white' : on ? 'bg-card text-p ring-2 ring-p' : 'bg-card text-ink3 ring-1 ring-line2'}">${done ? ic('check', 17) : n}</span><span class="text-[13.5px] font-bold hidden sm:inline ${on ? 'text-ink' : 'text-ink3'}">${s}</span></button>`; }).join('')}</div>`;
 }
 function liveCard(p, R) {
   const row = (k, v, cls = '') => `<div class="flex justify-between gap-3 py-2 border-b border-line last:border-0 text-[13.5px] ${cls}"><span class="text-ink3">${k}</span><span class="font-bold text-right">${v}</span></div>`;
@@ -1681,24 +1761,24 @@ function viewProject() {
 
 /* ---------- Schritt 1 ---------- */
 function dropZone(role, title, sub, multi) {
-  return `<label class="block cursor-pointer rounded-[var(--r)] border-2 border-dashed border-line2 bg-[#F8FBFD] hover:border-p hover:bg-p/5 transition p-5 text-center" data-drop="${role}">
+  return `<label class="block cursor-pointer rounded-[var(--r)] border-2 border-dashed border-line2 bg-field hover:border-p hover:bg-p/5 transition p-5 text-center" data-drop="${role}">
     <input type="file" class="hidden" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" ${multi ? 'multiple' : ''} data-upload="${role}">
-    <div class="w-12 h-12 rounded-[calc(var(--r)-4px)] bg-white border border-line text-p grid place-items-center mx-auto shadow-sm">${ic('upload', 22)}</div>
+    <div class="w-12 h-12 rounded-[calc(var(--r)-4px)] bg-card border border-line text-p grid place-items-center mx-auto shadow-sm">${ic('upload', 22)}</div>
     <div class="font-semibold text-[15px] mt-3">${title}</div><div class="text-[12.5px] text-ink3 mt-1">${sub}</div></label>`;
 }
 function docCard(p, d) {
   const busy = UI.busy[d.id], nSel = d.sel.filter(Boolean).length, choose = UI.chooseOpen[d.id];
   const roleL = { offer: 'Angebot', offerWP: 'Angebot Wärmepumpe', offerPV: 'Angebot Photovoltaik', tech: 'Technische Unterlage' }[d.role];
   const thumbs = d.pages.map((f, i) => ({ f, i })).filter(x => d.sel[x.i]).slice(0, 8);
-  return `<div class="rounded-[var(--r)] border border-line bg-white p-4">
+  return `<div class="rounded-[var(--r)] border border-line bg-card p-4">
     <div class="flex items-start gap-3"><div class="w-10 h-10 rounded-xl bg-tred text-ember2 grid place-items-center shrink-0">${ic('file', 19)}</div>
     <div class="min-w-0 flex-1"><div class="text-[12px] font-semibold text-ink4">${roleL}</div><div class="font-bold text-[14px] truncate">${esc(d.name)}</div>
     <div class="text-[12.5px] text-ink3">${busy ? `<span class="inline-flex items-center gap-1.5 text-p font-semibold"><span class="spin inline-block">${ic('refresh', 13)}</span><span data-busy="${d.id}">${esc(busy)}</span></span>` : `${d.pages.length} ${d.pages.length === 1 ? 'Seite' : 'Seiten'} · ${nSel} ausgewählt${d.note ? ' · ' + esc(d.note) : ''}`}</div></div>
     <div class="flex items-center gap-2 shrink-0"><span class="text-[12.5px] font-semibold text-ink3 hidden sm:inline">Anhängen</span>${tgl('', d.attach, `data-a="doc-attach" data-id="${d.id}"`)}</div></div>
-    ${thumbs.length ? `<div class="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">${thumbs.map(t => `<img src="${fileUrl(t.f)}" class="h-24 w-auto rounded-lg border border-line bg-white shrink-0" alt="Seite ${t.i + 1}">`).join('')}</div>` : ''}
+    ${thumbs.length ? `<div class="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">${thumbs.map(t => `<img src="${fileUrl(t.f)}" class="h-24 w-auto rounded-lg border border-line bg-card shrink-0" alt="Seite ${t.i + 1}">`).join('')}</div>` : ''}
     <div class="flex flex-wrap gap-1 mt-2 -mx-2">${d.pages.length > 1 ? `<button class="btn-g" data-a="doc-choose" data-id="${d.id}">${ic('grid', 15)}Seiten wählen</button>` : ''}<label class="btn-g cursor-pointer">${ic('refresh', 15)}Ersetzen<input type="file" class="hidden" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" data-replace="${d.id}" data-role="${d.role}"></label><button class="btn-g hover:!text-ember2" data-a="doc-del" data-id="${d.id}">${ic('trash', 15)}Entfernen</button></div>
     ${choose ? `<div class="mt-3 p-3 rounded-[calc(var(--r)-4px)] bg-bg"><div class="flex items-center justify-between mb-2"><span class="text-[13px] font-semibold text-ink2">Seiten für das Dokument antippen</span><span class="flex gap-1"><button class="chip !h-7" data-a="doc-all" data-id="${d.id}">Alle</button><button class="chip !h-7" data-a="doc-none" data-id="${d.id}">Keine</button></span></div>
-      <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">${d.pages.map((f, i) => `<button class="relative rounded-lg overflow-hidden ring-2 ${d.sel[i] ? 'ring-p' : 'ring-transparent opacity-50'} bg-white" data-a="doc-page" data-id="${d.id}" data-i="${i}"><img src="${fileUrl(f)}" class="w-full aspect-[1/1.414] object-cover object-top" alt=""><span class="absolute top-1 left-1 w-5 h-5 rounded-full text-[10px] font-semibold grid place-items-center ${d.sel[i] ? 'bg-p text-white' : 'bg-white text-ink3 border border-line'}">${d.sel[i] ? '✓' : i + 1}</span><span class="absolute bottom-0 inset-x-0 text-[10px] font-bold bg-white/90 text-ink3">${i + 1}</span></button>`).join('')}</div></div>` : ''}
+      <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">${d.pages.map((f, i) => `<button class="relative rounded-lg overflow-hidden ring-2 ${d.sel[i] ? 'ring-p' : 'ring-transparent opacity-50'} bg-card" data-a="doc-page" data-id="${d.id}" data-i="${i}"><img src="${fileUrl(f)}" class="w-full aspect-[1/1.414] object-cover object-top" alt=""><span class="absolute top-1 left-1 w-5 h-5 rounded-full text-[10px] font-semibold grid place-items-center ${d.sel[i] ? 'bg-p text-white' : 'bg-card text-ink3 border border-line'}">${d.sel[i] ? '✓' : i + 1}</span><span class="absolute bottom-0 inset-x-0 text-[10px] font-bold bg-card text-ink3">${i + 1}</span></button>`).join('')}</div></div>` : ''}
   </div>`;
 }
 function recognizedCard(p) {
@@ -1757,8 +1837,20 @@ function step2(p, R) {
     <div class="grid sm:grid-cols-[1fr_120px_1fr] gap-4 mt-4">${field('Straße und Hausnummer', 'p:customer.street')}${field('PLZ', 'p:customer.zip', { attrs: 'inputmode="numeric"' })}${field('Ort', 'p:customer.city')}</div>
     <div class="grid sm:grid-cols-2 gap-4 mt-4">${field('E-Mail', 'p:customer.email', { t: 'email' })}${field('Telefon', 'p:customer.phone', { t: 'tel' })}</div></div>
   <div class="card p-5 sm:p-6">${cardHead('euro', 'Preis und Angebot')}${price}
-    <div class="grid sm:grid-cols-3 gap-4 mt-5">${field('Angebots-Nr.', 'p:offer.number')}${field('Angebotsdatum', 'p:offer.date', { t: 'date' })}${field('Berater', 'p:offer.advisor', { attrs: 'list="advisor-list"' })}<datalist id="advisor-list">${(S.company.advisors || []).map(a => `<option value="${esc(a.name)}">`).join('')}</datalist></div>
+    <div class="grid sm:grid-cols-3 gap-4 mt-5">${field('Angebots-Nr.', 'p:offer.number')}${field('Angebotsdatum', 'p:offer.date', { t: 'date' })}${advisorPicker(p)}</div>
     <div class="mt-4">${field('Titel im Dokument', 'p:offer.title')}</div></div>`;
+}
+
+function advisorPicker(p) {
+  const list = (S.company.advisors || []).filter(a => a.name);
+  const cur = list.find(a => a.id === p.offer.advisorId && a.name === p.offer.advisor) || list.find(a => a.name === p.offer.advisor);
+  const val = cur ? cur.id : (p.offer.advisor ? '__other' : '');
+  const a = cur;
+  return `<div><span class="lbl flex items-center gap-2">Berater${isFrom('p:offer.advisor') ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus Angebot</span>' : ''}</span>
+    <select class="inp appearance-none pr-10" data-advisor-pick style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8692' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 16px center">
+      <option value="" ${val === '' ? 'selected' : ''}>– kein Berater –</option>${list.map(x => `<option value="${x.id}" ${val === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}<option value="__other" ${val === '__other' ? 'selected' : ''}>Anderer Name …</option></select>
+    ${val === '__other' ? `<div class="mt-2">${inp('p:offer.advisor', { ph: 'Name des Beraters' })}</div>` : ''}
+    <div class="hint">${a ? esc([a.role, a.phone, a.email].filter(Boolean).join(' · ')) : list.length ? '' : 'Berater legen Sie unter Einstellungen → Berater an.'}</div></div>`;
 }
 
 /* ---------- Schritt 3 ---------- */
@@ -1817,7 +1909,7 @@ function fundingCard(p, R) {
 }
 function prodThumb(pr, s = 44) {
   const url = fileUrl(pr && pr.img) || (pr && pr.imgUrl);
-  return url ? `<img src="${esc(url)}" class="rounded-xl object-contain bg-white border border-line shrink-0" style="width:${s}px;height:${s}px" alt="">` : `<div class="rounded-xl bg-p/10 text-p grid place-items-center shrink-0" style="width:${s}px;height:${s}px">${ic(pr && pr.cat === 'wp' ? 'fan' : pr && pr.cat === 'mod' ? 'sun' : pr && pr.cat === 'bat' ? 'battery' : pr && pr.cat === 'inv' ? 'bolt' : 'box', s * 0.45)}</div>`;
+  return url ? `<img src="${esc(url)}" class="rounded-xl object-contain bg-card border border-line shrink-0" style="width:${s}px;height:${s}px" alt="">` : `<div class="rounded-xl bg-p/10 text-p grid place-items-center shrink-0" style="width:${s}px;height:${s}px">${ic(pr && pr.cat === 'wp' ? 'fan' : pr && pr.cat === 'mod' ? 'sun' : pr && pr.cat === 'bat' ? 'battery' : pr && pr.cat === 'inv' ? 'bolt' : 'box', s * 0.45)}</div>`;
 }
 function componentsCard(p) {
   if (!PRODUCTS.length) return '';
@@ -1863,7 +1955,7 @@ function overview(p, R) {
     <div class="mt-4">${groupBars(monthlyGroups(R), { w: appW(), h: appW() < 640 ? 220 : 230 })}</div><div class="text-[12px] text-ink3 mt-1">${legendHtml([[c.red2, 'Heute-System'], [c.p, 'Neues System']])} Prognose mit ${R.scen === 'opt' ? 'optimistischen' : 'Standard'}-Annahmen: Öl/Gas +${num(R.scen === 'opt' ? S.optimistic.fuelInc : S.calc.fuelInc, 1)} % p. a. zzgl. CO₂-Preis, Strom +${num(R.scen === 'opt' ? S.optimistic.elecInc : S.calc.elecInc, 1)} % p. a.</div></div>`;
   if (R.W) h += `<div class="card p-5 sm:p-6">${cardHead('flame', 'Heizkostenvergleich', 'Kosten im 1. Jahr inkl. Grundpreis und Wartung')}${hBars([{ label: R.fuel === 'oil' ? 'Ölheizung' : 'Gasheizung', sub: 'bisher', v: R.costOld1, c: c.red, txt: eur(R.costOld1) }, { label: 'Wärmepumpe', sub: 'künftig', v: R.costNew1, c: c.p, txt: eur(R.costNew1) }], { w: appW(), lw: appW() < 640 ? 100 : 130 })}</div>`;
   if (R.V) h += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik', `${num(R.kwp, 2)} kWp · ${num(R.yield)} kWh Ertrag pro Jahr`)}<div class="flex flex-wrap justify-around gap-4">${ring(R.autarky, 'Autarkie', c.p, 140)}${ring(R.selfShare, 'Eigenverbrauch', S.design.secondary, 140)}</div><div class="grid grid-cols-3 gap-2 mt-4 text-center">${[['Selbst genutzt', num(R.self) + ' kWh'], ['Eingespeist', num(R.feed) + ' kWh'], ['PV-Nutzen 1. Jahr', eur(R.pvBenefit1)]].map(([k, v]) => `<div class="kpi !p-3"><div class="kpi-k !text-[11.5px]">${k}</div><div class="font-semibold text-[15px] mt-0.5">${v}</div></div>`).join('')}</div></div>`;
-  h += `<div class="card p-5 sm:p-6">${cardHead('chart', 'Amortisation', 'Kumulierter Saldo nach Abzug der Investition')}${amortChart(R, { w: appW(), h: appW() < 640 ? 240 : 250 })}<div class="text-[12px] text-ink3 mt-1">${legendHtml([[c.p, 'Saldo mit steigenden Preisen'], ['#1E4C86', 'gleichbleibende Preise', true]])}</div>
+  h += `<div class="card p-5 sm:p-6">${cardHead('chart', 'Amortisation', 'Kumulierter Saldo nach Abzug der Investition')}${amortChart(R, { w: appW(), h: appW() < 640 ? 240 : 250 })}<div class="text-[12px] text-ink3 mt-1">${legendHtml([[c.p, 'Saldo mit steigenden Preisen'], [c.blue, 'gleichbleibende Preise', true]])}</div>
     <div class="overflow-x-auto mt-4 -mx-1"><table class="w-full text-[13px] min-w-[520px]"><thead><tr class="text-ink3 text-[12px]"><th class="text-left font-semibold py-2 px-1">Jahr</th><th class="text-right font-semibold">Kosten alt</th><th class="text-right font-semibold">Kosten neu</th>${R.V ? '<th class="text-right font-semibold">PV-Nutzen</th>' : ''}<th class="text-right font-semibold">Ersparnis</th><th class="text-right font-semibold px-1">Saldo</th>${R.zins > 0 ? '<th class="text-right font-semibold px-1">Barwert-Saldo</th>' : ''}</tr></thead><tbody>${R.rows.filter(r => [1, 2, 3, 5, 10, 15, 20, R.N].includes(r.t)).filter((r, i, a) => a.indexOf(r) === i).map(r => `<tr class="border-t border-line ${R.amortRise && Math.ceil(R.amortRise) === r.t ? 'bg-tyel' : ''}"><td class="py-2 px-1 font-semibold">${r.t} <span class="text-ink4">(${r.year})</span></td><td class="text-right">${eur(r.costOld + (R.V ? R.hhCons * r.hhPrice : 0))}</td><td class="text-right">${eur(r.costNew + (R.V ? R.hhCons * r.hhPrice : 0))}</td>${R.V ? `<td class="text-right">${eur(r.pv)}</td>` : ''}<td class="text-right font-semibold text-p">${eur(r.saving)}</td><td class="text-right font-bold px-1 ${r.saldo < 0 ? 'text-ember2' : ''}">${eur(r.saldo)}</td>${R.zins > 0 ? `<td class="text-right px-1">${eur(r.saldoNpv)}</td>` : ''}</tr>`).join('')}</tbody></table></div>
     ${R.zins > 0 ? `<p class="hint">Barwert mit Kalkulationszins ${num(R.zins, 1)} %: Überschuss ${eur(R.npvSurplus)} (nur als Hinweis).</p>` : ''}</div>`;
   if (R.W) { const F = R.fund; h += `<div class="card p-5 sm:p-6">${cardHead('gift', 'Förderung im Detail', F.stand ? `Stand ${deDate(F.stand.from)}${F.stand.to ? ' bis ' + deDate(F.stand.to) : ''}` : '')}<div class="divide-y divide-line text-[14px]">${F.parts.map(([k, v]) => `<div class="flex justify-between py-2"><span class="text-ink2">${esc(k)}</span><b>${pct(v)}</b></div>`).join('')}<div class="flex justify-between py-2"><span class="font-bold">Fördersatz${F.capped ? ` (Höchstsatz ${F.max} %)` : ''}</span><b class="text-p">${pct(F.rate)}</b></div><div class="flex justify-between py-2"><span class="text-ink2">Förderfähige Kosten (max. ${eur(F.cap)})</span><b>${eur(F.base)}</b></div><div class="flex justify-between py-2 text-[16px]"><span class="font-semibold">Förderung</span><b class="text-p">${eur(F.amount)}</b></div></div></div>`; }
@@ -1967,7 +2059,7 @@ function logoImgUrl() { return fileUrl(S.company.logoFile) || S.company.logoUrl 
 function docLogo() { const u = logoImgUrl(); return u ? `<img src="${esc(u)}" alt="">` : `${sunMark(30)}<span>${esc(coName())}</span>`; }
 function advisorOf(p) {
   const n = String(p.offer.advisor || '').trim().toLowerCase(), list = S.company.advisors || [];
-  const a = list.find(x => x.name && x.name.trim().toLowerCase() === n) || list.find(x => x.name && n && (x.name.toLowerCase().includes(n) || n.includes(x.name.toLowerCase()))) || (!n && list[0]);
+  const a = list.find(x => x.id === p.offer.advisorId && (!n || x.name.trim().toLowerCase() === n)) || list.find(x => x.name && x.name.trim().toLowerCase() === n) || list.find(x => x.name && n && (x.name.toLowerCase().includes(n) || n.includes(x.name.toLowerCase()))) || (!n && list[0]);
   return { name: (a && a.name) || p.offer.advisor || '', role: (a && a.role) || 'Ihr Energieberater', phone: (a && a.phone) || S.company.phone, email: (a && a.email) || S.company.email, photo: a && fileUrl(a.photo) };
 }
 function pageFooter(n, N) {
@@ -1977,7 +2069,7 @@ function pageFooter(n, N) {
   const l3 = [c.taxNo && 'St.-Nr. ' + c.taxNo, c.vatId && 'USt-IdNr. ' + c.vatId, c.bank, c.iban && 'IBAN ' + c.iban, c.bic && 'BIC ' + c.bic].filter(Boolean).join(' · ');
   return `<div class="pf"><div>${esc(l1)}${l2 ? '<br>' + esc(l2) : ''}${l3 ? '<br>' + esc(l3) : ''}</div><div class="pn">Seite ${n} / ${N}</div></div>`;
 }
-const pageWrap = (p, title, body, n, N, key) => `<section class="page" data-key="${key}"><div class="ph ${S.design.pdfHeader}"><div class="lg">${docLogo()}</div><div class="tt"><b>${esc(title)}</b><span>${esc(custName(p))}</span></div></div><div class="pb">${body}</div>${pageFooter(n, N)}</section>`;
+const pageWrap = (p, title, body, n, N, key) => `<section class="${pageCls(key)}" data-key="${key}"><div class="ph ${S.design.pdfHeader}"><div class="lg">${docLogo()}</div><div class="tt"><b>${esc(title)}</b><span>${esc(custName(p))}</span></div></div><div class="pb">${body}</div>${pageFooter(n, N)}</section>`;
 function chap(t, lead = '') {
   const o = S.doc.texts[CUR_KEY] || {};
   const title = (o.title || t).replace('{jahre}', S.calc.years), ld = o.lead !== undefined && o.lead !== '' ? o.lead : lead;
@@ -1985,7 +2077,10 @@ function chap(t, lead = '') {
 }
 const tile = (k, v, u = '', cls = '') => `<div class="tile ${cls}"><div class="k">${k}</div><div class="v">${v}</div>${u ? `<div class="u">${u}</div>` : ''}</div>`;
 const fig = (k, v, u = '', col = '') => `<div><div class="small" style="font-weight:500">${k}</div><div class="fig" style="margin-top:1.2mm;${col ? 'color:' + col : ''}">${v}</div>${u ? `<div class="small" style="margin-top:1mm">${u}</div>` : ''}</div>`;
-function buildDocHtml(p, R) {
+const withDoc = fn => { const prev = THEME_CTX; THEME_CTX = 'doc'; try { return fn(); } finally { THEME_CTX = prev; } };
+const pageCls = key => (docDark() || (key === 'cover' && S.design.pdfTheme === 'mixed') ? 'page dk' : 'page');
+function buildDocHtml(p, R) { return withDoc(() => buildDocHtmlInner(p, R)); }
+function buildDocHtmlInner(p, R) {
   const pages = visiblePages(p, R), N = pages.reduce((a, x) => a + x.count, 0);
   let n = 0, html = '';
   for (const d of pages) {
@@ -2005,7 +2100,7 @@ function subtitleOf(p, R) {
 }
 function coverLogoHtml() {
   const L = S.design.coverLogo, url = L.source === 'custom' ? fileUrl(L.file) : logoImgUrl();
-  const inner = url ? `<img src="${esc(url)}" style="max-height:${L.size}mm;max-width:90mm;width:auto;height:auto;display:block">` : `<span style="display:flex;align-items:center;gap:2.5mm;font-weight:600;font-size:${Math.max(9, L.size * 0.85)}pt;color:var(--ink);height:${L.size}mm">${sunMark(Math.round(L.size * 3.2))}${esc(coName())}</span>`;
+  const inner = url ? `<img src="${esc(url)}" style="max-height:${L.size}mm;max-width:90mm;width:auto;height:auto;display:block">` : `<span style="display:flex;align-items:center;gap:2.5mm;font-weight:600;font-size:${Math.max(9, L.size * 0.85)}pt;color:${L.whiteBg ? '#0F2A3D' : 'var(--ink)'};height:${L.size}mm">${sunMark(Math.round(L.size * 3.2))}${esc(coName())}</span>`;
   return `<div style="position:absolute;left:${L.x}%;top:${L.y}%;transform:translate(-${L.x}%,-${L.y}%);${L.whiteBg ? 'background:#fff;border-radius:30mm;padding:3mm 6mm;box-shadow:0 1mm 4mm rgba(15,42,61,.10);' : ''}z-index:3">${inner}</div>`;
 }
 function coverFigures(p, R) {
@@ -2027,7 +2122,7 @@ function coverBigSun() {
 function docCover(p, R, n, N) {
   const cv = S.design.cover, st = S.design.coverStyle, year = R.startYear;
   if (st === 'image' && fileUrl(cv.file)) {
-    return `<section class="page" data-key="cover"><div style="position:absolute;inset:0;background:#fff url('${fileUrl(cv.file)}') center/cover no-repeat"></div>${coverLogoHtml()}
+    return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;inset:0;background:#fff url('${fileUrl(cv.file)}') center/cover no-repeat"></div>${coverLogoHtml()}
       ${cv.showCustomer ? `<div style="position:absolute;left:14mm;right:14mm;top:${cv.pos}%;${cv.whiteBox ? 'background:rgba(255,255,255,.95);border-radius:var(--dr);padding:7mm 8mm;box-shadow:0 2mm 8mm rgba(15,42,61,.12);' : ''}"><div style="font-family:var(--fh),Georgia,serif;font-weight:var(--hw);font-size:22pt;line-height:1.12;color:${cv.dark ? 'var(--ink)' : '#fff'};margin-bottom:4mm">${esc(p.offer.title)}</div>${custBlock(p, cv.dark)}</div>` : ''}</section>`;
   }
   const textBlock = `<span class="pill" style="background:var(--t-yel);color:var(--s-dark)">Ihr Energiekonzept ${year}</span>
@@ -2035,11 +2130,11 @@ function docCover(p, R, n, N) {
       <div style="font-size:11pt;color:var(--ink2);max-width:150mm">${esc(subtitleOf(p, R))}</div>
       <div style="margin-top:8mm">${custBlock(p, true)}</div>${coverFigures(p, R)}`;
   if (st === 'type') {
-    return `<section class="page" data-key="cover"><div style="position:absolute;inset:0;background:var(--bg)"></div>
+    return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;inset:0;background:var(--bg)"></div>
       <div style="position:absolute;right:-20mm;top:20mm;width:150mm;height:82.5mm"><img src="${svgDataUri(coverBigSun())}" style="width:150mm;height:82.5mm;display:block"></div>${coverLogoHtml()}
       <div style="position:absolute;left:14mm;right:14mm;top:118mm;background:#fff;border-radius:var(--dr);padding:9mm 9mm 8mm">${textBlock}</div>${pageFooter(n, N)}</section>`;
   }
-  return `<section class="page" data-key="cover"><div style="position:absolute;left:0;right:0;top:0;height:130mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true }))}" style="width:210mm;height:130mm;display:block"><div style="position:absolute;left:0;right:0;bottom:0;height:16mm;background:linear-gradient(180deg,rgba(255,255,255,0),#fff)"></div>${coverLogoHtml()}</div>
+  return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;left:0;right:0;top:0;height:130mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true }))}" style="width:210mm;height:130mm;display:block"><div style="position:absolute;left:0;right:0;bottom:0;height:18mm;background:linear-gradient(180deg,${pageCls('cover') === 'page dk' ? 'rgba(11,17,24,0),#0B1118' : 'rgba(255,255,255,0),#fff'})"></div>${coverLogoHtml()}</div>
     <div style="position:absolute;left:14mm;right:14mm;top:133mm">${textBlock}</div>${pageFooter(n, N)}</section>`;
 }
 function soundBlock(p) {
@@ -2148,7 +2243,7 @@ const DOC = {
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
     b += `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm"><span style="display:inline-flex;width:5.5mm;height:5.5mm;border-radius:50%;background:var(--p);color:#fff;font-weight:600;font-size:8pt;align-items:center;justify-content:center">${i + 1}</span><b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
-    b += `<div class="sec"><h2>Ein typischer Sonnentag – 6 Uhr bis 6 Uhr</h2>${dayProfileSVG(R)}<div class="small" style="margin-top:1mm">${legendDot(mix(S.design.secondary, '#ffffff', 0.5), 'Erzeugung')}${legendDot(S.design.primary, 'direkt genutzt')}${R.bat ? legendDot('#F5C76A', 'Speicher laden') + legendDot('#9DB3D3', 'aus dem Speicher') : ''}${legendDot('#0F2A3D', 'Verbrauch', true)}</div></div>`;
+    b += `<div class="sec"><h2>Ein typischer Sonnentag – 6 Uhr bis 6 Uhr</h2>${dayProfileSVG(R)}<div class="small" style="margin-top:1mm">${legendDot(mix(S.design.secondary, '#ffffff', 0.5), 'Erzeugung')}${legendDot(S.design.primary, 'direkt genutzt')}${R.bat ? legendDot('#F5C76A', 'Speicher laden') + legendDot('#9DB3D3', 'aus dem Speicher') : ''}${legendDot(C().ink, 'Verbrauch', true)}</div></div>`;
     b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung', 'grad')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
     return { title: 'So funktioniert Ihre Photovoltaikanlage', body: b };
   },
@@ -2338,7 +2433,7 @@ async function printDoc() {
    ========================================================= */
 function viewProducts() {
   const card = pr => `<div class="card p-4 flex flex-col"><div class="aspect-[4/3] rounded-[calc(var(--r)-4px)] bg-bg grid place-items-center overflow-hidden">${fileUrl(pr.img) || pr.imgUrl ? `<img src="${esc(fileUrl(pr.img) || pr.imgUrl)}" class="w-full h-full object-contain" alt="">` : `<span class="text-p opacity-60">${ic(pr.cat === 'wp' ? 'fan' : pr.cat === 'mod' ? 'sun' : pr.cat === 'bat' ? 'battery' : pr.cat === 'inv' ? 'bolt' : 'box', 44)}</span>`}</div>
-    <div class="flex flex-wrap gap-1.5 mt-3"><span class="badge bg-p/10 text-p">${esc(CATS[pr.cat][0])}</span>${pr.beg ? '<span class="badge bg-tyel text-[#7A4D05]">BEG-förderfähig</span>' : ''}</div>
+    <div class="flex flex-wrap gap-1.5 mt-3"><span class="badge bg-p/10 text-p">${esc(CATS[pr.cat][0])}</span>${pr.beg ? '<span class="badge bg-tyel text-yel-ink">BEG-förderfähig</span>' : ''}</div>
     <div class="font-semibold text-[15px] mt-2 leading-snug">${esc(pr.name || 'Ohne Namen')}</div><div class="text-[13px] text-ink3">${esc(pr.maker || '')}</div>
     <div class="text-[13px] text-ink2 mt-2 space-y-0.5">${pr.power ? `<div>Leistung: <b>${num(pr.power, pr.power % 1 ? 1 : 0)} ${CATS[pr.cat][1]}</b></div>` : ''}${pr.cat === 'wp' && pr.jaz ? `<div>JAZ: <b>${num(pr.jaz, 2)}</b></div>` : ''}${pr.price ? `<div>Listenpreis: <b>${eur(pr.price)}</b></div>` : ''}</div>
     <div class="flex gap-1 mt-auto pt-3 -mx-2"><button class="btn-g" data-a="prod-edit" data-id="${pr.id}">${ic('pen', 15)}Bearbeiten</button><button class="btn-g hover:!text-ember2" data-a="prod-del" data-id="${pr.id}">${ic('trash', 15)}Löschen</button></div></div>`;
@@ -2353,7 +2448,7 @@ function productModal(id) {
     <div class="grid sm:grid-cols-2 gap-4">${field('Hersteller', b('maker'))}${sel('Kategorie', b('cat'), Object.entries(CATS).map(([k, v]) => [k, v[0] + (v[1] ? ` (${v[1]})` : '')]))}
     ${field('Leistung', b('power'), { t: 'n', unit: CATS[pr.cat][1] })}${pr.cat === 'wp' ? field('JAZ', b('jaz'), { t: 'n' }) : ''}${field('Gewicht', b('weight'), { t: 'n', unit: 'kg' })}${field('Abmessungen', b('dims'), { ph: '1286 x 979 x 562 mm' })}${field('Listenpreis', b('price'), { t: 'n', unit: '€' })}</div>
     <div class="rounded-[calc(var(--r)-4px)] bg-bg px-4">${toggleRow('BEG-förderfähig', b('beg'))}</div>
-    <div><span class="lbl">Bild</span><div class="flex items-center gap-3">${img ? `<img src="${esc(img)}" class="w-20 h-20 rounded-[calc(var(--r)-4px)] object-contain bg-white border border-line">` : `<div class="w-20 h-20 rounded-[calc(var(--r)-4px)] bg-bg grid place-items-center text-ink4">${ic('image', 26)}</div>`}<div class="flex flex-wrap gap-2"><label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Hochladen<input type="file" accept="image/*" class="hidden" data-imgup="product" data-id="${id}"></label>${pr.img ? `<button class="btn-g" data-a="prod-img-del" data-id="${id}">Entfernen</button>` : ''}</div></div>
+    <div><span class="lbl">Bild</span><div class="flex items-center gap-3">${img ? `<img src="${esc(img)}" class="w-20 h-20 rounded-[calc(var(--r)-4px)] object-contain bg-card border border-line">` : `<div class="w-20 h-20 rounded-[calc(var(--r)-4px)] bg-bg grid place-items-center text-ink4">${ic('image', 26)}</div>`}<div class="flex flex-wrap gap-2"><label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Hochladen<input type="file" accept="image/*" class="hidden" data-imgup="product" data-id="${id}"></label>${pr.img ? `<button class="btn-g" data-a="prod-img-del" data-id="${id}">Entfernen</button>` : ''}</div></div>
     <div class="mt-3">${inp(b('imgUrl'), { ph: 'oder Bild-URL (https://…)' })}</div></div></div>
     <div class="flex justify-end mt-6"><button class="btn-p" data-a="modal-close">Fertig</button></div>`);
 }
@@ -2361,7 +2456,7 @@ function productModal(id) {
 /* =========================================================
    Einstellungen
    ========================================================= */
-const STABS = [['firma', 'Unternehmen', 'building'], ['design', 'Design & Deckblatt', 'palette'], ['rabatt', 'Rabatt & Unterschrift', 'tag'], ['foerderung', 'Förderung', 'gift'], ['preise', 'Preisentwicklung', 'chart'], ['dokument', 'Dokument & Verkauf', 'file'], ['ablauf', 'Roadmap', 'arrowR'], ['vergleiche', 'Vergleiche', 'scale'], ['berechnung', 'Berechnung', 'calc'], ['optimistisch', 'Optimistisches Szenario', 'rocket'], ['daten', 'Datensicherung', 'db']];
+const STABS = [['firma', 'Unternehmen', 'building'], ['berater', 'Berater', 'users'], ['design', 'Design & Deckblatt', 'palette'], ['rabatt', 'Rabatt & Unterschrift', 'tag'], ['foerderung', 'Förderung', 'gift'], ['preise', 'Preisentwicklung', 'chart'], ['dokument', 'Dokument & Verkauf', 'file'], ['ablauf', 'Roadmap', 'arrowR'], ['vergleiche', 'Vergleiche', 'scale'], ['berechnung', 'Berechnung', 'calc'], ['optimistisch', 'Optimistisches Szenario', 'rocket'], ['daten', 'Datensicherung', 'db']];
 function viewSettings() {
   const t = UI.settingsTab, body = (SET[t] || SET.firma)();
   return `<div class="max-w-7xl mx-auto px-4 pt-8"><h1 class="h-font text-[32px]">Einstellungen</h1><p class="text-ink3 text-[14px]">Alle Änderungen werden automatisch gespeichert.</p>
@@ -2373,7 +2468,8 @@ const sCard = (icon, title, sub, body) => `<div class="card p-5 sm:p-6">${cardHe
 function sampleProject() {
   const p = newProject('pvwp'); p.customer = { salutation: 'Familie', name: 'Mustermann', street: 'Sonnenweg 12', zip: '48143', city: 'Münster' }; p.offer.number = 'A-2026-0815'; p.offer.advisor = 'Max Berater'; p.offer.grossWP = 32000; p.offer.grossPV = 21000; p.heating.year = 1998; p.heating.cons = 24000; p.pv.kwp = 10; p.pv.bat = 10; return p;
 }
-function coverPreview() {
+function coverPreview() { return withDoc(coverPreviewInner); }
+function coverPreviewInner() {
   const p = sampleProject(), R = compute(p, 'real'); CUR_KEY = 'summary';
   const sum = DOC.summary(p, R); CUR_KEY = '';
   return `<div class="space-y-3">${[docCover(p, R, 1, 12), pageWrap(p, sum.title, sum.body, 2, 12, 'summary')].map(h => `<div class="rounded-[calc(var(--r)-4px)] bg-raised p-3 overflow-hidden" style="height:${Math.round(1123 * 0.34) + 24}px"><div style="zoom:0.34;width:794px;margin:0 auto" class="docpv">${h}</div></div>`).join('')}</div>`;
@@ -2381,29 +2477,30 @@ function coverPreview() {
 const SET = {
   firma: () => sCard('building', 'Unternehmen', 'Erscheint in Kopf- und Fußzeile des Kundendokuments.', `
     <div class="rounded-[calc(var(--r)-4px)] bg-tyel ring-1 ring-s/30 p-4 text-[13.5px] text-ink flex gap-3 mb-5">${ic('info', 18, 'shrink-0 mt-0.5')}<div>Pflegen Sie hier Ihre eigenen Daten – dann verwechselt die Angebotserkennung sie nicht mit dem Kunden.</div></div>
-    <div><span class="lbl">Logo</span><div class="flex flex-wrap items-center gap-3">${logoImgUrl() ? `<img src="${esc(logoImgUrl())}" class="h-14 max-w-[200px] object-contain rounded-xl bg-white border border-line p-2">` : `<div class="h-14 w-14 rounded-xl bg-bg grid place-items-center text-ink4">${ic('image', 22)}</div>`}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="logo"></label>${S.company.logoFile ? `<button class="btn-g" data-a="logo-del">Entfernen</button>` : ''}</div><div class="mt-3">${inp('s:company.logoUrl', { ph: 'oder Logo-URL (https://…)' })}</div></div>
-    <div class="grid sm:grid-cols-2 gap-4 mt-5">${field('Firmenname', 's:company.name')}${field('Geschäftsführung', 's:company.ceo')}${field('Handelsregister', 's:company.register', { ph: 'Amtsgericht Münster HRB …' })}${field('Straße', 's:company.street')}${field('PLZ', 's:company.zip')}${field('Ort', 's:company.city')}${field('Telefon', 's:company.phone', { t: 'tel' })}${field('E-Mail', 's:company.email', { t: 'email' })}${field('Web', 's:company.web')}${field('Steuernummer', 's:company.taxNo')}${field('USt-IdNr.', 's:company.vatId')}${field('Bank', 's:company.bank')}${field('IBAN', 's:company.iban')}${field('BIC', 's:company.bic')}</div>`)
-    + sCard('users', 'Berater', 'Erscheinen mit Foto und Kontakt in „Auf einen Blick“ und auf der Unterschriftsseite – passend zum Berater im Projekt.', `<div class="space-y-3">${(S.company.advisors || []).map(a => `<div class="rounded-[calc(var(--r)-4px)] border border-line p-4 flex flex-col sm:flex-row gap-4"><div class="flex sm:flex-col items-center gap-3 shrink-0">${fileUrl(a.photo) ? `<img src="${fileUrl(a.photo)}" class="w-16 h-16 rounded-full object-cover border border-line">` : `<div class="w-16 h-16 rounded-full bg-raised grid place-items-center text-ink3">${ic('users', 22)}</div>`}<label class="btn-g cursor-pointer">${ic('upload', 14)}Foto<input type="file" accept="image/*" class="hidden" data-imgup="advisor" data-id="${a.id}"></label></div><div class="grid sm:grid-cols-2 gap-3 flex-1">${field('Name', `adv:${a.id}:name`)}${field('Funktion', `adv:${a.id}:role`, { ph: 'Ihr Energieberater' })}${field('Telefon', `adv:${a.id}:phone`, { t: 'tel' })}${field('E-Mail', `adv:${a.id}:email`, { t: 'email' })}</div><button class="btn-g self-start hover:!text-ember" data-a="adv-del" data-id="${a.id}" aria-label="Berater löschen">${ic('trash', 16)}</button></div>`).join('')}</div><button class="chip mt-3" data-a="adv-add">${ic('plus', 14)}Berater hinzufügen</button>`),
+    <div><span class="lbl">Logo</span><div class="flex flex-wrap items-center gap-3">${logoImgUrl() ? `<img src="${esc(logoImgUrl())}" class="h-14 max-w-[200px] object-contain rounded-xl bg-card border border-line p-2">` : `<div class="h-14 w-14 rounded-xl bg-bg grid place-items-center text-ink4">${ic('image', 22)}</div>`}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="logo"></label>${S.company.logoFile ? `<button class="btn-g" data-a="logo-del">Entfernen</button>` : ''}</div><div class="mt-3">${inp('s:company.logoUrl', { ph: 'oder Logo-URL (https://…)' })}</div></div>
+    <div class="grid sm:grid-cols-2 gap-4 mt-5">${field('Firmenname', 's:company.name')}${field('Geschäftsführung', 's:company.ceo')}${field('Handelsregister', 's:company.register', { ph: 'Amtsgericht Münster HRB …' })}${field('Straße', 's:company.street')}${field('PLZ', 's:company.zip')}${field('Ort', 's:company.city')}${field('Telefon', 's:company.phone', { t: 'tel' })}${field('E-Mail', 's:company.email', { t: 'email' })}${field('Web', 's:company.web')}${field('Steuernummer', 's:company.taxNo')}${field('USt-IdNr.', 's:company.vatId')}${field('Bank', 's:company.bank')}${field('IBAN', 's:company.iban')}${field('BIC', 's:company.bic')}</div>`),
+
   design: () => {
     const d = S.design, L = d.coverLogo, cv = d.cover;
-    const colorRow = (label, k, quick = []) => `<div><span class="lbl">${label}</span><div class="flex items-center gap-3"><input type="color" class="w-11 h-11 rounded-[var(--rb)] border border-line2 p-0.5 bg-white cursor-pointer shrink-0" data-b="s:design.${k}" data-t="color" value="${d[k]}"><div class="w-32">${inp('s:design.' + k, { t: 'hex' })}</div></div>${quick.length ? `<div class="flex flex-wrap gap-2 mt-3">${quick.map(c => `<button class="w-7 h-7 rounded-full border-2 ${d[k].toLowerCase() === c.toLowerCase() ? 'border-ink' : 'border-white'} shadow-sm" style="background:${c}" data-a="color-quick" data-k="${k}" data-v="${c}" aria-label="${c}"></button>`).join('')}</div>` : ''}</div>`;
+    const colorRow = (label, k, quick = []) => `<div><span class="lbl">${label}</span><div class="flex items-center gap-3"><input type="color" class="w-11 h-11 rounded-[var(--rb)] border border-line2 p-0.5 bg-card cursor-pointer shrink-0" data-b="s:design.${k}" data-t="color" value="${d[k]}"><div class="w-32">${inp('s:design.' + k, { t: 'hex' })}</div></div>${quick.length ? `<div class="flex flex-wrap gap-2 mt-3">${quick.map(c => `<button class="w-7 h-7 rounded-full border-2 ${d[k].toLowerCase() === c.toLowerCase() ? 'border-ink' : 'border-white'} shadow-sm" style="background:${c}" data-a="color-quick" data-k="${k}" data-v="${c}" aria-label="${c}"></button>`).join('')}</div>` : ''}</div>`;
     const qp = [['oben links', 6, 6], ['oben Mitte', 50, 6], ['oben rechts', 94, 6], ['Mitte', 50, 50], ['unten links', 6, 92], ['unten rechts', 94, 92]];
     const range = (label, b, min, max, unit) => `<label class="block"><span class="lbl flex justify-between">${label}<span class="text-ink3 num" data-rv="${b}">${num(bval(b))}${unit}</span></span><input type="range" class="w-full" min="${min}" max="${max}" step="1" data-b="${b}" data-t="r" value="${bval(b)}"></label>`;
     const fontOpts = Object.keys(FONTS).map(f => [f, f + (SERIFS.includes(f) ? ' (Serif)' : '')]);
-    const presets = THEME_PRESETS.map((t, i) => `<button class="text-left rounded-[calc(var(--r)-4px)] border ${d.primary.toLowerCase() === t.primary.toLowerCase() ? 'border-p ring-4 ring-p/10' : 'border-line'} bg-white p-3 hover:border-p transition-colors" data-a="theme-preset" data-i="${i}"><div class="flex gap-1">${[t.primary, t.secondary, t.accent, t.ink].map(c => `<span class="w-5 h-5 rounded-full" style="background:${c}"></span>`).join('')}</div><div class="text-[13px] font-medium mt-2">${t.name}</div></button>`).join('');
-    return sCard('palette', 'Farbwelt', 'Ein Klick setzt alle Farben – danach jede Farbe einzeln anpassbar. App, PDF und Illustrationen färben sich mit.', `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">${presets}</div>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">${colorRow('Primärfarbe', 'primary', ['#0E7C66', '#0B6E99', '#1E4C86', '#2E7D32', '#6A3FB5', '#C2401F'])}${colorRow('Sonne / Sekundärfarbe', 'secondary', ['#F5A524', '#F2C230', '#FF8A3D', '#E4572E', '#7CC47F'])}${colorRow('Akzent (Verläufe, Diagramme)', 'accent')}${colorRow('Alte Kosten', 'old')}${colorRow('Schrift', 'ink')}${colorRow('App-Hintergrund', 'bg')}</div>`)
-      + sCard('pen', 'Schrift und Form', 'Gilt für App und Kundendokument.', `<div class="grid sm:grid-cols-2 gap-4">${sel('Fließtext', 's:design.fontBody', fontOpts.filter(f => !SERIFS.includes(f[0])))}${sel('Überschriften', 's:design.fontHead', fontOpts)}</div>
-        <div class="grid sm:grid-cols-2 gap-6 mt-5"><div><span class="lbl">Stärke der Überschriften</span>${seg('s:design.headWeight', [[400, 'Leicht'], [500, 'Normal'], [600, 'Kräftig']])}</div><div><span class="lbl">Buttons</span>${seg('s:design.buttons', [['round', 'Abgerundet'], ['pill', 'Pille']])}</div>
+    const presets = THEME_PRESETS.map((t, i) => `<button class="text-left rounded-[calc(var(--r)-4px)] border ${d.primary.toLowerCase() === t.primary.toLowerCase() ? 'border-p ring-4 ring-p/10' : 'border-line'} bg-card p-3 hover:border-p transition-colors" data-a="theme-preset" data-i="${i}"><div class="flex gap-1">${[t.night, t.primary, t.secondary, t.accent].map(c => `<span class="w-5 h-5 rounded-full border border-line2" style="background:${c}"></span>`).join('')}</div><div class="text-[13px] font-medium mt-2">${t.name}</div></button>`).join('');
+    return sCard('eye', 'Erscheinungsbild', 'Dunkel oder hell – für die App und getrennt für das Kundendokument.', `<div class="grid sm:grid-cols-2 gap-6"><div><span class="lbl">App</span>${seg('s:design.mode', [['dark', 'Dunkel'], ['light', 'Hell']])}</div><div><span class="lbl">Kundendokument</span>${seg('s:design.pdfTheme', [['light', 'Hell'], ['mixed', 'Gemischt'], ['dark', 'Dunkel']])}<div class="hint">Gemischt: dunkles Deckblatt und dunkle Highlights, Inhaltsseiten hell und gut druckbar.</div></div></div>`)
+      + sCard('palette', 'Farbwelt', 'Ein Klick setzt alle Farben – danach jede Farbe einzeln anpassbar. App, PDF und Illustrationen färben sich mit.', `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">${presets}</div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">${colorRow('Primärfarbe', 'primary', ['#0E7C66', '#0B6E99', '#1E4C86', '#2E7D32', '#6A3FB5', '#C2401F'])}${colorRow('Sonne / Sekundärfarbe', 'secondary', ['#F5A524', '#F2C230', '#FF8A3D', '#E4572E', '#7CC47F'])}${colorRow('Akzent (Verläufe, Diagramme)', 'accent')}${colorRow('Alte Kosten', 'old')}${colorRow('Schrift (hell)', 'ink')}${colorRow('Hintergrund (hell)', 'bg')}${colorRow('Hintergrund (dunkel)', 'night', ['#0A0E13', '#080D18', '#0B0F0C', '#110D0B', '#0B0B0C'])}</div>`)
+      + sCard('pen', 'Schrift und Form', 'Gilt für App und Kundendokument.', `<div class="grid sm:grid-cols-2 gap-4">${sel('Fließtext', 's:design.fontBody', fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0])))}${sel('Überschriften', 's:design.fontHead', fontOpts.filter(f => !MONOS.includes(f[0])))}${sel('Kennzahlen und Beschriftungen', 's:design.fontMono', [...MONOS.map(f => [f, f]), ...fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0]))])}</div>
+        <div class="grid sm:grid-cols-2 gap-6 mt-5"><div><span class="lbl">Stärke der Überschriften</span>${seg('s:design.headWeight', [[400, 'Leicht'], [500, 'Normal'], [600, 'Kräftig']])}</div><div><span class="lbl">Buttons</span><div class="flex flex-wrap gap-2">${seg('s:design.buttons', [['round', 'Abgerundet'], ['pill', 'Pille']])}${seg('s:design.buttonStyle', [['light', 'Neutral'], ['color', 'Primärfarbe']])}</div></div>
         <div>${range('Eckenradius', 's:design.radius', 0, 28, ' px')}</div><div><span class="lbl">Hervorhebungen</span>${seg('s:design.highlight', [['solid', 'Fläche'], ['gradient', 'Verlauf']])}</div></div>
-        <div class="mt-6 rounded-[calc(var(--r)-4px)] bg-raised p-5"><div class="h-font text-[26px] leading-tight">So sehen Überschriften aus</div><p class="text-ink2 text-[15px] mt-2">Und so der Fließtext in App und Dokument. Zahlen stehen tabellarisch: 12.480 € · 7,1 Jahre</p><div class="flex gap-2 mt-4"><span class="btn-p btn-sm">Primär</span><span class="btn-s btn-sm">Sekundär</span></div></div>`)
+        <div class="mt-6 rounded-[calc(var(--r)-4px)] bg-raised p-5"><div class="mono text-[12px] text-ink3">Vorschau</div><div class="h-font text-[30px] leading-tight mt-2">So sehen Überschriften aus</div><p class="text-ink2 text-[15px] mt-2">Und so der Fließtext in App und Dokument. Zahlen stehen tabellarisch: 12.480 € · 7,1 Jahre</p><div class="flex gap-2 mt-4"><span class="btn-p btn-sm">Primär</span><span class="btn-s btn-sm">Sekundär</span></div></div>`)
       + sCard('file', 'Kundendokument', 'Stil von Deckblatt, Kopfzeile und Kapitelmarke.', `
       <div class="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-6"><div class="space-y-5">
       <div><span class="lbl">Deckblatt</span>${seg('s:design.coverStyle', [['illu', 'Illustration'], ['type', 'Typografisch'], ['image', 'Eigenes Bild']], { cls: 'flex-wrap' })}</div>
       ${d.coverStyle === 'image' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 divide-y divide-line"><div class="py-3 flex flex-wrap items-center gap-3">${fileUrl(cv.file) ? `<img src="${fileUrl(cv.file)}" class="h-20 rounded-lg border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Illustration verwendet.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${cv.file ? 'Ersetzen' : 'Bild oder PDF hochladen'}<input type="file" accept="image/*,application/pdf" class="hidden" data-imgup="cover"></label></div>${toggleRow('Kundendaten einblenden', 's:design.cover.showCustomer')}${toggleRow('Weißer Kasten', 's:design.cover.whiteBox')}${toggleRow('Dunkle Schrift', 's:design.cover.dark')}<div class="py-3">${range('Position Kundendaten (von oben)', 's:design.cover.pos', 5, 85, ' %')}</div></div>` : ''}
       <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband']])}</div><div><span class="lbl">Kapitelmarke</span>${seg('s:design.chapter', [['sun', 'Sonnenaufgang'], ['bar', 'Balken'], ['none', 'Keine']])}</div></div>
       <div class="pt-2"><div class="font-medium text-[15px]">Logo auf dem Deckblatt</div><div class="mt-3">${seg('s:design.coverLogo.source', [['company', 'Firmenlogo'], ['custom', 'Eigenes Logo']])}</div>
-      ${L.source === 'custom' ? `<div class="mt-3 flex items-center gap-3">${fileUrl(L.file) ? `<img src="${fileUrl(L.file)}" class="h-12 max-w-[160px] object-contain rounded-lg bg-white border border-line p-1">` : ''}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="coverlogo"></label></div>` : ''}
+      ${L.source === 'custom' ? `<div class="mt-3 flex items-center gap-3">${fileUrl(L.file) ? `<img src="${fileUrl(L.file)}" class="h-12 max-w-[160px] object-contain rounded-lg bg-card border border-line p-1">` : ''}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="coverlogo"></label></div>` : ''}
       <div class="grid sm:grid-cols-3 gap-4 mt-4">${range('Horizontal', 's:design.coverLogo.x', 0, 100, ' %')}${range('Vertikal', 's:design.coverLogo.y', 0, 100, ' %')}${range('Größe', 's:design.coverLogo.size', 6, 40, ' mm')}</div>
       <div class="flex flex-wrap gap-2 mt-3">${qp.map(([l, x, y]) => `<button class="chip" data-a="logo-pos" data-x="${x}" data-y="${y}">${l}</button>`).join('')}</div>
       <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 mt-4">${toggleRow('Weißer Hintergrund hinter dem Logo', 's:design.coverLogo.whiteBg')}</div></div></div>
@@ -2438,6 +2535,10 @@ const SET = {
       + sCard('leaf', 'CO₂-Preis-Historie', 'Säulen auf der Seite „Warum Öl und Gas teurer werden“ (€/t).', `<div class="grid grid-cols-3 sm:grid-cols-7 gap-2">${co2y.map(y => `<label class="block"><span class="text-[11.5px] font-bold text-ink3">${y}</span>${inp(`s:prices.co2.${y}`, { t: 'n', icls: '!h-10 !px-3' })}</label>`).join('')}</div>`)
       + sCard('file', 'Quellen & Anzeige', '', `${area('Quellen-Text', 's:prices.sources', 3)}<div class="rounded-[calc(var(--r)-4px)] bg-bg px-4 mt-4">${toggleRow('Preisseiten standardmäßig zeigen', 's:prices.showPages')}</div><button class="btn-s btn-sm mt-4" data-a="prices-reset">${ic('refresh', 15)}Recherchierte Werte wiederherstellen</button>`);
   },
+  berater: () => {
+    const list = S.company.advisors || [];
+    return sCard('users', 'Berater', 'Stehen im Projekt zur Auswahl und erscheinen mit Foto, Telefon und E-Mail im Kundendokument.', `<div class="mb-5 max-w-sm">${sel('Standard-Berater für neue Berechnungen', 's:company.defaultAdvisor', [['', '– keiner –'], ...list.filter(a => a.name).map(a => [a.id, a.name])])}</div><div class="space-y-3">${(S.company.advisors || []).map(a => `<div class="rounded-[calc(var(--r)-4px)] border border-line p-4 flex flex-col sm:flex-row gap-4"><div class="flex sm:flex-col items-center gap-3 shrink-0">${fileUrl(a.photo) ? `<img src="${fileUrl(a.photo)}" class="w-16 h-16 rounded-full object-cover border border-line">` : `<div class="w-16 h-16 rounded-full bg-raised grid place-items-center text-ink3">${ic('users', 22)}</div>`}<label class="btn-g cursor-pointer">${ic('upload', 14)}Foto<input type="file" accept="image/*" class="hidden" data-imgup="advisor" data-id="${a.id}"></label></div><div class="grid sm:grid-cols-2 gap-3 flex-1">${field('Name', `adv:${a.id}:name`)}${field('Funktion', `adv:${a.id}:role`, { ph: 'Ihr Energieberater' })}${field('Telefon', `adv:${a.id}:phone`, { t: 'tel' })}${field('E-Mail', `adv:${a.id}:email`, { t: 'email' })}</div><button class="btn-g self-start hover:!text-ember" data-a="adv-del" data-id="${a.id}" aria-label="Berater löschen">${ic('trash', 16)}</button></div>`).join('')}</div><button class="chip mt-3" data-a="adv-add">${ic('plus', 14)}Berater hinzufügen</button>`);
+  },
   dokument: () => {
     const p = sampleProject(), R = compute(p, 'real');
     const order = docOrder(), dflt = S.doc.defaults || {};
@@ -2460,7 +2561,7 @@ const SET = {
   },
   vergleiche: () => sCard('scale', 'Vergleiche', 'Machen die Ersparnis greifbar – auf der Seite „Was Sie sich leisten können“.', `
     <span class="lbl">Basis</span>${seg('s:comparisons.basis', [['surplus', 'Überschuss nach Abzug der Investition'], ['total', 'Gesamtersparnis']], { cls: 'flex-wrap' })}
-    <div class="space-y-2 mt-5">${S.comparisons.items.map(i => `<div class="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 rounded-[calc(var(--r)-4px)] bg-bg">${tgl(`cmp:${i.id}:on`, i.on)}<span class="w-9 h-9 rounded-full bg-white text-p grid place-items-center shrink-0">${ic(i.icon, 18)}</span><div class="w-32 shrink-0">${`<select class="inp !h-10" data-b="cmp:${i.id}:icon" data-t="s">${['plane', 'car', 'spa', 'bike', 'home', 'heart', 'gift', 'sun'].map(x => `<option value="${x}" ${i.icon === x ? 'selected' : ''}>${{ plane: 'Reise', car: 'Auto', spa: 'Wellness', bike: 'Fahrrad', home: 'Haus', heart: 'Herz', gift: 'Geschenk', sun: 'Sonne' }[x]}</option>`).join('')}</select>`}</div><div class="flex-1 min-w-[140px]">${inp(`cmp:${i.id}:label`, { icls: '!h-10' })}</div><div class="w-32">${inp(`cmp:${i.id}:price`, { t: 'n', unit: '€', icls: '!h-10' })}</div><button class="btn-g !px-2 hover:!text-ember2" data-a="cmp-del" data-id="${i.id}" aria-label="Löschen">${ic('trash', 16)}</button></div>`).join('')}</div>
+    <div class="space-y-2 mt-5">${S.comparisons.items.map(i => `<div class="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 rounded-[calc(var(--r)-4px)] bg-bg">${tgl(`cmp:${i.id}:on`, i.on)}<span class="w-9 h-9 rounded-full bg-card text-p grid place-items-center shrink-0">${ic(i.icon, 18)}</span><div class="w-32 shrink-0">${`<select class="inp !h-10" data-b="cmp:${i.id}:icon" data-t="s">${['plane', 'car', 'spa', 'bike', 'home', 'heart', 'gift', 'sun'].map(x => `<option value="${x}" ${i.icon === x ? 'selected' : ''}>${{ plane: 'Reise', car: 'Auto', spa: 'Wellness', bike: 'Fahrrad', home: 'Haus', heart: 'Herz', gift: 'Geschenk', sun: 'Sonne' }[x]}</option>`).join('')}</select>`}</div><div class="flex-1 min-w-[140px]">${inp(`cmp:${i.id}:label`, { icls: '!h-10' })}</div><div class="w-32">${inp(`cmp:${i.id}:price`, { t: 'n', unit: '€', icls: '!h-10' })}</div><button class="btn-g !px-2 hover:!text-ember2" data-a="cmp-del" data-id="${i.id}" aria-label="Löschen">${ic('trash', 16)}</button></div>`).join('')}</div>
     <button class="chip mt-3" data-a="cmp-add">${ic('plus', 14)}Vergleich hinzufügen</button>`),
   berechnung: () => {
     const c = 's:calc.', co2 = Object.keys(S.calc.co2Path).sort();
@@ -2481,7 +2582,7 @@ const SET = {
   daten: () => sCard('db', 'Datensicherung', 'Alle Daten liegen nur in diesem Browser. Sichern Sie regelmäßig.', `
     <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="backup">${ic('download', 17)}Sicherung herunterladen</button><label class="btn-s cursor-pointer">${ic('upload', 17)}Sicherung einspielen<input type="file" accept="application/json,.json" class="hidden" data-import></label></div>
     <p class="hint">Die Sicherung enthält alle Berechnungen, Produkte, Einstellungen und Dateien (Angebote, Unterlagen, Logos).</p>
-    <div class="mt-6 pt-5 border-t border-line"><button class="btn bg-tred text-ember2 hover:bg-[#FBDCD0]" data-a="wipe">${ic('trash', 17)}Alles löschen</button></div>`)
+    <div class="mt-6 pt-5 border-t border-line"><button class="btn bg-tred text-ember2 hover:brightness-125" data-a="wipe">${ic('trash', 17)}Alles löschen</button></div>`)
 };
 
 /* =========================================================
@@ -2557,6 +2658,7 @@ document.addEventListener('change', async e => {
     if (el.dataset.b.startsWith('s:design.')) applyTheme();
     renderSoon(); return;
   }
+  if (el.hasAttribute('data-advisor-pick')) { const p = curProject(), v = el.value; if (v === '__other') { p.offer.advisorId = ''; p.offer.advisor = ''; } else { const a = (S.company.advisors || []).find(x => x.id === v); p.offer.advisorId = a ? a.id : ''; p.offer.advisor = a ? a.name : ''; } delete p.from['offer.advisor']; saveProject(p); renderSoon(); return; }
   if (el.dataset.upload) { const p = curProject(); const fs = [...el.files]; el.value = ''; if (p && fs.length) handleUpload(p, el.dataset.upload, fs); return; }
   if (el.dataset.replace) { const p = curProject(); const fs = [...el.files]; el.value = ''; if (p && fs.length) handleUpload(p, el.dataset.role, fs.slice(0, 1), el.dataset.replace); return; }
   if (el.dataset.imgup) { const f = el.files[0]; el.value = ''; if (f) await handleImage(el.dataset.imgup, f, el.dataset.id); return; }
@@ -2660,7 +2762,7 @@ document.addEventListener('click', async e => {
     case 'prices-reset': if (await confirmDlg('Recherchierte Werte wiederherstellen?', 'Alle Preisdaten werden auf den Stand Oktober 2026 zurückgesetzt.', 'Wiederherstellen', false)) { S.prices = clone(DEFAULT_PRICES); saveSettings(); render(); toast('Preisdaten wiederhergestellt.'); } break;
     case 'cmp-add': S.comparisons.items.push({ id: uid('c'), on: true, icon: 'gift', label: 'Neuer Vergleich', price: 1000 }); saveSettings(); render(); break;
     case 'cmp-del': S.comparisons.items = S.comparisons.items.filter(i => i.id !== a.dataset.id); saveSettings(); render(); break;
-    case 'theme-preset': { const t = THEME_PRESETS[+a.dataset.i]; Object.assign(S.design, { primary: t.primary, secondary: t.secondary, accent: t.accent, old: t.old, ink: t.ink, bg: t.bg }); applyTheme(); saveSettings(); render(); break; }
+    case 'theme-preset': { const t = THEME_PRESETS[+a.dataset.i]; Object.assign(S.design, { primary: t.primary, secondary: t.secondary, accent: t.accent, old: t.old, ink: t.ink, bg: t.bg, night: t.night }); applyTheme(); saveSettings(); render(); break; }
     case 'ord': { const o = docOrder(), i = o.indexOf(a.dataset.k), j = i + +a.dataset.d; if (j < 0 || j >= o.length) break; [o[i], o[j]] = [o[j], o[i]]; S.doc.order = o; saveSettings(); render(); break; }
     case 'ord-reset': S.doc.order = null; saveSettings(); render(); break;
     case 'docdef': { const k = a.dataset.k, on = S.doc.defaults[k] === false; S.doc.defaults[k] = on; if (on && k === 'sign') S.discount.signPage = true; if (on && (k === 'prices' || k === 'why')) S.prices.showPages = true; saveSettings(); render(); break; }

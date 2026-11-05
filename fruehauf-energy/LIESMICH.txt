@@ -29,10 +29,13 @@ Erste Schritte
 --------------
 1. Einstellungen → Unternehmen: Logo, Anschrift, Bankdaten eintragen.
    (Wichtig, damit die Angebotserkennung Ihre Daten nicht für Kundendaten hält.)
-2. Einstellungen → Design & Deckblatt: Farbwelt, Schriften, Eckenradius,
+2. Einstellungen → Design & Deckblatt: App dunkel oder hell, Kundendokument
+   hell, gemischt oder dunkel, Farbwelt, Schriften, Eckenradius,
    Deckblatt-Stil, Kopfzeile und Kapitelmarke anpassen.
    Einstellungen → Dokument & Verkauf: Seitenreihenfolge, alle Seitentexte,
-   Verkaufsargumente und Kontaktbox. Unter Unternehmen: Berater mit Foto.
+   Verkaufsargumente und Kontaktbox.
+   Einstellungen → Berater: Berater mit Name, E-Mail, Telefon und Foto anlegen
+   und einen Standard-Berater wählen. Im Projekt per Auswahlliste änderbar.
    Einstellungen → Roadmap: Schritte nach der Unterschrift (PV und WP).
 3. Produkte: eigene Komponenten anlegen (werden im Angebot erkannt).
 4. „+ Neue Berechnung“ → Angebot hochladen → Daten prüfen → PDF erstellen.
