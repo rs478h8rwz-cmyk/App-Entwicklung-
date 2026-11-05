@@ -48,7 +48,7 @@ tailwind.config = {
   --ease:cubic-bezier(0.22,1,0.36,1);
 }
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
-body{background:var(--bg);color:var(--ink);font-family:var(--fb),system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom);background:var(--bg);color:var(--ink);font-family:var(--fb),system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
 input,select,textarea,button{font-family:inherit}
 select option{background:var(--card);color:var(--ink)}
 @media (pointer:coarse){ input,select,textarea{font-size:16px!important} }
@@ -74,6 +74,8 @@ details[open] .chev{transform:rotate(180deg)}
    Eigene Farbvariablen, unabhängig vom App-Thema. Keine Tabellenziffern und kein
    Zeichenabstand: html2canvas zeichnet sonst Lücken vor €, % und Klammern. */
 #print-root{position:absolute;left:-12000px;top:0;width:210mm}
+#toasts{top:calc(env(safe-area-inset-top) + 12px)!important}
+.modal-wrap{padding-top:calc(env(safe-area-inset-top) + 16px)!important;padding-bottom:calc(env(safe-area-inset-bottom) + 16px)!important}
 .page{
   --p:var(--d-p); --p-rgb:var(--d-p-rgb); --ink:var(--d-ink); --ink2:var(--d-ink2); --ink3:var(--d-ink3); --line:var(--d-line); --line2:var(--d-line2);
   --tile:var(--d-tile); --t-red:var(--d-t-red); --t-yel:var(--d-t-yel); --p-light:var(--d-p-light); --hl:var(--d-hl); --hl-num:var(--d-hl-num);
@@ -456,7 +458,7 @@ function toast(msg, kind = 'ok', ms = 3200) {
 }
 function modal(html, opts = {}) {
   const root = $('#modal');
-  root.innerHTML = `<div class="fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" data-modal-bg>
+  root.innerHTML = `<div class="modal-wrap fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" data-modal-bg>
     <div class="card w-full ${opts.wide ? 'max-w-3xl' : 'max-w-lg'} p-6 sm:p-7 fade-in my-8 relative">
       <button class="absolute right-4 top-4 w-9 h-9 rounded-full grid place-items-center text-ink3 hover:bg-bg" data-a="modal-close" aria-label="Schließen">${ic('x', 18)}</button>
       ${html}
@@ -502,7 +504,8 @@ const DEFAULT_SETTINGS = {
     v: 3, mode: 'dark', pdfTheme: 'mixed',
     primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA', night: '#0A0E13',
     fontBody: 'Geist', fontHead: 'Instrument Serif', fontMono: 'Geist Mono', headWeight: 400, radius: 14, buttons: 'round', buttonStyle: 'light', highlight: 'solid',
-    chapter: 'sun', pdfHeader: 'band', coverStyle: 'illu',
+    chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', coverStyle: 'illu',
+    mark: { style: 'sun', shape: 'rounded', bg: '', fg: '', line: '', text: '', file: '' },
     cover: { use: false, file: '', showCustomer: true, whiteBox: true, dark: true, pos: 62 },
     coverLogo: { source: 'company', file: '', x: 6, y: 6, size: 14, whiteBg: true }
   },
@@ -641,7 +644,7 @@ async function loadAll() {
   if (st2) {
     S = deepMerge(clone(DEFAULT_SETTINGS), st2);
     if (!st2.design || st2.design.v !== 3) { // neue Designsprache: Stil zurücksetzen, Farben, Logos und Deckblatt behalten
-      const keep = { primary: S.design.primary, secondary: S.design.secondary, cover: S.design.cover, coverLogo: S.design.coverLogo, coverStyle: st2.design && st2.design.cover && st2.design.cover.use ? 'image' : 'illu' };
+      const keep = { mark: S.design.mark, primary: S.design.primary, secondary: S.design.secondary, cover: S.design.cover, coverLogo: S.design.coverLogo, coverStyle: st2.design && st2.design.cover && st2.design.cover.use ? 'image' : 'illu' };
       S.design = { ...clone(DEFAULT_SETTINGS.design), ...keep };
     }
   }
@@ -651,7 +654,7 @@ async function loadAll() {
   if (!st2) saveSettingsNow();
   if (!PROJECTS.length) PROJECTS = (await DB.all('projects')) || [];
   PROJECTS = PROJECTS.map(p => deepMerge(newProject(p.type || 'wp'), p));
-  await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file, ...(S.company.advisors || []).map(a => a.photo)]);
+  await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file, S.design.mark && S.design.mark.file, ...(S.company.advisors || []).map(a => a.photo)]);
 }
 async function migrateLegacy() {
   let raw; try { raw = localStorage.getItem('fruehauf-energy-wirtschaftlichkeit-v1'); } catch (e) { return; }
@@ -1576,12 +1579,23 @@ function annualLegend(A, px) {
 
 /* Kapitelmarke */
 function kmHtml() {
-  const k = S.design.chapter, p = S.design.primary, s = S.design.secondary;
+  const d = S.design, k = d.chapter, p = d.chapterLine || d.primary, s = d.chapterSun || d.secondary;
   if (k === 'none') return '';
   if (k === 'bar') return `<div class="km"><div style="width:9mm;height:2.2mm;border-radius:2mm;background:linear-gradient(90deg,${s},${p})"></div></div>`;
+  if (k === 'dot') return `<div class="km"><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="${s}"/></svg></div>`;
+  if (k === 'line') return `<div class="km"><div style="width:14mm;height:0.6mm;border-radius:1mm;background:${p}"></div></div>`;
+  if (k === 'mark') return `<div class="km">${sunMark(22)}</div>`;
   return `<div class="km"><svg width="34" height="17" viewBox="0 0 34 17"><path d="M7 15 A10 10 0 0 1 27 15 Z" fill="${s}"/><g stroke="${s}" stroke-width="1.8" stroke-linecap="round"><line x1="17" y1="1.2" x2="17" y2="3"/><line x1="7.4" y1="4.6" x2="8.7" y2="5.9"/><line x1="26.6" y1="4.6" x2="25.3" y2="5.9"/></g><line x1="1" y1="15.6" x2="33" y2="15.6" stroke="${p}" stroke-width="1.8" stroke-linecap="round"/></svg></div>`;
 }
-const sunMark = (size = 28, p = S.design.primary, s = S.design.secondary) => `<svg width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="${p}"/><path d="M8 21 A8 8 0 0 1 24 21 Z" fill="${s}"/><g stroke="${s}" stroke-width="1.8" stroke-linecap="round"><line x1="16" y1="7.5" x2="16" y2="9.5"/><line x1="8.6" y1="10.6" x2="10" y2="12"/><line x1="23.4" y1="10.6" x2="22" y2="12"/></g><line x1="6" y1="21.8" x2="26" y2="21.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+/* Signet: das kleine Symbol oben links (App-Kopfleiste und PDF, wenn kein Logo hochgeladen ist) */
+function sunMark(size = 28) {
+  const m = S.design.mark || {}, bg = m.bg || S.design.primary, fg = m.fg || S.design.secondary, line = m.line || '#ffffff';
+  if (m.style === 'image' && fileUrl(m.file)) return `<img src="${fileUrl(m.file)}" alt="" style="max-width:${size}px;max-height:${size}px;width:auto;height:auto;display:block;border-radius:${m.shape === 'circle' ? '50%' : m.shape === 'none' ? '0' : Math.round(size * 0.28) + 'px'}">`;
+  const shape = m.shape === 'circle' ? `<circle cx="16" cy="16" r="16" fill="${bg}"/>` : m.shape === 'none' ? '' : `<rect width="32" height="32" rx="9" fill="${bg}"/>`;
+  if (m.style === 'initial') return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">${shape}<text x="16" y="21.5" text-anchor="middle" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="16" font-weight="600" fill="${m.shape === 'none' ? bg : fg}">${esc((m.text || coName()[0] || 'F').slice(0, 2))}</text></svg>`;
+  const lc = m.shape === 'none' ? bg : line;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">${shape}<path d="M8 21 A8 8 0 0 1 24 21 Z" fill="${fg}"/><g stroke="${fg}" stroke-width="1.8" stroke-linecap="round"><line x1="16" y1="7.5" x2="16" y2="9.5"/><line x1="8.6" y1="10.6" x2="10" y2="12"/><line x1="23.4" y1="10.6" x2="22" y2="12"/></g><line x1="6" y1="21.8" x2="26" y2="21.8" stroke="${lc}" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+}
 
 /* Roadmap nach der Unterschrift (HTML, für App und PDF) */
 function roadmapHtml(p, mm = true) {
@@ -1663,7 +1677,7 @@ function shell(inner) {
   const nav = [['kunden', 'Kunden', 'users'], ['produkte', 'Produkte', 'box'], ['einstellungen', 'Einstellungen', 'gear']];
   const active = UI.route === 'projekt' ? 'kunden' : UI.route;
   const links = cls => nav.map(([k, l, i]) => `<a href="#/${k}" class="navl ${cls} ${active === k ? 'on' : ''}">${ic(i, 17)}${l}</a>`).join('');
-  return `<header class="sticky top-0 z-40 backdrop-blur-md border-b border-line" style="background:var(--header)">
+  return `<header class="sticky top-0 z-40 backdrop-blur-md border-b border-line" style="background:var(--header);padding-top:env(safe-area-inset-top);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)">
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
     <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3">Wirtschaftlichkeitsrechner</div></div></a>
     <nav class="hidden md:flex items-center gap-1 ml-6">${links('')}</nav>
@@ -2467,6 +2481,18 @@ function viewSettings() {
       <nav class="card p-2 flex lg:flex-col gap-1 overflow-x-auto no-scrollbar lg:sticky lg:top-24">${STABS.map(([k, l, i]) => `<a href="#/einstellungen/${k}" class="tab ${t === k ? 'on' : ''}">${ic(i, 18)}<span>${l}</span></a>`).join('')}</nav>
       <div class="min-w-0 space-y-5">${body}</div></div></div>`;
 }
+function markSettings() {
+  const m = S.design.mark, d = S.design;
+  const colorField = (label, b, fallback) => `<div><span class="lbl">${label}</span><div class="flex items-center gap-3"><input type="color" class="w-11 h-11 rounded-[var(--rb)] border border-line2 p-0.5 bg-card cursor-pointer shrink-0" data-b="${b}" data-t="color" value="${bval(b) || fallback}"><div class="w-32">${inp(b, { t: 'hex', ph: fallback })}</div>${bval(b) ? `<button class="btn-g !px-2" data-a="clear-color" data-b="${b}" title="Wie Farbwelt">${ic('refresh', 15)}</button>` : ''}</div></div>`;
+  const prev = `<div class="flex flex-wrap items-end gap-6 rounded-[calc(var(--r)-4px)] bg-raised p-5"><div class="text-center">${sunMark(64)}<div class="mono text-[11px] text-ink3 mt-2">Signet</div></div><div class="text-center">${sunMark(32)}<div class="mono text-[11px] text-ink3 mt-2">klein</div></div><div class="flex items-center gap-3 rounded-[var(--rb)] bg-card border border-line px-4 h-14">${sunMark(32)}<div class="leading-tight"><div class="text-[14px] font-semibold">${esc(coName())}</div><div class="text-[11px] text-ink3">Kopfleiste</div></div></div><div class="rounded-[var(--rb)] bg-white px-5 py-3" style="color:#0F2A3D"><div style="height:20px;display:flex;align-items:flex-end">${kmHtml().replace('<div class="km">', '<div>')}</div><div class="h-font text-[22px] mt-1">Kapitelüberschrift</div></div></div>`;
+  return `${prev}
+    <div class="grid sm:grid-cols-2 gap-5 mt-5"><div><span class="lbl">Signet</span>${seg('s:design.mark.style', [['sun', 'Sonnenaufgang'], ['initial', 'Initiale'], ['image', 'Eigenes Bild']], { cls: 'flex-wrap' })}</div><div><span class="lbl">Form</span>${seg('s:design.mark.shape', [['rounded', 'Abgerundet'], ['circle', 'Rund'], ['none', 'Ohne Fläche']])}</div></div>
+    ${m.style === 'image' ? `<div class="mt-4 flex items-center gap-3">${fileUrl(m.file) ? `<img src="${fileUrl(m.file)}" class="h-12 w-12 object-contain rounded-lg bg-card border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Sonne gezeigt.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${m.file ? 'Ersetzen' : 'Bild hochladen'}<input type="file" accept="image/*" class="hidden" data-imgup="mark"></label></div>` : ''}
+    ${m.style === 'initial' ? `<div class="mt-4 max-w-[200px]">${field('Buchstaben', 's:design.mark.text', { ph: coName()[0] || 'F' })}</div>` : ''}
+    ${m.style !== 'image' ? `<div class="grid sm:grid-cols-3 gap-5 mt-5">${colorField('Hintergrund', 's:design.mark.bg', d.primary)}${colorField(m.style === 'initial' ? 'Buchstabe' : 'Sonne', 's:design.mark.fg', d.secondary)}${m.style === 'sun' ? colorField('Horizontlinie', 's:design.mark.line', '#ffffff') : ''}</div>` : ''}
+    <div class="mt-6 pt-5 border-t border-line"><span class="lbl">Kapitelmarke über den Überschriften im PDF</span>${seg('s:design.chapter', [['sun', 'Sonnenaufgang'], ['mark', 'Wie Signet'], ['bar', 'Balken'], ['line', 'Linie'], ['dot', 'Punkt'], ['none', 'Keine']], { cls: 'flex-wrap' })}
+    ${['sun', 'bar', 'line', 'dot'].includes(d.chapter) ? `<div class="grid sm:grid-cols-2 gap-5 mt-4">${d.chapter !== 'line' ? colorField('Sonne / Akzent', 's:design.chapterSun', d.secondary) : ''}${d.chapter !== 'dot' ? colorField('Linie', 's:design.chapterLine', d.primary) : ''}</div>` : ''}</div>`;
+}
 const sCard = (icon, title, sub, body) => `<div class="card p-5 sm:p-6">${cardHead(icon, title, sub)}${body}</div>`;
 function sampleProject() {
   const p = newProject('pvwp'); p.customer = { salutation: 'Familie', name: 'Mustermann', street: 'Sonnenweg 12', zip: '48143', city: 'Münster' }; p.offer.number = 'A-2026-0815'; p.offer.advisor = 'Max Berater'; p.offer.grossWP = 32000; p.offer.grossPV = 21000; p.heating.year = 1998; p.heating.cons = 24000; p.pv.kwp = 10; p.pv.bat = 10; return p;
@@ -2497,11 +2523,12 @@ const SET = {
         <div class="grid sm:grid-cols-2 gap-6 mt-5"><div><span class="lbl">Stärke der Überschriften</span>${seg('s:design.headWeight', [[400, 'Leicht'], [500, 'Normal'], [600, 'Kräftig']])}</div><div><span class="lbl">Buttons</span><div class="flex flex-wrap gap-2">${seg('s:design.buttons', [['round', 'Abgerundet'], ['pill', 'Pille']])}${seg('s:design.buttonStyle', [['light', 'Neutral'], ['color', 'Primärfarbe']])}</div></div>
         <div>${range('Eckenradius', 's:design.radius', 0, 28, ' px')}</div><div><span class="lbl">Hervorhebungen</span>${seg('s:design.highlight', [['solid', 'Fläche'], ['gradient', 'Verlauf']])}</div></div>
         <div class="mt-6 rounded-[calc(var(--r)-4px)] bg-raised p-5"><div class="mono text-[12px] text-ink3">Vorschau</div><div class="h-font text-[30px] leading-tight mt-2">So sehen Überschriften aus</div><p class="text-ink2 text-[15px] mt-2">Und so der Fließtext in App und Dokument. Zahlen stehen tabellarisch: 12.480 € · 7,1 Jahre</p><div class="flex gap-2 mt-4"><span class="btn-p btn-sm">Primär</span><span class="btn-s btn-sm">Sekundär</span></div></div>`)
+      + sCard('sun', 'Signet und Kapitelmarke', 'Das kleine Symbol oben links in App und PDF (solange kein Firmenlogo hochgeladen ist) und das Zeichen über den Überschriften im PDF.', markSettings())
       + sCard('file', 'Kundendokument', 'Stil von Deckblatt, Kopfzeile und Kapitelmarke.', `
       <div class="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-6"><div class="space-y-5">
       <div><span class="lbl">Deckblatt</span>${seg('s:design.coverStyle', [['illu', 'Illustration'], ['type', 'Typografisch'], ['image', 'Eigenes Bild']], { cls: 'flex-wrap' })}</div>
       ${d.coverStyle === 'image' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 divide-y divide-line"><div class="py-3 flex flex-wrap items-center gap-3">${fileUrl(cv.file) ? `<img src="${fileUrl(cv.file)}" class="h-20 rounded-lg border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Illustration verwendet.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${cv.file ? 'Ersetzen' : 'Bild oder PDF hochladen'}<input type="file" accept="image/*,application/pdf" class="hidden" data-imgup="cover"></label></div>${toggleRow('Kundendaten einblenden', 's:design.cover.showCustomer')}${toggleRow('Weißer Kasten', 's:design.cover.whiteBox')}${toggleRow('Dunkle Schrift', 's:design.cover.dark')}<div class="py-3">${range('Position Kundendaten (von oben)', 's:design.cover.pos', 5, 85, ' %')}</div></div>` : ''}
-      <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband']])}</div><div><span class="lbl">Kapitelmarke</span>${seg('s:design.chapter', [['sun', 'Sonnenaufgang'], ['bar', 'Balken'], ['none', 'Keine']])}</div></div>
+      <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband']])}</div></div>
       <div class="pt-2"><div class="font-medium text-[15px]">Logo auf dem Deckblatt</div><div class="mt-3">${seg('s:design.coverLogo.source', [['company', 'Firmenlogo'], ['custom', 'Eigenes Logo']])}</div>
       ${L.source === 'custom' ? `<div class="mt-3 flex items-center gap-3">${fileUrl(L.file) ? `<img src="${fileUrl(L.file)}" class="h-12 max-w-[160px] object-contain rounded-lg bg-card border border-line p-1">` : ''}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="coverlogo"></label></div>` : ''}
       <div class="grid sm:grid-cols-3 gap-4 mt-4">${range('Horizontal', 's:design.coverLogo.x', 0, 100, ' %')}${range('Vertikal', 's:design.coverLogo.y', 0, 100, ' %')}${range('Größe', 's:design.coverLogo.size', 6, 40, ' mm')}</div>
@@ -2700,6 +2727,8 @@ async function handleImage(kind, file, id) {
       const blob = await imageKeepAlpha(file, 900); if (S.company.logoFile) await delFiles([S.company.logoFile]); S.company.logoFile = await putFile(blob, file.name);
     } else if (kind === 'coverlogo') {
       const blob = await imageKeepAlpha(file, 900); if (S.design.coverLogo.file) await delFiles([S.design.coverLogo.file]); S.design.coverLogo.file = await putFile(blob, file.name);
+    } else if (kind === 'mark') {
+      const blob = await imageKeepAlpha(file, 400); if (S.design.mark.file) await delFiles([S.design.mark.file]); S.design.mark.file = await putFile(blob, file.name); S.design.mark.style = 'image';
     } else if (kind === 'advisor') {
       const a = S.company.advisors.find(x => x.id === id); const blob = await resizeImage(file, 500, 'image/jpeg'); if (a.photo) await delFiles([a.photo]); a.photo = await putFile(blob, file.name);
     } else if (kind === 'product') {
@@ -2765,6 +2794,7 @@ document.addEventListener('click', async e => {
     case 'prices-reset': if (await confirmDlg('Recherchierte Werte wiederherstellen?', 'Alle Preisdaten werden auf den Stand Oktober 2026 zurückgesetzt.', 'Wiederherstellen', false)) { S.prices = clone(DEFAULT_PRICES); saveSettings(); render(); toast('Preisdaten wiederhergestellt.'); } break;
     case 'cmp-add': S.comparisons.items.push({ id: uid('c'), on: true, icon: 'gift', label: 'Neuer Vergleich', price: 1000 }); saveSettings(); render(); break;
     case 'cmp-del': S.comparisons.items = S.comparisons.items.filter(i => i.id !== a.dataset.id); saveSettings(); render(); break;
+    case 'clear-color': bset(a.dataset.b, ''); applyTheme(); render(); break;
     case 'theme-toggle': S.design.mode = appDark() ? 'light' : 'dark'; applyTheme(); saveSettings(); render(); break;
     case 'theme-preset': { const t = THEME_PRESETS[+a.dataset.i]; Object.assign(S.design, { primary: t.primary, secondary: t.secondary, accent: t.accent, old: t.old, ink: t.ink, bg: t.bg, night: t.night }); applyTheme(); saveSettings(); render(); break; }
     case 'ord': { const o = docOrder(), i = o.indexOf(a.dataset.k), j = i + +a.dataset.d; if (j < 0 || j >= o.length) break; [o[i], o[j]] = [o[j], o[i]]; S.doc.order = o; saveSettings(); render(); break; }
