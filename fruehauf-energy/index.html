@@ -524,7 +524,7 @@ const DEFAULT_SETTINGS = {
     gasNet: 0, gasNetYear: 2040, jaz: 3.4,
     oilPrice: 1.05, gasPrice: 0.12, hpTariff: 0.27, hhPrice: 0.34, hhCons: 4000,
     efficiency: 85, hpBase: 120, hpMaint: 180, oilMaint: 380, gasMaint: 280, oilBase: 0, gasBase: 180,
-    pvYield: 950, feedIn: 7.7, potKwp: 10, potBat: 0, pvDeg: 0.5, pvHpShare: 30,
+    pvYield: 950, feedIn: 7.7, potKwp: 10, potBat: 0, rodName: 'my-PV Heizstab', rodKw: 3, dhwShare: 18, pvDeg: 0.5, pvHpShare: 30,
     co2Oil: 0.31, co2Gas: 0.24, co2El: 0.38,
     replaceGas: 12000, replaceOil: 15000,
     hideFinanceAbove: 15, showAssumptions: true,
@@ -609,6 +609,7 @@ function newProject(type) {
     hp: { model: '', kw: null, jaz: null, tariff: c.hpTariff, heat: null, power: null, dims: '', weight: null, base: c.hpBase, maint: c.hpMaint, sw: 53, swDay: 60, swNight: 51, spl: 34, splDist: 3, p14a: 0 },
     pv: { kwp: null, bat: null, modules: '' },
     pvPot: { kwp: null, bat: null },
+    rod: { on: false, name: '', kw: null, months: 5 },
     hh: { cons: c.hhCons, price: c.hhPrice },
     fund: { stand: currentStand(today).id, eu: false, speed: null, income: 'none', units: 1, eligible: null, other: 0 },
     discount: { on: true, amount: S.discount.amount, until: addDays(today, S.discount.days) },
@@ -802,6 +803,13 @@ function compute(p, scen) {
     R.autarky = (R.hhCons + R.hpPower) ? R.self / (R.hhCons + R.hpPower) : 0;
     R.co2Pv = R.yield * c.co2El;
   } else { R.yield = 0; R.self = 0; R.feed = 0; R.pvBenefit1 = 0; R.autarky = 0; R.co2Pv = 0; R.kwp = 0; R.bat = 0; R.selfShare = 0; R.mixPrice = R.hhPrice; }
+  R.rod = W && V && p.rod && p.rod.on;
+  if (R.rod) {
+    R.rodMonths = clamp(nz(p.rod.months, 5), 3, 6);
+    R.rodName = p.rod.name || c.rodName; R.rodKw = nz(p.rod.kw, c.rodKw);
+    R.rodHeat = R.heat * nz(c.dhwShare, 18) / 100 * R.rodMonths / 12;  // Warmwasser in den Sommermonaten
+    R.rodHpSaved = R.jaz ? R.rodHeat / R.jaz : 0;                     // WP-Strom, der im Sommer entfällt
+  }
   R.co2Save = Math.max(0, R.co2Old - R.co2New) + R.co2Pv;
   // Dynamik
   const fi = nz(P.fuelInc) / 100, ei = nz(P.elecInc) / 100, mi = nz(P.maintInc) / 100, zi = nz(P.rate) / 100, deg = nz(c.pvDeg) / 100;
@@ -872,7 +880,11 @@ function annualProfile(p, R) {
   const pvM = norm(PV_SHARE).map(f => f * yieldY);
   const hhM = norm([1.1, 1.02, 1, 0.95, 0.92, 0.9, 0.9, 0.92, 0.95, 1.02, 1.08, 1.14]).map(f => f * R.hhCons);
   let demM;
-  if (mode === 'hp') { const dhw = 0.18; demM = norm(norm(HEAT_SHARE).map((h, i) => (h * (1 - dhw) + dhw / 12) * COP_F[i])).map(f => f * total); }
+  let rodM = MONTHS.map(() => 0);
+  if (mode === 'hp') {
+    const dhw = nz(S.calc.dhwShare, 18) / 100; demM = norm(norm(HEAT_SHARE).map((h, i) => (h * (1 - dhw) + dhw / 12) * COP_F[i])).map(f => f * total);
+    if (R.rod) { const span = { 3: [5, 6, 7], 4: [4, 5, 6, 7], 5: [4, 5, 6, 7, 8], 6: [4, 5, 6, 7, 8, 9] }[R.rodMonths] || [4, 5, 6, 7, 8]; span.forEach(i => { rodM[i] = R.heat * dhw / 12; demM[i] = demM[i] * 0.04; }); }
+  }
   else demM = hhM;
   const bf = Math.min(1, bat / 10);
   const months = MONTHS.map((m, i) => {
@@ -881,11 +893,12 @@ function annualProfile(p, R) {
     const dayShare = mode === 'hp' ? DAY_F[i] : 0.42;
     const cap = demM[i] * Math.min(0.95, dayShare + 0.3 * bf);
     const covered = Math.min(cap, avail * (0.55 + 0.25 * bf), demM[i]);
-    return { m, demand: demM[i], pv: pvM[i], covered };
+    return { m, demand: demM[i], pv: pvM[i], covered, rod: rodM[i] };
   });
   const covered = months.reduce((a, x) => a + x.covered, 0);
   const price = mode === 'hp' ? (R.tariff || S.calc.hpTariff) : R.hhPrice;
-  return { mode, pot, kwp, bat, yieldY, total, months, covered, share: total ? covered / total : 0, value: covered * (price - S.calc.feedIn / 100) };
+  const totalM = months.reduce((a, x) => a + x.demand, 0);
+  return { mode, pot, kwp, bat, yieldY, total: totalM, months, covered, rodTotal: rodM.reduce((a, b) => a + b, 0), rod: R.rod, share: totalM ? covered / totalM : 0, value: covered * (price - S.calc.feedIn / 100) };
 }
 
 /* =========================================================
@@ -1515,25 +1528,77 @@ ${arr(80, 60, 113, 60, s)}${arr(248, 60, 285, 60, s)}
 ${arr(420, 52, 465, 34, p)}${arr(420, 64, 465, 110, s)}${arr(420, 76, 465, 186, C().blue)}
 </svg>`;
 }
-/* Tagesverlauf 6 bis 6 Uhr */
-function dayProfileSVG(R) {
-  const c = C(), W = 640, H = 190, pl = 30, pr = 10, pt = 14, pb = 28, s = S.design.secondary;
-  const hours = Array.from({ length: 25 }, (_, i) => 6 + i);
-  const gen = h => { const hh = h % 24; return hh >= 6 && hh <= 20 ? Math.pow(Math.sin(Math.PI * (hh - 6) / 14), 1.6) : 0; };
-  const use = h => { const hh = h % 24; return 0.18 + 0.32 * Math.exp(-Math.pow((hh - 7.5) / 1.4, 2)) + 0.45 * Math.exp(-Math.pow((hh - 19) / 2.2, 2)) + 0.12 * Math.exp(-Math.pow((hh - 12.5) / 1.5, 2)) - (hh >= 0 && hh < 5 ? 0.06 : 0); };
-  const X = h => pl + (W - pl - pr) * (h - 6) / 24, Y = v => pt + (H - pt - pb) * (1 - v / 1.05);
-  const path = (f, close) => { let d = `M${X(6)},${Y(close ? 0 : f(6))}`; for (let h = 6; h <= 30; h += 0.25) d += ` L${X(h).toFixed(1)},${Y(f(h)).toFixed(1)}`; return close ? d + ` L${X(30)},${Y(0)} Z` : d; };
-  const direct = h => Math.min(gen(h), use(h)), charge = h => Math.max(0, gen(h) - use(h)) * (R.bat ? 0.55 : 0);
-  const fromBat = h => { const hh = h % 24; return R.bat && (hh >= 19 || hh < 6) && gen(h) < use(h) ? use(h) - gen(h) : 0; };
-  let sv = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
-  sv += `<path d="${path(gen, true)}" fill="${s}" opacity=".28"/>`;
-  sv += `<path d="${path(direct, true)}" fill="${c.p}" opacity=".5"/>`;
-  if (R.bat) { let d = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d += ` L${X(h).toFixed(1)},${Y(direct(h) + charge(h)).toFixed(1)}`; sv += `<path d="${d} L${X(30)},${Y(0)} Z" fill="#F5C76A" opacity=".55"/><path d="${path(direct, true)}" fill="${c.p}" opacity=".55"/>`; let d2 = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d2 += ` L${X(h).toFixed(1)},${Y(fromBat(h)).toFixed(1)}`; sv += `<path d="${d2} L${X(30)},${Y(0)} Z" fill="${C().blue}" opacity=".28"/>`; }
-  sv += `<path d="${path(use, false)}" fill="none" stroke="${C().ink}" stroke-width="2" stroke-dasharray="5 4"/>`;
-  sv += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C().stroke}"/>`;
-  [6, 9, 12, 15, 18, 21, 24, 27, 30].forEach(h => { sv += T(X(h), H - 10, String(h % 24).padStart(2, '0') + ' Uhr', { a: h === 6 ? 'start' : h === 30 ? 'end' : 'middle', fs: 9.5 }); });
-  if (R.bat) sv += T(X(26.5), Y(0.62), 'Speicher versorgt Sie', { a: 'middle', fs: 10, fw: 800, c: C().blue }) + T(X(26.5), Y(0.62) + 13, 'bis zum Morgen', { a: 'middle', fs: 10, fw: 800, c: C().blue });
-  return sv + '</svg>';
+/* Tagesverlauf 6 bis 6 Uhr: Ertrag, Verbrauch, Laden und Entladen des Speichers übereinander */
+const MONTH_NAMES = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const SUN_RISE = [8.5, 7.8, 6.9, 6.9, 5.9, 5.3, 5.6, 6.3, 7.2, 8.0, 7.6, 8.4];   // Münster, Ortszeit
+const SUN_SET = [16.8, 17.7, 18.6, 20.4, 21.3, 21.9, 21.8, 21.0, 19.9, 18.8, 16.9, 16.4];
+const DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+/* Viertelstunden-Simulation eines typischen (eher sonnigen) Tages im gewählten Monat */
+function simulateDay(R, month, p) {
+  const mi = clamp((month || 4) - 1, 0, 11), dt = 0.25, steps = 96;
+  const rise = SUN_RISE[mi], set = SUN_SET[mi];
+  const shape = h => { const x = h % 24; return x > rise && x < set ? Math.pow(Math.sin(Math.PI * (x - rise) / (set - rise)), 1.6) : 0; };
+  let sh = 0; for (let i = 0; i < steps; i++) sh += shape(6 + i * dt) * dt;
+  const eDay = R.kwp * S.calc.pvYield * norm(PV_SHARE)[mi] / DAYS[mi] * 1.2;      // typischer Sonnentag: etwas über dem Monatsmittel
+  const gen = h => sh ? eDay * shape(h) / sh : 0;
+  const hhM = [1.1, 1.02, 1, 0.95, 0.92, 0.9, 0.9, 0.92, 0.95, 1.02, 1.08, 1.14][mi];
+  const hhK = Math.max(0.4, R.hhCons / 4000) * hhM;
+  const hh = h => { const x = h % 24; return hhK * (0.22 + 0.55 * Math.exp(-Math.pow((x - 7.3) / 1.1, 2)) + 0.38 * Math.exp(-Math.pow((x - 12.6) / 1.4, 2)) + 1.05 * Math.exp(-Math.pow((x - 19.2) / 1.9, 2)) - (x < 5 ? 0.06 : 0)); };
+  let hpDay = 0, rodDay = 0;
+  if (R.W && p) { const A = annualProfile(p, R); hpDay = A.months[mi].demand / DAYS[mi]; rodDay = A.months[mi].rod / DAYS[mi]; }
+  const hpShape = h => { const x = h % 24; return 0.7 + 0.5 * Math.exp(-Math.pow((x - 6.5) / 2.2, 2)) + 0.35 * Math.exp(-Math.pow((x - 13) / 2, 2)) - (x > 22 || x < 4 ? 0.25 : 0); };
+  let hpNorm = 0; for (let i = 0; i < steps; i++) hpNorm += hpShape(6 + i * dt) * dt;
+  const use = h => hh(h) + (hpDay ? hpDay * hpShape(h) / hpNorm : 0);
+  const cap = R.bat || 0, pMax = cap ? Math.max(2.5, cap * 0.5) : 0, minSoc = cap * 0.05, rodKw = R.rod ? R.rodKw : 0;
+  let soc = cap * [0.1, 0.1, 0.15, 0.2, 0.3, 0.35, 0.35, 0.3, 0.2, 0.15, 0.1, 0.1][mi], rodLeft = rodDay / 0.98;
+  const pts = []; let sum = { g: 0, u: 0, self: 0, rod: 0 };
+  for (let i = 0; i <= steps; i++) {
+    const h = 6 + i * dt, g = gen(h), uBase = use(h);
+    let ch = 0, dis = 0, rod = 0;
+    if (cap) {
+      if (g > uBase) { ch = Math.min(g - uBase, pMax, (cap - soc) / dt); soc += ch * dt; }
+      else { dis = Math.min(uBase - g, pMax, Math.max(0, soc - minSoc) / dt); soc -= dis * dt; }
+    }
+    if (rodKw && rodLeft > 0 && g > uBase + ch) { rod = Math.min(g - uBase - ch, rodKw, rodLeft / dt); rodLeft -= rod * dt; }
+    const u = uBase + rod;
+    if (i < steps) { sum.g += g * dt; sum.u += u * dt; sum.self += Math.min(u, g + dis) * dt; sum.rod += rod * dt; }
+    pts.push({ h, g, u, ch, dis, rod, soc: cap ? soc / cap : 0 });
+  }
+  return { pts, cap, month: mi + 1, max: Math.max(...pts.map(q => Math.max(q.g, q.u))), sum };
+}
+function dayInfo(D) {
+  const s = D.sum, aut = s.u ? s.self / s.u : 0;
+  return `Ertrag ${num(s.g, 1)} kWh · Verbrauch ${num(s.u, 1)} kWh · aus Sonne und Speicher gedeckt: ${pct(Math.min(1, aut) * 100)}${s.rod > 0.05 ? ` · Heizstab ${num(s.rod, 1)} kWh` : ''}`;
+}
+function dayProfileSVG(R, o = {}) {
+  const c = C(), D = o.D || simulateDay(R, o.month, o.p), W = o.w || 640, H = o.h || 230, pl = 40, pr = D.cap ? 40 : 12, pt = 16, pb = 28;
+  const mx = niceMax(Math.max(D.max, 1) * 1.08), X = h => pl + (W - pl - pr) * (h - 6) / 24, Y = v => pt + (H - pt - pb) * (1 - v / mx), Ys = f => pt + (H - pt - pb) * (1 - f);
+  const line = f => D.pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.h).toFixed(1)},${f(p).toFixed(1)}`).join(' ');
+  const area = f => `${line(p => Y(f(p)))} L${X(30).toFixed(1)},${Y(0)} L${X(6).toFixed(1)},${Y(0)} Z`;
+  const sun = mix(c.s, '#000000', 0.12), chg = c.p, dis = c.blue, socC = c.dark ? mix(c.blue, '#ffffff', 0.3) : mix(c.blue, '#000000', 0.1);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
+  const nT = Number.isInteger(mx / 4) || mx === 10 ? 4 : 5;
+  for (let i = 0; i <= nT; i++) { const v = mx * i / nT; s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${c.grid}"/>` + T(pl - 6, Y(v) + 3.5, num(v, v % 1 ? 1 : 0), { a: 'end', fs: 9 }); }
+  if (D.cap) for (let i = 0; i <= 4; i++) s += T(W - 2, Ys(i / 4) + 3.5, (i * 25) + ' %', { a: 'end', fs: 9 });
+  s += T(pl - 6, pt - 5, 'kW', { a: 'end', fs: 9, fw: 600 }) + (D.cap ? T(W - 2, pt - 5, 'Ladung', { a: 'end', fs: 9, fw: 600 }) : '');
+  s += `<path d="${area(p => p.g)}" fill="${c.s}" fill-opacity=".22"/>`;
+  if (D.cap) {
+    s += `<path d="${area(p => p.ch)}" fill="${chg}" fill-opacity=".55"/>`;
+    s += `<path d="${area(p => p.dis)}" fill="${dis}" fill-opacity=".45"/>`;
+    s += `<path d="${line(p => Ys(p.soc))}" fill="none" stroke="${socC}" stroke-width="1.6" stroke-dasharray="2 3"/>`;
+  } else s += `<path d="${area(p => Math.min(p.g, p.u))}" fill="${chg}" fill-opacity=".45"/>`;
+  if (D.pts.some(q => q.rod > 0)) s += `<path d="${area(p => p.rod)}" fill="${mix(c.s, '#C2401F', 0.45)}" fill-opacity=".75"/>`;
+  s += `<path d="${line(p => Y(p.g))}" fill="none" stroke="${sun}" stroke-width="2.4" stroke-linejoin="round"/>`;
+  s += `<path d="${line(p => Y(p.u))}" fill="none" stroke="${c.ink}" stroke-width="2" stroke-linejoin="round"/>`;
+  s += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${c.stroke}"/>`;
+  (W < 500 ? [6, 12, 18, 24, 30] : [6, 9, 12, 15, 18, 21, 24, 27, 30]).forEach(h => { s += T(X(h), H - 9, String(h % 24).padStart(2, '0') + ' Uhr', { a: h === 6 ? 'start' : h === 30 ? 'end' : 'middle', fs: 9.5 }); });
+  return s + '</svg>';
+}
+function dayLegend(R, px) {
+  const c = C(), cap = R.bat > 0, m = px ? '14px' : '4mm';
+  const box = (col, op, t) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${m}"><span style="display:inline-block;width:${px ? '10px' : '3mm'};height:${px ? '10px' : '3mm'};border-radius:2px;background:${col};opacity:${op}"></span>${t}</span>`;
+  const ln = (col, w, dash, t) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${m}"><span style="display:inline-block;width:${px ? '16px' : '5mm'};height:0;border-top:${w} ${dash ? 'dotted' : 'solid'} ${col}"></span>${t}</span>`;
+  return ln(mix(c.s, '#000000', 0.12), px ? '2.5px' : '0.7mm', false, 'Ertrag') + ln(c.ink, px ? '2px' : '0.6mm', false, 'Verbrauch') + (cap ? box(c.p, 0.7, 'Speicher laden') + box(c.blue, 0.6, 'Speicher entladen') + ln(c.dark ? mix(c.blue, '#ffffff', 0.3) : mix(c.blue, '#000000', 0.1), px ? '2px' : '0.5mm', true, 'Ladezustand') : box(c.p, 0.6, 'direkt genutzt')) + (R.rod ? box(mix(c.s, '#C2401F', 0.45), 0.8, 'Heizstab') : '');
 }
 const legendDot = (col, txt, dashed) => `<span style="display:inline-flex;align-items:center;gap:1.5mm;margin-right:4mm"><span style="display:inline-block;width:${dashed ? '5mm' : '3mm'};height:${dashed ? '0' : '3mm'};border-radius:1mm;background:${dashed ? 'none' : col};border-top:${dashed ? '0.6mm dashed ' + col : 'none'}"></span>${txt}</span>`;
 /* Schallskala */
@@ -1582,6 +1647,7 @@ function annualChart(A, o = {}) {
     const x = pl + bw * i + bw * 0.22, w = bw * 0.56, yd = Y(m.demand), yc = Y(m.covered), r = Math.min(4, w / 3);
     s += `<rect x="${x}" y="${yd}" width="${w}" height="${Math.max(0, Y(0) - yd)}" rx="${r}" fill="${neutral}"/>`;
     if (m.covered > 0) s += `<rect x="${x}" y="${yc}" width="${w}" height="${Math.max(0, Y(0) - yc)}" rx="${r}" fill="${c.p}"/>`;
+    if (m.rod > 0) { const yr = Y(m.rod); s += `<rect x="${x + w * 0.18}" y="${yr}" width="${w * 0.64}" height="${Math.max(0, Y(0) - yr)}" rx="${r}" fill="${c.s}" fill-opacity=".85"/>`; }
     s += T(x + w / 2, H - 9, m.m, { a: 'middle', fs: 10 });
   });
   s += `<path d="${smoothPath(pts)}" fill="none" stroke="${mix(c.s, '#000000', 0.12)}" stroke-width="2.5" stroke-linecap="round"/>`;
@@ -1591,7 +1657,7 @@ function annualChart(A, o = {}) {
 }
 function annualLegend(A, px) {
   const c = C(), dot = (col, t, line) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${px ? '16px' : '4mm'}"><span style="display:inline-block;width:${line ? (px ? '16px' : '5mm') : (px ? '10px' : '3mm')};height:${line ? '0' : (px ? '10px' : '3mm')};border-radius:2px;background:${line ? 'none' : col};border-top:${line ? `2.5px solid ${col}` : 'none'}"></span>${t}</span>`;
-  return dot(c.neutral, A.mode === 'hp' ? 'Strombedarf Wärmepumpe' : 'Strombedarf Haushalt') + dot(c.p, 'davon mit Solarstrom gedeckt') + dot(mix(c.s, '#000000', 0.12), A.pot ? `Solarstrom einer ${num(A.kwp, 1)}-kWp-Anlage` : 'Ihr Solarstrom', true);
+  return dot(c.neutral, A.mode === 'hp' ? 'Strombedarf Wärmepumpe' : 'Strombedarf Haushalt') + dot(c.p, 'davon mit Solarstrom gedeckt') + (A.rod ? dot(c.s, 'Warmwasser per Heizstab (Solarstrom)') : '') + dot(mix(c.s, '#000000', 0.12), A.pot ? `Solarstrom einer ${num(A.kwp, 1)}-kWp-Anlage` : 'Ihr Solarstrom', true);
 }
 
 /* Kapitelmarke */
@@ -1908,7 +1974,9 @@ function step3(p, R) {
       ${h.replace ? `<div class="pb-4">${field(`Kosten einer neuen ${oil ? 'Ölheizung' : 'Gasheizung'}`, 'p:heating.replaceCost', { t: 'n', unit: '€', ph: num(oil ? c.replaceOil : c.replaceGas), hint: `Leer = Standardwert ${eur(oil ? c.replaceOil : c.replaceGas)}` })}</div>` : ''}</div></div>`;
     out += `<div class="card p-5 sm:p-6">${cardHead('fan', 'Neue Wärmepumpe')}
       <div class="grid sm:grid-cols-2 gap-4">${field('Modell', 'p:hp.model', { cls: 'sm:col-span-2' })}${field('Heizleistung', 'p:hp.kw', { t: 'n', unit: 'kW' })}${field('JAZ (Jahresarbeitszahl)', 'p:hp.jaz', { t: 'n', ph: num(c.jaz, 1), hint: `Leer = Standard ${num(c.jaz, 1)}` })}${field('WP-Stromtarif', 'p:hp.tariff', { t: 'n', unit: '€/kWh' })}</div>
-      ${det('hp-more', 'Weitere Angaben', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Wärmebedarf laut Auslegung', 'p:hp.heat', { t: 'n', unit: 'kWh', ph: R.heat ? num(R.heat) : '', hint: 'Leer = aus Verbrauch × Nutzungsgrad' })}${field('Strombedarf laut Auslegung', 'p:hp.power', { t: 'n', unit: 'kWh', ph: R.hpPower ? num(R.hpPower) : '', hint: 'Leer = Wärmebedarf ÷ JAZ' })}${field('Maße Außeneinheit', 'p:hp.dims', { ph: '1286 x 979 x 562 mm' })}${field('Gewicht Außeneinheit', 'p:hp.weight', { t: 'n', unit: 'kg' })}${field('WP-Grundpreis', 'p:hp.base', { t: 'n', unit: '€/Jahr' })}${field('Wartung WP', 'p:hp.maint', { t: 'n', unit: '€/Jahr' })}${field('Schallleistungspegel', 'p:hp.sw', { t: 'n', unit: 'dB(A)' })}${field('Schallleistung nachts', 'p:hp.swNight', { t: 'n', unit: 'dB(A)' })}${field('Schalldruck nachts', 'p:hp.spl', { t: 'n', unit: 'dB(A)' })}${field('Abstand Schalldruck', 'p:hp.splDist', { t: 'n', unit: 'm' })}${field('§ 14a-Netzentgeltreduzierung', 'p:hp.p14a', { t: 'n', unit: '€/Jahr' })}</div><p class="hint">Schallwerte sind mit Wolf CHA-10 vorbelegt und werden aus Angebot oder Datenblatt übernommen.</p>`)}</div>`;
+      ${det('hp-more', 'Weitere Angaben', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Wärmebedarf laut Auslegung', 'p:hp.heat', { t: 'n', unit: 'kWh', ph: R.heat ? num(R.heat) : '', hint: 'Leer = aus Verbrauch × Nutzungsgrad' })}${field('Strombedarf laut Auslegung', 'p:hp.power', { t: 'n', unit: 'kWh', ph: R.hpPower ? num(R.hpPower) : '', hint: 'Leer = Wärmebedarf ÷ JAZ' })}${field('Maße Außeneinheit', 'p:hp.dims', { ph: '1286 x 979 x 562 mm' })}${field('Gewicht Außeneinheit', 'p:hp.weight', { t: 'n', unit: 'kg' })}${field('WP-Grundpreis', 'p:hp.base', { t: 'n', unit: '€/Jahr' })}${field('Wartung WP', 'p:hp.maint', { t: 'n', unit: '€/Jahr' })}${field('Schallleistungspegel', 'p:hp.sw', { t: 'n', unit: 'dB(A)' })}${field('Schallleistung nachts', 'p:hp.swNight', { t: 'n', unit: 'dB(A)' })}${field('Schalldruck nachts', 'p:hp.spl', { t: 'n', unit: 'dB(A)' })}${field('Abstand Schalldruck', 'p:hp.splDist', { t: 'n', unit: 'm' })}${field('§ 14a-Netzentgeltreduzierung', 'p:hp.p14a', { t: 'n', unit: '€/Jahr' })}</div><p class="hint">Schallwerte sind mit Wolf CHA-10 vorbelegt und werden aus Angebot oder Datenblatt übernommen.</p>`)}
+      ${p.type === 'pvwp' ? `<div class="mt-4 rounded-[calc(var(--r)-4px)] border border-line bg-field p-4"><label class="flex items-start gap-3 cursor-pointer"><input type="checkbox" class="mt-0.5" data-tgcheck="p:rod.on" ${p.rod && p.rod.on ? 'checked' : ''}><span><span class="text-[14px] font-semibold">Heizstab mit PV-Überschuss</span><span class="block hint !mt-0.5">z. B. my-PV: Im Sommer erwärmt der Heizstab das Warmwasser mit überschüssigem Solarstrom. Die Wärmepumpe kann dann nahezu komplett pausieren – weniger Laufzeit, längere Lebensdauer.</span></span></label>
+        ${p.rod && p.rod.on ? `<div class="grid sm:grid-cols-3 gap-4 mt-4">${field('Bezeichnung', 'p:rod.name', { ph: S.calc.rodName })}${field('Leistung', 'p:rod.kw', { t: 'n', unit: 'kW', ph: num(S.calc.rodKw, 1) })}${sel('Sommerbetrieb', 'p:rod.months', [[3, 'Juni bis August'], [4, 'Mai bis August'], [5, 'Mai bis September'], [6, 'Mai bis Oktober']], { t: 'y' })}</div>` : ''}</div>` : ''}</div>`;
   }
   if (hasPV(p)) {
     out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}
@@ -1961,6 +2029,18 @@ function applyComponents(p) {
 }
 
 /* ---------- Schritt 4: Ergebnis ---------- */
+const withChart = fn => fn();
+const dayMonth = p => clamp(+(p.docOpts.dayMonth || 4), 1, 12);
+function dayChartHtml(p, R) { const D = simulateDay(R, dayMonth(p), p); return { svg: dayProfileSVG(R, { D, w: appW(), h: appW() < 640 ? 220 : 250 }), info: dayInfo(D) }; }
+function dayCard(p, R) {
+  const m = dayMonth(p), d = dayChartHtml(p, R);
+  return `<div class="card p-5 sm:p-6">${cardHead('sun', 'Ein typischer Tag – 6 Uhr bis 6 Uhr', R.bat ? `Ertrag, Verbrauch und Ihr ${num(R.bat, 1)}-kWh-Speicher im Tagesverlauf, Leistung in kW` : 'Ertrag und Verbrauch im Tagesverlauf, Leistung in kW')}
+    <div class="rounded-[calc(var(--r)-4px)] bg-raised border border-line p-4 mb-4"><div class="flex items-baseline justify-between gap-3"><span class="text-[13px] text-ink2">Monat wählen</span><span class="h-font text-[24px]" id="day-month">${MONTH_NAMES[m - 1]}</span></div>
+      <input type="range" min="1" max="12" step="1" value="${m}" class="w-full mt-3" data-daymonth aria-label="Monat">
+      <div class="flex justify-between mono text-[11px] text-ink3 mt-1">${['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'].map((x, i) => `<span class="${i % 2 ? 'hidden sm:inline' : ''}">${x}</span>`).join('')}</div></div>
+    <div id="day-chart">${d.svg}</div><div class="text-[12px] text-ink3 mt-2 leading-6">${dayLegend(R, true)}</div>
+    <div class="mt-3 text-[13px] text-ink2" id="day-info">${d.info}</div><p class="hint">Der gewählte Monat erscheint auch im Kundendokument.</p></div>`;
+}
 const appW = () => (window.innerWidth < 640 ? 380 : 640);
 const MONTH_YEARS = R => [R.startYear, 2030, 2035, 2040, 2045].filter((y, i, a) => (i === 0 || y > R.startYear) && y <= R.startYear + R.N - 1 && a.indexOf(y) === i);
 const rowOfYear = (R, y) => R.rows.find(r => r.year === y) || R.rows[0];
@@ -2002,6 +2082,8 @@ function overview(p, R) {
       <div class="grid grid-cols-3 gap-3 mt-4">${[[hp ? 'Solaranteil am WP-Strom' : 'Solaranteil', pct(A.share * 100)], ['Vom eigenen Dach', num(A.covered) + ' kWh'], ['Wert pro Jahr', eur(A.value)]].map(([k, v]) => `<div class="kpi !p-3"><div class="kpi-k !text-[12px]">${k}</div><div class="text-[18px] font-semibold mt-1">${v}</div></div>`).join('')}</div>
       ${A.pot ? `<p class="hint">Die PV-Anlage ist nur ein Vorschlag (Schritt 3 → Potenzielle PV-Anlage) und nicht Teil der Berechnung.</p>` : ''}</div>`;
   }
+  if (R.V && R.kwp > 0) h += dayCard(p, R);
+  if (R.rod) h += `<div class="card p-5 sm:p-6">${cardHead('fan', 'Sommerbetrieb mit Heizstab', `${esc(R.rodName)} · ${num(R.rodKw, 1)} kW`)}<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">${[['Wärmepumpe pausiert', `${R.rodMonths} Monate`, 'im Sommer nahezu aus'], ['Warmwasser per Solarstrom', num(R.rodHeat) + ' kWh', 'pro Jahr über den Heizstab'], ['WP-Strom, der entfällt', num(R.rodHpSaved) + ' kWh', 'weniger Laufzeit und Starts']].map(([k, v, u]) => `<div class="kpi"><div class="kpi-k">${k}</div><div class="kpi-v !text-[22px]">${v}</div><div class="text-[12px] text-ink3 mt-1">${u}</div></div>`).join('')}</div><p class="hint">Der Heizstab nutzt Solarstrom, der sonst für ${num(S.calc.feedIn, 2)} ct/kWh ins Netz ginge. Finanziell ist das etwa neutral – der Vorteil liegt in der geschonten Wärmepumpe und einer längeren Lebensdauer.</p></div>`;
   h += `<div class="card p-5 sm:p-6">${cardHead('arrowR', 'So geht es nach der Unterschrift weiter', p.type === 'pvwp' ? 'Photovoltaik und Wärmepumpe laufen parallel' : p.type === 'pv' ? 'Ablauf Photovoltaik' : 'Ablauf Wärmepumpe')}<div class="overflow-x-auto -mx-1 px-1"><div class="${p.type === 'pvwp' ? 'min-w-[540px]' : ''}">${roadmapHtml(p, false)}</div></div><p class="hint">Schritte und Texte ändern Sie unter Einstellungen → Roadmap.</p></div>`;
   h += docCreateCard(p, R) + docOptionsCard(p, R);
   return h;
@@ -2191,6 +2273,7 @@ function benefitsOf(p, R) {
   if (p.type === 'pvwp') { const A = annualProfile(p, R); if (A.share > 0) b.push(`Rund <b>${pct(A.share * 100)}</b> des Wärmepumpen-Stroms kommen vom eigenen Dach`); }
   if (R.V && R.bat) b.push(`Speicher mit ${num(R.bat, 1)} kWh – Solarstrom auch am Abend`);
   b.push(`<b>${num(R.co2Save / 1000, 1)} t</b> weniger CO₂ pro Jahr`);
+  if (R.rod) b.push(`Im Sommer Warmwasser per Heizstab mit Solarstrom – die Wärmepumpe pausiert ${R.rodMonths} Monate und hält länger`);
   if (R.W) b.push('Wärme und Warmwasser aus Umweltwärme – zuverlässig auch bei Frost');
   return b.slice(0, 5);
 }
@@ -2202,6 +2285,7 @@ function advisorCard(p, R, compact) {
     <div style="display:flex;flex-wrap:wrap;gap:1.5mm 6mm;margin-top:2.5mm;font-size:8.6pt">${a.name ? `<span><b style="font-weight:600">${esc(a.name)}</b> · ${esc(a.role)}</span>` : ''}${a.phone ? `<span>${esc(a.phone)}</span>` : ''}${a.email ? `<span>${esc(a.email)}</span>` : ''}</div>
     ${R.discount && !compact ? `<div style="margin-top:2.5mm;font-size:8.4pt;color:var(--s-dark);font-weight:600">${esc(S.discount.text.replace('{datum}', deDate(p.discount.until)))}: ${eur(R.discount)} Preisvorteil</div>` : ''}</div></div>`;
 }
+let DAY_CACHE = null;
 const DOC = {
   cover: () => ({}),
   summary(p, R) {
@@ -2226,7 +2310,7 @@ const DOC = {
     b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:6mm">${[[hp ? 'Anteil Solarstrom am WP-Strom' : 'Anteil Solarstrom am Verbrauch', pct(A.share * 100), 'rechnerisch übers Jahr', 'var(--p)'], ['Vom eigenen Dach', num(A.covered) + ' kWh', `von ${num(A.total)} kWh Bedarf`], [hp ? 'Weniger Stromkosten' : 'Wert des Eigenverbrauchs', eur(A.value), A.pot ? 'pro Jahr, zusätzlich möglich' : 'pro Jahr – bereits in Ihrer Ersparnis enthalten']].map(([k, v, u, col], i) => `<div style="padding:0 5mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}">${fig(k, v, u, col)}</div>`).join('')}</div>`;
     const seas = (a, z) => A.months.slice(a, z).reduce((s, m) => s + m.covered, 0) / Math.max(1, A.months.slice(a, z).reduce((s, m) => s + m.demand, 0));
     const winter = (A.months[0].covered + A.months[1].covered + A.months[10].covered + A.months[11].covered) / Math.max(1, A.months[0].demand + A.months[1].demand + A.months[10].demand + A.months[11].demand);
-    b += `<div class="sec g3">${[['Frühling und Herbst', `Die beste Zeit: Ihr Haus braucht noch Wärme, und die Sonne liefert schon viel Strom. Rund ${pct((A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.covered, 0) / Math.max(1, A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.demand, 0))) * 100)} des Bedarfs von März bis Mai und im September/Oktober kommen vom Dach.`], ['Sommer', hp ? 'Die Wärmepumpe bereitet fast nur Warmwasser – das läuft tagsüber nahezu komplett mit Solarstrom. Überschüsse fließen in den Speicher oder ins Netz.' : 'Die Anlage erzeugt mehr, als Sie verbrauchen. Überschüsse fließen in den Speicher oder ins Netz.'], ['Winter', `Der Bedarf ist am höchsten, die Sonne am schwächsten: Etwa ${pct(winter * 100)} kommen jetzt vom Dach, den Rest liefert ${hp ? 'Ihr günstiger Wärmepumpentarif' : 'das Netz'}.`]].map(([t, x]) => `<div class="tile"><h3>${t}</h3><div class="small" style="font-size:8pt;line-height:1.45;color:var(--ink2)">${x}</div></div>`).join('')}</div>`;
+    b += `<div class="sec g3">${[['Frühling und Herbst', `Die beste Zeit: Ihr Haus braucht noch Wärme, und die Sonne liefert schon viel Strom. Rund ${pct((A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.covered, 0) / Math.max(1, A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.demand, 0))) * 100)} des Bedarfs von März bis Mai und im September/Oktober kommen vom Dach.`], ['Sommer', hp ? (A.rod ? `Der Heizstab (${esc(R.rodName)}) erwärmt das Warmwasser mit überschüssigem Solarstrom. Ihre Wärmepumpe kann nahezu komplett pausieren – das schont sie und verlängert ihre Lebensdauer.` : 'Die Wärmepumpe bereitet fast nur Warmwasser – das läuft tagsüber nahezu komplett mit Solarstrom. Überschüsse fließen in den Speicher oder ins Netz.') : 'Die Anlage erzeugt mehr, als Sie verbrauchen. Überschüsse fließen in den Speicher oder ins Netz.'], ['Winter', `Der Bedarf ist am höchsten, die Sonne am schwächsten: Etwa ${pct(winter * 100)} kommen jetzt vom Dach, den Rest liefert ${hp ? 'Ihr günstiger Wärmepumpentarif' : 'das Netz'}.`]].map(([t, x]) => `<div class="tile"><h3>${t}</h3><div class="small" style="font-size:8pt;line-height:1.45;color:var(--ink2)">${x}</div></div>`).join('')}</div>`;
     if (A.pot) b += `<div class="sec" style="background:var(--t-yel);border-radius:var(--dr);padding:4.5mm 5mm;display:flex;gap:4mm;align-items:center">${icC('sun', 26, S.design.secondary, 1.8)}<div style="font-size:8.8pt"><b style="font-weight:600">Diese Photovoltaikanlage ist nicht Teil Ihres Angebots.</b> Sie zeigt, wie viel Ihre Wärmepumpe zusätzlich mit eigenem Solarstrom laufen könnte. Gern erstellen wir Ihnen ein passendes Angebot.</div></div>`;
     b += `<p class="small" style="margin-top:3mm">Modellrechnung mit typischen Monatswerten für den Raum Münster/Osnabrück (Ertrag ${num(S.calc.pvYield)} kWh/kWp${hp ? ', Heizgradtage und jahreszeitliche Effizienz der Wärmepumpe' : ''}). Die tatsächliche Deckung hängt von Wetter, Laufzeiten und Speichergröße ab.</p>`;
     return { title: txt('year', 'title'), body: b };
@@ -2247,6 +2331,7 @@ const DOC = {
     const sys = [];
     if (R.V) { sys.push(tile('Photovoltaik', num(R.kwp, 2) + ' kWp', p.pv.modules || `${num(R.yield)} kWh pro Jahr`, 'tgrn')); sys.push(tile('Stromspeicher', R.bat ? num(R.bat, 1) + ' kWh' : 'ohne', R.bat ? 'speichert Solarstrom für abends' : '', 'tgrn')); }
     if (R.W) sys.push(tile('Wärmepumpe', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–', `JAZ ${num(R.jaz, 2)}`, 'tgrn'));
+    if (R.rod) sys.push(tile('Heizstab', num(R.rodKw, 1) + ' kW', 'mit PV-Überschuss', 'tgrn'));
     b += `<div class="sec"><h2>Ihr neues Energiesystem</h2><div class="g${Math.max(2, sys.length)}">${sys.join('')}</div></div>`;
     if (R.W) {
       const kv = [['Modell', p.hp.model || '–'], ['Heizleistung', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–'], ['Jahresarbeitszahl', num(R.jaz, 2)], ['Maße Außeneinheit', p.hp.dims || '–'], ['Gewicht', p.hp.weight ? num(p.hp.weight) + ' kg' : '–'], ['Schallleistung', p.hp.sw ? num(p.hp.sw, 1) + ' dB(A)' : '–']];
@@ -2267,6 +2352,7 @@ const DOC = {
     let b = chap('So funktioniert eine Wärmepumpe', 'Im Prinzip wie ein Kühlschrank – nur umgekehrt: Sie holt Wärme aus der Umgebung ins Haus.');
     b += `<div class="tile" style="padding:3mm 4mm">${hpCycleSVG()}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm"><span style="display:inline-flex;width:5.5mm;height:5.5mm;border-radius:50%;background:var(--p);color:#fff;font-weight:600;font-size:8pt;align-items:center;justify-content:center">${i + 1}</span><b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
+    if (R.rod) b += `<div class="tile" style="margin-top:3.5mm;padding:3.5mm 4mm;background:var(--p-light);display:flex;gap:3.5mm;align-items:flex-start">${icC('sun', 20, S.design.primary, 1.8)}<div><b style="font-weight:600">Sommerpause für Ihre Wärmepumpe:</b> <span class="muted">Ein ${esc(R.rodName)} mit ${num(R.rodKw, 1)} kW erwärmt von ${R.rodMonths === 3 ? 'Juni' : 'Mai'} bis ${['', '', '', 'August', 'August', 'September', 'Oktober'][R.rodMonths]} Ihr Warmwasser mit überschüssigem Solarstrom – rund ${num(R.rodHeat)} kWh im Jahr. Die Wärmepumpe bleibt in dieser Zeit nahezu aus: weniger Laufzeit, weniger Starts, eine längere Lebensdauer.</span></div></div>`;
     b += `<div class="tile" style="margin-top:3.5mm;padding:3mm 4mm;background:var(--t-yel)"><b>Der Kühlschrank-Vergleich:</b> <span class="muted">Ihr Kühlschrank holt die Wärme aus dem Inneren und gibt sie hinten an die Küche ab. Die Wärmepumpe macht genau das mit der Außenluft – und gibt die Wärme an Ihr Haus.</span></div>`;
     b += `<div class="sec"><h2>Warum die Wärmepumpe so effizient ist</h2><p class="small">So entstehen 100 kWh Wärme:</p>
       <div style="display:grid;grid-template-columns:30mm 1fr;gap:2.5mm 3mm;align-items:center;margin-top:2mm">
@@ -2284,7 +2370,7 @@ const DOC = {
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
     b += `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm"><span style="display:inline-flex;width:5.5mm;height:5.5mm;border-radius:50%;background:var(--p);color:#fff;font-weight:600;font-size:8pt;align-items:center;justify-content:center">${i + 1}</span><b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
-    b += `<div class="sec"><h2>Ein typischer Sonnentag – 6 Uhr bis 6 Uhr</h2>${dayProfileSVG(R)}<div class="small" style="margin-top:1mm">${legendDot(mix(S.design.secondary, '#ffffff', 0.5), 'Erzeugung')}${legendDot(S.design.primary, 'direkt genutzt')}${R.bat ? legendDot('#F5C76A', 'Speicher laden') + legendDot('#9DB3D3', 'aus dem Speicher') : ''}${legendDot(C().ink, 'Verbrauch', true)}</div></div>`;
+    b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2><p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
     b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung', 'grad')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
     return { title: 'So funktioniert Ihre Photovoltaikanlage', body: b };
   },
@@ -2623,7 +2709,7 @@ const SET = {
     return sCard('calc', 'Preissteigerung & Zeitraum', '', `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${field('Öl/Gas ohne CO₂', c + 'fuelInc', { t: 'n', unit: '% p. a.' })}${field('Strom', c + 'elecInc', { t: 'n', unit: '% p. a.' })}${field('Wartung', c + 'maintInc', { t: 'n', unit: '% p. a.' })}${field('Kalkulationszins', c + 'rate', { t: 'n', unit: '%' })}${field('Betrachtungszeitraum', c + 'years', { t: 'y', unit: 'Jahre' })}</div>`)
       + sCard('leaf', 'CO₂-Pfad & Gasnetz', 'CO₂-Preis in €/t, dazwischen linear interpoliert.', `<div class="grid grid-cols-3 sm:grid-cols-6 gap-2">${co2.map(y => `<label class="block"><span class="text-[11.5px] font-bold text-ink3">${y}</span>${inp(`s:calc.co2Path.${y}`, { t: 'n', icls: '!h-10 !px-3' })}</label>`).join('')}</div>
         <div class="grid sm:grid-cols-2 gap-4 mt-4">${field('Gasnetzentgelt-Zuschlag', c + 'gasNet', { t: 'n', unit: 'ct/kWh', hint: 'steigt linear bis zum Zieljahr' })}${field('Zieljahr', c + 'gasNetYear', { t: 'y' })}</div>`)
-      + sCard('euro', 'Standardpreise & Technik', 'Vorbelegung für neue Berechnungen.', `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${field('Heizöl', c + 'oilPrice', { t: 'n', unit: '€/l' })}${field('Erdgas', c + 'gasPrice', { t: 'n', unit: '€/kWh' })}${field('WP-Stromtarif', c + 'hpTariff', { t: 'n', unit: '€/kWh' })}${field('Haushaltsstrom', c + 'hhPrice', { t: 'n', unit: '€/kWh' })}${field('Haushaltsverbrauch', c + 'hhCons', { t: 'n', unit: 'kWh' })}${field('Standard-JAZ', c + 'jaz', { t: 'n' })}${field('Nutzungsgrad Kessel', c + 'efficiency', { t: 'n', unit: '%' })}${field('Wartung Ölheizung', c + 'oilMaint', { t: 'n', unit: '€' })}${field('Wartung Gasheizung', c + 'gasMaint', { t: 'n', unit: '€' })}${field('Grundpreis Gas', c + 'gasBase', { t: 'n', unit: '€' })}${field('WP-Grundpreis', c + 'hpBase', { t: 'n', unit: '€' })}${field('Wartung WP', c + 'hpMaint', { t: 'n', unit: '€' })}${field('PV-Ertrag', c + 'pvYield', { t: 'n', unit: 'kWh/kWp' })}${field('Einspeisevergütung', c + 'feedIn', { t: 'n', unit: 'ct/kWh' })}${field('PV-Degradation', c + 'pvDeg', { t: 'n', unit: '% p. a.' })}${field('WP-Strom-Anteil für PV', c + 'pvHpShare', { t: 'n', unit: '%' })}${field('CO₂ Heizöl', c + 'co2Oil', { t: 'n', unit: 'kg/kWh' })}${field('CO₂ Erdgas', c + 'co2Gas', { t: 'n', unit: 'kg/kWh' })}${field('CO₂ Strom', c + 'co2El', { t: 'n', unit: 'kg/kWh' })}</div>`)
+      + sCard('euro', 'Standardpreise & Technik', 'Vorbelegung für neue Berechnungen.', `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${field('Heizöl', c + 'oilPrice', { t: 'n', unit: '€/l' })}${field('Erdgas', c + 'gasPrice', { t: 'n', unit: '€/kWh' })}${field('WP-Stromtarif', c + 'hpTariff', { t: 'n', unit: '€/kWh' })}${field('Haushaltsstrom', c + 'hhPrice', { t: 'n', unit: '€/kWh' })}${field('Haushaltsverbrauch', c + 'hhCons', { t: 'n', unit: 'kWh' })}${field('Standard-JAZ', c + 'jaz', { t: 'n' })}${field('Nutzungsgrad Kessel', c + 'efficiency', { t: 'n', unit: '%' })}${field('Wartung Ölheizung', c + 'oilMaint', { t: 'n', unit: '€' })}${field('Wartung Gasheizung', c + 'gasMaint', { t: 'n', unit: '€' })}${field('Grundpreis Gas', c + 'gasBase', { t: 'n', unit: '€' })}${field('WP-Grundpreis', c + 'hpBase', { t: 'n', unit: '€' })}${field('Wartung WP', c + 'hpMaint', { t: 'n', unit: '€' })}${field('PV-Ertrag', c + 'pvYield', { t: 'n', unit: 'kWh/kWp' })}${field('Einspeisevergütung', c + 'feedIn', { t: 'n', unit: 'ct/kWh' })}${field('PV-Degradation', c + 'pvDeg', { t: 'n', unit: '% p. a.' })}${field('WP-Strom-Anteil für PV', c + 'pvHpShare', { t: 'n', unit: '%' })}${field('Heizstab – Bezeichnung', c + 'rodName')}${field('Heizstab – Leistung', c + 'rodKw', { t: 'n', unit: 'kW' })}${field('Warmwasser-Anteil am Wärmebedarf', c + 'dhwShare', { t: 'n', unit: '%' })}${field('CO₂ Heizöl', c + 'co2Oil', { t: 'n', unit: 'kg/kWh' })}${field('CO₂ Erdgas', c + 'co2Gas', { t: 'n', unit: 'kg/kWh' })}${field('CO₂ Strom', c + 'co2El', { t: 'n', unit: 'kg/kWh' })}</div>`)
       + sCard('home', 'Sowieso-Kosten & Dokument', '', `<div class="grid sm:grid-cols-3 gap-4">${field('Neue Gasheizung', c + 'replaceGas', { t: 'n', unit: '€' })}${field('Neue Ölheizung', c + 'replaceOil', { t: 'n', unit: '€' })}${field('Finanzseite ausblenden ab', c + 'hideFinanceAbove', { t: 'n', unit: 'Jahren' })}</div>
         <div class="rounded-[calc(var(--r)-4px)] bg-bg px-4 mt-4">${toggleRow('Berechnungsannahmen standardmäßig zeigen', c + 'showAssumptions')}</div><div class="mt-4">${area('Haftungshinweis', c + 'disclaimer', 4)}</div>`);
   },
@@ -2689,6 +2775,7 @@ bset = function (b, v) { if (b.startsWith('u:')) { setPath(UI, b.slice(2), v); r
 
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.hasAttribute('data-daymonth')) { const p = curProject(), m = +el.value; p.docOpts.dayMonth = m; saveProject(p); const R = compute(p), d = dayChartHtml(p, R); $('#day-month').textContent = MONTH_NAMES[m - 1]; $('#day-chart').innerHTML = d.svg; $('#day-info').textContent = d.info; return; }
   if (el.dataset.b) {
     const v = readVal(el); if (v === undefined) return;
     const b = el.dataset.b;
@@ -2713,6 +2800,7 @@ document.addEventListener('change', async e => {
     if (el.dataset.b.startsWith('s:design.')) applyTheme();
     renderSoon(); return;
   }
+  if (el.dataset.tgcheck) { bset(el.dataset.tgcheck, el.checked); renderSoon(); return; }
   if (el.hasAttribute('data-advisor-pick')) { const p = curProject(), v = el.value; if (v === '__other') { p.offer.advisorId = ''; p.offer.advisor = ''; } else { const a = (S.company.advisors || []).find(x => x.id === v); p.offer.advisorId = a ? a.id : ''; p.offer.advisor = a ? a.name : ''; } delete p.from['offer.advisor']; saveProject(p); renderSoon(); return; }
   if (el.dataset.upload) { const p = curProject(); const fs = [...el.files]; el.value = ''; if (p && fs.length) handleUpload(p, el.dataset.upload, fs); return; }
   if (el.dataset.replace) { const p = curProject(); const fs = [...el.files]; el.value = ''; if (p && fs.length) handleUpload(p, el.dataset.role, fs.slice(0, 1), el.dataset.replace); return; }
