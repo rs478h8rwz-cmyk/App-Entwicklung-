@@ -127,7 +127,7 @@ details[open] .chev{transform:rotate(180deg)}
 .page table.t td:first-child{text-align:left}
 .page table.t tr.hl td{background:var(--t-yel);font-weight:600}
 .page .row{display:flex;justify-content:space-between;align-items:center;padding:2.3mm 3mm;border-bottom:0.25mm solid var(--line)}
-.page .pill{display:inline-block;border-radius:10mm;padding:1mm 3mm;font-size:7.4pt;font-weight:500;line-height:1.5}
+.page .pill{display:inline-block;height:5.4mm;line-height:5.4mm;border-radius:10mm;padding:0 3mm;font-size:7.4pt;font-weight:500;white-space:nowrap;vertical-align:middle}
 .page .chk{display:inline-block;width:4mm;height:4mm;border:0.35mm solid var(--ink2);border-radius:0.8mm;vertical-align:-0.8mm;margin-right:2mm}
 .page ul.dl{margin:0;padding:0;list-style:none;columns:2;column-gap:6mm;font-size:7.6pt;color:var(--ink2)}
 .page ul.dl li{break-inside:avoid;padding:0.7mm 0 0.7mm 3mm;position:relative}
@@ -1001,6 +1001,7 @@ function ownChecker() {
     return /[·|•]/.test(line) || /\bgmbh\b|\biban\b|steuer-?\s?n|steuernummer|geschäftsführ|amtsgericht|handelsregister|\bhrb\b|ust-?id|^\s*seite\s+\d/i.test(line);
   };
 }
+const isFurniture = l => /^\s*Pos\.?\s+Menge\b/i.test(l) || /Seite\s+\d+\s*\/\s*\d+/i.test(l) || /\bIBAN\b|Steuernummer|USt-?IdNr|Geschäftsführer/i.test(l) || /^\s*(Beispielbild|Technische Merkmale)\s*$/i.test(l);
 function splitPositions(lines) {
   const blocks = []; let cur = null;
   const startRx = /^\s*(\d{1,3}(?:\.\d{1,4}){1,3}|\d{1,3})\.?\s+(\d+(?:,\d+)?\s*(?:stk\.?|st\.?|stück|x|psch\.?|pausch\.?|pauschal|std\.?|m|lfm|satz|set|pkt)?\s+)?\S/i;
@@ -1010,22 +1011,28 @@ function splitPositions(lines) {
     if (m && (/\./.test(m[1]) || m[2]) && (hasAmount || /[a-zäöü]{3}/i.test(l))) {
       cur = { no: m[1], lines: [l], idx: [i] }; blocks.push(cur);
     } else if (cur) {
-      if (/^(summe|zwischensumme|gesamt|netto|mwst|brutto|endbetrag|übertrag)/i.test(l.trim()) || cur.lines.length > 14) { cur = null; return; }
+      if (isFurniture(l)) return;
+      if (/^(zusammenfassung|summe|zwischensumme|gesamt|netto|mwst|brutto|endbetrag|übertrag|alternative positionen|bedarfspositionen|ergänzende informationen)/i.test(l.trim()) || /^pos\.?\s+\d+\s+[A-Za-zÄÖÜäöü]/i.test(l.trim()) || cur.lines.length > 40) { cur = null; return; }
       cur.lines.push(l); cur.idx.push(i);
     }
   });
   for (const b of blocks) {
-    const text = b.lines.join('\n'), joined = text.replace(/-\s*\n\s*/g, '').replace(/\s*\n\s*/g, ' ');
+    const text = b.lines.join('\n'), joined = text.replace(/[-\u00AD]\s*\n\s*/g, '').replace(/\s*\n\s*/g, ' ').replace(/\u00AD/g, '');
     b.text = joined;
     const q = /^\s*[\d.]+\.?\s+(\d+(?:,\d+)?)\s*(stk\.?|st\.?|stück|x)?\s/i.exec(b.lines[0]);
     b.qty = q ? pnum(q[1]) : (/(\d+(?:,\d+)?)\s*(stk\.?|st\.?|stück)\b/i.exec(joined) ? pnum(/(\d+(?:,\d+)?)\s*(stk\.?|st\.?|stück)\b/i.exec(joined)[1]) : 1);
-    const amts = [...b.lines[0].matchAll(RX_AMOUNT)].concat(...b.lines.slice(1).map(l => [...l.matchAll(RX_AMOUNT)]));
+    const euroAmts = l => [...l.matchAll(RX_AMOUNT)].filter(m => /€|EUR/.test(m[0]) || m[1] === '(');
+    const firstAmts = euroAmts(b.lines[0]);
+    const amts = firstAmts.length ? firstAmts : b.lines.slice(1, 3).flatMap(euroAmts);
     const last = amts[amts.length - 1];
     b.total = last ? parseAmt(last[2], last[3]) : null;
     b.bracket = amts.some(a => a[1] === '(' && (a[4] === ')' || a[5] === ')'));
-    const plain = b.lines.map(l => l.replace(RX_AMOUNT, '').replace(/€/g, '').trim()).join('\n').replace(/-\s*\n\s*/g, '').replace(/\s*\n\s*/g, ' ');
+    const plain = b.lines.map(l => l.replace(RX_AMOUNT, '').replace(/€/g, '').trim()).join('\n').replace(/[-\u00AD]\s*\n\s*/g, '').replace(/\s*\n\s*/g, ' ').replace(/\u00AD/g, '');
     b.notOrdered = b.bracket || /alternativ\s*-?\s*position|alternativposition|bedarfs\s*-?\s*position/i.test(joined + ' ' + plain);
+    b.first = b.lines[0].replace(/\u00AD/g, '');
     b.title = joined.replace(/^\s*[\d.]+\.?\s+/, '').replace(/^\d+(?:,\d+)?\s*(stk\.?|st\.?|stück|x|psch\.?|pausch\.?|pauschal)?\s+/i, '').replace(RX_AMOUNT, '').replace(/\s{2,}/g, ' ').trim().slice(0, 90);
+    if (b.notOrdered) b.kind = /alternativ/i.test(joined + plain) ? 'Alternativposition' : /bedarf/i.test(joined + plain) ? 'Bedarfsposition' : 'nicht beauftragt';
+    b.title = b.first.replace(/^\s*[\d.]+\.?\s+/, '').replace(/^\d+(?:,\d+)?\s*(stk\.?|st\.?|stück|x|psch\.?|pausch\.?|pauschal|lfm|m)?\s+/i, '').replace(RX_AMOUNT, '').replace(/€/g, '').replace(/\((alternative|bedarfs?|be)[^)]*$/i, '').replace(/\((alternative position|bedarfsposition)\)/i, '').replace(/\s{2,}/g, ' ').trim().slice(0, 70);
   }
   return blocks;
 }
@@ -1094,8 +1101,10 @@ function parseMeta(all) {
   if (nr) res.number = nr[1].replace(/[.,]$/, '');
   const dl = all.find(l => /datum/i.test(l) && /\d{1,2}\.\d{1,2}\.\d{2,4}/.test(l)) || all.find(l => /\d{1,2}\.\d{1,2}\.\d{4}/.test(l) && !/gültig|bis zum|lieferung/i.test(l));
   if (dl) { const m = /(\d{1,2})\.(\d{1,2})\.(\d{2,4})/.exec(dl); let y = +m[3]; if (y < 100) y += 2000; res.date = `${y}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`; }
-  const apl = all.find(l => /(ansprechpartner(in)?|berater(in)?|bearbeiter(in)?)\s*[:\-]/i.test(l));
-  if (apl) { const m = /(?:ansprechpartner(?:in)?|berater(?:in)?|bearbeiter(?:in)?)\s*[:\-]\s*((?:Herr|Frau)?\s*[A-ZÄÖÜ][a-zäöüß]+(?:[ -][A-ZÄÖÜ][a-zäöüß.]+){0,2})/i.exec(apl); if (m) res.advisor = m[1].replace(/^(Herr|Frau)\s+/i, '').trim(); }
+  const apl = all.find(l => /\b(ansprechpartner(in)?|ihr\s+berater(in)?|berater(in)?|bearbeiter(in)?)\b/i.test(l) && !/^sehr geehrte/i.test(l.trim()));
+  if (apl) { const m = /(?:[Aa]nsprechpartner(?:in)?|[Bb]erater(?:in)?|[Bb]earbeiter(?:in)?)\s*[:\-]?\s+((?:Herr|Frau)\s+)?([A-ZÄÖÜ][a-zäöüß]+(?:[ -][A-ZÄÖÜ][a-zäöüß.]+){0,2})/.exec(apl.replace(/^.*?(?=(Ansprechpartner|Ihr Berater|Berater|Bearbeiter))/i, '')); if (m) res.advisor = m[2].trim(); }
+  const ai = all.findIndex(l => l === apl);
+  if (ai >= 0) { const near = all.slice(ai, ai + 4).join('\n'); const ph = /(?:mobil|tel(?:efon)?\.?|fon)\s*:?\s*((?:\+49|0)[\d\s/()-]{6,18}\d)/i.exec(near); const em = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/.exec(near); if (ph) res.advisorPhone = ph[1].trim(); if (em) res.advisorEmail = em[0]; }
   return res;
 }
 const num1 = s => pnum(String(s).replace(/\s/g, ''));
@@ -1135,20 +1144,23 @@ function pickBySize(vals, sizes, hpKw) {
 function parseSound(lines, hpKw, sizes = []) {
   const res = {};
   const dbVals = l => [...l.matchAll(/(?<![\d,.])(\d{2}(?:[.,]\d)?)(?![\d])\s*(?:dB)?/g)].map(m => num1(m[1])).filter(v => v >= 20 && v <= 90);
-  for (const l of lines) {
+  const merged = lines.map((l, k) => /nacht|schall/i.test(l) && /db/i.test(l) && !/\b(m|meter)\b/i.test(l) ? l + ' ' + (lines[k + 1] || '') : l);
+  for (const l of merged) {
     if (!/db|schall/i.test(l)) continue;
-    const v = dbVals(l.replace(/\b(35|55)\s*°C/g, '').replace(/\d+\s*m\b/g, ''));
+    const v = dbVals(l.replace(/\b(35|55)\s*°C/g, '').replace(/\d+(?:[.,]\d)?\s*(?:m|meter)\b/gi, ''));
     if (!v.length) continue;
     if (/schallleistung/i.test(l) && /nacht/i.test(l)) res.swNight ??= pickBySize(v, sizes, hpKw);
     else if (/schallleistung/i.test(l) && /tag|max/i.test(l)) res.swDay ??= pickBySize(v, sizes, hpKw);
     else if (/schallleistung/i.test(l)) res.sw ??= pickBySize(v, sizes, hpKw);
+    else if (/nacht/i.test(l) && /(\d+(?:[.,]\d)?)\s*(m|meter)\b/i.test(l) && !res.spl) { res.spl = v[0]; res.splDist = num1(/(\d+(?:[.,]\d)?)\s*(m|meter)\b/i.exec(l)[1]); }
     else if (/schalldruck/i.test(l)) { res.spl ??= pickBySize(v, sizes, hpKw); const d = /(\d+(?:[.,]\d)?)\s*m\b/.exec(l); if (d && !res.splDist) res.splDist = num1(d[1]); }
   }
   return res;
 }
 function parseOffer(read, role) {
-  const all = read.pages.flat(), own = ownChecker();
-  const blocks = splitPositions(all);
+  const raw = read.pages.flat(), all = raw.map(l => l.replace(/\u00AD/g, '')), own = ownChecker();
+  read = { ...read, leftLines: (read.leftLines || []).map(l => l.replace(/\u00AD/g, '')) };
+  const blocks = splitPositions(raw);
   const skipIdx = new Set(blocks.filter(b => b.notOrdered).flatMap(b => b.idx));
   const ordered = all.filter((l, i) => !skipIdx.has(i));
   const R = { role, ocr: !!read.ocr };
@@ -1156,14 +1168,18 @@ function parseOffer(read, role) {
   Object.assign(R, parseMeta(all));
   R.amounts = scoreAmounts(ordered.filter(l => !own(l))).slice(0, 8);
   R.gross = R.amounts[0] ? R.amounts[0].v : null;
-  R.skipped = blocks.filter(b => b.notOrdered).map(b => ({ no: b.no, title: b.title, total: b.total }));
+  R.skipped = blocks.filter(b => b.notOrdered).map(b => ({ no: b.no, title: b.title, total: b.total, kind: b.kind }));
   const ob = blocks.filter(b => !b.notOrdered);
   // PV
   if (role !== 'offerWP') {
     let kwp = 0, mods = [];
+    const wattRx = /(\d{3})\s*(?:W|Wp|Watt|Watt-?peak)\b/gi;
     for (const b of ob) {
-      if (!/modul|solarmodul|pv-?modul|photovoltaikmodul/i.test(b.text) || /wechselrichter|speicher|batterie|kabel|unterkonstruktion|montage|gestell|halterung|optimierer|dachhaken|schiene/i.test(b.text.slice(0, 60))) continue;
-      const w = [...b.text.matchAll(/(\d{3})\s*(?:W|Wp)\b/g)].map(m => +m[1]).find(v => v >= 250 && v <= 800);
+      if (/wechselrichter|speicher|batterie|kabel|unterkonstruktion|montage|gestell|halterung|optimierer|dachhaken|schiene|wallbox/i.test(b.first)) continue;
+      const wFirst = [...b.first.matchAll(wattRx)].map(m => +m[1]).find(v => v >= 250 && v <= 800);
+      const isModule = /modul|solarmodul|pv-?modul|photovoltaikmodul|panel/i.test(b.text) || wFirst;
+      if (!isModule) continue;
+      const w = wFirst || [...b.text.matchAll(wattRx)].map(m => +m[1]).find(v => v >= 250 && v <= 800);
       if (!w) continue;
       kwp += (b.qty || 1) * w / 1000; mods.push(`${num(b.qty || 1)} × ${w} W`);
     }
@@ -1178,7 +1194,7 @@ function parseOffer(read, role) {
     if (kwp) { R.kwp = Math.round(kwp * 1000) / 1000; R.modules = mods.join(' + '); }
     let bat = 0;
     for (const b of ob) {
-      if (!/speicher|batterie|akku/i.test(b.text) || /wasser|puffer|liter|wärme|\bl\b/i.test(b.text)) continue;
+      if (!/speicher|batterie|akku/i.test(b.first) || /wasser|puffer|liter|wärme|\bl\b/i.test(b.first) || !(b.total > 0)) continue;
       const k = /(\d{1,3}(?:[.,]\d{1,2})?)\s*kWh/i.exec(b.text); if (!k) continue;
       bat += (b.qty || 1) * num1(k[1]);
     }
@@ -1186,16 +1202,17 @@ function parseOffer(read, role) {
   }
   // Wärmepumpe
   if (role !== 'offerPV') {
-    const hpB = ob.find(b => /wärmepumpe/i.test(b.text) && /(\d{1,2}(?:[.,]\d)?)\s*kW\b|\d{1,2}\s*\/\s*400\s*V|CHA|[A-Z]{2,}[-\s]?\d/i.test(b.text));
+    const hpRx = /(\d{1,2}(?:[.,]\d)?)\s*kW\b|\d{1,2}\s*\/\s*400\s*V|CHA|[A-Z]{2,}[-\s]?\d/i, noHp = /rohr|leitung|fundament|hauseinführung|antrag|förder|sockel|konsole/i;
+    const hpB = ob.find(b => b.total > 0 && /wärmepumpe|luft-?wasser/i.test(b.first) && !noHp.test(b.first) && hpRx.test(b.text)) || ob.find(b => b.total > 0 && /wärmepumpe/i.test(b.first) && !noHp.test(b.first)) || ob.find(b => b.total > 0 && /wärmepumpe/i.test(b.text) && hpRx.test(b.text) && !noHp.test(b.first));
     const hpTxt = hpB ? hpB.text : ordered.filter(l => /wärmepumpe|heizleistung/i.test(l)).join(' ');
     let kw = null;
     const m1 = /(?:heizleistung|nennleistung|leistung)?[^\d]{0,12}(\d{1,2}(?:[.,]\d{1,2})?)\s*kW\b(?!h)/i.exec(hpTxt);
     if (m1) kw = num1(m1[1]);
-    const m2 = /(?:-|\s)(\d{1,2})\s*\/\s*400\s*V/i.exec(hpTxt); if ((!kw || kw < 2) && m2) kw = +m2[1];
-    const m3 = /CHA[-\s]?(\d{2})/i.exec(hpTxt); if ((!kw || kw < 2) && m3) kw = +m3[1];
+    const m2 = /(?:-|\s)(\d{1,2})\s*\/\s*(?:230|400)\s*V/i.exec(hpTxt); if ((!kw || kw < 2) && m2) kw = +m2[1];
+    const m3 = /CHA\s*-?\s*(?:Monoblock\s*)?(\d{1,2})\b/i.exec(hpTxt); if ((!kw || kw < 2) && m3) kw = +m3[1];
     if (kw >= 2 && kw <= 60) R.hpKw = kw;
     if (hpB) {
-      let model = hpB.lines[0].replace(/^\s*[\d.]+\.?\s+/, '').replace(/^\d+(?:,\d+)?\s*(stk\.?|st\.?|stück|x|psch\.?|pausch\.?)?\s+/i, '').replace(RX_AMOUNT, '').replace(/\s*€\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+      let model = hpB.first.replace(/^\s*[\d.]+\.?\s+/, '').replace(/^\d+(?:,\d+)?\s*(stk\.?|st\.?|stück|x|psch\.?|pausch\.?)?\s+/i, '').replace(RX_AMOUNT, '').replace(/\s*€\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
       if (/\b(mit|und|inkl\.?)$/i.test(model) && hpB.lines[1]) model += ' ' + hpB.lines[1].replace(RX_AMOUNT, '').split(',')[0].trim();
       R.hpModel = model.slice(0, 80);
     }
@@ -1208,8 +1225,8 @@ function parseOffer(read, role) {
       if (g && !R.weight && !indoor(l, g.index)) R.weight = num1(g[1]);
     }
     Object.assign(R, Object.fromEntries(Object.entries(parseTech(all, R.hpKw)).filter(([k]) => ['jaz', 'heat', 'power', 'load', 'scop', 'sw', 'swDay', 'swNight', 'spl', 'splDist'].includes(k))));
-    const wm = /CHA[-\s]?(07|10|16)/i.exec(all.join(' '));
-    if (wm && /wolf/i.test(all.join(' '))) { const w = WOLF[wm[1]]; R.sw ??= w.sw; R.swDay ??= w.day; R.swNight ??= w.night; R.spl ??= w.spl; R.splDist ??= 3; R.wolf = 'CHA-' + wm[1]; }
+    const wm = /CHA\s*-?\s*(?:Monoblock\s*)?(0?7|10|16)\b/i.exec(hpTxt || all.join(' '));
+    if (wm && /wolf/i.test(all.join(' '))) { const w = WOLF[wm[1].padStart(2, '0')]; R.sw ??= w.sw; R.swDay ??= w.day; R.swNight ??= w.night; R.spl ??= w.spl; R.splDist ??= 3; R.wolf = 'CHA-' + wm[1]; }
   }
   R.products = matchProducts(ordered);
   return R;
@@ -1276,7 +1293,7 @@ function applyRecognition(p, doc, r) {
       if (nums.length) setFrom(p, 'offer.number', [...new Set(nums)].join(' / '));
     } else { setFrom(p, 'offer.gross', r.gross); setFrom(p, 'offer.number', r.number); }
     setFrom(p, 'offer.date', r.date);
-    if (r.advisor) { const m = (S.company.advisors || []).find(a => a.name && (a.name.toLowerCase() === r.advisor.toLowerCase() || a.name.toLowerCase().includes(r.advisor.toLowerCase()) || r.advisor.toLowerCase().includes(a.name.toLowerCase()))); setFrom(p, 'offer.advisor', m ? m.name : r.advisor); p.offer.advisorId = m ? m.id : ''; }
+    if (r.advisor) { const m = (S.company.advisors || []).find(a => a.name && (a.name.toLowerCase() === r.advisor.toLowerCase() || a.name.toLowerCase().includes(r.advisor.toLowerCase()) || r.advisor.toLowerCase().includes(a.name.toLowerCase()))); setFrom(p, 'offer.advisor', m ? m.name : r.advisor); p.offer.advisorId = m ? m.id : ''; p.offer.advisorPhone = r.advisorPhone || ''; p.offer.advisorEmail = r.advisorEmail || ''; }
     if (r.date) { p.discount.until = addDays(r.date > isoToday() ? r.date : isoToday(), S.discount.days); }
     if (hasPV(p)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.bat', r.bat); setFrom(p, 'pv.modules', r.modules); }
   }
@@ -1454,7 +1471,7 @@ function co2Columns() {
 }
 /* Spirale Gasnetz */
 function gasSpiral() {
-  const c = C(), W = 300, H = 170, cx = 150, cy = 85, rx = 112, ry = 60;
+  const c = C(), W = 340, H = 170, cx = 170, cy = 85, rx = 110, ry = 60;
   const nodes = [['Weniger', 'Gaskunden', 0], ['Netzkosten bleiben', 'gleich hoch', 90], ['Netzentgelt', 'pro Kunde steigt', 180], ['Noch mehr', 'wechseln', 270]];
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%"><defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="${c.red}"/></marker></defs>`;
   s += `<ellipse cx="${cx}" cy="${cy}" rx="${rx - 30}" ry="${ry - 18}" fill="none" stroke="${C().salmon}" stroke-width="2.5" stroke-dasharray="7 5"/>`;
@@ -1514,7 +1531,7 @@ function dayProfileSVG(R) {
   if (R.bat) { let d = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d += ` L${X(h).toFixed(1)},${Y(direct(h) + charge(h)).toFixed(1)}`; sv += `<path d="${d} L${X(30)},${Y(0)} Z" fill="#F5C76A" opacity=".55"/><path d="${path(direct, true)}" fill="${c.p}" opacity=".55"/>`; let d2 = `M${X(6)},${Y(0)}`; for (let h = 6; h <= 30; h += 0.25) d2 += ` L${X(h).toFixed(1)},${Y(fromBat(h)).toFixed(1)}`; sv += `<path d="${d2} L${X(30)},${Y(0)} Z" fill="${C().blue}" opacity=".28"/>`; }
   sv += `<path d="${path(use, false)}" fill="none" stroke="${C().ink}" stroke-width="2" stroke-dasharray="5 4"/>`;
   sv += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C().stroke}"/>`;
-  [6, 9, 12, 15, 18, 21, 24, 27, 30].forEach(h => { sv += T(X(h), H - 10, String(h % 24).padStart(2, '0') + ' Uhr', { a: 'middle', fs: 9.5 }); });
+  [6, 9, 12, 15, 18, 21, 24, 27, 30].forEach(h => { sv += T(X(h), H - 10, String(h % 24).padStart(2, '0') + ' Uhr', { a: h === 6 ? 'start' : h === 30 ? 'end' : 'middle', fs: 9.5 }); });
   if (R.bat) sv += T(X(26.5), Y(0.62), 'Speicher versorgt Sie', { a: 'middle', fs: 10, fw: 800, c: C().blue }) + T(X(26.5), Y(0.62) + 13, 'bis zum Morgen', { a: 'middle', fs: 10, fw: 800, c: C().blue });
   return sv + '</svg>';
 }
@@ -1809,6 +1826,8 @@ function recognizedCard(p) {
   add('Kunde', esc([c.sal, c.name].filter(Boolean).join(' ')));
   add('Anschrift', esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')));
   offers.forEach(x => add(offers.length > 1 ? (x.d.role === 'offerWP' ? 'Angebot WP' : 'Angebot PV') : 'Angebot', esc([x.r.number && 'Nr. ' + x.r.number, x.r.date && deDate(x.r.date), x.r.advisor && 'Ansprechpartner: ' + x.r.advisor].filter(Boolean).join(' · '))));
+  const ra = offers.map(x => x.r).find(r => r.advisor);
+  if (ra && !(S.company.advisors || []).some(a => a.name && a.name.toLowerCase() === ra.advisor.toLowerCase())) add('Berater', `${esc([ra.advisor, ra.advisorPhone, ra.advisorEmail].filter(Boolean).join(' · '))}<div class="mt-2"><button class="chip" data-a="adv-from-offer" data-n="${esc(ra.advisor)}" data-ph="${esc(ra.advisorPhone || '')}" data-em="${esc(ra.advisorEmail || '')}">${ic('plus', 14)}Zu meinen Beratern hinzufügen</button></div>`);
   offers.forEach(x => { if (x.r.amounts && x.r.amounts.length) add(offers.length > 1 ? `Bruttopreis ${x.d.role === 'offerWP' ? 'WP' : 'PV'}` : 'Bruttopreis', `<div class="text-[16px] font-semibold">${eur2(x.r.gross)}</div><div class="flex flex-wrap gap-1.5 mt-2">${x.r.amounts.map(a => `<button class="chip ${Math.abs(a.v - x.r.gross) < 0.01 ? '!bg-p/10 !text-p !ring-p/30' : ''}" data-a="set-price" data-role="${x.d.role}" data-v="${a.v}" title="${esc(a.line)}">${eur2(a.v)}</button>`).join('')}</div><div class="hint">Erkannte Beträge – ein Antippen setzt den Bruttopreis.</div>`); });
   const kwp = first('kwp'); if (kwp) add('Photovoltaik', `${num(kwp, 2)} kWp${first('modules') ? ` <span class="text-ink3">(${esc(first('modules'))})</span>` : ''}${first('bat') ? ` · Speicher ${num(first('bat'), 1)} kWh` : ''}`);
   const hk = first('hpKw'), hm = first('hpModel');
@@ -1819,7 +1838,7 @@ function recognizedCard(p) {
   const scop = recs.flatMap(x => x.r.scop || []);
   if (scop.length) add('SCOP', `<div class="flex flex-wrap gap-1.5">${scop.map(s => `<button class="chip" data-a="set-jaz" data-v="${s.value}">SCOP${s.temp ? ' ' + s.temp + ' °C' : ''}${s.size ? ` (${s.size} kW)` : ''}: ${num(s.value, 2)} als JAZ</button>`).join('')}</div><div class="hint">SCOP ist ein Normwert aus dem Datenblatt. Die JAZ Ihres Gebäudes kann davon abweichen.</div>`);
   const skipped = offers.flatMap(x => x.r.skipped || []);
-  if (skipped.length) add('Nicht berücksichtigt', `<ul class="space-y-1">${skipped.map(s => `<li class="text-ink3 text-[13px]"><span class="font-bold text-ink2">${esc(s.no)}</span> ${esc(s.title)}${s.total ? ` <span class="whitespace-nowrap">(${eur2(s.total)})</span>` : ''}</li>`).join('')}</ul><div class="hint">Alternativ- und Bedarfspositionen werden nicht eingerechnet.</div>`);
+  if (skipped.length) add('Nicht berücksichtigt', `<ul class="space-y-1">${skipped.map(s => `<li class="text-ink3 text-[13px]"><span class="font-semibold text-ink2 mono">${esc(s.no)}</span> ${esc(s.title)}${s.kind ? ` · <span class="text-ink2">${esc(s.kind)}</span>` : ''}${s.total ? ` <span class="whitespace-nowrap">· ${eur2(s.total)}</span>` : ''}</li>`).join('')}</ul><div class="hint">Alternativ- und Bedarfspositionen werden nicht eingerechnet.</div>`);
   return `<div class="card p-5 sm:p-6">${cardHead('sparkle', 'Das wurde erkannt', 'Bitte kurz prüfen – alles lässt sich in den nächsten Schritten ändern.')}${rows.join('') || '<p class="text-ink3 text-[14px]">Keine Werte erkannt. Bitte tragen Sie die Daten in den nächsten Schritten ein.</p>'}</div>`;
 }
 function productsRecCard(p) {
@@ -2077,7 +2096,7 @@ function docLogo() { const u = logoImgUrl(); return u ? `<img src="${esc(u)}" al
 function advisorOf(p) {
   const n = String(p.offer.advisor || '').trim().toLowerCase(), list = S.company.advisors || [];
   const a = list.find(x => x.id === p.offer.advisorId && (!n || x.name.trim().toLowerCase() === n)) || list.find(x => x.name && x.name.trim().toLowerCase() === n) || list.find(x => x.name && n && (x.name.toLowerCase().includes(n) || n.includes(x.name.toLowerCase()))) || (!n && list[0]);
-  return { name: (a && a.name) || p.offer.advisor || '', role: (a && a.role) || 'Ihr Energieberater', phone: (a && a.phone) || S.company.phone, email: (a && a.email) || S.company.email, photo: a && fileUrl(a.photo) };
+  return { name: (a && a.name) || p.offer.advisor || '', role: (a && a.role) || 'Ihr Energieberater', phone: (a && a.phone) || p.offer.advisorPhone || S.company.phone, email: (a && a.email) || p.offer.advisorEmail || S.company.email, photo: a && fileUrl(a.photo) };
 }
 function pageFooter(n, N) {
   const c = S.company;
@@ -2131,6 +2150,11 @@ function custBlock(p, dark = true) {
   return `<div style="color:${col}"><div style="font-size:7.6pt;font-weight:500;color:${sub}">Erstellt für</div><div style="font-size:14pt;font-weight:600;line-height:1.25;margin-top:0.5mm">${esc(custName(p))}</div><div style="font-size:9pt;color:${sub}">${esc(custAddr(p))}</div>
     <div style="display:flex;gap:6mm;margin-top:2.5mm;font-size:8.2pt;color:${sub};flex-wrap:wrap">${meta ? `<span>${meta}</span>` : ''}<span>Erstellt am ${new Date().toLocaleDateString('de-DE')}</span>${p.offer.advisor ? `<span>Ihr Berater: <b style="color:${col};font-weight:600">${esc(p.offer.advisor)}</b></span>` : ''}</div></div>`;
 }
+function coverContact(p) {
+  const a = advisorOf(p); if (!a.name && !a.phone) return '';
+  return `<div style="margin-top:9mm;padding-top:4mm;border-top:0.25mm solid var(--line);display:flex;align-items:center;gap:4mm">${a.photo ? `<div style="width:11mm;height:11mm;border-radius:50%;background:#fff url('${a.photo}') center/cover no-repeat;flex-shrink:0"></div>` : `<div style="width:11mm;height:11mm;border-radius:50%;background:var(--p-light);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:9pt;flex-shrink:0">${esc(initials(a.name || coName()))}</div>`}
+    <div style="font-size:8.6pt;line-height:1.45"><div style="color:var(--ink3);font-size:7.4pt">Ihr Ansprechpartner</div><b style="font-weight:600">${esc(a.name || coName())}</b>${a.phone ? ` · ${esc(a.phone)}` : ''}${a.email ? ` · ${esc(a.email)}` : ''}</div></div>`;
+}
 function coverBigSun() {
   const s = S.design.secondary, p = S.design.primary;
   let rays = ''; for (let i = 0; i <= 12; i++) { const a = Math.PI + i * Math.PI / 12; rays += `<line x1="${300 + Math.cos(a) * 170}" y1="${300 + Math.sin(a) * 170}" x2="${300 + Math.cos(a) * 215}" y2="${300 + Math.sin(a) * 215}" stroke="${s}" stroke-width="10" stroke-linecap="round" opacity=".9"/>`; }
@@ -2145,7 +2169,7 @@ function docCover(p, R, n, N) {
   const textBlock = `<span class="pill" style="background:var(--t-yel);color:var(--s-dark)">Ihr Energiekonzept ${year}</span>
       <div style="font-family:var(--fh),Georgia,serif;font-weight:var(--hw);font-size:29pt;line-height:1.08;color:var(--ink);margin:4mm 0 3mm;letter-spacing:-0.02em">${esc(p.offer.title)}</div>
       <div style="font-size:11pt;color:var(--ink2);max-width:150mm">${esc(subtitleOf(p, R))}</div>
-      <div style="margin-top:8mm">${custBlock(p, true)}</div>${coverFigures(p, R)}`;
+      <div style="margin-top:8mm">${custBlock(p, true)}</div>${coverFigures(p, R)}${coverContact(p)}`;
   if (st === 'type') {
     return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;inset:0;background:var(--bg)"></div>
       <div style="position:absolute;right:-20mm;top:20mm;width:150mm;height:82.5mm"><img src="${svgDataUri(coverBigSun())}" style="width:150mm;height:82.5mm;display:block"></div>${coverLogoHtml()}
@@ -2187,7 +2211,7 @@ const DOC = {
       <div><div style="font-size:9pt;color:rgba(255,255,255,.85)">Sie sparen durchschnittlich</div><div style="font-size:32pt;font-weight:600;letter-spacing:-0.02em;line-height:1.25;color:var(--hl-num);margin-top:1mm">${eur(R.avg)}</div><div style="font-size:9pt;color:rgba(255,255,255,.85);margin-top:1mm">pro Jahr – im ersten Jahr bereits ${eur(R.saving1)}</div></div>
       <div style="border-left:0.3mm solid rgba(255,255,255,.3);padding-left:6mm"><div style="font-size:9pt;color:rgba(255,255,255,.85)">Bezahlt gemacht nach</div><div style="font-size:22pt;font-weight:600;letter-spacing:-0.02em;margin-top:1mm">${am === null ? 'über ' + R.N : num(am, 1)} Jahren</div><div style="font-size:8pt;color:rgba(255,255,255,.75)">mit steigenden Energiepreisen${R.scen === 'opt' ? ' (optimistisch)' : ''}</div></div></div>`;
     const fin = visiblePages(p, R).some(d => d.key === 'finance');
-    b += `<div style="display:grid;grid-template-columns:repeat(${R.W ? 4 : 3},1fr);margin-top:5mm">${[['Angebotspreis', eur(R.gross)], ...(R.W ? [['Förderung', '− ' + eur(R.funding)]] : []), ['Ihre Kosten', eur(R.net)], fin ? [`Überschuss nach ${R.N} Jahren`, eur(R.surplus)] : ['Weniger CO₂ pro Jahr', num(R.co2Save / 1000, 1) + ' t']].map(([k, v], i) => `<div style="padding:0 4mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}"><div class="small" style="font-weight:500">${k}</div><div style="font-size:14pt;font-weight:600;margin-top:1mm;${k === 'Förderung' ? 'color:var(--p)' : ''}">${v}</div></div>`).join('')}</div>`;
+    b += `<div style="display:grid;grid-template-columns:repeat(${3 + (R.W ? 1 : 0) + (R.other ? 1 : 0) + (R.discount ? 1 : 0)},1fr);margin-top:5mm">${[['Angebotspreis', eur(R.gross)], ...(R.W ? [['Förderung', '− ' + eur(R.funding)]] : []), ...(R.other ? [['Zuschüsse', '− ' + eur(R.other)]] : []), ...(R.discount ? [['Sonderrabatt', '− ' + eur(R.discount)]] : []), ['Ihre Kosten', eur(R.net)], fin ? [`Überschuss in ${R.N} J.`, eur(R.surplus)] : ['Weniger CO₂/Jahr', num(R.co2Save / 1000, 1) + ' t']].map(([k, v], i) => `<div style="padding:0 4mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}"><div class="small" style="font-weight:500">${k}</div><div style="font-size:14pt;font-weight:600;margin-top:1mm;${k === 'Förderung' || k === 'Sonderrabatt' || k === 'Zuschüsse' ? 'color:var(--p)' : ''}">${v}</div></div>`).join('')}</div>`;
     b += `<div class="sec" style="display:grid;grid-template-columns:1fr 1fr;gap:7mm"><div><h2>Ihre Vorteile</h2>${benefitsOf(p, R).map(checkLi).join('')}</div>`;
     const tr = S.sales.trustOn ? S.sales.trust.filter(t => t.on).slice(0, 4) : [];
     b += `<div>${tr.length ? `<h2>Warum ${esc(coName())}</h2>${tr.map(t => `<div style="display:flex;gap:3mm;margin-bottom:3mm"><span style="flex-shrink:0;display:inline-flex;width:8mm;height:8mm;border-radius:calc(var(--dr) * .7);background:var(--tile);align-items:center;justify-content:center">${icC(t.icon, 16, S.design.primary, 1.8)}</span><div><div style="font-weight:600;font-size:9pt">${esc(t.title)}</div><div class="small" style="font-size:7.8pt;line-height:1.4">${esc(t.text)}</div></div></div>`).join('')}` : ''}</div></div>`;
@@ -2199,10 +2223,10 @@ const DOC = {
     const lead = hp ? (A.pot ? `Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. So würde eine Photovoltaikanlage mit ${num(A.kwp, 1)} kWp Ihre Wärmepumpe übers Jahr unterstützen.` : 'Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. So ergänzen sich Ihre beiden Anlagen übers Jahr.') : 'So verteilen sich Ihr Stromverbrauch und Ihre Solarerzeugung über die Monate.';
     let b = chap(txt('year', 'title'), S.doc.texts.year && S.doc.texts.year.lead ? S.doc.texts.year.lead : lead);
     b += `<div class="tile" style="padding:4mm 4mm 3mm">${annualChart(A, { h: 250 })}<div class="small" style="margin-top:2mm">${annualLegend(A)}</div></div>`;
-    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:6mm">${[[hp ? 'Anteil Solarstrom am WP-Strom' : 'Anteil Solarstrom am Verbrauch', pct(A.share * 100), 'rechnerisch übers Jahr', 'var(--p)'], ['Vom eigenen Dach', num(A.covered) + ' kWh', `von ${num(A.total)} kWh Bedarf`], [hp ? 'Weniger Stromkosten' : 'Wert des Eigenverbrauchs', eur(A.value), 'pro Jahr, abzüglich entgangener Einspeisung']].map(([k, v, u, col], i) => `<div style="padding:0 5mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}">${fig(k, v, u, col)}</div>`).join('')}</div>`;
+    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:6mm">${[[hp ? 'Anteil Solarstrom am WP-Strom' : 'Anteil Solarstrom am Verbrauch', pct(A.share * 100), 'rechnerisch übers Jahr', 'var(--p)'], ['Vom eigenen Dach', num(A.covered) + ' kWh', `von ${num(A.total)} kWh Bedarf`], [hp ? 'Weniger Stromkosten' : 'Wert des Eigenverbrauchs', eur(A.value), A.pot ? 'pro Jahr, zusätzlich möglich' : 'pro Jahr – bereits in Ihrer Ersparnis enthalten']].map(([k, v, u, col], i) => `<div style="padding:0 5mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}">${fig(k, v, u, col)}</div>`).join('')}</div>`;
     const seas = (a, z) => A.months.slice(a, z).reduce((s, m) => s + m.covered, 0) / Math.max(1, A.months.slice(a, z).reduce((s, m) => s + m.demand, 0));
     const winter = (A.months[0].covered + A.months[1].covered + A.months[10].covered + A.months[11].covered) / Math.max(1, A.months[0].demand + A.months[1].demand + A.months[10].demand + A.months[11].demand);
-    b += `<div class="sec g3">${[['Frühling und Herbst', `Die beste Zeit: Ihr Haus braucht noch Wärme, und die Sonne liefert schon viel Strom. Rund ${pct(seas(2, 5) * 100)} des Bedarfs von März bis Mai kommen vom Dach.`], ['Sommer', hp ? 'Die Wärmepumpe bereitet fast nur Warmwasser – das läuft tagsüber nahezu komplett mit Solarstrom. Überschüsse fließen in den Speicher oder ins Netz.' : 'Die Anlage erzeugt mehr, als Sie verbrauchen. Überschüsse fließen in den Speicher oder ins Netz.'], ['Winter', `Der Bedarf ist am höchsten, die Sonne am schwächsten: Etwa ${pct(winter * 100)} kommen jetzt vom Dach, den Rest liefert ${hp ? 'Ihr günstiger Wärmepumpentarif' : 'das Netz'}.`]].map(([t, x]) => `<div class="tile"><h3>${t}</h3><div class="small" style="font-size:8pt;line-height:1.45;color:var(--ink2)">${x}</div></div>`).join('')}</div>`;
+    b += `<div class="sec g3">${[['Frühling und Herbst', `Die beste Zeit: Ihr Haus braucht noch Wärme, und die Sonne liefert schon viel Strom. Rund ${pct((A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.covered, 0) / Math.max(1, A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.demand, 0))) * 100)} des Bedarfs von März bis Mai und im September/Oktober kommen vom Dach.`], ['Sommer', hp ? 'Die Wärmepumpe bereitet fast nur Warmwasser – das läuft tagsüber nahezu komplett mit Solarstrom. Überschüsse fließen in den Speicher oder ins Netz.' : 'Die Anlage erzeugt mehr, als Sie verbrauchen. Überschüsse fließen in den Speicher oder ins Netz.'], ['Winter', `Der Bedarf ist am höchsten, die Sonne am schwächsten: Etwa ${pct(winter * 100)} kommen jetzt vom Dach, den Rest liefert ${hp ? 'Ihr günstiger Wärmepumpentarif' : 'das Netz'}.`]].map(([t, x]) => `<div class="tile"><h3>${t}</h3><div class="small" style="font-size:8pt;line-height:1.45;color:var(--ink2)">${x}</div></div>`).join('')}</div>`;
     if (A.pot) b += `<div class="sec" style="background:var(--t-yel);border-radius:var(--dr);padding:4.5mm 5mm;display:flex;gap:4mm;align-items:center">${icC('sun', 26, S.design.secondary, 1.8)}<div style="font-size:8.8pt"><b style="font-weight:600">Diese Photovoltaikanlage ist nicht Teil Ihres Angebots.</b> Sie zeigt, wie viel Ihre Wärmepumpe zusätzlich mit eigenem Solarstrom laufen könnte. Gern erstellen wir Ihnen ein passendes Angebot.</div></div>`;
     b += `<p class="small" style="margin-top:3mm">Modellrechnung mit typischen Monatswerten für den Raum Münster/Osnabrück (Ertrag ${num(S.calc.pvYield)} kWh/kWp${hp ? ', Heizgradtage und jahreszeitliche Effizienz der Wärmepumpe' : ''}). Die tatsächliche Deckung hängt von Wetter, Laufzeiten und Speichergröße ab.</p>`;
     return { title: txt('year', 'title'), body: b };
@@ -2276,7 +2300,7 @@ const DOC = {
     rows += `<div class="row grad" style="border-radius:var(--dr);margin-top:2mm;border:0;padding:3mm 4mm"><span style="font-weight:600">Ihre schlussendlichen Kosten</span><b style="font-size:14pt;color:var(--hl-num)">${eur(R.net)}</b></div>`;
     if (R.sowieso) rows += row(`Ohnehin fällige neue ${R.fuel === 'oil' ? 'Ölheizung' : 'Gasheizung'}`, '− ' + eur(R.sowieso)) + row('<b>Ihre tatsächlichen Mehrkosten</b>', `<span style="font-size:11pt">${eur(R.invest)}</span>`);
     let b = chap('Investition & Förderung', 'Was Ihre Anlage kostet – und was davon der Staat übernimmt.') + `<div>${rows}</div>`;
-    if (R.W) b += `<div class="sec tile" style="padding:3.5mm 4.5mm"><h3>So setzt sich Ihr Fördersatz zusammen</h3><div style="display:flex;flex-wrap:wrap;gap:2mm;margin-top:2mm">${F.parts.map(([k, v]) => `<span class="pill" style="background:#fff;box-shadow:0 0 0 0.3mm #DCE6EE">${esc(k)} ${pct(v)}</span>`).join('')}<span class="pill" style="background:var(--p);color:#fff">= ${pct(F.rate)}${F.capped ? ` (max. ${F.max} %)` : ''}</span></div><div class="small" style="margin-top:2mm">Förderfähige Kosten ${eur(F.base)} (Kappungsgrenze ${eur(F.cap)}) · Förderstand ${deDate(F.stand.from)}${F.stand.to ? '–' + deDate(F.stand.to) : ''}${F.stand.note ? ' · ' + esc(F.stand.note) : ''}</div></div>`;
+    if (R.W) b += `<div class="sec tile" style="padding:3.5mm 4.5mm"><h3>So setzt sich Ihr Fördersatz zusammen</h3><div style="font-size:9pt;margin-top:1.5mm;line-height:1.6">${F.parts.map(([k, v]) => `${esc(k)} <b style="font-weight:600">${pct(v)}</b>`).join(' <span style="color:var(--ink3)">+</span> ')} <span style="color:var(--ink3)">=</span> <b style="font-weight:600;color:var(--p);font-size:11pt">${pct(F.rate)}</b>${F.capped ? ` <span class="small">(Höchstsatz ${F.max} %)</span>` : ''}</div><div class="small" style="margin-top:2mm">Förderfähige Kosten ${eur(F.base)} (Kappungsgrenze ${eur(F.cap)}) · Förderstand ${deDate(F.stand.from)}${F.stand.to ? '–' + deDate(F.stand.to) : ''}${F.stand.note ? ' · ' + esc(F.stand.note) : ''}</div></div>`;
     b += `<div class="sec"><div class="km"></div><h1 style="font-size:15pt">Energiebilanz</h1>`;
     if (R.W) b += `<h3 style="margin-top:2mm">Heizkosten im ersten Jahr</h3>${hBars([{ label: R.fuel === 'oil' ? 'Ölheizung' : 'Gasheizung', sub: 'bisher', v: R.costOld1, c: '#D9482B', txt: eur(R.costOld1) }, { label: 'Wärmepumpe', sub: 'künftig', v: R.costNew1, c: S.design.primary, txt: eur(R.costNew1) }], { rowH: 40 })}`;
     const t = [];
@@ -2288,7 +2312,7 @@ const DOC = {
   monthly(p, R) {
     const c = C(), last = R.rows[R.rows.length - 1], oil = R.fuel === 'oil';
     const ys = [...new Set([0, 1, 2, 3, 4].map(i => R.startYear + i).concat([2030, 2032, 2035, 2038, 2040, 2045]))].filter(y => y >= R.startYear && y <= R.startYear + R.N - 1).sort();
-    let b = chap('Ihre monatlichen Energiekosten', 'So entwickeln sich Ihre Energiekosten pro Monat – heute und in Zukunft.');
+    let b = chap('Ihre monatlichen Energiekosten', R.W && R.V ? 'Heizung und Haushaltsstrom zusammen – so entwickeln sich Ihre Energiekosten pro Monat, heute und in Zukunft.' : R.W ? 'Ihre Heizkosten pro Monat inklusive Grundpreis und Wartung – heute und in Zukunft.' : 'Ihre Stromkosten pro Monat – heute und in Zukunft.');
     b += `<div class="g3">${tile('Heute', eur(R.monthOld1), 'pro Monat mit dem heutigen System', 'tred')}${tile('Künftig', eur(R.monthNew1), 'pro Monat mit dem neuen System', 'tgrn')}${tile('Ersparnis', eur(R.monthOld1 - R.monthNew1), `pro Monat · in ${R.N} Jahren ${eur(last.monthSave)}`, 'tyel')}</div>`;
     b += `<div class="sec">${groupBars(monthlyGroups(R), { h: 200 })}<div class="small">${legendDot(c.red2, 'Heute-System')}${legendDot(c.p, 'Neues System')}</div></div>`;
     b += `<table class="t" style="margin-top:3mm"><thead><tr><th>Jahr</th>${R.W ? `<th>${oil ? 'Öl je Liter' : 'Gas je kWh'}</th><th>davon CO₂</th><th>WP-Strom je kWh</th>` : '<th>Strom je kWh</th>'}<th>Heute-System / Monat</th><th>Neues System / Monat</th><th>Ersparnis / Monat</th></tr></thead><tbody>${ys.map(y => { const r = rowOfYear(R, y); return `<tr><td>${y}</td>${R.W ? `<td>${oil ? eur(r.fuelPrice, 2) : ct(r.fuelPrice)}</td><td>${oil ? eur(r.co2Part, 2) : ct(r.co2Part)}</td><td>${ct(r.hpPrice)}</td>` : `<td>${ct(r.hhPrice)}</td>`}<td>${eur(r.monthOld)}</td><td>${eur(r.monthNew)}</td><td style="color:var(--p);font-weight:600">${eur(r.monthSave)}</td></tr>`; }).join('')}</tbody></table>`;
@@ -2297,12 +2321,13 @@ const DOC = {
     return { title: 'Monatliche Energiekosten', body: b };
   },
   finance(p, R) {
-    const ys = [1, 2, 3, 5, 10, 15, 20].filter(t => t <= R.N), am = R.amortRise ? Math.ceil(R.amortRise) : null;
+    const am = R.amortRise ? Math.ceil(R.amortRise) : null, ys = [...new Set([1, 2, 3, 5, 10, 15, 20].concat(am ? [am] : []))].filter(t => t <= R.N).sort((a, b) => a - b);
     let b = chap('Finanzielle Bilanz & Ersparnis', 'Ab wann sich Ihre Investition rechnet – und was danach übrig bleibt.');
     b += `<div class="g4">${tile('Amortisation', yrs(R.amortStatic), 'bei gleichbleibenden Energiepreisen')}${tile('Amortisation', yrs(R.amortRise), `mit steigenden Energiepreisen${R.scen === 'opt' ? ' (optimistisch)' : ''}`, 'grad')}${tile('Ø Ersparnis', eur(R.avg), 'pro Jahr')}${tile(`Überschuss nach ${R.N} Jahren`, eur(R.surplus), 'nach Abzug der Investition', 'tyel')}</div>`;
     b += `<div class="sec">${amortChart(R, { h: 240 })}<div class="small">${legendDot(S.design.primary, 'kumulierter Saldo mit steigenden Preisen')}${legendDot('#F2B8A6', 'noch nicht amortisiert')}${legendDot('#1E4C86', 'gleichbleibende Preise', true)}</div></div>`;
-    b += `<table class="t" style="margin-top:3mm"><thead><tr><th>Jahr</th><th>Kosten bisher</th><th>Kosten neu</th>${R.V ? '<th>Solarstrom-Nutzen</th>' : ''}<th>Ersparnis</th><th>Kumuliert</th><th>Saldo</th></tr></thead><tbody>${ys.map(t => { const r = R.rows[t - 1]; return `<tr class="${am === t ? 'hl' : ''}"><td>${t} (${r.year})</td><td>${eur(r.costOld + (R.V ? R.hhCons * r.hhPrice : 0))}</td><td>${eur(r.costNew + (R.V ? R.hhCons * r.hhPrice : 0))}</td>${R.V ? `<td>${eur(r.pv)}</td>` : ''}<td>${eur(r.saving)}</td><td>${eur(r.cum)}</td><td style="font-weight:600;color:${r.saldo < 0 ? '#D9482B' : 'var(--p)'}">${eur(r.saldo)}</td></tr>`; }).join('')}</tbody></table>`;
-    b += `<p class="small" style="margin-top:2.5mm">Investition für die Amortisation: ${eur(R.invest)} (${R.sowieso ? 'Mehrkosten nach Abzug der ohnehin fälligen neuen Heizung' : 'Kosten nach Förderung, Zuschüssen und Rabatt'}).${R.zins > 0 ? ` Mit einem Kalkulationszins von ${num(R.zins, 1)} % beträgt der Barwert des Überschusses ${eur(R.npvSurplus)}.` : ''}${am ? ` Hervorgehoben: Jahr der Amortisation.` : ''}</p>`;
+    const hh = r => (R.V ? R.hhCons * r.hhPrice : 0);
+    b += `<table class="t" style="margin-top:3mm"><thead><tr><th>Jahr</th><th>Energiekosten bisher</th><th>Energiekosten neu</th><th>Ersparnis</th><th>Ersparnis gesamt</th><th>Stand nach Investition</th></tr></thead><tbody>${ys.map(t => { const r = R.rows[t - 1]; return `<tr class="${am === t ? 'hl' : ''}"><td>${t} (${r.year})${am === t ? ' · amortisiert' : ''}</td><td>${eur(r.costOld + hh(r))}</td><td>${eur(r.costNew + hh(r) - r.pv)}</td><td>${eur(r.saving)}</td><td>${eur(r.cum)}</td><td style="font-weight:600;color:${r.saldo < 0 ? 'var(--old)' : 'var(--p)'}">${r.saldo > 0 ? '+' : ''}${eur(r.saldo)}</td></tr>`; }).join('')}</tbody></table>`;
+    b += `<p class="small" style="margin-top:2.5mm">Energiekosten pro Jahr ${R.W && R.V ? 'für Heizung und Haushaltsstrom' : R.W ? 'für die Heizung inkl. Grundpreis und Wartung' : 'für den Haushaltsstrom'}${R.V ? '; beim neuen System ist der Nutzen Ihres Solarstroms bereits abgezogen' : ''}. „Stand nach Investition“: Ersparnis gesamt minus Ihre Investition von ${eur(R.invest)} (${R.sowieso ? 'Mehrkosten nach Abzug der ohnehin fälligen neuen Heizung' : 'Kosten nach Förderung, Zuschüssen und Rabatt'}). Ab dem hervorgehobenen Jahr ist die Anlage bezahlt.${R.zins > 0 ? ` Mit einem Kalkulationszins von ${num(R.zins, 1)} % beträgt der Barwert des Überschusses ${eur(R.npvSurplus)}.` : ''}</p>`;
     return { title: 'Finanzielle Bilanz', body: b };
   },
   prices(p, R) {
@@ -2794,6 +2819,7 @@ document.addEventListener('click', async e => {
     case 'prices-reset': if (await confirmDlg('Recherchierte Werte wiederherstellen?', 'Alle Preisdaten werden auf den Stand Oktober 2026 zurückgesetzt.', 'Wiederherstellen', false)) { S.prices = clone(DEFAULT_PRICES); saveSettings(); render(); toast('Preisdaten wiederhergestellt.'); } break;
     case 'cmp-add': S.comparisons.items.push({ id: uid('c'), on: true, icon: 'gift', label: 'Neuer Vergleich', price: 1000 }); saveSettings(); render(); break;
     case 'cmp-del': S.comparisons.items = S.comparisons.items.filter(i => i.id !== a.dataset.id); saveSettings(); render(); break;
+    case 'adv-from-offer': { const ad = { id: uid('a'), name: a.dataset.n, role: 'Energieberater', phone: a.dataset.ph, email: a.dataset.em, photo: '' }; (S.company.advisors = S.company.advisors || []).push(ad); if (!S.company.defaultAdvisor) S.company.defaultAdvisor = ad.id; p.offer.advisorId = ad.id; p.offer.advisor = ad.name; saveSettings(); saveProject(p); toast(`${ad.name} wurde als Berater angelegt.`); render(); break; }
     case 'clear-color': bset(a.dataset.b, ''); applyTheme(); render(); break;
     case 'theme-toggle': S.design.mode = appDark() ? 'light' : 'dark'; applyTheme(); saveSettings(); render(); break;
     case 'theme-preset': { const t = THEME_PRESETS[+a.dataset.i]; Object.assign(S.design, { primary: t.primary, secondary: t.secondary, accent: t.accent, old: t.old, ink: t.ink, bg: t.bg, night: t.night }); applyTheme(); saveSettings(); render(); break; }
