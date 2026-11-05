@@ -1,0 +1,43 @@
+Frühauf Energy – Wirtschaftlichkeitsrechner
+===========================================
+
+Veröffentlichen mit Netlify Drop (ca. 1 Minute)
+-----------------------------------------------
+1. ZIP-Datei entpacken. Sie erhalten einen Ordner mit diesen Dateien:
+   index.html, favicon.svg, icon-180.png, icon-192.png, icon-512.png,
+   manifest.webmanifest, _headers, _redirects, LIESMICH.txt
+2. https://app.netlify.com/drop im Browser öffnen (kostenloses Konto genügt).
+3. Den ENTPACKTEN Ordner in das Feld ziehen – nicht die ZIP-Datei selbst.
+4. Netlify zeigt eine Adresse wie https://name-123.netlify.app – fertig.
+   Unter „Site configuration“ können Sie einen eigenen Namen vergeben.
+
+Auf dem iPhone/iPad als App nutzen
+----------------------------------
+Adresse in Safari öffnen → Teilen-Symbol → „Zum Home-Bildschirm“.
+Die App startet dann im Vollbild mit eigenem Symbol.
+
+Wichtig zu Ihren Daten
+----------------------
+- Alle Berechnungen, Produkte, Einstellungen und hochgeladenen Angebote
+  werden NUR lokal im Browser gespeichert (IndexedDB). Es gibt keinen Server.
+- Jedes Gerät und jeder Browser hat einen eigenen Datenbestand.
+- Unter Einstellungen → Datensicherung regelmäßig „Sicherung herunterladen“.
+  Mit „Sicherung einspielen“ übertragen Sie alles auf ein anderes Gerät.
+- Die Seite ist per X-Robots-Tag von Suchmaschinen ausgeschlossen.
+
+Erste Schritte
+--------------
+1. Einstellungen → Unternehmen: Logo, Anschrift, Bankdaten eintragen.
+   (Wichtig, damit die Angebotserkennung Ihre Daten nicht für Kundendaten hält.)
+2. Einstellungen → Design & Deckblatt: Farben und Deckblatt anpassen.
+3. Produkte: eigene Komponenten anlegen (werden im Angebot erkannt).
+4. „+ Neue Berechnung“ → Angebot hochladen → Daten prüfen → PDF erstellen.
+
+Hinweise
+--------
+- Für das Lesen von PDFs, die Texterkennung (OCR) und die PDF-Erstellung
+  werden Bibliotheken bei Bedarf aus dem Internet geladen
+  (cdnjs.cloudflare.com, cdn.jsdelivr.net). Eine Internetverbindung ist nötig.
+- Aktualisieren: Einfach den neuen Ordner erneut per Drag & Drop auf die
+  bestehende Seite unter „Deploys“ ziehen. Ihre Daten bleiben erhalten,
+  solange die Adresse gleich bleibt.
