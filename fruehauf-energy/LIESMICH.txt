@@ -29,7 +29,11 @@ Erste Schritte
 --------------
 1. Einstellungen → Unternehmen: Logo, Anschrift, Bankdaten eintragen.
    (Wichtig, damit die Angebotserkennung Ihre Daten nicht für Kundendaten hält.)
-2. Einstellungen → Design & Deckblatt: Farben und Deckblatt anpassen.
+2. Einstellungen → Design & Deckblatt: Farbwelt, Schriften, Eckenradius,
+   Deckblatt-Stil, Kopfzeile und Kapitelmarke anpassen.
+   Einstellungen → Dokument & Verkauf: Seitenreihenfolge, alle Seitentexte,
+   Verkaufsargumente und Kontaktbox. Unter Unternehmen: Berater mit Foto.
+   Einstellungen → Roadmap: Schritte nach der Unterschrift (PV und WP).
 3. Produkte: eigene Komponenten anlegen (werden im Angebot erkannt).
 4. „+ Neue Berechnung“ → Angebot hochladen → Daten prüfen → PDF erstellen.
 
