@@ -521,6 +521,7 @@ const DEFAULT_SETTINGS = {
     v: 3, mode: 'dark', pdfTheme: 'mixed',
     primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA', night: '#0A0E13',
     fontBody: 'Geist', fontHead: 'Instrument Serif', fontMono: 'Geist Mono', headWeight: 400, radius: 14, buttons: 'round', buttonStyle: 'light', highlight: 'solid',
+    moduleColor: 'black', hpIllu: 'scene',
     chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', coverStyle: 'illu',
     mark: { style: 'sun', shape: 'rounded', bg: '', fg: '', line: '', text: '', file: '' },
     cover: { use: false, file: '', showCustomer: true, whiteBox: true, dark: true, pos: 62 },
@@ -1351,8 +1352,8 @@ function houseSVG(o = {}) {
   const id = n => n + uid2;
   const top = { y: 150, l: 205, r: 395 }, bot = { y: 228, l: 150, r: 450 }, lerp = (a, b, t) => a + (b - a) * t;
   const K = dawn
-    ? { sky1: '#060B16', sky2: '#13213D', sky3: '#3A3550', hor: '#E59A5C', hill1a: '#132A22', hill1b: '#0E2019', hill2a: '#0F241B', hill2b: '#0A1913', wall1: '#2C3644', wall2: '#222B37', wallS: '#3A4656', roof1: '#4A2219', roof2: '#5C2C21', eave: '#3A1A13', win: '#FFC870', winS: '#FFE2A8', mod1: '#1D3354', mod2: '#0F1E36', modS: '#3C5A86', hp: '#3B4756', hpS: '#566577', fan: '#2C3644', tree: '#163A26', cloud: '#E9A27A' }
-    : { sky1: '#A9D4F5', sky2: '#CFE7FA', sky3: '#E8F4FD', hor: '#F4FAFF', hill1a: '#A9DCA0', hill1b: '#86C98A', hill2a: '#8FD08F', hill2b: '#6BB979', wall1: '#FFFFFF', wall2: '#EEF3F7', wallS: '#DCE6EE', roof1: '#C8553D', roof2: '#D9694F', eave: '#A9432E', win: '#CFE6F8', winS: '#ffffff', mod1: '#2B5C93', mod2: '#173B66', modS: '#9EC3E6', hp: '#F7FAFC', hpS: '#C9D6E1', fan: '#E3EBF2', tree: '#5FAE6E', cloud: '#ffffff' };
+    ? { sky1: '#060B16', sky2: '#13213D', sky3: '#3A3550', hor: '#E59A5C', hill1a: '#132A22', hill1b: '#0E2019', hill2a: '#0F241B', hill2b: '#0A1913', wall1: '#2C3644', wall2: '#222B37', wallS: '#3A4656', roof1: '#4A2219', roof2: '#5C2C21', eave: '#3A1A13', win: '#FFC870', winS: '#FFE2A8', mod1: modColors(true).m1, mod2: modColors(true).m2, modS: modColors(true).s, hp: '#3B4756', hpS: '#566577', fan: '#2C3644', tree: '#163A26', cloud: '#E9A27A' }
+    : { sky1: '#A9D4F5', sky2: '#CFE7FA', sky3: '#E8F4FD', hor: '#F4FAFF', hill1a: '#A9DCA0', hill1b: '#86C98A', hill2a: '#8FD08F', hill2b: '#6BB979', wall1: '#FFFFFF', wall2: '#EEF3F7', wallS: '#DCE6EE', roof1: '#C8553D', roof2: '#D9694F', eave: '#A9432E', win: '#CFE6F8', winS: '#ffffff', mod1: modColors(false).m1, mod2: modColors(false).m2, modS: modColors(false).s, hp: '#F7FAFC', hpS: '#C9D6E1', fan: '#E3EBF2', tree: '#5FAE6E', cloud: '#ffffff' };
   let mods = '';
   for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) {
     const pad = 0.035, t0 = 0.1 + r * 0.27 + 0.012, t1 = t0 + 0.255;
@@ -1489,6 +1490,16 @@ function priceChart(key, o = {}) {
   const last = fc[fc.length - 1]; if (fc.length > 1) s += `<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="3.5" fill="${col}"/>`;
   return s + T(pl, pt - 2 + 0, d.unit, { fs: 9, fw: 700 }) + '</svg>';
 }
+/* Heizölpreise der letzten Jahre (aus den Preisdaten) */
+function oilBars() {
+  const c = C(), d = S.prices.oel, now = new Date().getFullYear();
+  const ys = Object.keys(d.years).map(Number).filter(y => y >= now - 7).sort((a, b) => a - b);
+  const vals = ys.map(y => [String(y), +d.years[y]]).concat(ys.includes(now) ? [] : [[String(now), +d.current]]);
+  const W = 300, H = 120, mx = niceMax(Math.max(...vals.map(v => v[1])) * 1.15), bw = (W - 10) / vals.length;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
+  vals.forEach(([y, v], i) => { const h = (H - 34) * v / mx, x = 5 + i * bw + bw * 0.18, peak = v === Math.max(...vals.map(q => q[1])); s += `<rect x="${x}" y="${H - 18 - h}" width="${bw * 0.64}" height="${h}" rx="3" fill="${peak ? c.red : mix(c.red, '#ffffff', 0.55)}"/>` + T(x + bw * 0.32, H - 22 - h, num(v), { a: 'middle', fs: 9, fw: 600, c: c.ink }) + T(x + bw * 0.32, H - 5, y, { a: 'middle', fs: 8.5 }); });
+  return s + '</svg>';
+}
 /* CO2-Preis-Säulen */
 function co2Columns() {
   const c = C(), d = S.prices.co2, W = 300, H = 150, ys = Object.keys(d).map(Number).sort();
@@ -1510,6 +1521,73 @@ function gasSpiral() {
   s += T(cx, cy - 4, '2,3 ct', { a: 'middle', fs: 11, fw: 700, c: C().ink3 }) + T(cx, cy + 12, '→ ca. 22 ct/kWh', { a: 'middle', fs: 11, fw: 800, c: c.red });
   return s + '</svg>';
 }
+/* Wärmepumpe als Szene im Stil des Deckblatts */
+function modColors(dawn) {
+  const black = (S.design.moduleColor || 'black') === 'black';
+  return black ? (dawn ? { m1: '#1C1E23', m2: '#08090B', s: '#3A3F48' } : { m1: '#2B2E35', m2: '#0E0F12', s: '#5A606A' })
+    : (dawn ? { m1: '#1D3354', m2: '#0F1E36', s: '#3C5A86' } : { m1: '#2B5C93', m2: '#173B66', s: '#9EC3E6' });
+}
+function hpSceneSVG() {
+  const p = S.design.primary, s = S.design.secondary, M = modColors(false), red = '#E4572E', blue = '#4F9BE0';
+  const badge = (x, y, n) => `<circle cx="${x}" cy="${y}" r="11" fill="${p}" stroke="#fff" stroke-width="2.5"/><text x="${x}" y="${y + 4.3}" text-anchor="middle" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">${n}</text>`;
+  const lab = (x, y, t, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#3D5568">${esc(t)}</text>`;
+  const wave = (x, y, len, col, w = 2.6) => { let d = `M${x},${y}`; for (let i = 0; i < len; i += 20) d += ` q5,-6 10,0 t10,0`; return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`; };
+  const arrowHead = (x, y, col) => `<path d="M${x},${y - 6} L${x + 9},${y} L${x},${y + 6} Z" fill="${col}"/>`;
+  // Dach mit Modulen
+  const top = { y: 74, l: 455, r: 575 }, bot = { y: 120, l: 418, r: 612 }, lerp = (a, b, t) => a + (b - a) * t;
+  let mods = '';
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 5; c++) { const t0 = 0.14 + r * 0.42, t1 = t0 + 0.38, y0 = lerp(top.y, bot.y, t0), y1 = lerp(top.y, bot.y, t1); const l0 = lerp(top.l, bot.l, t0) + 9, r0 = lerp(top.r, bot.r, t0) - 9, l1 = lerp(top.l, bot.l, t1) + 9, r1 = lerp(top.r, bot.r, t1) - 9; const a0 = c / 5 + 0.01, a1 = (c + 1) / 5 - 0.01; mods += `<polygon points="${[[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]].map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#hsMod)" stroke="${M.s}" stroke-width=".7"/>`; }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 262" width="100%">
+<defs><linearGradient id="hsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CFE6F9"/><stop offset="1" stop-color="#F3F9FE"/></linearGradient>
+<linearGradient id="hsMod" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${M.m1}"/><stop offset="1" stop-color="${M.m2}"/></linearGradient>
+<linearGradient id="hsWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#EEF3F7"/></linearGradient>
+<radialGradient id="hsWarm" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFD9A8" stop-opacity=".9"/><stop offset="1" stop-color="#FFD9A8" stop-opacity="0"/></radialGradient>
+<clipPath id="hsClip"><rect x="0" y="0" width="640" height="262" rx="16"/></clipPath></defs>
+<g clip-path="url(#hsClip)">
+<rect width="640" height="262" fill="url(#hsSky)"/>
+<circle cx="70" cy="40" r="18" fill="${s}" opacity=".9"/>
+<g fill="#fff" opacity=".95"><ellipse cx="150" cy="44" rx="34" ry="11"/><ellipse cx="172" cy="38" rx="20" ry="11"/><ellipse cx="330" cy="34" rx="26" ry="8"/></g>
+<path d="M0 214 C110 196 220 200 330 210 S540 196 640 204 V262 H0Z" fill="#A9DCA0"/><path d="M0 236 C160 222 330 230 460 236 S600 226 640 230 V262 H0Z" fill="#86C98A"/>
+<!-- Außenluft -->
+<rect x="18" y="70" width="128" height="26" rx="13" fill="#fff" stroke="#CFE3F5"/>${lab(82, 87, 'Außenluft · auch bei −20 °C')}
+${wave(26, 128, 130, blue)}${arrowHead(158, 128, blue)}${wave(36, 150, 120, blue)}${arrowHead(158, 150, blue)}${wave(26, 172, 130, blue)}${arrowHead(158, 172, blue)}
+<!-- Außeneinheit -->
+<ellipse cx="248" cy="214" rx="78" ry="6" fill="#000" opacity=".08"/>
+<rect x="180" y="112" width="136" height="96" rx="9" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/>
+<circle cx="226" cy="160" r="34" fill="#E3EBF2" stroke="#B8C7D4" stroke-width="2"/><path d="M226 128v64M194 160h64M203 137l46 46M249 137l-46 46" stroke="#B8C7D4" stroke-width="2"/><circle cx="226" cy="160" r="6" fill="#B8C7D4"/>
+<rect x="272" y="130" width="30" height="5" rx="2.5" fill="#C9D6E1"/><rect x="272" y="141" width="30" height="5" rx="2.5" fill="#C9D6E1"/><rect x="272" y="152" width="30" height="5" rx="2.5" fill="#C9D6E1"/><rect x="272" y="166" width="18" height="5" rx="2.5" fill="${p}"/>
+<rect x="190" y="208" width="14" height="6" fill="#9FB1C1"/><rect x="292" y="208" width="14" height="6" fill="#9FB1C1"/>
+${badge(196, 124, 1)}${lab(226, 106, 'Verdampfer')}
+<!-- Strom -->
+<rect x="268" y="40" width="76" height="26" rx="13" fill="#FFF4DC" stroke="#F7DFA6"/><path d="M287 45 l-6 9 h5 l-3 8 l9 -11 h-5 l3 -6 z" fill="${s}"/>${lab(316, 57, 'Strom')}
+<path d="M300 66 V112" stroke="${s}" stroke-width="3" stroke-dasharray="4 3"/>
+${badge(300, 186, 2)}${lab(300, 228, 'Verdichter')}
+<!-- Leitungen -->
+<path d="M316 140 H400" stroke="${red}" stroke-width="7" stroke-linecap="round"/>${arrowHead(392, 140, red)}
+<path d="M400 178 H316" stroke="${blue}" stroke-width="7" stroke-linecap="round"/><path d="M322 172 L313 178 L322 184 Z" fill="${blue}"/>
+${badge(358, 178, 4)}${lab(358, 202, 'Expansionsventil')}
+<text x="358" y="130" text-anchor="middle" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="9.5" font-weight="600" fill="${red}">warm · Vorlauf</text>
+<!-- Haus -->
+<ellipse cx="515" cy="216" rx="104" ry="6" fill="#000" opacity=".07"/>
+<rect x="404" y="118" width="222" height="96" rx="4" fill="url(#hsWall)" stroke="#DCE6EE"/>
+<polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="#C8553D"/>
+<polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="#D9694F"/>${mods}
+<rect x="${bot.l - 8}" y="${bot.y}" width="${bot.r - bot.l + 16}" height="5" rx="2.5" fill="#A9432E"/>
+<!-- Innen: Speicher, Heizkörper, Dusche -->
+<rect x="414" y="134" width="40" height="70" rx="12" fill="#fff" stroke="#C9D6E1" stroke-width="2"/><rect x="418" y="150" width="32" height="50" rx="9" fill="#FDEEE8"/>
+${badge(434, 140, 3)}${lab(434, 228, 'Verflüssiger')}
+<path d="M400 140 H418" stroke="${red}" stroke-width="5"/><path d="M418 178 H400" stroke="${blue}" stroke-width="5"/>
+<circle cx="520" cy="166" r="34" fill="url(#hsWarm)"/>
+<rect x="494" y="160" width="54" height="34" rx="5" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/>${[0, 1, 2, 3, 4].map(i => `<rect x="${499 + i * 10}" y="164" width="5" height="26" rx="2.5" fill="#E3EBF2"/>`).join('')}
+${[504, 520, 536].map(x => `<path d="M${x} 152 q-5 -7 0 -14 t0 -14" fill="none" stroke="${red}" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>`).join('')}
+<path d="M454 170 H494" stroke="${red}" stroke-width="3" stroke-dasharray="5 3"/>
+<path d="M582 136 v16 m-8 0 h16" stroke="#9FB1C1" stroke-width="3" stroke-linecap="round"/>${[576, 582, 588].map((x, i) => `<path d="M${x} 158 l-2 ${8 + i * 3}" stroke="${blue}" stroke-width="2" stroke-linecap="round"/>`).join('')}
+<path d="M454 146 H566 V136" fill="none" stroke="${red}" stroke-width="2.4" stroke-dasharray="4 3"/>
+<rect x="534" y="88" width="0" height="0"/>
+${lab(515, 248, 'Ihr Haus · Heizung und Warmwasser')}
+</g></svg>`;
+}
+
 /* Wärmepumpen-Kreislauf */
 function hpCycleSVG() {
   const c = C(), p = c.p;
@@ -2238,7 +2316,7 @@ const DOC_TEXT = {
   monthly: { label: 'Ihre monatlichen Energiekosten', title: 'Ihre monatlichen Energiekosten', lead: 'So entwickeln sich Ihre Energiekosten pro Monat – heute und in Zukunft.' },
   finance: { label: 'Finanzielle Bilanz & Ersparnis', title: 'Finanzielle Bilanz & Ersparnis', lead: 'Ab wann sich Ihre Investition rechnet – und was danach übrig bleibt.' },
   prices: { label: 'Energiepreise: Rückblick & Ausblick', title: 'Energiepreise: 20 Jahre Rückblick & Ausblick', lead: 'Historische Preise (Fläche) und Prognose bis 2040 (gestrichelt).' },
-  why: { label: 'Warum Öl und Gas teurer werden', title: 'Warum Öl und Gas langfristig teurer werden', lead: 'Drei Entwicklungen, die heute schon feststehen.' },
+  why: { label: 'Warum Öl und Gas teurer werden', title: 'Warum Öl und Gas langfristig teurer werden', lead: 'Vier Entwicklungen, die heute schon feststehen.' },
   leisure: { label: 'Was Sie sich leisten können', title: 'Was Sie sich in {jahre} Jahren leisten können', lead: 'Ihre Ersparnis – greifbar gemacht.' },
   roadmap: { label: 'Roadmap nach der Unterschrift', title: 'So geht es nach Ihrer Unterschrift weiter', lead: 'Von der Unterschrift bis zur fertigen Anlage – Schritt für Schritt, mit einem festen Ansprechpartner.' },
   sign: { label: 'Angebot annehmen', title: 'Angebot annehmen', lead: 'Überzeugt? Dann können Sie Ihren Auftrag direkt hier erteilen.' },
@@ -2394,7 +2472,7 @@ function advisorCard(p, R, compact) {
   return `<div style="background:var(--p-light);border-radius:var(--dr);padding:5mm 6mm;display:flex;gap:5mm;align-items:center">${photo}<div style="flex:1;min-width:0">
     <div style="font-family:var(--fh),Georgia,serif;font-weight:var(--hw);font-size:12.5pt">${esc(S.sales.ctaTitle)}</div><div style="font-size:8.6pt;color:var(--ink2);margin-top:0.8mm">${esc(S.sales.ctaText)}</div>
     <div style="display:flex;flex-wrap:wrap;gap:1.5mm 6mm;margin-top:2.5mm;font-size:8.6pt">${a.name ? `<span><b style="font-weight:600">${esc(a.name)}</b> · ${esc(a.role)}</span>` : ''}${a.phone ? `<span>${esc(a.phone)}</span>` : ''}${a.email ? `<span>${esc(a.email)}</span>` : ''}</div>
-    ${R.discount && !compact ? `<div style="margin-top:2.5mm;font-size:8.4pt;color:var(--s-dark);font-weight:600">${esc(S.discount.text.replace('{datum}', deDate(p.discount.until)))}: ${eur(R.discount)} Preisvorteil</div>` : ''}</div></div>`;
+    </div></div>`;
 }
 let DAY_CACHE = null;
 const DOC = {
@@ -2411,6 +2489,7 @@ const DOC = {
     const tr = S.sales.trustOn ? S.sales.trust.filter(t => t.on).slice(0, 4) : [];
     b += `<div>${tr.length ? `<h2>Warum ${esc(coName())}</h2>${tr.map(t => `<div style="display:flex;gap:3mm;margin-bottom:3mm"><span style="flex-shrink:0;display:inline-flex;width:8mm;height:8mm;border-radius:calc(var(--dr) * .7);background:var(--tile);align-items:center;justify-content:center">${icC(t.icon, 16, S.design.primary, 1.8)}</span><div><div style="font-weight:600;font-size:9pt">${esc(t.title)}</div><div class="small" style="font-size:7.8pt;line-height:1.4">${esc(t.text)}</div></div></div>`).join('')}` : ''}</div></div>`;
     b += `<div class="sec">${advisorCard(p, R)}</div>`;
+    if (R.discount) b += `<div style="margin-top:3mm;background:var(--t-yel);border-radius:var(--dr);padding:4.5mm 6mm;display:flex;justify-content:space-between;align-items:center;gap:5mm"><div><div style="font-size:8pt;font-weight:600;color:var(--s-dark)">Ihr Vorteil bei schneller Entscheidung</div><div style="font-size:10pt;font-weight:600;margin-top:0.8mm">${esc(S.discount.text.replace('{datum}', deDate(p.discount.until)))}</div></div><div style="font-size:18pt;font-weight:600;color:var(--p);white-space:nowrap">− ${eur(R.discount)}</div></div>`;
     return { title: txt('summary', 'title'), body: b };
   },
   year(p, R) {
@@ -2461,7 +2540,7 @@ const DOC = {
     const bar = (parts, max) => `<div style="display:flex;height:7mm;border-radius:2mm;overflow:hidden;width:${(parts.reduce((a, x) => a + x[0], 0) / max * 100).toFixed(1)}%">${parts.map(([v, col, t, tc]) => `<div style="width:${(v / parts.reduce((a, x) => a + x[0], 0) * 100).toFixed(1)}%;background:${col};color:${tc || '#fff'};font-size:7.2pt;font-weight:600;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden">${t}</div>`).join('')}</div>`;
     const mx = Math.max(fuelIn, 100);
     let b = chap('So funktioniert eine Wärmepumpe', 'Im Prinzip wie ein Kühlschrank – nur umgekehrt: Sie holt Wärme aus der Umgebung ins Haus.');
-    b += `<div class="tile" style="padding:3mm 4mm">${hpCycleSVG()}</div>`;
+    b += S.design.hpIllu === 'diagram' ? `<div class="tile" style="padding:3mm 4mm">${hpCycleSVG()}</div>` : `<div style="border-radius:var(--dr);overflow:hidden">${hpSceneSVG()}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
     if (R.rod) b += `<div class="tile" style="margin-top:3.5mm;padding:3.5mm 4mm;background:var(--p-light);display:flex;gap:3.5mm;align-items:flex-start">${icC('sun', 20, S.design.primary, 1.8)}<div><b style="font-weight:600">Sommerpause für Ihre Wärmepumpe:</b> <span class="muted">Ein ${esc(R.rodName)} mit ${num(R.rodKw, 1)} kW erwärmt von ${R.rodMonths === 3 ? 'Juni' : 'Mai'} bis ${['', '', '', 'August', 'August', 'September', 'Oktober'][R.rodMonths]} Ihr Warmwasser mit überschüssigem Solarstrom – rund ${num(R.rodHeat)} kWh im Jahr. Die Wärmepumpe bleibt in dieser Zeit nahezu aus: weniger Laufzeit, weniger Starts, eine längere Lebensdauer.</span></div></div>`;
     b += `<div class="tile" style="margin-top:3.5mm;padding:3mm 4mm;background:var(--t-yel)"><b>Der Kühlschrank-Vergleich:</b> <span class="muted">Ihr Kühlschrank holt die Wärme aus dem Inneren und gibt sie hinten an die Küche ab. Die Wärmepumpe macht genau das mit der Außenluft – und gibt die Wärme an Ihr Haus.</span></div>`;
@@ -2481,8 +2560,8 @@ const DOC = {
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
     b += `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
-    b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2><p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
-    b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung', 'grad')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
+    b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2><p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE, h: 205 })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
+    b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
     return { title: 'So funktioniert Ihre Photovoltaikanlage', body: b };
   },
   invest(p, R) {
@@ -2532,9 +2611,9 @@ const DOC = {
     const block = key => {
       const d = S.prices[key], first = Object.entries(d.years).sort((a, b) => a[0] - b[0])[0], inc = first ? (d.current / first[1] - 1) * 100 : null;
       const col = key === 'strom' ? '#1E4C86' : key === 'gas' ? S.design.primary : '#D9482B';
-      return `<div class="tile" style="display:grid;grid-template-columns:1fr 50mm;gap:4mm;padding:3.5mm 4mm;margin-bottom:3mm;${key === mine ? 'box-shadow:0 0 0 0.4mm ' + S.design.secondary : ''}"><div>${priceChart(key, { h: 170, color: col })}</div><div><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${d.label}</h2></div>${key === mine ? '<span class="pill" style="background:var(--t-yel);color:var(--s-dark);margin-top:1mm">Ihr heutiger Energieträger</span>' : ''}
+      return `<div class="tile" style="display:grid;grid-template-columns:1fr 50mm;gap:4mm;padding:3.5mm 4mm;margin-bottom:3mm;${key === mine ? 'box-shadow:0 0 0 0.4mm ' + S.design.secondary : ''}"><div>${priceChart(key, { h: 170, color: col })}</div><div>${key === mine ? '<div style="display:table;background:var(--t-yel);color:var(--s-dark);border-radius:10mm;padding:1.2mm 3mm;font-size:7.4pt;font-weight:600;line-height:1.2;margin-bottom:2mm">Ihr heutiger Energieträger</div>' : ''}<h2 style="margin:0">${d.label}</h2>
         <div style="font-size:15pt;font-weight:600;margin-top:2mm">${num(d.current, d.current < 100 ? 2 : 0)} <span style="font-size:8.5pt;color:var(--ink3)">${d.unit}</span></div><div class="small">aktuell${d.currentNote ? ', ' + esc(d.currentNote) : ''}</div>
-        ${inc !== null ? `<span class="pill" style="background:var(--t-red);color:var(--old);margin-top:1.5mm">${inc >= 0 ? '+' : ''}${num(inc)} % seit ${first[0]}</span>` : ''}
+        ${inc !== null ? `<div style="display:table;background:var(--t-red);color:var(--old);border-radius:10mm;padding:1.2mm 3mm;font-size:7.4pt;font-weight:600;line-height:1.2;margin-top:1.5mm">${inc >= 0 ? '+' : ''}${num(inc)} % seit ${first[0]}</div>` : ''}
         <div class="small" style="margin-top:1.5mm">Prognose 2040: <b style="color:var(--ink)">${num(d.forecast[2040], d.forecast[2040] < 100 ? 1 : 0)} ${d.unit}</b></div><div class="small" style="margin-top:1mm;line-height:1.35">${esc(d.text)}</div></div></div>`;
     };
     const b = chap('Energiepreise: 20 Jahre Rückblick & Ausblick', 'Historische Preise (Fläche) und Prognose bis 2040 (gestrichelt).') + ['strom', 'gas', 'oel'].map(block).join('') + `<p class="small">Quellen: ${esc(S.prices.sources)}</p>`;
@@ -2544,13 +2623,14 @@ const DOC = {
     const oil = R.fuel === 'oil', co2Now = interpPath(S.calc.co2Path, R.startYear), co2_30 = interpPath(S.calc.co2Path, 2030), co2_40 = interpPath(S.calc.co2Path, 2040);
     const perYear = pr => R.cons * co2Share(R.fuel, pr);
     const num3 = (n, t, x) => `<div style="display:flex;gap:3mm;align-items:flex-start;margin-bottom:1.5mm">${numCircle(n, 7, { fill: S.design.primary, color: '#fff', fs: 12 })}<div><h2 style="margin:0.6mm 0 0.5mm">${t}</h2><div class="small" style="font-size:8.2pt;color:var(--ink2)">${x}</div></div></div>`;
-    let b = chap('Warum Öl und Gas langfristig teurer werden', 'Drei Entwicklungen, die heute schon feststehen.');
-    b += `<div class="tile" style="padding:4mm">${num3(1, 'Der CO₂-Preis steigt', `Seit 2021 kostet jede Tonne CO₂ aus Heizöl und Erdgas Geld. Ab 2028 bildet sich der Preis im europäischen Emissionshandel frei – Experten erwarten deutlich höhere Werte.`)}
-      <div style="display:grid;grid-template-columns:1fr 70mm;gap:4mm;align-items:center"><div>${co2Columns()}<div class="small" style="text-align:center">CO₂-Preis in €/t</div></div><div style="background:#fff;border-radius:var(--dr);padding:3mm 4mm"><div class="small">Bei Ihrem Verbrauch von ${num(R.cons)} ${oil ? 'Litern Heizöl' : 'kWh Erdgas'} zahlen Sie allein für CO₂:</div>
+    let b = chap('Warum Öl und Gas langfristig teurer werden', 'Vier Entwicklungen, die heute schon feststehen.');
+    b += `<div class="tile" style="padding:3.5mm 4mm">${num3(1, 'Der CO₂-Preis steigt', `Seit 2021 kostet jede Tonne CO₂ aus Heizöl und Erdgas Geld. Ab 2028 bildet sich der Preis im europäischen Emissionshandel frei – Experten erwarten deutlich höhere Werte.`)}
+      <div style="display:grid;grid-template-columns:1fr 70mm;gap:4mm;align-items:center"><div style="max-width:78mm">${co2Columns()}<div class="small" style="text-align:center">CO₂-Preis in €/t</div></div><div style="background:#fff;border-radius:var(--dr);padding:3mm 4mm"><div class="small">Bei Ihrem Verbrauch von ${num(R.cons)} ${oil ? 'Litern Heizöl' : 'kWh Erdgas'} zahlen Sie allein für CO₂:</div>
       <div style="display:grid;grid-template-columns:1fr auto;gap:1mm 3mm;margin-top:2mm;font-size:8.6pt"><span>heute (${num(co2Now)} €/t)</span><b>${eur(perYear(co2Now))}</b><span>2030 (${num(co2_30)} €/t)</span><b>${eur(perYear(co2_30))}</b><span>2040 (${num(co2_40)} €/t)</span><b style="color:var(--old)">${eur(perYear(co2_40))}</b></div><div class="small" style="margin-top:1.5mm">pro Jahr, inkl. MwSt.</div></div></div></div>`;
-    b += `<div class="tile" style="padding:4mm;margin-top:3mm;display:grid;grid-template-columns:1fr 72mm;gap:4mm;align-items:center"><div>${num3(2, 'Weniger Kunden, gleiche Netzkosten', 'Immer mehr Haushalte steigen auf Wärmepumpen um. Die Kosten für das Gasnetz bleiben aber – und verteilen sich auf immer weniger Kunden. Laut Fraunhofer IFAM kann das Netzentgelt von heute rund 2,3 ct auf ca. 22 ct pro kWh steigen.')}</div><div>${gasSpiral()}</div></div>`;
-    b += `<div class="tile" style="padding:4mm;margin-top:3mm">${num3(3, 'Strom wird heimisch und erneuerbar', 'Wind und Sonne liefern schon heute mehr als die Hälfte unseres Stroms – ohne Brennstoffkosten und ohne CO₂-Preis. Mit eigener Photovoltaik erzeugen Sie einen Teil davon direkt auf Ihrem Dach.')}</div>`;
-    b += `<div class="grad" style="border-radius:var(--dr);padding:4mm 5mm;margin-top:3.5mm"><b style="font-size:10.5pt">Fazit</b><div style="margin-top:1mm;font-size:9pt;color:rgba(255,255,255,.92)">Wer heute von ${oil ? 'Öl' : 'Gas'} auf eine Wärmepumpe umsteigt, macht sich unabhängig von CO₂-Preis und steigenden Netzentgelten – und sichert sich die aktuell hohe Förderung.</div></div>`;
+    b += `<div class="tile" style="padding:3.5mm 4mm;margin-top:2.5mm;display:grid;grid-template-columns:1fr 70mm;gap:4mm;align-items:center"><div>${num3(2, 'Heizöl hängt am Weltmarkt', 'Der Ölpreis folgt Rohöl, Dollarkurs und Krisen – ohne Vorwarnung. Dazu kommen Tankwartung, Lagerung und Prüfpflichten. Und je weniger Häuser mit Öl heizen, desto teurer wird die Lieferung pro Kunde.')}</div><div>${oilBars()}<div class="small" style="text-align:center">Heizöl in €/100 l (Jahresmittel, ${new Date().getFullYear()} aktuell)</div></div></div>`;
+    b += `<div class="tile" style="padding:3.5mm 4mm;margin-top:2.5mm;display:grid;grid-template-columns:1fr 72mm;gap:4mm;align-items:center"><div>${num3(3, 'Weniger Kunden, gleiche Netzkosten', 'Immer mehr Haushalte steigen auf Wärmepumpen um. Die Kosten für das Gasnetz bleiben aber – und verteilen sich auf immer weniger Kunden. Laut Fraunhofer IFAM kann das Netzentgelt von heute rund 2,3 ct auf ca. 22 ct pro kWh steigen.')}</div><div>${gasSpiral()}</div></div>`;
+    b += `<div class="tile" style="padding:3.5mm 4mm;margin-top:2.5mm">${num3(4, 'Strom wird heimisch und erneuerbar', 'Wind und Sonne liefern schon heute mehr als die Hälfte unseres Stroms – ohne Brennstoffkosten und ohne CO₂-Preis. Mit eigener Photovoltaik erzeugen Sie einen Teil davon direkt auf Ihrem Dach.')}</div>`;
+    b += `<div class="grad" style="border-radius:var(--dr);padding:4mm 5mm;margin-top:3.5mm"><b style="font-size:10.5pt">Fazit</b><div style="margin-top:1mm;font-size:9pt;color:rgba(255,255,255,.92)">Wer heute von ${oil ? 'Öl' : 'Gas'} auf eine Wärmepumpe umsteigt, macht sich unabhängig von CO₂-Preis, ${oil ? 'Weltmarktschwankungen' : 'steigenden Netzentgelten'} – und sichert sich die aktuell hohe Förderung.</div></div>`;
     b += `<p class="small" style="margin-top:2.5mm">Quellen: Brennstoffemissionshandelsgesetz (BEHG), EU-Emissionshandel (ETS 2), Fraunhofer IFAM „Gasnetzentgelte im Wandel“, Umweltbundesamt.</p>`;
     return { title: 'Warum Öl und Gas teurer werden', body: b };
   },
@@ -2749,6 +2829,7 @@ const SET = {
       + sCard('file', 'Kundendokument', 'Stil von Deckblatt, Kopfzeile und Kapitelmarke.', `
       <div class="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-6"><div class="space-y-5">
       <div><span class="lbl">Deckblatt</span>${seg('s:design.coverStyle', [['illu', 'Illustration'], ['type', 'Typografisch'], ['image', 'Eigenes Bild']], { cls: 'flex-wrap' })}</div>
+      <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Solarmodule in Illustrationen</span>${seg('s:design.moduleColor', [['black', 'Schwarz'], ['blue', 'Blau']])}</div><div><span class="lbl">„So funktioniert eine Wärmepumpe“</span>${seg('s:design.hpIllu', [['scene', 'Illustration'], ['diagram', 'Schema (alt)']])}</div></div>
       ${d.coverStyle === 'image' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 divide-y divide-line"><div class="py-3 flex flex-wrap items-center gap-3">${fileUrl(cv.file) ? `<img src="${fileUrl(cv.file)}" class="h-20 rounded-lg border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Illustration verwendet.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${cv.file ? 'Ersetzen' : 'Bild oder PDF hochladen'}<input type="file" accept="image/*,application/pdf" class="hidden" data-imgup="cover"></label></div>${toggleRow('Kundendaten einblenden', 's:design.cover.showCustomer')}${toggleRow('Weißer Kasten', 's:design.cover.whiteBox')}${toggleRow('Dunkle Schrift', 's:design.cover.dark')}<div class="py-3">${range('Position Kundendaten (von oben)', 's:design.cover.pos', 5, 85, ' %')}</div></div>` : ''}
       <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband']])}</div></div>
       <div class="pt-2"><div class="font-medium text-[15px]">Logo auf dem Deckblatt</div><div class="mt-3">${seg('s:design.coverLogo.source', [['company', 'Firmenlogo'], ['custom', 'Eigenes Logo']])}</div>
