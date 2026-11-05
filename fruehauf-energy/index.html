@@ -69,6 +69,18 @@ details>summary::-webkit-details-marker{display:none}
 details[open] .chev{transform:rotate(180deg)}
 .num{font-variant-numeric:tabular-nums}
 .hair-top{box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+[data-ui=studio] .h-font,[data-ui=studio] .sec-t{font-family:var(--fb),system-ui,sans-serif!important;font-weight:500!important;letter-spacing:-0.02em}
+[data-ui=studio] .sec-t{font-size:17px}
+[data-ui=studio] .card{border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+[data-ui=studio] .navl.on,[data-ui=studio] .tab.on{background:linear-gradient(180deg,#2b2b2e,#222224);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px rgba(255,255,255,.06)}
+[data-ui=studio] .icon-box{background:transparent;border-color:transparent;color:var(--ink3)}
+[data-ui=studio] .kpi{background:#1e1e20;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:6px;background:#232325;border:1px solid rgba(255,255,255,.1);font-family:var(--fm),monospace;font-size:11px;color:var(--ink2)}
+.side-row{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:10px;font-size:14px;color:var(--ink2);transition:background-color .15s,color .15s}
+.side-row:hover{background:var(--raised);color:var(--ink)}
+.side-row.on{background:linear-gradient(180deg,#2b2b2e,#222224);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px rgba(255,255,255,.06)}
+.side-row svg{flex-shrink:0;color:var(--ink3)}
+.side-row.on svg{color:var(--ink)}
 
 /* ===== Kundendokument =====
    Eigene Farbvariablen, unabhängig vom App-Thema. Keine Tabellenziffern und kein
@@ -263,7 +275,9 @@ const SERIFS = ['Instrument Serif', 'Fraunces', 'Newsreader', 'DM Serif Display'
 const MONOS = ['Geist Mono', 'IBM Plex Mono', 'JetBrains Mono'];
 let THEME_CTX = 'app';
 const sysDark = () => { try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return true; } };
+const isStudio = () => S.design.mode === 'studio';
 const appDark = () => (S.design.mode === 'system' ? sysDark() : S.design.mode !== 'light');
+const STUDIO = { base: '#141415', side: '#0f0f10', card: '#19191b', raised: '#232325', field: '#111112', ink: '#ededed', ink2: '#a1a1a6', ink3: '#85858b' };
 const docDark = () => S.design.pdfTheme === 'dark';
 const rgbStr = h => hexToRgb(h).join(' ');
 const rgba = (h, a) => `rgba(${hexToRgb(h).join(',')},${a})`;
@@ -273,15 +287,16 @@ function applyTheme() {
   set('--p', P); set('--p-rgb', rgbStr(P)); set('--s', d.secondary); set('--s-rgb', rgbStr(d.secondary));
   set('--acc', d.accent); set('--old', d.old); set('--gold', mix(d.secondary, '#ffffff', 0.35));
   set('--p-dark', mix(d.primary, '#000000', 0.22));
+  document.documentElement.dataset.ui = isStudio() ? 'studio' : dark ? 'dark' : 'light';
   if (dark) {
-    const base = d.night, ink = '#ECEFF3';
-    set('--bg', base); set('--card', mix(base, '#ffffff', 0.035)); set('--raised', mix(base, '#ffffff', 0.07)); set('--field', mix(base, '#000000', 0.15));
-    set('--ink', ink); set('--ink2', '#A7B2BE'); set('--ink3', '#7A8692');
+    const st = isStudio(), base = st ? STUDIO.base : d.night, ink = st ? STUDIO.ink : '#ECEFF3';
+    set('--bg', base); set('--card', st ? STUDIO.card : mix(base, '#ffffff', 0.035)); set('--raised', st ? STUDIO.raised : mix(base, '#ffffff', 0.07)); set('--field', st ? STUDIO.field : mix(base, '#000000', 0.15)); set('--side', st ? STUDIO.side : base);
+    set('--ink', ink); set('--ink2', st ? STUDIO.ink2 : '#A7B2BE'); set('--ink3', st ? STUDIO.ink3 : '#7A8692');
     set('--line', 'rgba(255,255,255,.07)'); set('--line2', 'rgba(255,255,255,.13)');
     set('--p-light', rgba(P, 0.15)); set('--t-red', rgba(d.old, 0.15)); set('--t-yel', rgba(d.secondary, 0.13)); set('--tile', mix(base, '#ffffff', 0.07));
     set('--yel-ink', mix(d.secondary, '#ffffff', 0.35)); set('--red-ink', mix(d.old, '#ffffff', 0.4)); set('--s-dark', mix(d.secondary, '#ffffff', 0.3));
     set('--btn', d.buttonStyle === 'color' ? P : ink); set('--btn-ink', d.buttonStyle === 'color' ? contrastOn(P) : base); set('--btn-h', d.buttonStyle === 'color' ? mix(P, '#ffffff', 0.1) : '#ffffff');
-    set('--hl', d.highlight === 'gradient' ? `linear-gradient(125deg,${mix(d.primary, base, 0.35)} 0%,${mix(d.accent, base, 0.4)} 100%)` : mix(d.primary, base, 0.62));
+    set('--hl', st ? 'linear-gradient(180deg,#232325 0%,#1c1c1e 100%)' : d.highlight === 'gradient' ? `linear-gradient(125deg,${mix(d.primary, base, 0.35)} 0%,${mix(d.accent, base, 0.4)} 100%)` : mix(d.primary, base, 0.62));
     set('--header', rgba(base, 0.78)); set('--hi', '.035'); set('--scheme', 'dark'); set('--hero-fade', rgba(base, 0.82)); set('--hero-fade2', rgba(base, 0.45));
   } else {
     const base = d.bg, ink = d.ink;
@@ -315,7 +330,8 @@ function applyTheme() {
 function C() {
   const d = S.design, dark = THEME_CTX === 'doc' ? docDark() : appDark();
   const P = dark ? mix(d.primary, '#ffffff', THEME_CTX === 'doc' ? 0.15 : 0.28) : d.primary;
-  const ink = dark ? '#ECEFF3' : d.ink, surf = dark ? (THEME_CTX === 'doc' ? '#141B24' : mix(d.night, '#ffffff', 0.07)) : '#ffffff';
+  const st = THEME_CTX !== 'doc' && isStudio();
+  const ink = dark ? (st ? STUDIO.ink : '#ECEFF3') : d.ink, surf = dark ? (THEME_CTX === 'doc' ? '#141B24' : st ? STUDIO.raised : mix(d.night, '#ffffff', 0.07)) : '#ffffff';
   return {
     dark, p: P, s: d.secondary, pl: dark ? rgba(P, 0.18) : mix(d.primary, '#ffffff', 0.88), pd: mix(d.primary, '#000000', 0.22),
     ink, ink2: dark ? '#A7B2BE' : mix(ink, '#ffffff', 0.22), ink3: dark ? '#7F8B98' : mix(ink, '#ffffff', 0.42), ink4: dark ? '#6A7683' : mix(ink, '#ffffff', 0.5),
@@ -351,6 +367,7 @@ const IP = {
   arrowR: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   arrowL: '<path d="M19 12H5M11 18l-6-6 6-6"/>',
   chevD: '<path d="m6 9 6 6 6-6"/>',
+  studio: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18"/>',
   moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
   flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
@@ -1624,11 +1641,12 @@ function appIconSVG(bg = '#0E7C66') {
 }
 
 /* Jahresdiagramm: Strombedarf und Solarstrom je Monat */
-function smoothPath(pts) {
+function smoothPath(pts, yLimit) {
   let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
     const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    if (yLimit !== undefined) { const lim = v => (yLimit.dir > 0 ? Math.min(v, yLimit.y) : Math.max(v, yLimit.y)); c1[1] = lim(c1[1]); c2[1] = lim(c2[1]); }
     d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
   }
   return d;
@@ -1660,6 +1678,11 @@ function annualLegend(A, px) {
   return dot(c.neutral, A.mode === 'hp' ? 'Strombedarf Wärmepumpe' : 'Strombedarf Haushalt') + dot(c.p, 'davon mit Solarstrom gedeckt') + (A.rod ? dot(c.s, 'Warmwasser per Heizstab (Solarstrom)') : '') + dot(mix(c.s, '#000000', 0.12), A.pot ? `Solarstrom einer ${num(A.kwp, 1)}-kWp-Anlage` : 'Ihr Solarstrom', true);
 }
 
+/* Nummer im Kreis – als SVG, damit die Ziffer auch im PDF exakt mittig sitzt */
+function numCircle(n, sizeMm, opt = {}) {
+  const fill = opt.fill || 'none', stroke = opt.stroke || 'none', color = opt.color || '#fff', sw = opt.border ? 1.6 : 0;
+  return `<svg width="${sizeMm * 3.78}" height="${sizeMm * 3.78}" viewBox="0 0 24 24" style="display:block;flex-shrink:0;width:${sizeMm}mm;height:${sizeMm}mm"><circle cx="12" cy="12" r="${12 - sw / 2 - 0.2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/><text x="12" y="16.2" text-anchor="middle" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="${opt.fs || 12}" font-weight="600" fill="${color}">${n}</text></svg>`;
+}
 /* Kapitelmarke */
 function kmHtml() {
   const d = S.design, k = d.chapter, p = d.chapterLine || d.primary, s = d.chapterSun || d.secondary;
@@ -1691,7 +1714,7 @@ function roadmapHtml(p, mm = true) {
   const lane = L => `<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:${u(2)};margin-bottom:${u(3)}"><span style="display:inline-flex;width:${u(7)};height:${u(7)};border-radius:50%;background:${L.col};align-items:center;justify-content:center">${icC(L.icon, mm ? 15 : 16, '#ffffff', 2)}</span><b style="font-size:${f(10.5)}">${L.title}</b></div>
     ${L.steps.map((s, i) => `<div style="display:flex;gap:${u(3)};position:relative;padding-bottom:${u(i === L.steps.length - 1 ? 0 : 3.2)}">
       ${i < L.steps.length - 1 ? `<div style="position:absolute;left:${u(2.9)};top:${u(6.2)};bottom:0;width:${u(0.5)};background:${L.col};opacity:.35"></div>` : ''}
-      <span style="flex-shrink:0;display:inline-flex;width:${u(6.3)};height:${u(6.3)};border-radius:50%;border:${u(0.5)} solid ${L.col};background:var(--bg);color:${L.col};font-weight:600;font-size:${f(8)};align-items:center;justify-content:center">${i + 1}</span>
+      ${mm ? numCircle(i + 1, 6.3, { fill: C().surface, stroke: L.col, color: L.col, border: true, fs: 11 }) : `<span style="flex-shrink:0;display:grid;place-items:center;box-sizing:border-box;width:${u(6.3)};height:${u(6.3)};border-radius:50%;border:${u(0.5)} solid ${L.col};background:var(--bg);color:${L.col};font-weight:600;font-size:${f(8)}">${i + 1}</span>`}
       <div style="min-width:0;padding-top:${u(0.6)}"><div style="font-weight:600;font-size:${f(9)};line-height:1.3">${esc(s.title)}${s.dur ? ` <span style="font-weight:500;color:var(--ink3);font-size:${f(7.4)}">· ${esc(s.dur)}</span>` : ''}</div><div style="font-size:${f(7.8)};color:var(--ink2);line-height:1.4;margin-top:${u(0.4)}">${esc(s.text)}</div></div></div>`).join('')}</div>`;
   const conn = merge => two
     ? `<svg viewBox="0 0 400 40" width="100%" height="${mm ? '10mm' : '38px'}" preserveAspectRatio="none" style="display:block"><path d="${merge ? 'M100,0 C100,24 200,16 200,40 M300,0 C300,24 200,16 200,40' : 'M200,0 C200,24 100,16 100,40 M200,0 C200,24 300,16 300,40'}" fill="none" stroke="${c.ink}" stroke-opacity=".28" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/></svg>`
@@ -1757,6 +1780,7 @@ function logoMark(size = 40) {
   return sunMark(size - 4);
 }
 function shell(inner) {
+  if (isStudio() && inner !== '') return studioShell(inner);
   const nav = [['kunden', 'Kunden', 'users'], ['produkte', 'Produkte', 'box'], ['einstellungen', 'Einstellungen', 'gear']];
   const active = UI.route === 'projekt' ? 'kunden' : UI.route;
   const links = cls => nav.map(([k, l, i]) => `<a href="#/${k}" class="navl ${cls} ${active === k ? 'on' : ''}">${ic(i, 17)}${l}</a>`).join('');
@@ -1764,13 +1788,43 @@ function shell(inner) {
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
     <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3">Wirtschaftlichkeitsrechner</div></div></a>
     <nav class="hidden md:flex items-center gap-1 ml-6">${links('')}</nav>
-    <button class="btn-g ml-auto !w-10 !h-10 !px-0" data-a="theme-toggle" aria-label="${appDark() ? 'Helle Ansicht' : 'Dunkle Ansicht'}" title="${appDark() ? 'Helle Ansicht' : 'Dunkle Ansicht'}">${ic(appDark() ? 'sun' : 'moon', 19)}</button>
+    ${themeButton('ml-auto')}
     <button class="btn-p !h-10 !px-4" data-a="new">${ic('plus', 17)}<span>Neue Berechnung</span></button>
   </div>
   <nav class="md:hidden flex gap-1 px-3 pb-2 overflow-x-auto no-scrollbar">${links('!h-9 !px-3 !text-[13px]')}</nav>
 </header>
 <main class="pb-32">${inner}</main>`;
 }
+/* Ansicht: Hell → Dunkel → Studio */
+const curMode = () => (isStudio() ? 'studio' : appDark() ? 'dark' : 'light');
+const MODE_LABEL = { light: 'Hell', dark: 'Dunkel', studio: 'Studio' };
+function themeButton(cls = '') {
+  const m = curMode(), next = { light: 'dark', dark: 'studio', studio: 'light' }[m];
+  return `<button class="btn-g ${cls} !h-10 !px-2.5 gap-1.5" data-a="theme-toggle" aria-label="Ansicht wechseln, jetzt ${MODE_LABEL[m]}" title="Ansicht: ${MODE_LABEL[m]} – weiter zu ${MODE_LABEL[next]}">${ic(m === 'light' ? 'sun' : m === 'dark' ? 'moon' : 'studio', 18)}<span class="hidden sm:inline text-[13px]">${MODE_LABEL[m]}</span></button>`;
+}
+function studioShell(inner) {
+  const active = UI.route === 'projekt' ? 'kunden' : UI.route;
+  const nav = [['kunden', 'Kunden', 'users', PROJECTS.length], ['produkte', 'Produkte', 'box', PRODUCTS.length], ['einstellungen', 'Einstellungen', 'gear', '']];
+  const recent = PROJECTS.slice().sort((a, b) => b.updated - a.updated).slice(0, 6);
+  const dot = t => `<span class="w-2 h-2 rounded-full shrink-0" style="background:${t === 'pv' ? 'var(--s)' : t === 'wp' ? 'var(--old)' : 'rgb(var(--p-rgb))'};box-shadow:0 0 8px ${t === 'pv' ? 'rgb(var(--s-rgb)/.6)' : t === 'wp' ? 'rgba(217,72,43,.6)' : 'rgb(var(--p-rgb)/.6)'}"></span>`;
+  const title = UI.route === 'projekt' ? (curProject() && curProject().customer.name || 'Berechnung') : { kunden: 'Übersicht', produkte: 'Produkte', einstellungen: 'Einstellungen' }[UI.route];
+  const tIcon = UI.route === 'produkte' ? 'box' : UI.route === 'einstellungen' ? 'gear' : UI.route === 'projekt' ? 'calc' : 'grid';
+  return `<aside class="hidden lg:flex fixed inset-y-0 left-0 w-[268px] flex-col border-r border-line z-40" style="background:var(--side);padding-top:env(safe-area-inset-top)">
+    <div class="h-[72px] px-6 flex items-center gap-3"><a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark(32)}<span class="font-medium text-[17px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</span></a></div>
+    <div class="px-4"><button class="w-full h-11 rounded-[12px] bg-[#1a1a1c] border border-line flex items-center gap-2.5 px-3 text-ink3 text-[14px] hover:border-line2 transition-colors" data-a="focus-search">${ic('search', 17)}<span>Suchen</span><span class="ml-auto flex gap-1"><span class="kbd">⌘</span><span class="kbd">K</span></span></button></div>
+    <div class="mt-6 pt-6 border-t border-line px-4"><div class="mono text-[12px] text-ink3 px-2.5 mb-2">Navigation</div>
+      <div class="space-y-1">${nav.map(([k, l, i, n]) => `<a href="#/${k}" class="side-row ${active === k ? 'on' : ''}">${ic(i, 17)}<span>${l}</span>${n !== '' ? `<span class="ml-auto mono text-[12px] text-ink3">${n}</span>` : ''}</a>`).join('')}</div></div>
+    <div class="mt-6 pt-6 border-t border-line px-4 min-h-0 flex-1 overflow-y-auto no-scrollbar"><div class="mono text-[12px] text-ink3 px-2.5 mb-2">Zuletzt bearbeitet</div>
+      <div class="space-y-1">${recent.length ? recent.map(p => `<a href="#/projekt/${p.id}/${p.step || 1}" class="side-row ${UI.pid === p.id && UI.route === 'projekt' ? 'on' : ''}">${dot(p.type)}<span class="truncate">${esc(p.customer.name || 'Neue Berechnung')}</span><span class="ml-auto mono text-[12px] text-ink3">${{ pv: 'PV', wp: 'WP', pvwp: 'PV+WP' }[p.type]}</span></a>`).join('') : '<div class="px-2.5 text-[13px] text-ink3">Noch keine Berechnungen</div>'}</div></div>
+    <div class="p-4 border-t border-line flex items-center gap-2"><button class="btn-p flex-1 !h-10" data-a="new">${ic('plus', 16)}Neue Berechnung</button>${themeButton('!w-10 !px-0 [&>span]:!hidden')}</div>
+  </aside>
+  <div class="lg:pl-[268px]">
+    <div class="lg:hidden">${shellHeaderOnly()}</div>
+    <div class="hidden lg:flex h-[72px] items-center gap-3 px-10 border-b border-line text-[16px]"><span class="text-ink3">${ic(tIcon, 19)}</span><span class="font-medium">${esc(title)}</span></div>
+    <main class="pb-32">${inner}</main>
+  </div>`;
+}
+function shellHeaderOnly() { return shell('').replace('<main class="pb-32"></main>', ''); }
 function newDialog() {
   const opt = (t, icon, title, text) => `<button class="w-full text-left card !shadow-none p-4 flex items-center gap-4 hover:ring-p hover:ring-2 transition" data-a="create" data-type="${t}"><div class="w-12 h-12 rounded-[calc(var(--r)-4px)] grid place-items-center shrink-0" style="background:${t === 'pv' ? 'var(--t-yel)' : t === 'wp' ? 'var(--t-red)' : 'var(--p-light)'};color:${t === 'pv' ? 'var(--yel-ink)' : t === 'wp' ? 'var(--red-ink)' : 'rgb(var(--p-rgb))'}">${icon}</div><div><div class="font-semibold text-[16px]">${title}</div><div class="text-[13px] text-ink3">${text}</div></div><span class="ml-auto text-ink4">${ic('arrowR', 18)}</span></button>`;
   modal(`<h3 class="text-[21px] font-semibold pr-8">Neue Berechnung</h3><p class="text-ink3 text-[14px] mt-1 mb-5">Wofür möchten Sie rechnen?</p>
@@ -1780,14 +1834,61 @@ function newDialog() {
 /* =========================================================
    Kunden
    ========================================================= */
-function viewKunden() {
+function solarModuleObj() {
+  let cells = ''; for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) cells += `<rect x="${8 + c * 21}" y="${8 + r * 21}" width="19" height="19" rx="2" fill="url(#cellg)"/>`;
+  return `<svg viewBox="0 0 142 100" width="150" height="106" style="transform:perspective(500px) rotateY(-18deg) rotateX(14deg) rotate(-8deg);filter:drop-shadow(0 18px 24px rgba(0,0,0,.55))"><defs><linearGradient id="cellg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a3a55"/><stop offset=".55" stop-color="#151d2c"/><stop offset="1" stop-color="#0d121b"/></linearGradient><linearGradient id="frameg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4a4f"/><stop offset="1" stop-color="#1c1c1e"/></linearGradient><linearGradient id="gloss" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect x="1" y="1" width="140" height="98" rx="5" fill="url(#frameg)"/><rect x="5" y="5" width="132" height="90" rx="3" fill="#0b0f16"/>${cells}<rect x="5" y="5" width="132" height="90" rx="3" fill="url(#gloss)"/></svg>`;
+}
+/* Angebotsvolumen je Monat: ein Balken pro Monat, gestapelt nach Anlagentyp */
+function studioChart(months) {
+  const W = 760, H = 300, pl = 52, pr = 12, top = 24, base = 236;
+  const types = [['pvwp', S.design.primary], ['pv', S.design.secondary], ['wp', S.design.old]];
+  const tot = m => types.reduce((a, [k]) => a + m.vol[k], 0), cnt = m => types.reduce((a, [k]) => a + m.cnt[k], 0);
+  const mx = niceMax(Math.max(1, ...months.map(tot)) * 1.12), Y = v => base - (base - top) * v / mx;
+  const slot = (W - pl - pr) / months.length, bw = Math.min(64, slot * 0.46);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%"><defs><filter id="sglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  for (let i = 0; i <= 4; i++) { const v = mx * i / 4, y = Y(v); s += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,.06)"/>` + T(pl - 10, y + 4, v >= 1000 ? num(v / 1000) + 'k' : num(v), { a: 'end', fs: 11, c: '#85858b' }); }
+  months.forEach((m, i) => {
+    const x = pl + slot * i + (slot - bw) / 2, last = i === months.length - 1, op = last ? 1 : 0.55;
+    let y = base; const th = (base - top) * tot(m) / mx;
+    s += `<clipPath id="bc${i}"><rect x="${x}" y="${base - th}" width="${bw}" height="${th}" rx="6"/></clipPath><g clip-path="url(#bc${i})" opacity="${op}" ${last ? 'filter="url(#sglow)"' : ''}>`;
+    types.forEach(([k, col]) => { const v = m.vol[k]; if (!v) return; const h = (base - top) * v / mx; s += `<rect x="${x}" y="${y - h}" width="${bw}" height="${h + 0.5}" fill="${col}"/>`; y -= h; });
+    s += '</g>';
+    if (tot(m)) s += T(x + bw / 2, Y(tot(m)) - 8, num(tot(m) / 1000) + 'k', { a: 'middle', fs: 11, c: last ? '#ededed' : '#a1a1a6', fw: 500 });
+    s += T(x + bw / 2, base + 22, m.label, { a: 'middle', fs: 12, c: last ? '#ededed' : '#85858b' });
+    s += T(x + bw / 2, base + 40, cnt(m) === 1 ? '1 Berechnung' : `${cnt(m)} Berechnungen`, { a: 'middle', fs: 10, c: '#6b6b70' });
+  });
+  return s + `<line x1="${pl}" x2="${W - pr}" y1="${base}" y2="${base}" stroke="rgba(255,255,255,.14)"/></svg>`;
+}
+function viewKundenStudio() {
   const q = UI.search.trim().toLowerCase();
   const list = PROJECTS.slice().sort((a, b) => b.updated - a.updated).filter(p => !q || [p.customer.name, p.customer.city, p.customer.zip, p.offer.number].join(' ').toLowerCase().includes(q));
-  const res = PROJECTS.map(p => compute(p, 'real'));
-  const vol = res.reduce((a, r) => a + nz(r.gross), 0);
-  const am = res.map(r => r.amortRise).filter(v => isNum(v) && v > 0);
-  const avgAm = am.length ? am.reduce((a, b) => a + b, 0) / am.length : null;
-  const card = p => {
+  const res = PROJECTS.map(p => ({ p, R: compute(p, 'real') }));
+  const now = new Date(), key = d => d.getFullYear() * 12 + d.getMonth(), nowK = key(now);
+  const months = [];
+  for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ k: key(d), label: d.toLocaleDateString('de-DE', { month: 'short' }).replace('.', ''), vol: { pv: 0, wp: 0, pvwp: 0 }, cnt: { pv: 0, wp: 0, pvwp: 0 } }); }
+  res.forEach(({ p, R }) => { const m = months.find(x => x.k === key(new Date(p.created))); if (m) { m.vol[p.type] += nz(R.gross); m.cnt[p.type]++; } });
+  const sum = m => m.vol.pv + m.vol.wp + m.vol.pvwp, cur = months[5], prev = months[4];
+  const vol = res.reduce((a, x) => a + nz(x.R.gross), 0), am = res.map(x => x.R.amortRise).filter(v => isNum(v) && v > 0), avgAm = am.length ? am.reduce((a, b) => a + b, 0) / am.length : null;
+  const fund = res.reduce((a, x) => a + nz(x.R.funding), 0);
+  const thisMonth = PROJECTS.filter(p => key(new Date(p.created)) === nowK).length, lastMonth = PROJECTS.filter(p => key(new Date(p.created)) === nowK - 1).length;
+  const delta = (a, b, unit = '') => { const d = a - b; return `<span style="color:${d >= 0 ? '#4cc38a' : '#e5484d'}">${d >= 0 ? '+' : '−'}${num(Math.abs(d))}${unit}</span> <span class="text-ink3">vs. Vormonat</span>`; };
+  const volChange = sum(prev) ? `<span style="color:${sum(cur) >= sum(prev) ? '#4cc38a' : '#e5484d'}">${num((sum(cur) / sum(prev) - 1) * 100, 1)} % ${sum(cur) >= sum(prev) ? '↑' : '↓'}</span> <span class="text-ink3">vs. ${months[4].label}</span>` : `<span class="text-ink3">${num(thisMonth)} neue Berechnungen diesen Monat</span>`;
+  const statCard = (k, v, sub, extra = '') => `<div class="card p-6 relative overflow-hidden min-h-[156px] ${extra ? 'sm:pr-[190px]' : ''}"><div class="text-[14px] text-ink2">${k}</div><div class="text-[38px] font-medium tracking-[-0.02em] mt-2 leading-none num">${v}</div><div class="mono text-[13px] mt-4">${sub}</div>${extra}</div>`;
+  return `<div class="max-w-[1400px] mx-auto px-4 sm:px-10 pt-8 lg:pt-10">
+    <h1 class="text-[40px] sm:text-[56px] font-medium tracking-[-0.03em] leading-none">Kunden <span class="text-ink3">${now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}</span></h1>
+    <div class="grid lg:grid-cols-[1.35fr_1fr_1fr] gap-4 mt-8">
+      ${statCard('Angebotsvolumen', eur(vol), PROJECTS.length ? `<span class="text-ink3">${eur(fund)} Förderung</span>` : '<span class="text-ink3">Noch keine Berechnungen</span>', `<div class="hidden sm:block absolute right-4 top-1/2 -translate-y-1/2">${solarModuleObj()}</div>`)}
+      ${statCard('Neue Berechnungen', String(thisMonth).padStart(2, '0'), delta(thisMonth, lastMonth))}
+      ${statCard('Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–', '<span class="text-ink3">mit steigenden Preisen</span>')}
+    </div>
+    <div class="card p-6 mt-4"><div class="flex flex-wrap items-start justify-between gap-4"><div><div class="text-[14px] text-ink2">Angebotsvolumen im ${now.toLocaleDateString('de-DE', { month: 'long' })}</div><div class="text-[38px] font-medium tracking-[-0.02em] mt-2 leading-none num">${eur(sum(cur))}</div><div class="mono text-[13px] mt-3">${volChange}</div></div>
+      <div class="flex gap-4 text-[13px] text-ink2">${[['PV + WP', S.design.primary], ['PV', S.design.secondary], ['WP', S.design.old]].map(([l, c]) => `<span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:${c};box-shadow:0 0 8px ${c}"></span>${l}</span>`).join('')}</div></div>
+      <div class="mt-4">${studioChart(months)}</div><div class="mono text-[12px] text-ink3 mt-1">Summe der Bruttopreise aller in diesem Monat angelegten Berechnungen, aufgeteilt nach Anlagentyp</div></div>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-10"><h2 class="text-[22px] font-medium tracking-[-0.01em]">Alle Kunden</h2>
+      <div class="relative sm:w-[360px]"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-10" placeholder="Kunde, Ort oder Angebots-Nr." value="${esc(UI.search)}" data-b="u:search" data-t="s" id="cust-search"></div></div>
+    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5" id="cust-list">${list.length ? list.map(customerCard).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3 text-ink3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div>`}</div></div>`;
+}
+function customerCard(p) {
     const R = compute(p, 'real'), c = p.customer, nd = p.docs.length;
     return `<div class="card p-5 flex flex-col hover:border-line2 transition-colors cursor-pointer" data-a="open" data-id="${p.id}">
       <div class="flex items-start gap-3"><div class="w-12 h-12 rounded-full grid place-items-center text-white font-semibold shrink-0" style="background:linear-gradient(135deg,var(--p),var(--acc))">${esc(initials(c.name))}</div>
@@ -1795,7 +1896,17 @@ function viewKunden() {
       <div class="flex flex-wrap gap-1.5 mt-2">${typeBadge(p.type)}${nd ? `<span class="badge bg-bg text-ink3 border border-line">${ic('file', 12)} ${nd} ${nd === 1 ? 'Dokument' : 'Dokumente'}</span>` : ''}${p.offer.number ? `<span class="badge bg-bg text-ink3 border border-line">Nr. ${esc(p.offer.number)}</span>` : ''}</div></div></div>
       <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-line text-[12px]"><div><div class="text-ink3 mono text-[11px]">Investition</div><div class="font-semibold text-[14px] text-ink mt-0.5">${R.gross ? eur(R.gross) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Ersparnis/Jahr</div><div class="font-semibold text-[14px] text-p mt-0.5">${R.gross || R.saving1 ? eur(R.avg) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Stand</div><div class="font-bold text-[13px] text-ink2 mt-0.5">${new Date(p.updated).toLocaleDateString('de-DE')}</div></div></div>
       <div class="flex gap-1 mt-3 -mb-1 -mx-2"><button class="btn-g" data-a="dup" data-id="${p.id}">${ic('copy', 15)}Duplizieren</button><button class="btn-g hover:!text-ember2" data-a="del" data-id="${p.id}">${ic('trash', 15)}Löschen</button><span class="ml-auto btn-g !text-p">Öffnen ${ic('arrowR', 15)}</span></div></div>`;
-  };
+  }
+function viewKunden() {
+  if (isStudio()) return viewKundenStudio();
+  const q = UI.search.trim().toLowerCase();
+  const list = PROJECTS.slice().sort((a, b) => b.updated - a.updated).filter(p => !q || [p.customer.name, p.customer.city, p.customer.zip, p.offer.number].join(' ').toLowerCase().includes(q));
+  const res = PROJECTS.map(p => compute(p, 'real'));
+  const vol = res.reduce((a, r) => a + nz(r.gross), 0);
+  const am = res.map(r => r.amortRise).filter(v => isNum(v) && v > 0);
+  const avgAm = am.length ? am.reduce((a, b) => a + b, 0) / am.length : null;
+  const card = customerCard;
+
   return `<section class="relative overflow-hidden border-b border-line">
     <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax' })}</div>
     <div class="hidden sm:block absolute inset-0" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
@@ -2351,7 +2462,7 @@ const DOC = {
     const mx = Math.max(fuelIn, 100);
     let b = chap('So funktioniert eine Wärmepumpe', 'Im Prinzip wie ein Kühlschrank – nur umgekehrt: Sie holt Wärme aus der Umgebung ins Haus.');
     b += `<div class="tile" style="padding:3mm 4mm">${hpCycleSVG()}</div>`;
-    b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm"><span style="display:inline-flex;width:5.5mm;height:5.5mm;border-radius:50%;background:var(--p);color:#fff;font-weight:600;font-size:8pt;align-items:center;justify-content:center">${i + 1}</span><b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
+    b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
     if (R.rod) b += `<div class="tile" style="margin-top:3.5mm;padding:3.5mm 4mm;background:var(--p-light);display:flex;gap:3.5mm;align-items:flex-start">${icC('sun', 20, S.design.primary, 1.8)}<div><b style="font-weight:600">Sommerpause für Ihre Wärmepumpe:</b> <span class="muted">Ein ${esc(R.rodName)} mit ${num(R.rodKw, 1)} kW erwärmt von ${R.rodMonths === 3 ? 'Juni' : 'Mai'} bis ${['', '', '', 'August', 'August', 'September', 'Oktober'][R.rodMonths]} Ihr Warmwasser mit überschüssigem Solarstrom – rund ${num(R.rodHeat)} kWh im Jahr. Die Wärmepumpe bleibt in dieser Zeit nahezu aus: weniger Laufzeit, weniger Starts, eine längere Lebensdauer.</span></div></div>`;
     b += `<div class="tile" style="margin-top:3.5mm;padding:3mm 4mm;background:var(--t-yel)"><b>Der Kühlschrank-Vergleich:</b> <span class="muted">Ihr Kühlschrank holt die Wärme aus dem Inneren und gibt sie hinten an die Küche ab. Die Wärmepumpe macht genau das mit der Außenluft – und gibt die Wärme an Ihr Haus.</span></div>`;
     b += `<div class="sec"><h2>Warum die Wärmepumpe so effizient ist</h2><p class="small">So entstehen 100 kWh Wärme:</p>
@@ -2369,7 +2480,7 @@ const DOC = {
     const steps = [['Sonne einfangen', `Ihre ${num(R.kwp, 2)} kWp erzeugen rund ${num(R.yield)} kWh Strom im Jahr.`], ['Selbst nutzen', `Etwa ${num(R.self)} kWh nutzen Sie direkt oder über den Speicher.`], ['Speichern', R.bat ? `Der ${num(R.bat, 1)}-kWh-Speicher versorgt Sie abends und nachts.` : 'Ein Speicher lässt sich jederzeit nachrüsten.'], ['Einspeisen', `Rund ${num(R.feed)} kWh gehen ins Netz – vergütet mit ${num(S.calc.feedIn, 2)} ct/kWh.`]];
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
     b += `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>`;
-    b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm"><span style="display:inline-flex;width:5.5mm;height:5.5mm;border-radius:50%;background:var(--p);color:#fff;font-weight:600;font-size:8pt;align-items:center;justify-content:center">${i + 1}</span><b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
+    b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
     b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2><p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
     b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung', 'grad')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
     return { title: 'So funktioniert Ihre Photovoltaikanlage', body: b };
@@ -2432,7 +2543,7 @@ const DOC = {
   why(p, R) {
     const oil = R.fuel === 'oil', co2Now = interpPath(S.calc.co2Path, R.startYear), co2_30 = interpPath(S.calc.co2Path, 2030), co2_40 = interpPath(S.calc.co2Path, 2040);
     const perYear = pr => R.cons * co2Share(R.fuel, pr);
-    const num3 = (n, t, x) => `<div style="display:flex;gap:3mm;align-items:flex-start;margin-bottom:1.5mm"><span style="display:inline-flex;flex-shrink:0;width:7mm;height:7mm;border-radius:50%;background:var(--p);color:#fff;font-weight:600;align-items:center;justify-content:center">${n}</span><div><h2 style="margin:0.6mm 0 0.5mm">${t}</h2><div class="small" style="font-size:8.2pt;color:var(--ink2)">${x}</div></div></div>`;
+    const num3 = (n, t, x) => `<div style="display:flex;gap:3mm;align-items:flex-start;margin-bottom:1.5mm">${numCircle(n, 7, { fill: S.design.primary, color: '#fff', fs: 12 })}<div><h2 style="margin:0.6mm 0 0.5mm">${t}</h2><div class="small" style="font-size:8.2pt;color:var(--ink2)">${x}</div></div></div>`;
     let b = chap('Warum Öl und Gas langfristig teurer werden', 'Drei Entwicklungen, die heute schon feststehen.');
     b += `<div class="tile" style="padding:4mm">${num3(1, 'Der CO₂-Preis steigt', `Seit 2021 kostet jede Tonne CO₂ aus Heizöl und Erdgas Geld. Ab 2028 bildet sich der Preis im europäischen Emissionshandel frei – Experten erwarten deutlich höhere Werte.`)}
       <div style="display:grid;grid-template-columns:1fr 70mm;gap:4mm;align-items:center"><div>${co2Columns()}<div class="small" style="text-align:center">CO₂-Preis in €/t</div></div><div style="background:#fff;border-radius:var(--dr);padding:3mm 4mm"><div class="small">Bei Ihrem Verbrauch von ${num(R.cons)} ${oil ? 'Litern Heizöl' : 'kWh Erdgas'} zahlen Sie allein für CO₂:</div>
@@ -2627,7 +2738,7 @@ const SET = {
     const range = (label, b, min, max, unit) => `<label class="block"><span class="lbl flex justify-between">${label}<span class="text-ink3 num" data-rv="${b}">${num(bval(b))}${unit}</span></span><input type="range" class="w-full" min="${min}" max="${max}" step="1" data-b="${b}" data-t="r" value="${bval(b)}"></label>`;
     const fontOpts = Object.keys(FONTS).map(f => [f, f + (SERIFS.includes(f) ? ' (Serif)' : '')]);
     const presets = THEME_PRESETS.map((t, i) => `<button class="text-left rounded-[calc(var(--r)-4px)] border ${d.primary.toLowerCase() === t.primary.toLowerCase() ? 'border-p ring-4 ring-p/10' : 'border-line'} bg-card p-3 hover:border-p transition-colors" data-a="theme-preset" data-i="${i}"><div class="flex gap-1">${[t.night, t.primary, t.secondary, t.accent].map(c => `<span class="w-5 h-5 rounded-full border border-line2" style="background:${c}"></span>`).join('')}</div><div class="text-[13px] font-medium mt-2">${t.name}</div></button>`).join('');
-    return sCard('eye', 'Erscheinungsbild', 'Dunkel oder hell – für die App und getrennt für das Kundendokument.', `<div class="grid sm:grid-cols-2 gap-6"><div><span class="lbl">App</span>${seg('s:design.mode', [['light', 'Hell'], ['dark', 'Dunkel'], ['system', 'Wie System']])}<div class="hint">Schnell umschalten: Sonne/Mond oben in der Kopfleiste. „Wie System“ folgt der Einstellung von iPhone oder Computer.</div></div><div><span class="lbl">Kundendokument</span>${seg('s:design.pdfTheme', [['light', 'Hell'], ['mixed', 'Gemischt'], ['dark', 'Dunkel']])}<div class="hint">Gemischt: dunkles Deckblatt und dunkle Highlights, Inhaltsseiten hell und gut druckbar.</div></div></div>`)
+    return sCard('eye', 'Erscheinungsbild', 'Dunkel oder hell – für die App und getrennt für das Kundendokument.', `<div class="grid sm:grid-cols-2 gap-6"><div><span class="lbl">App</span>${seg('s:design.mode', [['light', 'Hell'], ['dark', 'Dunkel'], ['studio', 'Studio'], ['system', 'Wie System']], { cls: 'flex-wrap' })}<div class="hint">Schnell wechseln: Schalter oben in der Kopfleiste bzw. unten in der Seitenleiste (Hell → Dunkel → Studio). Studio: Graphit-Look mit Seitenleiste auf großen Bildschirmen. „Wie System“ folgt iPhone oder Computer (hell/dunkel).</div></div><div><span class="lbl">Kundendokument</span>${seg('s:design.pdfTheme', [['light', 'Hell'], ['mixed', 'Gemischt'], ['dark', 'Dunkel']])}<div class="hint">Gemischt: dunkles Deckblatt und dunkle Highlights, Inhaltsseiten hell und gut druckbar.</div></div></div>`)
       + sCard('palette', 'Farbwelt', 'Ein Klick setzt alle Farben – danach jede Farbe einzeln anpassbar. App, PDF und Illustrationen färben sich mit.', `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">${presets}</div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">${colorRow('Primärfarbe', 'primary', ['#0E7C66', '#0B6E99', '#1E4C86', '#2E7D32', '#6A3FB5', '#C2401F'])}${colorRow('Sonne / Sekundärfarbe', 'secondary', ['#F5A524', '#F2C230', '#FF8A3D', '#E4572E', '#7CC47F'])}${colorRow('Akzent (Verläufe, Diagramme)', 'accent')}${colorRow('Alte Kosten', 'old')}${colorRow('Schrift (hell)', 'ink')}${colorRow('Hintergrund (hell)', 'bg')}${colorRow('Hintergrund (dunkel)', 'night', ['#0A0E13', '#080D18', '#0B0F0C', '#110D0B', '#0B0B0C'])}</div>`)
       + sCard('pen', 'Schrift und Form', 'Gilt für App und Kundendokument.', `<div class="grid sm:grid-cols-2 gap-4">${sel('Fließtext', 's:design.fontBody', fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0])))}${sel('Überschriften', 's:design.fontHead', fontOpts.filter(f => !MONOS.includes(f[0])))}${sel('Kennzahlen und Beschriftungen', 's:design.fontMono', [...MONOS.map(f => [f, f]), ...fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0]))])}</div>
@@ -2808,6 +2919,8 @@ document.addEventListener('change', async e => {
   if (el.hasAttribute('data-import')) { const f = el.files[0]; el.value = ''; if (f) importBackup(f); return; }
   if (el.hasAttribute('data-compqty') || el.hasAttribute('data-recqty')) renderSoon();
 });
+function focusSearch() { if (UI.route !== 'kunden') go('kunden'); setTimeout(() => { const el = $('[data-b="u:search"]'); if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); } }, 80); }
+document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); focusSearch(); } });
 document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.det) UI.open[d.dataset.det] = d.open; }, true);
 document.addEventListener('dragover', e => { const z = e.target.closest && e.target.closest('[data-drop]'); if (z) { e.preventDefault(); z.classList.add('!border-p', '!bg-p/5'); } });
 document.addEventListener('dragleave', e => { const z = e.target.closest && e.target.closest('[data-drop]'); if (z) z.classList.remove('!border-p', '!bg-p/5'); });
@@ -2909,7 +3022,8 @@ document.addEventListener('click', async e => {
     case 'cmp-del': S.comparisons.items = S.comparisons.items.filter(i => i.id !== a.dataset.id); saveSettings(); render(); break;
     case 'adv-from-offer': { const ad = { id: uid('a'), name: a.dataset.n, role: 'Energieberater', phone: a.dataset.ph, email: a.dataset.em, photo: '' }; (S.company.advisors = S.company.advisors || []).push(ad); if (!S.company.defaultAdvisor) S.company.defaultAdvisor = ad.id; p.offer.advisorId = ad.id; p.offer.advisor = ad.name; saveSettings(); saveProject(p); toast(`${ad.name} wurde als Berater angelegt.`); render(); break; }
     case 'clear-color': bset(a.dataset.b, ''); applyTheme(); render(); break;
-    case 'theme-toggle': S.design.mode = appDark() ? 'light' : 'dark'; applyTheme(); saveSettings(); render(); break;
+    case 'theme-toggle': S.design.mode = { light: 'dark', dark: 'studio', studio: 'light' }[curMode()]; applyTheme(); saveSettings(); render(); toast('Ansicht: ' + MODE_LABEL[curMode()]); break;
+    case 'focus-search': focusSearch(); break;
     case 'theme-preset': { const t = THEME_PRESETS[+a.dataset.i]; Object.assign(S.design, { primary: t.primary, secondary: t.secondary, accent: t.accent, old: t.old, ink: t.ink, bg: t.bg, night: t.night }); applyTheme(); saveSettings(); render(); break; }
     case 'ord': { const o = docOrder(), i = o.indexOf(a.dataset.k), j = i + +a.dataset.d; if (j < 0 || j >= o.length) break; [o[i], o[j]] = [o[j], o[i]]; S.doc.order = o; saveSettings(); render(); break; }
     case 'ord-reset': S.doc.order = null; saveSettings(); render(); break;
