@@ -34,6 +34,7 @@ Erste Schritte
    Deckblatt-Stil, Kopfzeile und Kapitelmarke anpassen.
    Einstellungen → Dokument & Verkauf: Seitenreihenfolge, alle Seitentexte,
    Verkaufsargumente und Kontaktbox.
+   Hell/Dunkel: Sonne/Mond oben rechts in der Kopfleiste (oder „Wie System“).
    Einstellungen → Berater: Berater mit Name, E-Mail, Telefon und Foto anlegen
    und einen Standard-Berater wählen. Im Projekt per Auswahlliste änderbar.
    Einstellungen → Roadmap: Schritte nach der Unterschrift (PV und WP).

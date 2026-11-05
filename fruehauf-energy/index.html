@@ -260,7 +260,8 @@ const FONTS = {
 const SERIFS = ['Instrument Serif', 'Fraunces', 'Newsreader', 'DM Serif Display'];
 const MONOS = ['Geist Mono', 'IBM Plex Mono', 'JetBrains Mono'];
 let THEME_CTX = 'app';
-const appDark = () => S.design.mode !== 'light';
+const sysDark = () => { try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return true; } };
+const appDark = () => (S.design.mode === 'system' ? sysDark() : S.design.mode !== 'light');
 const docDark = () => S.design.pdfTheme === 'dark';
 const rgbStr = h => hexToRgb(h).join(' ');
 const rgba = (h, a) => `rgba(${hexToRgb(h).join(',')},${a})`;
@@ -348,6 +349,7 @@ const IP = {
   arrowR: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   arrowL: '<path d="M19 12H5M11 18l-6-6 6-6"/>',
   chevD: '<path d="m6 9 6 6 6-6"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
   flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
   fan: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 7.5v9M7.5 12h9"/>',
@@ -1665,7 +1667,8 @@ function shell(inner) {
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
     <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3">Wirtschaftlichkeitsrechner</div></div></a>
     <nav class="hidden md:flex items-center gap-1 ml-6">${links('')}</nav>
-    <button class="btn-p ml-auto !h-10 !px-4" data-a="new">${ic('plus', 17)}<span>Neue Berechnung</span></button>
+    <button class="btn-g ml-auto !w-10 !h-10 !px-0" data-a="theme-toggle" aria-label="${appDark() ? 'Helle Ansicht' : 'Dunkle Ansicht'}" title="${appDark() ? 'Helle Ansicht' : 'Dunkle Ansicht'}">${ic(appDark() ? 'sun' : 'moon', 19)}</button>
+    <button class="btn-p !h-10 !px-4" data-a="new">${ic('plus', 17)}<span>Neue Berechnung</span></button>
   </div>
   <nav class="md:hidden flex gap-1 px-3 pb-2 overflow-x-auto no-scrollbar">${links('!h-9 !px-3 !text-[13px]')}</nav>
 </header>
@@ -2487,7 +2490,7 @@ const SET = {
     const range = (label, b, min, max, unit) => `<label class="block"><span class="lbl flex justify-between">${label}<span class="text-ink3 num" data-rv="${b}">${num(bval(b))}${unit}</span></span><input type="range" class="w-full" min="${min}" max="${max}" step="1" data-b="${b}" data-t="r" value="${bval(b)}"></label>`;
     const fontOpts = Object.keys(FONTS).map(f => [f, f + (SERIFS.includes(f) ? ' (Serif)' : '')]);
     const presets = THEME_PRESETS.map((t, i) => `<button class="text-left rounded-[calc(var(--r)-4px)] border ${d.primary.toLowerCase() === t.primary.toLowerCase() ? 'border-p ring-4 ring-p/10' : 'border-line'} bg-card p-3 hover:border-p transition-colors" data-a="theme-preset" data-i="${i}"><div class="flex gap-1">${[t.night, t.primary, t.secondary, t.accent].map(c => `<span class="w-5 h-5 rounded-full border border-line2" style="background:${c}"></span>`).join('')}</div><div class="text-[13px] font-medium mt-2">${t.name}</div></button>`).join('');
-    return sCard('eye', 'Erscheinungsbild', 'Dunkel oder hell – für die App und getrennt für das Kundendokument.', `<div class="grid sm:grid-cols-2 gap-6"><div><span class="lbl">App</span>${seg('s:design.mode', [['dark', 'Dunkel'], ['light', 'Hell']])}</div><div><span class="lbl">Kundendokument</span>${seg('s:design.pdfTheme', [['light', 'Hell'], ['mixed', 'Gemischt'], ['dark', 'Dunkel']])}<div class="hint">Gemischt: dunkles Deckblatt und dunkle Highlights, Inhaltsseiten hell und gut druckbar.</div></div></div>`)
+    return sCard('eye', 'Erscheinungsbild', 'Dunkel oder hell – für die App und getrennt für das Kundendokument.', `<div class="grid sm:grid-cols-2 gap-6"><div><span class="lbl">App</span>${seg('s:design.mode', [['light', 'Hell'], ['dark', 'Dunkel'], ['system', 'Wie System']])}<div class="hint">Schnell umschalten: Sonne/Mond oben in der Kopfleiste. „Wie System“ folgt der Einstellung von iPhone oder Computer.</div></div><div><span class="lbl">Kundendokument</span>${seg('s:design.pdfTheme', [['light', 'Hell'], ['mixed', 'Gemischt'], ['dark', 'Dunkel']])}<div class="hint">Gemischt: dunkles Deckblatt und dunkle Highlights, Inhaltsseiten hell und gut druckbar.</div></div></div>`)
       + sCard('palette', 'Farbwelt', 'Ein Klick setzt alle Farben – danach jede Farbe einzeln anpassbar. App, PDF und Illustrationen färben sich mit.', `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">${presets}</div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">${colorRow('Primärfarbe', 'primary', ['#0E7C66', '#0B6E99', '#1E4C86', '#2E7D32', '#6A3FB5', '#C2401F'])}${colorRow('Sonne / Sekundärfarbe', 'secondary', ['#F5A524', '#F2C230', '#FF8A3D', '#E4572E', '#7CC47F'])}${colorRow('Akzent (Verläufe, Diagramme)', 'accent')}${colorRow('Alte Kosten', 'old')}${colorRow('Schrift (hell)', 'ink')}${colorRow('Hintergrund (hell)', 'bg')}${colorRow('Hintergrund (dunkel)', 'night', ['#0A0E13', '#080D18', '#0B0F0C', '#110D0B', '#0B0B0C'])}</div>`)
       + sCard('pen', 'Schrift und Form', 'Gilt für App und Kundendokument.', `<div class="grid sm:grid-cols-2 gap-4">${sel('Fließtext', 's:design.fontBody', fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0])))}${sel('Überschriften', 's:design.fontHead', fontOpts.filter(f => !MONOS.includes(f[0])))}${sel('Kennzahlen und Beschriftungen', 's:design.fontMono', [...MONOS.map(f => [f, f]), ...fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0]))])}</div>
@@ -2762,6 +2765,7 @@ document.addEventListener('click', async e => {
     case 'prices-reset': if (await confirmDlg('Recherchierte Werte wiederherstellen?', 'Alle Preisdaten werden auf den Stand Oktober 2026 zurückgesetzt.', 'Wiederherstellen', false)) { S.prices = clone(DEFAULT_PRICES); saveSettings(); render(); toast('Preisdaten wiederhergestellt.'); } break;
     case 'cmp-add': S.comparisons.items.push({ id: uid('c'), on: true, icon: 'gift', label: 'Neuer Vergleich', price: 1000 }); saveSettings(); render(); break;
     case 'cmp-del': S.comparisons.items = S.comparisons.items.filter(i => i.id !== a.dataset.id); saveSettings(); render(); break;
+    case 'theme-toggle': S.design.mode = appDark() ? 'light' : 'dark'; applyTheme(); saveSettings(); render(); break;
     case 'theme-preset': { const t = THEME_PRESETS[+a.dataset.i]; Object.assign(S.design, { primary: t.primary, secondary: t.secondary, accent: t.accent, old: t.old, ink: t.ink, bg: t.bg, night: t.night }); applyTheme(); saveSettings(); render(); break; }
     case 'ord': { const o = docOrder(), i = o.indexOf(a.dataset.k), j = i + +a.dataset.d; if (j < 0 || j >= o.length) break; [o[i], o[j]] = [o[j], o[i]]; S.doc.order = o; saveSettings(); render(); break; }
     case 'ord-reset': S.doc.order = null; saveSettings(); render(); break;
@@ -2787,6 +2791,7 @@ document.addEventListener('click', async e => {
   applyTheme();
   if (!location.hash) history.replaceState(null, '', '#/kunden');
   await route();
+  try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 })();
 </script>
