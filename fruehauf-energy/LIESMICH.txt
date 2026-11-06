@@ -3,9 +3,9 @@ Frühauf Energy – Wirtschaftlichkeitsrechner
 
 Veröffentlichen mit Netlify Drop (ca. 1 Minute)
 -----------------------------------------------
-1. ZIP-Datei entpacken. Sie erhalten einen Ordner mit diesen Dateien:
-   index.html, favicon.svg, icon-180.png, icon-192.png, icon-512.png,
-   manifest.webmanifest, _headers, _redirects, LIESMICH.txt
+1. ZIP-Datei entpacken. Sie erhalten einen Ordner mit index.html, sw.js,
+   Icons, manifest.webmanifest, _headers, _redirects, LIESMICH.txt und dem
+   Unterordner „vendor“ (Schriften und Bibliotheken – bitte mit hochladen).
 2. https://app.netlify.com/drop im Browser öffnen (kostenloses Konto genügt).
 3. Den ENTPACKTEN Ordner in das Feld ziehen – nicht die ZIP-Datei selbst.
 4. Netlify zeigt eine Adresse wie https://name-123.netlify.app – fertig.
@@ -42,11 +42,35 @@ Erste Schritte
 3. Produkte: eigene Komponenten anlegen (werden im Angebot erkannt).
 4. „+ Neue Berechnung“ → Angebot hochladen → Daten prüfen → PDF erstellen.
 
+Admin-Bereich und Vertriebler
+-----------------------------
+- Vertriebler können ohne Passwort: Ansicht, eigenes Profil, Produkte und
+  Datensicherung. Alles andere (Firma, Design, Förderung, Preise, Texte …)
+  ist mit dem Admin-Passwort geschützt.
+- Verteilen: Einstellungen → Admin & Konfiguration → „Konfiguration
+  exportieren“, Datei per Mail/AirDrop an die Vertriebler. Diese spielen sie
+  unter Einstellungen → Datensicherung → „Firmen-Konfiguration einspielen“ ein.
+- Hinweis: Der Schutz läuft im Browser des Geräts. Er verhindert versehentliche
+  Änderungen, ersetzt aber keine Server-Anmeldung.
+
+Datenschutz und Offline-Betrieb
+-------------------------------
+- Schriften und Bibliotheken liegen im Ordner „vendor“ – die App lädt nichts
+  von Google oder anderen fremden Servern.
+- Nach dem ersten Öffnen funktioniert die App auch ohne Internet.
+- Einzige Ausnahme: „Genau mit PVGIS“ fragt den Solarertrag beim Dienst der
+  EU-Kommission ab (über die Netlify-Weiterleitung in _redirects). Dabei wird
+  nur die auf ca. 1 km gerundete Lage der Postleitzahl übertragen.
+
+Lizenzen
+--------
+Schriften: SIL Open Font License (Google Fonts). Texterkennung: Tesseract.js
+(Apache 2.0). PDF: pdf.js (Apache 2.0), jsPDF (MIT), html2canvas (MIT).
+Tailwind CSS (MIT). Postleitzahl-Koordinaten: GeoNames (CC BY 4.0,
+www.geonames.org). Solarertrag: PVGIS © Europäische Union.
+
 Hinweise
 --------
-- Für das Lesen von PDFs, die Texterkennung (OCR) und die PDF-Erstellung
-  werden Bibliotheken bei Bedarf aus dem Internet geladen
-  (cdnjs.cloudflare.com, cdn.jsdelivr.net). Eine Internetverbindung ist nötig.
 - Aktualisieren: Einfach den neuen Ordner erneut per Drag & Drop auf die
   bestehende Seite unter „Deploys“ ziehen. Ihre Daten bleiben erhalten,
   solange die Adresse gleich bleibt.
