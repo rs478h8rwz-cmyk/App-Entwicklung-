@@ -3917,14 +3917,16 @@ async function saveSignature(p) {
    ========================================================= */
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
-  ['plus', '1 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“ und wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe.'],
-  ['upload', '2 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten und Ansprechpartner werden automatisch erkannt – bitte kurz prüfen.'],
-  ['calc', '3 · Daten ergänzen', 'Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV können Sie Dachflächen, Ausrichtung und ein E-Auto angeben.'],
-  ['chart', '4 · Ergebnis zeigen', 'Im Ergebnis sehen Sie Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie dem Kunden einen Tag im Winter oder Sommer. Varianten wie „ohne Speicher“ vergleichen Sie direkt.'],
-  ['file', '5 · PDF und Unterschrift', '„PDF erstellen“ prüft zuerst Ihre Eingaben auf Tippfehler. Im Termin kann der Kunde direkt auf dem Gerät unterschreiben – die Unterschrift kommt ins PDF.'],
-  ['clock', '6 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite.'],
-  ['db', '7 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie regelmäßig. Eine Anleitung für beide finden Sie unter Einstellungen → Ansicht & Tutorial.'],
-  ['gear', 'Fertig', 'Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial jederzeit wiederholen.']
+  ['download', '1 · Als App installieren', 'Legen Sie die App auf den Home-Bildschirm – iPhone: Teilen → „Zum Home-Bildschirm“, Android: Menü ⋮ → „App installieren“. So startet sie schneller, läuft offline und Ihre Daten sind geschützt.'],
+  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“ und wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe.'],
+  ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien und Ansprechpartner werden automatisch erkannt – bitte kurz prüfen.'],
+  ['calc', '4 · Daten ergänzen', 'Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an.'],
+  ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ stellen Sie die Monatsrate der Ersparnis gegenüber.'],
+  ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät.'],
+  ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite.'],
+  ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
+  ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
+  ['gear', 'Fertig', 'Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
 ];
 function showTutorial(i = 0) {
   const [icon, title, text] = TUTORIAL[i], last = i === TUTORIAL.length - 1;
@@ -4098,7 +4100,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107211635';
+const APP_VERSION = '20261107212117';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4435,30 +4437,96 @@ const WN_IMG = {
     <rect x="86" y="23" width="14" height="8" rx="4" fill="#3FA98C"/><circle cx="96" cy="27" r="3" fill="#ffffff"/><rect x="16" y="45" width="88" height="9" rx="3" fill="#232E3A"/><rect x="16" y="57" width="88" height="9" rx="3" fill="#232E3A"/><text x="21" y="51.5" font-size="4" fill="#C9D3DD">Komplette PDF</text><text x="21" y="63.5" font-size="4" fill="#C9D3DD">Vertriebs-PDF</text></svg>`
 };
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
-const WHATS_NEW = {
-  version: '1.40', id: '1.40', date: '2026-11-07',
-  items: [
+/* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
+const RELEASES = [
+  { version: '1.41', date: '2026-11-07', items: [
+    ['version', 'Versionsnummern', 'Die App zeigt jetzt ihre Versionsnummer – unten auf jeder Seite, im Update-Hinweis und unter Einstellungen → Ansicht.'],
+    ['archive', 'Versionsarchiv', 'Alle bisherigen Versionen mit ihren Änderungen auf einen Blick – unter Einstellungen → Ansicht → Versionsarchiv.'],
+    ['tutorial', 'Tutorial aktualisiert', 'Neue Schritte zu App-Installation, Vertriebs-PDF, Rabatt-Fenster, Finanzierung, E-Mail-Versand und Updates – unter Einstellungen → Ansicht & Tutorial.']
+  ] },
+  { version: '1.40', date: '2026-11-07', items: [
     ['house', 'Neues Deckblatt-Haus', 'Klassisch oder modern, Licht an oder aus. PV, Wärmepumpe, Speicher und E-Auto mit Wallbox erscheinen automatisch, wenn sie zum Angebot gehören.'],
     ['sign', 'Schönere Unterschriftsfelder', 'Im dunklen PDF mit hellem Hintergrund – Form, Farbe und Stärke einstellbar. Ort und Datum in Handschrift.'],
     ['reviews', '„Das sagen Kunden“', 'Neue letzte Seite mit Ihren Kundenbewertungen – pflegen unter Einstellungen → Dokument & Verkauf.'],
     ['discount', 'Sonderrabatt nicht vergessen', 'Vor jeder PDF erscheint ein Fenster: Rabatt prüfen, Layout wählen, fertig.']
-  ]
-};
-function showWhatsNew() {
-  modal(`<div><div class="mono text-[12px] text-ink3">Version ${WHATS_NEW.version} · ${deDate(WHATS_NEW.date)}</div><h3 class="h-font text-[26px] mt-1 pr-8">Neu in Version ${WHATS_NEW.version}</h3>
-    <div class="space-y-4 mt-5">${WHATS_NEW.items.map(([img, t, x]) => `<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start"><div class="w-full sm:w-[120px] h-[130px] sm:h-[80px] shrink-0 rounded-xl overflow-hidden border border-line" style="background:${WN_BG[img] || 'transparent'}">${WN_IMG[img] ? WN_IMG[img]() : ''}</div><div class="min-w-0"><div class="font-semibold text-[15px]">${esc(t)}</div><div class="text-[13px] text-ink2 mt-0.5 leading-relaxed">${esc(x)}</div></div></div>`).join('')}</div>
+  ] }
+];
+const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date: RELEASES[0].date };
+const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
+WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
+WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
+WN_BG.version = '#141B24'; WN_BG.tutorial = '#141B24'; WN_BG.archive = '#141B24';
+WN_IMG.archive = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[0, 1, 2, 3].map(i => `<text x="22" y="${22 + i * 13}" font-size="6.5" font-weight="700" fill="${i ? '#C9D3DD' : '#3FA98C'}">1.${41 - i}</text><rect x="40" y="${17 + i * 13}" width="${58 - i * 6}" height="3" rx="1.5" fill="#5A6878"/>`).join('')}</svg>`;
+function showWhatsNew(all) {
+  const seen = verNum(PERSONAL.seenRelease), list = (all ? RELEASES : RELEASES.filter(r => verNum(r.version) > seen)).slice(0, all ? 5 : 3);
+  const show = list.length ? list : [RELEASES[0]];
+  const block = r => `<div class="mono text-[12px] text-ink3 mt-6 first:mt-0">Version ${r.version} · ${deDate(r.date)}</div>
+    <div class="space-y-4 mt-3">${r.items.map(([img, t, x]) => `<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start"><div class="w-full sm:w-[120px] h-[130px] sm:h-[80px] shrink-0 rounded-xl overflow-hidden border border-line" style="background:${WN_BG[img] || 'transparent'}">${WN_IMG[img] ? WN_IMG[img]() : ''}</div><div class="min-w-0"><div class="font-semibold text-[15px]">${esc(t)}</div><div class="text-[13px] text-ink2 mt-0.5 leading-relaxed">${esc(x)}</div></div></div>`).join('')}</div>`;
+  modal(`<div><h3 class="h-font text-[26px] pr-8">Neu in Version ${RELEASES[0].version}</h3>${show.length > 1 ? `<p class="text-[13px] text-ink3 mt-1">Dazu die Neuerungen der letzten ${show.length - 1 === 1 ? 'Version' : show.length - 1 + ' Versionen'}.</p>` : ''}
+    <div class="mt-5">${show.map(block).join('<div class="border-t border-line mt-6"></div>')}</div>
     <div class="flex justify-end mt-6"><button class="btn-p" data-a="modal-close">Alles klar</button></div></div>`);
-  PERSONAL.seenRelease = WHATS_NEW.id; savePersonal();
+  PERSONAL.seenRelease = RELEASES[0].version; savePersonal();
 }
 function maybeWhatsNew() {
-  if (PERSONAL.seenRelease === WHATS_NEW.id) return;
-  if (!PERSONAL.seenRelease && !PROJECTS.length && !PERSONAL.lastBackup) { PERSONAL.seenRelease = WHATS_NEW.id; savePersonal(); return; } // ganz neue Installation: nichts zeigen
+  if (verNum(PERSONAL.seenRelease) >= verNum(RELEASES[0].version)) return;
+  if (!PERSONAL.seenRelease && !PROJECTS.length && !PERSONAL.lastBackup) { PERSONAL.seenRelease = RELEASES[0].version; savePersonal(); return; } // ganz neue Installation: nichts zeigen
   if ($('#modal') && $('#modal').innerHTML.trim()) { setTimeout(maybeWhatsNew, 1500); return; }
   showWhatsNew();
 }
 /* Einstellungen → Ansicht: Neuigkeiten erneut ansehen */
 const _setAnsicht17 = SET.ansicht;
-SET.ansicht = () => _setAnsicht17() + sCard('sparkle', 'Neuigkeiten', `Sie nutzen Version ${WHATS_NEW.version} vom ${deDate(WHATS_NEW.date)}`, `<button class="btn-s" data-a="whatsnew">${ic('sparkle', 16)}Was ist neu?</button>`);
+SET.ansicht = () => _setAnsicht17() + sCard('sparkle', 'Neuigkeiten', `Sie nutzen Version ${WHATS_NEW.version} vom ${deDate(WHATS_NEW.date)}`, `<div class="flex flex-wrap gap-2"><button class="btn-s" data-a="whatsnew-all">${ic('sparkle', 16)}Was ist neu?</button><button class="btn-g" data-a="archive">${ic('clock', 16)}Versionsarchiv</button></div>`);
+/* =========================================================
+   Versionsarchiv – was in früheren Versionen geändert wurde
+   (neueste zuerst; aktuelle Versionen stehen in RELEASES)
+   ========================================================= */
+const ARCHIVE = [
+  ['1.39', '2026-11-07', 'Fenster „Neu in dieser Version“ erscheint einmal nach jedem Update – mit Beispielbildern.'],
+  ['1.38', '2026-11-07', 'Deckblatt: Wallbox an der Hauswand statt vor dem Fenster, Auto mit schmalerem Aufbau.'],
+  ['1.37', '2026-11-07', 'Deckblatt: wieder das ursprüngliche Auto.'],
+  ['1.36', '2026-11-07', 'Deckblatt: E-Limousine ausprobiert.'],
+  ['1.35', '2026-11-07', 'Deckblatt: großer SUV ausprobiert.'],
+  ['1.34', '2026-11-07', 'Deckblatt-Haus: Stromspeicher steht an der Hauswand statt eines Fensters.'],
+  ['1.33', '2026-11-07', 'Deckblatt-Haus klassisch oder modern, Licht an/aus/automatisch, Carport mit E-Auto und Wallbox, Speicher-Tower. Haus und Licht pro PDF nur nach Admin-Freigabe.'],
+  ['1.32', '2026-11-07', 'Handschrift für Ort und Datum fest eingebunden; Updates laden Bibliotheken immer frisch.'],
+  ['1.31', '2026-11-07', 'Hinweis „Neue Version verfügbar“ funktioniert zuverlässig.'],
+  ['1.30', '2026-11-07', 'Unterschriftsfelder mit Hintergrund ohne Strich, Beschriftung im Feld.'],
+  ['1.29', '2026-11-07', 'Unterschriftsfelder mit einstellbarem Hintergrund und Handschrift, Ansprechpartner nur einmal, neue letzte Seite „Das sagen Kunden“.'],
+  ['1.28', '2026-11-07', 'PDF: mehr Abstand unter Überschriften und im Tabellenkopf.'],
+  ['1.27', '2026-11-07', 'Kopfleiste scharf auf dem iPhone, Navigation mit mehr Platz.'],
+  ['1.26', '2026-11-07', 'Keine doppelten Komponenten und Garantien; zu volle Seiten werden automatisch eingepasst.'],
+  ['1.25', '2026-11-07', 'Wärmepumpen-Illustration: Pfeile ohne Zwischenstücke.'],
+  ['1.24', '2026-11-07', 'Illustrationen mit klaren Pfeilen, Dach so breit wie das Haus, nur „Außenluft“; Texte zum Jahresverlauf und Winter positiv formuliert.'],
+  ['1.23', '2026-11-07', 'Vor dem PDF: Fenster mit Sonderrabatt, Layout, Verkleinern und QR-Code.'],
+  ['1.22', '2026-11-07', 'Hersteller und Garantien aus dem Angebot (Module, Wechselrichter, Speicher, Wärmepumpe), Puffer- und Warmwasserspeicher, EU-Wertschöpfungsbonus automatisch.'],
+  ['1.21', '2026-11-07', 'Ratenrechner, QR-Code, E-Mail-Versand, kleine PDF, Anleitung für iPhone und Android, Erinnerungen, Update-Hinweis.'],
+  ['1.20', '2026-11-07', 'Rechengrundlagen standardmäßig aus (außer beim optimistischen Szenario); Abstände großer Zahlen im Vertriebs-PDF.'],
+  ['1.19', '2026-11-07', 'PDF-Kopfzeile mit weichem Farbverlauf und wählbarer Endfarbe, Lesbarkeit automatisch.'],
+  ['1.18', '2026-11-07', 'Logo im dunklen Modus auf hellem Feld.'],
+  ['1.17', '2026-11-07', '„So funktioniert Ihre Photovoltaikanlage“ als Illustration, Datumsfeld auf dem iPhone korrigiert.'],
+  ['1.16', '2026-11-07', 'Tagesdiagramm: Hinweis auf die Sommerpause der Wärmepumpe mit Heizstab.'],
+  ['1.15', '2026-11-07', 'Tagesdiagramm: Anteil der Wärmepumpe sichtbar.'],
+  ['1.14', '2026-11-07', 'Vertriebs-PDF als zweites Layout, Widerrufsbelehrung, Impressum und Datenschutz, Deckblatt-Hintergrund mit Stärke, Studio-Ansicht entfernt.'],
+  ['1.13', '2026-11-06', 'Deckblatt-Angaben einzeln per Schieberegler positionieren.'],
+  ['1.12', '2026-11-06', 'Beraterfoto im PDF, Deckblatt-Angaben wählbar, PDF-Farben vom eigenen Deckblatt.'],
+  ['1.11', '2026-11-06', 'Wärmepumpen-Stromtarif als Option, Texte im Dokument korrigiert.'],
+  ['1.10', '2026-11-06', 'Admin-Schutz, Offline-Betrieb, PVGIS-Ertrag, E-Auto, Status und Nachfassen, Varianten, Unterschrift auf dem Gerät, Tutorial.'],
+  ['1.09', '2026-11-05', 'PDF-Feinschliff: Wärmepumpen-Illustration, schwarze Module, Heizöl.'],
+  ['1.08', '2026-11-05', 'Dritte Ansicht „Studio“ (später wieder entfernt), Zahlen in Kreisen mittig.'],
+  ['1.07', '2026-11-05', 'Tagesverlauf mit Speicher und Monatsregler, Heizstab-Option.'],
+  ['1.06', '2026-11-05', 'Bessere Angebotserkennung für Frühauf-Solar-Angebote, Dokument verständlicher.'],
+  ['1.05', '2026-11-05', 'iPhone-Vollbild mit Abstand zur Dynamic Island; Signet und Kapitelmarke anpassbar.'],
+  ['1.04', '2026-11-05', 'Helle und dunkle Ansicht per Schalter, dazu „Wie System“.'],
+  ['1.03', '2026-11-05', 'Neue dunkle Designsprache, feste Berater, PDF-Abstände korrigiert.'],
+  ['1.02', '2026-11-05', 'Jahresdiagramm, Roadmap nach der Unterschrift und anpassbares Design.'],
+  ['1.01', '2026-11-05', 'Erste Version: Angebot hochladen, Wirtschaftlichkeit berechnen, Kunden-PDF erstellen.']
+];
+function showArchive() {
+  const rows = RELEASES.map(r => [r.version, r.date, r.items.map(x => x[1]).join(' · ')]).concat(ARCHIVE);
+  modal(`<div><h3 class="h-font text-[26px] pr-8">Versionsarchiv</h3><p class="text-[13px] text-ink3 mt-1">Alle Versionen mit ihren Änderungen – die neueste zuerst.</p>
+    <div class="mt-5 divide-y divide-line">${rows.map(([v, d, t], i) => `<div class="py-3 flex gap-4"><div class="w-16 shrink-0"><div class="font-semibold text-[15px] num">${v}</div><div class="text-[11px] text-ink3">${deDate(d)}</div></div><div class="text-[14px] text-ink2 leading-relaxed">${i === 0 ? '<span class="badge mr-1 text-[11px]">aktuell</span>' : ''}${esc(t)}</div></div>`).join('')}</div>
+    <div class="flex justify-end mt-5"><button class="btn-p" data-a="modal-close">Schließen</button></div></div>`, { wide: true });
+}
 
 /* =========================================================
    Router & Rendern
@@ -4684,6 +4752,8 @@ document.addEventListener('click', async e => {
     case 'plaus-back': closeModal(); p.step = 3; saveProject(p); go(`projekt/${p.id}/3`); break;
     case 'tut': showTutorial(+a.dataset.i); break;
     case 'whatsnew': showWhatsNew(); break;
+    case 'whatsnew-all': showWhatsNew(true); break;
+    case 'archive': showArchive(); break;
     case 'tut-skip': closeModal(); PERSONAL.tutorialDone = true; savePersonal(); break;
     case 'admin-lock': lockAdmin(); break;
     case 'export-config': exportConfig(); break;
