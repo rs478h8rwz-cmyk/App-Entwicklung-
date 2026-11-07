@@ -1506,18 +1506,16 @@ function houseSVG(o = {}) {
 ${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill="${dawn ? '#1A2029' : '#2B3440'}"/>` : `<polygon points="22,266 166,266 154,250 34,250" fill="${K.roof1}"/><rect x="20" y="264" width="148" height="5" rx="2.5" fill="${K.eave}"/>`}
 <rect x="32" y="264" width="5" height="68" fill="${dawn ? '#3A4656' : '#8A97A6'}"/><rect x="148" y="264" width="5" height="68" fill="${dawn ? '#3A4656' : '#8A97A6'}"/>
 <defs><linearGradient id="${id('car')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(p, '#ffffff', 0.18)}"/><stop offset="1" stop-color="${mix(p, '#000000', 0.25)}"/></linearGradient></defs>
-<g transform="translate(28 282)">
-<path d="M3 37 L3 21 Q3 16 8 15 L15 14 L24 4 Q26 1.5 31 1.5 H80 Q85 1.5 88 4.5 L98 14 L106 16 Q112 17.5 112 24 L112 36 Q112 40 108 40 H7 Q3 40 3 37 Z" fill="url(#${id('car')})"/>
-<path d="M27 5 H45 V14 H18 Z" fill="${dawn ? '#1C2735' : '#22344A'}"/><path d="M48 5 H65 V14 H48 Z" fill="${dawn ? '#1C2735' : '#22344A'}"/><path d="M68 5 H84 Q86 5 87.5 6.5 L95 14 H68 Z" fill="${dawn ? '#1C2735' : '#22344A'}"/>
-<path d="M18 14.5 L26.5 4.5 H84.5 Q86.3 4.5 88 6.2 L95.5 14.5 Z" fill="none" stroke="#DCE3EA" stroke-width="1.1" opacity=".9"/>
-<path d="M46.5 4.8 V33 M66.5 4.8 V33" stroke="${mix(p, '#000000', 0.32)}" stroke-width="1.1"/><rect x="39" y="18.5" width="5" height="1.4" rx="0.7" fill="#DCE3EA"/><rect x="60" y="18.5" width="5" height="1.4" rx="0.7" fill="#DCE3EA"/>
-<path d="M30 8 L35 8 L31 13 L26 13 Z" fill="#ffffff" opacity="${dawn ? 0.08 : 0.3}"/>
-<path d="M6 25 H110" stroke="#ffffff" stroke-width="0.7" opacity=".3"/>
-<path d="M10.5 40 A13.5 13.5 0 0 1 37.5 40 M76.5 40 A13.5 13.5 0 0 1 103.5 40" fill="none" stroke="#26303B" stroke-width="3.2" opacity=".7"/>
-<path d="M39 37.5 H75" stroke="#DCE3EA" stroke-width="1.6" opacity=".8"/>
-<rect x="100" y="17.5" width="11" height="2.6" rx="1.3" fill="${lit ? '#FFF1C2' : '#F2F6FA'}"/><rect x="108.5" y="22" width="3.5" height="9" rx="1" fill="#26303B"/><path d="M109 24.5 H112 M109 27 H112 M109 29.5 H112" stroke="#C3CDD7" stroke-width=".7"/>
-<rect x="3" y="17" width="7" height="2.8" rx="1.2" fill="#E5484D"/>
-${[24, 90].map(cx => `<circle cx="${cx}" cy="40" r="11" fill="#1B232C"/><circle cx="${cx}" cy="40" r="7.2" fill="${dawn ? '#5A6878' : '#C9D2DB'}"/>${[0, 60, 120, 180, 240, 300].map(a => `<line x1="${cx}" y1="40" x2="${(cx + Math.cos(a * Math.PI / 180) * 6.8).toFixed(1)}" y2="${(40 + Math.sin(a * Math.PI / 180) * 6.8).toFixed(1)}" stroke="#1B232C" stroke-width="1.4"/>`).join('')}<circle cx="${cx}" cy="40" r="2" fill="#1B232C"/>`).join('')}</g>
+<g transform="translate(28 290)">
+<path d="M4 29 Q3 23 9 21.5 L23 18.5 Q37 6 57 5 Q75 5 87 12 L100 18.5 Q110 20.5 111 26 L111 30 Q111 33.5 107 33.5 H8 Q4 33.5 4 29 Z" fill="url(#${id('car')})"/>
+<path d="M28 18 Q39 8.5 57 8 Q72 8 83 13.5 L89.5 18 Z" fill="${dawn ? '#1C2735' : '#22344A'}"/>
+<path d="M57.5 8 V18" stroke="${mix(p, '#000000', 0.35)}" stroke-width="1.6"/>
+<path d="M35 15 Q41 10.5 48 9.6" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="${dawn ? 0.1 : 0.35}" fill="none"/>
+<path d="M14 24 Q60 22 104 24" stroke="#ffffff" stroke-width="0.8" opacity=".3" fill="none"/>
+<rect x="46" y="21" width="6" height="1.2" rx="0.6" fill="#ffffff" opacity=".45"/><rect x="68" y="21" width="6" height="1.2" rx="0.6" fill="#ffffff" opacity=".45"/>
+<path d="M101 21.5 Q106 21.8 109 23.5" stroke="${lit ? '#FFF1C2' : '#F2F6FA'}" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+<path d="M4.5 22.5 H11" stroke="#E5484D" stroke-width="2.4" stroke-linecap="round"/>
+${[25, 88].map(cx => `<circle cx="${cx}" cy="33" r="9.6" fill="#1B232C"/><circle cx="${cx}" cy="33" r="6.6" fill="${dawn ? '#4C5968' : '#AEB9C4'}"/><circle cx="${cx}" cy="33" r="4.4" fill="none" stroke="${dawn ? '#36414E' : '#8C99A6'}" stroke-width="1"/><circle cx="${cx}" cy="33" r="1.6" fill="#1B232C"/>`).join('')}</g>
 <rect x="141" y="270" width="16" height="24" rx="3.5" fill="${dawn ? '#2C3644' : '#ffffff'}" stroke="${K.hpS}" stroke-width="1.5"/><circle cx="149" cy="278" r="2.4" fill="#3FBF6E"/><rect x="144" y="286" width="10" height="3" rx="1.5" fill="${p}"/>
 <path d="M149 294 C 151 312, 147 318, 141 316" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/></g>`;
   // Stromspeicher als Tower zur Außenmontage (z. B. EcoFlow Ocean 2)
@@ -4106,7 +4104,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107210514';
+const APP_VERSION = '20261107210644';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
