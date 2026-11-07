@@ -608,7 +608,7 @@ const DEFAULT_SETTINGS = {
     pvYield: 950, feedIn: 7.7, potKwp: 10, potBat: 0, rodName: 'my-PV Heizstab', rodKw: 3, dhwShare: 18, pvDeg: 0.5, pvHpShare: 30,
     co2Oil: 0.31, co2Gas: 0.24, co2El: 0.38,
     replaceGas: 12000, replaceOil: 15000,
-    hideFinanceAbove: 15, showAssump2: false,
+    hideFinanceAbove: 15, showAssump2: false, storageNote: true,
     disclaimer: 'Diese Berechnung ist eine unverbindliche Prognose auf Basis der angegebenen Verbrauchsdaten, aktueller Energiepreise und der zum Erstellungszeitpunkt gültigen Förderbedingungen. Tatsächliche Erträge, Verbräuche, Preisentwicklungen und Förderbewilligungen können abweichen. Maßgeblich für die Förderung ist ausschließlich die Zusage des Fördergebers.'
   },
   doc: { order: null, salesOrder: null, defaults: {}, texts: {}, pdfAsk: 'ask', salesFont: 'Inter' },
@@ -687,14 +687,14 @@ function newProject(type) {
     offer: { gross: null, grossWP: null, grossPV: null, total: null, number: '', date: today, advisor: defAdv().name, advisorId: defAdv().id, title: 'Individuelle Wirtschaftlichkeits- und Energiekonzept-Berechnung' },
     from: {},
     heating: { fuel: 'gas', gasType: 'central', year: null, cons: null, price: c.gasPrice, maint: c.gasMaint, base: c.gasBase, eff: c.efficiency, replace: false, replaceCost: null },
-    hp: { model: '', kw: null, jaz: null, tariffOn: false, tariff: c.hpTariff, heat: null, power: null, dims: '', weight: null, base: c.hpBase, maint: c.hpMaint, sw: 53, swDay: 60, swNight: 51, spl: 34, splDist: 3, p14a: 0 },
-    pv: { kwp: null, bat: null, modules: '', roofs: [{ id: 'r1', az: 0, tilt: 35, kwp: null }], pvgis: null },
+    hp: { model: '', kw: null, jaz: null, tariffOn: false, tariff: c.hpTariff, heat: null, power: null, dims: '', weight: null, warranty: '', buffer: '', dhw: '', base: c.hpBase, maint: c.hpMaint, sw: 53, swDay: 60, swNight: 51, spl: 34, splDist: 3, p14a: 0 },
+    pv: { kwp: null, bat: null, modules: '', modMaker: '', modWarranty: '', batMaker: '', batWarranty: '', invMaker: '', invWarranty: '', roofs: [{ id: 'r1', az: 0, tilt: 35, kwp: null }], pvgis: null },
     pvPot: { kwp: null, bat: null },
     car: { on: false, km: 15000, cons: 18, home: 80, day: 30 },
     status: 'offen', statusDate: today, variants: [], sign: null, signDraft: { place: '' },
     rod: { on: false, name: '', kw: null, months: 5 },
     hh: { cons: c.hhCons, price: c.hhPrice },
-    fund: { stand: currentStand(today).id, eu: false, speed: null, income: 'none', units: 1, eligible: null, other: 0 },
+    fund: { stand: currentStand(today).id, eu: false, euMode: 'auto', speed: null, income: 'none', units: 1, eligible: null, other: 0 },
     discount: { on: true, amount: S.discount.amount, until: addDays(today, S.discount.days) },
     scenario: 'real',
     components: [],
@@ -813,6 +813,10 @@ function speedAuto(p) {
   if (age === null) return { on: false, why: 'kein Bonus – Baujahr der Gasheizung fehlt' };
   return age >= 20 ? { on: true, why: `Gas-Zentralheizung ist ${age} Jahre alt (ab 20 Jahren)` } : { on: false, why: `kein Bonus – Gas-Zentralheizung ist erst ${age} Jahre alt (ab 20 Jahren)` };
 }
+/* Wertschöpfungsbonus: Wärmepumpe aus EU-Produktion – automatisch nach Hersteller, im Projekt änderbar */
+const EU_MAKERS = /\b(wolf|viessmann|vaillant|bosch|buderus|junkers|stiebel|tecalor|nibe|alpha[\s-]?innotec|novelan|waterkotte|ochsner|weishaupt|br(?:ö|oe)tje|remeha|de\s?dietrich|kermi|dimplex|idm|lambda|heliotherm|hoval|thermia|ctc|elco|hautec|m-tec|windhager|fr(?:ö|oe)ling|hargassner|zewotherm|ait)\b/i;
+const euMaker = p => { const m = EU_MAKERS.exec(String(p.hp.model || '') + ' ' + String(p.hp.warranty || '')); return m ? m[1].replace(/^./, c => c.toUpperCase()) : ''; };
+const euOf = p => { const f = p.fund || {}; return f.euMode === 'yes' || (f.euMode !== 'no' && (!!f.eu || !!euMaker(p))); };
 function fundingOf(p) {
   const out = { amount: 0, rate: 0, parts: [], eligible: 0, cap: 0, base: 0, stand: null, speedOn: false, capped: false };
   if (!hasWP(p)) return out;
@@ -822,7 +826,7 @@ function fundingOf(p) {
   out.eligible = isNum(f.eligible) && f.eligible > 0 ? f.eligible : (p.type === 'pvwp' ? nz(p.offer.grossWP) : grossOf(p));
   out.base = Math.min(out.eligible, out.cap);
   const parts = [['Grundförderung', st.base]];
-  if (f.eu && st.eu > 0) parts.push(['Wertschöpfungsbonus (EU-Wärmepumpe)', st.eu]);
+  if (euOf(p) && st.eu > 0) parts.push(['Wertschöpfungsbonus (EU-Wärmepumpe)', st.eu]);
   out.speedOn = f.speed === null || f.speed === undefined ? speedAuto(p).on : !!f.speed;
   if (out.speedOn && st.speed > 0) parts.push(['Klimageschwindigkeitsbonus', st.speed]);
   const inc = { '50': st.inc50, '40': st.inc40, '30': st.inc30 }[f.income];
@@ -1263,6 +1267,27 @@ function parseSound(lines, hpKw, sizes = []) {
   }
   return res;
 }
+/* Garantie-Aussagen aus einem Positionstext, z. B. „30 Jahre Produkt sowie Leistungsgarantie (…)“ */
+/* Zeilen zusammenfügen; pdf.js verliert weiche Trennstriche – kleingeschriebene Fortsetzung wird angehängt,
+   außer nach vollständigen kurzen Wörtern („mit“, „und“ …) */
+const SHORT_WORDS = new Set('mit und von der die das im in auf bis zu für bei nach sowie oder ein eine einer den dem des ist sind wird als auch an am zum zur über unter aus ohne je pro bzw inkl'.split(' '));
+function joinLines(lines) {
+  let out = '';
+  for (const raw of lines) {
+    const l = raw.replace(/\u00AD/g, '').trim(); if (!l) continue;
+    if (!out) { out = l; continue; }
+    const last = (out.match(/([A-Za-zÄÖÜäöüß]+)$/) || [])[1];
+    out += last && /^[a-zäöüß]/.test(l) && !SHORT_WORDS.has(last.toLowerCase()) ? l : ' ' + l;
+  }
+  return out;
+}
+function warrantyOf(text) {
+  const t = String(Array.isArray(text) ? joinLines(text) : text || '').replace(/\s+/g, ' '), out = [];
+  for (const m of t.matchAll(/(\d{1,2})\s*Jahre?\s+([^•]{0,140}?garantie[^•]*?)(?=\s*•|\s*\d{1,3}\.\d{3}\b|$)/gi)) out.push(`${m[1]} Jahre ${m[2].trim()}`);
+  for (const m of t.matchAll(/Garantie(?:erweiterung|verlängerung)[^•]{0,80}?(?=\s*•|\s*\d{1,3}\.\d{3}\b|$)/gi)) out.push(m[0].trim());
+  return [...new Set(out.map(x => x.replace(/\s*\(keine Folgekosten im Garantiefall\)/i, '').replace(/\s{2,}/g, ' ').replace(/[,;.\s]+$/, '').slice(0, 150)))].join(' · ');
+}
+const itemName = b => b.title.replace(/\((alternative|bedarf)[^)]*\)/gi, '').replace(/\s{2,}/g, ' ').trim();
 function parseOffer(read, role) {
   const raw = read.pages.flat(), all = raw.map(l => l.replace(/\u00AD/g, '')), own = ownChecker();
   read = { ...read, leftLines: (read.leftLines || []).map(l => l.replace(/\u00AD/g, '')) };
@@ -1298,6 +1323,10 @@ function parseOffer(read, role) {
       }
     }
     if (kwp) { R.kwp = Math.round(kwp * 1000) / 1000; R.modules = mods.join(' + '); }
+    const modB = ob.find(b => !/wechselrichter|speicher|batterie|kabel|unterkonstruktion|montage|gestell|halterung|optimierer|dachhaken|schiene|wallbox/i.test(b.first) && /(\d{3})\s*(?:W|Wp|Watt)\b/i.test(b.first));
+    if (modB) { R.modMaker = itemName(modB); R.modWarranty = warrantyOf(modB.lines); }
+    const invB = ob.find(b => /wechselrichter/i.test(b.first) && !/montage|anschluss|installation/i.test(b.first));
+    if (invB) { R.invMaker = itemName(invB).replace(/\s+inkl\..*$/i, ''); R.invWarranty = warrantyOf(invB.lines); }
     let bat = 0;
     for (const b of ob) {
       if (!/speicher|batterie|akku/i.test(b.first) || /wasser|puffer|liter|wärme|\bl\b/i.test(b.first) || !(b.total > 0)) continue;
@@ -1305,6 +1334,8 @@ function parseOffer(read, role) {
       bat += (b.qty || 1) * num1(k[1]);
     }
     if (bat) R.bat = Math.round(bat * 100) / 100;
+    const batB = ob.find(b => /speicher|batterie|akku/i.test(b.first) && !/wasser|puffer|liter|wärme|\bl\b/i.test(b.first) && b.total > 0 && /kWh/i.test(b.text));
+    if (batB) { R.batMaker = itemName(batB); R.batWarranty = warrantyOf(batB.lines); }
   }
   // Wärmepumpe
   if (role !== 'offerPV') {
@@ -1332,6 +1363,12 @@ function parseOffer(read, role) {
     }
     Object.assign(R, Object.fromEntries(Object.entries(parseTech(all, R.hpKw)).filter(([k]) => ['jaz', 'heat', 'power', 'load', 'scop', 'sw', 'swDay', 'swNight', 'spl', 'splDist'].includes(k))));
     const wm = /CHA\s*-?\s*(?:Monoblock\s*)?(0?7|10|16)\b/i.exec(hpTxt || all.join(' '));
+    { const wt = all.join(' ').replace(/\u00AD/g, '').replace(/-\s+/g, '').replace(/\s+/g, ' ');
+      const g = /(\w+)?\s*Garantie\s+von\s+(\d{1,2})\s*Jahren[^.]{0,80}?Wartung/i.exec(wt) || /(\d{1,2})\s*Jahre[^.]{0,40}Garantie[^.]{0,80}?Wartung/i.exec(wt);
+      if (g) { const yrs = g[2] || g[1], mk = g[2] && g[1] && /^[A-ZÄÖÜ]/.test(g[1]) ? g[1] + '-' : ''; R.hpWarranty = `${yrs} Jahre ${mk}Herstellergarantie – Voraussetzung: jährliche Wartung`; } }
+    const clean = s => s.replace(/\s+(inkl\.?|inklusive|mit Verohrrung|mit Verrohrung).*$/i, '').replace(/\s+für die Heizung/i, '').trim();
+    const bufB = ob.find(b => /puffer/i.test(b.first)), dhwB = ob.find(b => /(warm|trink|brauch)wasser-?speicher|speicher.*warmwasser/i.test(b.first) && !/puffer/i.test(b.first));
+    if (bufB) R.hpBuffer = clean(itemName(bufB)); if (dhwB) R.hpDhw = clean(itemName(dhwB));
     if (wm && /wolf/i.test(all.join(' '))) { const w = WOLF[wm[1].padStart(2, '0')]; R.sw ??= w.sw; R.swDay ??= w.day; R.swNight ??= w.night; R.spl ??= w.spl; R.splDist ??= 3; R.wolf = 'CHA-' + wm[1]; }
   }
   R.products = matchProducts(ordered);
@@ -1401,10 +1438,10 @@ function applyRecognition(p, doc, r) {
     setFrom(p, 'offer.date', r.date);
     if (r.advisor) { const m = (S.company.advisors || []).find(a => a.name && (a.name.toLowerCase() === r.advisor.toLowerCase() || a.name.toLowerCase().includes(r.advisor.toLowerCase()) || r.advisor.toLowerCase().includes(a.name.toLowerCase()))); setFrom(p, 'offer.advisor', m ? m.name : r.advisor); p.offer.advisorId = m ? m.id : ''; p.offer.advisorPhone = r.advisorPhone || ''; p.offer.advisorEmail = r.advisorEmail || ''; }
     if (r.date) { p.discount.until = addDays(r.date > isoToday() ? r.date : isoToday(), S.discount.days); }
-    if (hasPV(p)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.bat', r.bat); setFrom(p, 'pv.modules', r.modules); }
+    if (hasPV(p)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.bat', r.bat); setFrom(p, 'pv.modules', r.modules); ['modMaker', 'modWarranty', 'batMaker', 'batWarranty', 'invMaker', 'invWarranty'].forEach(k => setFrom(p, 'pv.' + k, r[k])); }
   }
   if (hasWP(p)) {
-    setFrom(p, 'hp.kw', r.hpKw); setFrom(p, 'hp.model', r.hpModel); setFrom(p, 'hp.dims', r.dims); setFrom(p, 'hp.weight', r.weight);
+    setFrom(p, 'hp.kw', r.hpKw); setFrom(p, 'hp.model', r.hpModel); setFrom(p, 'hp.warranty', r.hpWarranty); setFrom(p, 'hp.buffer', r.hpBuffer); setFrom(p, 'hp.dhw', r.hpDhw); setFrom(p, 'hp.dims', r.dims); setFrom(p, 'hp.weight', r.weight);
     setFrom(p, 'hp.jaz', r.jaz); setFrom(p, 'hp.heat', r.heat); setFrom(p, 'hp.power', r.power);
     ['sw', 'swDay', 'swNight', 'spl', 'splDist'].forEach(k => setFrom(p, 'hp.' + k, r[k]));
   }
@@ -2303,7 +2340,7 @@ function step3(p, R) {
       <div class="mt-4 rounded-[calc(var(--r)-4px)] bg-bg px-4">${toggleRow('Bestandsheizung müsste ohnehin erneuert werden', 'p:heating.replace', 'Die Kosten einer neuen Öl-/Gasheizung werden als Sowieso-Kosten abgezogen.')}
       ${h.replace ? `<div class="pb-4">${field(`Kosten einer neuen ${oil ? 'Ölheizung' : 'Gasheizung'}`, 'p:heating.replaceCost', { t: 'n', unit: '€', ph: num(oil ? c.replaceOil : c.replaceGas), hint: `Leer = Standardwert ${eur(oil ? c.replaceOil : c.replaceGas)}` })}</div>` : ''}</div></div>`;
     out += `<div class="card p-5 sm:p-6">${cardHead('fan', 'Neue Wärmepumpe')}
-      <div class="grid sm:grid-cols-2 gap-4">${field('Modell', 'p:hp.model', { cls: 'sm:col-span-2' })}${field('Heizleistung', 'p:hp.kw', { t: 'n', unit: 'kW' })}${field('JAZ (Jahresarbeitszahl)', 'p:hp.jaz', { t: 'n', ph: num(c.jaz, 1), hint: `Leer = Standard ${num(c.jaz, 1)}` })}<div class="sm:col-span-2 rounded-[calc(var(--r)-4px)] border border-line bg-field p-4"><label class="flex items-start gap-3 cursor-pointer"><input type="checkbox" class="mt-0.5" data-tgcheck="p:hp.tariffOn" ${p.hp.tariffOn ? 'checked' : ''}><span><span class="text-[14px] font-semibold">Separater Wärmepumpen-Stromtarif</span><span class="block hint !mt-0.5">Eigener Zähler mit günstigerem Arbeitspreis. Ohne Haken läuft die Wärmepumpe über den normalen Haushaltsstrom (${ct(nz(p.hh.price, c.hhPrice))}/kWh).</span></span></label>${p.hp.tariffOn ? `<div class="grid sm:grid-cols-2 gap-4 mt-4">${field('WP-Stromtarif', 'p:hp.tariff', { t: 'n', unit: '€/kWh' })}${field('Grundpreis WP-Zähler', 'p:hp.base', { t: 'n', unit: '€/Jahr' })}</div>` : ''}</div></div>
+      <div class="grid sm:grid-cols-2 gap-4">${field('Modell', 'p:hp.model', { cls: 'sm:col-span-2' })}${field('Pufferspeicher', 'p:hp.buffer', { ph: 'z. B. Pufferspeicher 200 Liter' })}${field('Warmwasserspeicher', 'p:hp.dhw', { ph: 'z. B. Warmwasserspeicher 200 Liter' })}${field('Garantie', 'p:hp.warranty', { cls: 'sm:col-span-2', ph: 'z. B. 5 Jahre Herstellergarantie – Voraussetzung: jährliche Wartung', hint: 'Aus dem Angebot übernommen – erscheint im Kundendokument.' })}${field('Heizleistung', 'p:hp.kw', { t: 'n', unit: 'kW' })}${field('JAZ (Jahresarbeitszahl)', 'p:hp.jaz', { t: 'n', ph: num(c.jaz, 1), hint: `Leer = Standard ${num(c.jaz, 1)}` })}<div class="sm:col-span-2 rounded-[calc(var(--r)-4px)] border border-line bg-field p-4"><label class="flex items-start gap-3 cursor-pointer"><input type="checkbox" class="mt-0.5" data-tgcheck="p:hp.tariffOn" ${p.hp.tariffOn ? 'checked' : ''}><span><span class="text-[14px] font-semibold">Separater Wärmepumpen-Stromtarif</span><span class="block hint !mt-0.5">Eigener Zähler mit günstigerem Arbeitspreis. Ohne Haken läuft die Wärmepumpe über den normalen Haushaltsstrom (${ct(nz(p.hh.price, c.hhPrice))}/kWh).</span></span></label>${p.hp.tariffOn ? `<div class="grid sm:grid-cols-2 gap-4 mt-4">${field('WP-Stromtarif', 'p:hp.tariff', { t: 'n', unit: '€/kWh' })}${field('Grundpreis WP-Zähler', 'p:hp.base', { t: 'n', unit: '€/Jahr' })}</div>` : ''}</div></div>
       ${det('hp-more', 'Weitere Angaben', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Wärmebedarf laut Auslegung', 'p:hp.heat', { t: 'n', unit: 'kWh', ph: R.heat ? num(R.heat) : '', hint: 'Leer = aus Verbrauch × Nutzungsgrad' })}${field('Strombedarf laut Auslegung', 'p:hp.power', { t: 'n', unit: 'kWh', ph: R.hpPower ? num(R.hpPower) : '', hint: 'Leer = Wärmebedarf ÷ JAZ' })}${field('Maße Außeneinheit', 'p:hp.dims', { ph: '1286 x 979 x 562 mm' })}${field('Gewicht Außeneinheit', 'p:hp.weight', { t: 'n', unit: 'kg' })}${field('Wartung WP', 'p:hp.maint', { t: 'n', unit: '€/Jahr' })}${field('Schallleistungspegel', 'p:hp.sw', { t: 'n', unit: 'dB(A)' })}${field('Schallleistung nachts', 'p:hp.swNight', { t: 'n', unit: 'dB(A)' })}${field('Schalldruck nachts', 'p:hp.spl', { t: 'n', unit: 'dB(A)' })}${field('Abstand Schalldruck', 'p:hp.splDist', { t: 'n', unit: 'm' })}${field('§ 14a-Netzentgeltreduzierung', 'p:hp.p14a', { t: 'n', unit: '€/Jahr' })}</div><p class="hint">Schallwerte sind mit Wolf CHA-10 vorbelegt und werden aus Angebot oder Datenblatt übernommen.</p>`)}
       ${p.type === 'pvwp' ? `<div class="mt-4 rounded-[calc(var(--r)-4px)] border border-line bg-field p-4"><label class="flex items-start gap-3 cursor-pointer"><input type="checkbox" class="mt-0.5" data-tgcheck="p:rod.on" ${p.rod && p.rod.on ? 'checked' : ''}><span><span class="text-[14px] font-semibold">Heizstab mit PV-Überschuss</span><span class="block hint !mt-0.5">z. B. my-PV: Im Sommer erwärmt der Heizstab das Warmwasser mit überschüssigem Solarstrom. Die Wärmepumpe kann dann nahezu komplett pausieren – weniger Laufzeit, längere Lebensdauer.</span></span></label>
         ${p.rod && p.rod.on ? `<div class="grid sm:grid-cols-3 gap-4 mt-4">${field('Bezeichnung', 'p:rod.name', { ph: S.calc.rodName })}${field('Leistung', 'p:rod.kw', { t: 'n', unit: 'kW', ph: num(S.calc.rodKw, 1) })}${sel('Sommerbetrieb', 'p:rod.months', [[3, 'Juni bis August'], [4, 'Mai bis August'], [5, 'Mai bis September'], [6, 'Mai bis Oktober']], { t: 'y' })}</div>` : ''}</div>` : ''}</div>`;
@@ -2311,6 +2348,7 @@ function step3(p, R) {
   if (hasPV(p)) {
     out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}
       <div class="grid sm:grid-cols-2 gap-4">${field('Anlagenleistung', 'p:pv.kwp', { t: 'n', unit: 'kWp', hint: p.pv.modules ? esc(p.pv.modules) : '' })}${field('Batteriespeicher', 'p:pv.bat', { t: 'n', unit: 'kWh', ph: '0' })}</div>
+      ${det('pv-maker', 'Hersteller & Garantien', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Module (Hersteller / Typ)', 'p:pv.modMaker', { ph: 'z. B. Winaico WST-BKX54' })}${field('Garantie Module', 'p:pv.modWarranty', { ph: 'z. B. 30 Jahre Produkt- und Leistungsgarantie' })}${field('Speicher (Hersteller / Typ)', 'p:pv.batMaker', { ph: 'z. B. EcoFlow Ocean 2' })}${field('Garantie Speicher', 'p:pv.batWarranty', { ph: 'z. B. 15 Jahre Produktgarantie' })}${field('Wechselrichter (Hersteller / Typ)', 'p:pv.invMaker')}${field('Garantie Wechselrichter', 'p:pv.invWarranty')}</div><p class="hint">Wird aus dem Angebot übernommen und erscheint im Kundendokument.</p>`, [p.pv.modMaker, p.pv.batMaker].filter(Boolean).map(esc).join(' · '))}
       ${roofsCard(p, R)}
       <div class="mt-4 text-[13px] text-ink3">Einspeisevergütung ${num(c.feedIn, 2)} ct/kWh · Ertrag pro Jahr <b class="text-ink2">${num(R.yield)} kWh</b></div></div>`;
     out += carCard(p, R);
@@ -2332,7 +2370,7 @@ function fundingCard(p, R) {
     <div class="grid grid-cols-3 gap-2 mt-3">${tile('Grundförderung', pct(st.base))}${tile('Geschwindigkeitsbonus', pct(st.speed))}${tile('Förderfähig max.', eur(st.first))}</div>
     ${st.note ? `<p class="hint">${esc(st.note)}</p>` : ''}
     <div class="mt-3 divide-y divide-line">
-      ${st.eu > 0 ? toggleRow(`Wertschöpfungsbonus (EU-Wärmepumpe) +${st.eu} %`, 'p:fund.eu', 'Nur für in der EU gefertigte Wärmepumpen.') : ''}
+      <div class="py-3"><span class="lbl">Wärmepumpe aus EU-Produktion (Wertschöpfungsbonus${st.eu > 0 ? ` +${st.eu} %` : (() => { const e = S.funding.stands.filter(x => x.eu > 0).sort((a, b) => a.from.localeCompare(b.from))[0]; return e ? ` ab ${deDate(e.from)} +${e.eu} %` : ''; })()})</span>${seg('p:fund.euMode', [['auto', `Automatisch${euMaker(p) ? ` (ja – ${esc(euMaker(p))})` : ' (nein)'}`], ['yes', 'Ja'], ['no', 'Nein']], { cls: 'flex-wrap' })}<div class="hint">${st.eu > 0 ? 'Gilt für in der EU gefertigte Wärmepumpen.' : 'Gilt erst für spätere Förderstände – wichtig für den Hinweis „Förderung jetzt sichern“.'} Automatisch erkannt am Hersteller; im Zweifel beim Hersteller nachfragen.</div></div>
       ${st.speed > 0 ? `<div class="py-3"><label class="flex items-start gap-3"><input type="checkbox" class="mt-0.5" ${F.speedOn ? 'checked' : ''} data-a="speed"><span><span class="text-[14px] font-semibold">Klimageschwindigkeitsbonus +${st.speed} %</span><span class="block hint !mt-0.5">${manual ? `Manuell gesetzt · automatisch wäre: ${auto.on ? 'ja' : 'nein'} (${esc(auto.why)})` : `Automatisch: ${auto.on ? 'ja' : 'nein'} – ${esc(auto.why)}`}</span></span></label>${manual ? `<button class="text-p font-bold text-[13px] mt-1 ml-8 hover:underline" data-a="speed-auto">Wieder automatisch bestimmen</button>` : ''}</div>` : `<div class="py-3 text-[13px] text-ink3">In diesem Förderstand gibt es keinen Klimageschwindigkeitsbonus.</div>`}
     </div>
     <div class="grid sm:grid-cols-2 gap-4 mt-3">
@@ -2649,6 +2687,23 @@ function docCover(p, R, n, N) {
   return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;left:0;right:0;top:0;height:130mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, pv: hasPV(p), hp: hasWP(p) }))}" style="width:210mm;height:130mm;display:block"><div style="position:absolute;left:0;right:0;bottom:0;height:18mm;background:linear-gradient(180deg,${pageCls('cover') === 'page dk' ? 'rgba(11,17,24,0),#0B1118' : 'rgba(255,255,255,0),#fff'})"></div>${coverLogoHtml()}</div>
     <div style="position:absolute;left:14mm;right:14mm;top:133mm">${textBlock}</div>${pageFooter(n, N)}</section>`;
 }
+/* Puffer- und separater Warmwasserspeicher – Namen aus dem Angebot, sonst allgemein */
+function storageNote(p, mode) {
+  if (S.calc.storageNote === false) return '';
+  const buf = String(p.hp.buffer || '').trim(), dhw = String(p.hp.dhw || '').trim();
+  const t = `Zu Ihrer Wärmepumpe gehören ein <b style="font-weight:600">Pufferspeicher</b>${buf ? ` (${esc(buf)})` : ''} und ein <b style="font-weight:600">separater Warmwasserspeicher</b>${dhw ? ` (${esc(dhw)})` : ''}.${mode === 'short' ? ' Der Puffer sorgt für lange, gleichmäßige Laufzeiten; der Warmwasserspeicher hält warmes Wasser getrennt vom Heizwasser bereit.' : ' Der Puffer speichert Heizwärme und sorgt für gleichmäßige, lange Laufzeiten – das spart Strom und schont die Wärmepumpe. Der Warmwasserspeicher hält jederzeit ausreichend warmes Wasser bereit, getrennt vom Heizwasser.'}`;
+  return mode === 'sales' ? `<p class="small" style="color:var(--ink2);font-size:7.8pt;line-height:1.45;margin-top:2.5mm">${t}</p>` : `<div class="tile" style="margin-top:3.5mm;padding:3mm 4mm;display:flex;gap:3.5mm;align-items:flex-start"><div style="flex-shrink:0;padding-top:0.3mm">${sImg('flame', 4.6, S.design.primary)}</div><div style="font-size:8.6pt;line-height:1.45">${t}</div></div>`;
+}
+/* Hersteller und Garantien – genau so, wie sie im Angebot stehen */
+function makersBlock(p, R) {
+  const pv = p.pv || {}, rows = [];
+  if (R.V && (pv.modMaker || pv.modWarranty)) rows.push(['Solarmodule', pv.modMaker, pv.modWarranty]);
+  if (R.V && (pv.invMaker || pv.invWarranty)) rows.push(['Wechselrichter', pv.invMaker, pv.invWarranty]);
+  if (R.V && R.bat && (pv.batMaker || pv.batWarranty)) rows.push(['Stromspeicher', pv.batMaker, pv.batWarranty]);
+  if (R.W && (p.hp.model || p.hp.warranty)) rows.push(['Wärmepumpe', p.hp.model, p.hp.warranty]);
+  if (!rows.some(r => r[2])) return '';
+  return `<div class="sec" style="margin-top:4.5mm"><h2>Hersteller & Garantien</h2><table class="t" style="font-size:7.4pt"><thead><tr><th>Komponente</th><th style="text-align:left">Hersteller / Typ</th><th style="text-align:left">Garantie laut Angebot</th></tr></thead><tbody>${rows.map(([k, m, w]) => `<tr><td style="font-weight:600;white-space:nowrap">${k}</td><td style="text-align:left">${esc(m || '–')}</td><td style="text-align:left;color:var(--ink2)">${esc(w || '–')}</td></tr>`).join('')}</tbody></table></div>`;
+}
 function soundBlock(p) {
   const v = isNum(p.hp.spl) ? p.hp.spl : null;
   return `<div class="sec"><h2>Wie laut ist Ihre Wärmepumpe?</h2><p class="small" style="margin-bottom:2mm">Schalldruckpegel nachts${p.hp.splDist ? ` in ${num(p.hp.splDist, 1)} m Abstand` : ''} im Vergleich zu Alltagsgeräuschen.</p>${soundScaleSVG(v)}</div>`;
@@ -2724,9 +2779,10 @@ const DOC = {
     if (R.W) sys.push(tile('Wärmepumpe', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–', `JAZ ${num(R.jaz, 2)}`, 'tgrn'));
     if (R.rod) sys.push(tile('Heizstab', num(R.rodKw, 1) + ' kW', 'mit PV-Überschuss', 'tgrn'));
     b += `<div class="sec"><h2>Ihr neues Energiesystem</h2><div class="g${Math.max(2, sys.length)}">${sys.join('')}</div></div>`;
+    b += makersBlock(p, R);
     if (R.W) {
-      const kv = [['Modell', p.hp.model || '–'], ['Heizleistung', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–'], ['Jahresarbeitszahl', num(R.jaz, 2)], ['Maße Außeneinheit', p.hp.dims || '–'], ['Gewicht', p.hp.weight ? num(p.hp.weight) + ' kg' : '–'], ['Schallleistung', p.hp.sw ? num(p.hp.sw, 1) + ' dB(A)' : '–']];
-      b += `<div class="sec tile" style="padding:4mm 5mm"><h3>Ihre Wärmepumpe</h3><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm 5mm;margin-top:1.5mm">${kv.map(([k, v]) => `<div><div class="small">${k}</div><div style="font-weight:600;font-size:9pt">${esc(v)}</div></div>`).join('')}</div></div>`;
+      const mk = !!makersBlock(p, R), kv = [...(mk ? [] : [['Modell', p.hp.model || '–']]), ['Heizleistung', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–'], ['Jahresarbeitszahl', num(R.jaz, 2)], ['Maße Außeneinheit', p.hp.dims || '–'], ['Gewicht', p.hp.weight ? num(p.hp.weight) + ' kg' : '–'], ['Schallleistung', p.hp.sw ? num(p.hp.sw, 1) + ' dB(A)' : '–']];
+      b += `<div class="sec tile" style="padding:4mm 5mm"><h3>Ihre Wärmepumpe</h3><div style="display:grid;grid-template-columns:${mk ? 'repeat(5,1fr)' : '1fr 1fr 1fr'};gap:2mm 5mm;margin-top:1.5mm">${kv.map(([k, v]) => `<div><div class="small">${k}</div><div style="font-weight:600;font-size:9pt">${esc(v)}</div></div>`).join('')}</div></div>`;
     }
     const comps = p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr).slice(0, 4);
     if (comps.length) b += `<div class="sec"><h2>Ihre Komponenten</h2><div class="g${Math.min(4, Math.max(2, comps.length))}">${comps.map(({ c, pr }) => { const u = fileUrl(pr.img) || pr.imgUrl; return `<div class="tile" style="text-align:center;padding:3mm">${u ? `<img src="${esc(u)}" style="max-height:${R.W ? 16 : 24}mm;max-width:100%;width:auto;height:auto;margin:0 auto 1.5mm;display:block">` : ''}<div style="font-weight:600;font-size:8.4pt;line-height:1.25">${c.qty > 1 ? c.qty + ' × ' : ''}${esc(pr.name)}</div><div class="small">${esc(pr.maker || '')}</div></div>`; }).join('')}</div></div>`;
@@ -2744,7 +2800,8 @@ const DOC = {
     b += S.design.hpIllu === 'diagram' ? `<div class="tile" style="padding:3mm 4mm">${hpCycleSVG()}</div>` : `<div style="border-radius:var(--dr);overflow:hidden">${hpSceneSVG()}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
     if (R.rod) b += `<div class="tile" style="margin-top:3.5mm;padding:3.5mm 4mm;background:var(--p-light);display:flex;gap:3.5mm;align-items:flex-start">${icC('sun', 20, S.design.primary, 1.8)}<div><b style="font-weight:600">Sommerpause für Ihre Wärmepumpe:</b> <span class="muted">Ein ${esc(R.rodName)} mit ${num(R.rodKw, 1)} kW erwärmt von ${R.rodMonths === 3 ? 'Juni' : 'Mai'} bis ${['', '', '', 'August', 'August', 'September', 'Oktober'][R.rodMonths]} Ihr Warmwasser mit überschüssigem Solarstrom – rund ${num(R.rodHeat)} kWh im Jahr. Die Wärmepumpe bleibt in dieser Zeit nahezu aus: weniger Laufzeit, weniger Starts, eine längere Lebensdauer.</span></div></div>`;
-    b += `<div class="tile" style="margin-top:3.5mm;padding:3mm 4mm;background:var(--t-yel)"><b>Der Kühlschrank-Vergleich:</b> <span class="muted">Ihr Kühlschrank holt die Wärme aus dem Inneren und gibt sie hinten an die Küche ab. Die Wärmepumpe macht genau das mit der Außenluft – und gibt die Wärme an Ihr Haus.</span></div>`;
+    b += storageNote(p, R.rod ? 'short' : 'full');
+    if (!R.rod) b += `<div class="tile" style="margin-top:3.5mm;padding:3mm 4mm;background:var(--t-yel)"><b>Der Kühlschrank-Vergleich:</b> <span class="muted">Ihr Kühlschrank holt die Wärme aus dem Inneren und gibt sie hinten an die Küche ab. Die Wärmepumpe macht genau das mit der Außenluft – und gibt die Wärme an Ihr Haus.</span></div>`;
     b += `<div class="sec"><h2>Warum die Wärmepumpe so effizient ist</h2><p class="small">So entstehen 100 kWh Wärme:</p>
       <div style="display:grid;grid-template-columns:30mm 1fr;gap:2.5mm 3mm;align-items:center;margin-top:2mm">
       <b style="font-size:8.6pt">${oil ? 'Ölheizung' : 'Gasheizung'}</b>${bar([[100, '#D9482B', '100 kWh Wärme'], [fuelIn - 100, '#F2B8A6', `${num(fuelIn - 100)} kWh Verlust`, '#7A2A14']], mx)}
@@ -2761,7 +2818,7 @@ const DOC = {
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
     b += S.design.pvIllu === 'diagram' ? `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>` : `<div style="border-radius:var(--dr);overflow:hidden">${pvSceneSVG(R)}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
-    b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2>${rodPause(R, dayMonth(p)) ? `<div style="background:var(--t-yel);border-radius:var(--dr);padding:2.5mm 4mm;margin-bottom:2mm;font-size:8.4pt;display:flex;gap:3mm;align-items:flex-start">${icC('sun', 16, S.design.secondary, 2)}<div><b style="font-weight:600">Sommerpause der Wärmepumpe.</b> ${esc(rodPauseText(R))}</div></div>` : ''}<p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE, h: 205 })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
+    b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2>${rodPause(R, dayMonth(p)) ? `<div style="background:var(--t-yel);border-radius:var(--dr);padding:2.5mm 4mm;margin-bottom:2mm;font-size:8.4pt;display:flex;gap:3mm;align-items:flex-start">${icC('sun', 16, S.design.secondary, 2)}<div><b style="font-weight:600">Sommerpause der Wärmepumpe.</b> ${esc(rodPauseText(R))}</div></div>` : ''}<p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE, h: 185 })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
     b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
     return { title: 'So funktioniert Ihre Photovoltaikanlage', body: b };
   },
@@ -2788,7 +2845,7 @@ const DOC = {
   },
   monthly(p, R) {
     const c = C(), last = R.rows[R.rows.length - 1], oil = R.fuel === 'oil';
-    const ys = [...new Set([0, 1, 2, 3, 4].map(i => R.startYear + i).concat([2030, 2032, 2035, 2038, 2040, 2045]))].filter(y => y >= R.startYear && y <= R.startYear + R.N - 1).sort();
+    const ys = [...new Set((R.fin ? [0, 1, 2] : [0, 1, 2, 3, 4]).map(i => R.startYear + i).concat(R.fin ? [2030, 2035, 2040, 2045] : [2030, 2032, 2035, 2038, 2040, 2045]))].filter(y => y >= R.startYear && y <= R.startYear + R.N - 1).sort();
     let b = chap('Ihre monatlichen Energiekosten', R.W && R.V ? 'Heizung und Haushaltsstrom zusammen – so entwickeln sich Ihre Energiekosten pro Monat, heute und in Zukunft.' : R.W ? 'Ihre Heizkosten pro Monat inklusive Grundpreis und Wartung – heute und in Zukunft.' : 'Ihre Stromkosten pro Monat – heute und in Zukunft.');
     b += `<div class="g3">${tile('Heute', eur(R.monthOld1), 'pro Monat mit dem heutigen System', 'tred')}${tile('Künftig', eur(R.monthNew1), 'pro Monat mit dem neuen System', 'tgrn')}${tile('Ersparnis', eur(R.monthOld1 - R.monthNew1), `pro Monat · in ${R.N} Jahren ${eur(last.monthSave)}`, 'tyel')}</div>`;
     b += `<div class="sec">${groupBars(monthlyGroups(R), { h: 200 })}<div class="small">${legendDot(c.red2, 'Heute-System')}${legendDot(c.p, 'Neues System')}</div></div>`;
@@ -3087,15 +3144,23 @@ Object.assign(DOC, {
   sSystem(p, R) {
     let b = sChap('sSystem', p, R);
     const items = [];
-    if (R.V) { const m = String(p.pv.modules || '').match(/(\d+)\s*[×x]\s*(\d+)\s*W/i); items.push(['sun', 'Photovoltaikanlage', m ? `${m[1]} Solarmodule à ${m[2]} Watt` : (p.pv.modules || 'Ihre Solaranlage'), `Rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr`, num(R.kwp, 2) + ' kWp']); }
-    if (R.V && R.bat) items.push(['battery', 'Stromspeicher', 'Batteriespeicher', 'Speichert Solarstrom für Abend und Nacht', num(R.bat, 1) + ' kWh']);
-    if (R.W) items.push(['flame', 'Wärmepumpe', p.hp.model || 'Luft-Wasser-Wärmepumpe', [`Jahresarbeitszahl ${num(R.jaz, 2)}`, p.hp.dims && `Außeneinheit ${p.hp.dims.replace(/\s*x\s*/gi, ' × ')}`, p.hp.weight && `${num(p.hp.weight)} kg`].filter(Boolean).join(' · '), p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '']);
+    const pv = p.pv, short = s => String(s || '').replace(/\s*\(.*$/, '').trim();
+    if (R.V) { const m = String(pv.modules || '').match(/(\d+)\s*[×x]\s*(\d+)\s*W/i); items.push(['sun', 'Photovoltaikanlage', m ? `${m[1]} Solarmodule à ${m[2]} Watt` : (pv.modules || 'Ihre Solaranlage'), [pv.modMaker, `rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr`].filter(Boolean).join(' · '), num(R.kwp, 2) + ' kWp', pv.modWarranty ? [pv.modWarranty] : []]); }
+    if (R.V && (pv.invMaker || pv.invWarranty)) { const kw = /(\d{1,2}(?:[.,]\d{1,2})?)\s*kW\b(?!h)/i.exec(pv.invMaker || ''); items.push(['bolt', 'Wechselrichter', short(pv.invMaker) || 'Wechselrichter', 'Wandelt Solarstrom in Haushaltsstrom um und steuert den Speicher', kw ? num(parseFloat(kw[1].replace(',', '.')), 1) + ' kW' : '', pv.invWarranty ? [pv.invWarranty] : []]); }
+    if (R.V && R.bat) items.push(['battery', 'Stromspeicher', pv.batMaker || 'Batteriespeicher', 'Speichert Solarstrom für Abend und Nacht', num(R.bat, 1) + ' kWh', pv.batWarranty ? [pv.batWarranty] : []]);
+    if (R.W) items.push(['flame', 'Wärmepumpe', p.hp.model || 'Luft-Wasser-Wärmepumpe', [`Jahresarbeitszahl ${num(R.jaz, 2)}`, p.hp.dims && `Außeneinheit ${p.hp.dims.replace(/\s*x\s*/gi, ' × ')}`, p.hp.weight && `${num(p.hp.weight)} kg`].filter(Boolean).join(' · '), p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '', p.hp.warranty ? [p.hp.warranty] : []]);
     if (R.rod) items.push(['sun', 'Heizstab', R.rodName || 'Heizstab', 'Warmwasser mit überschüssigem Solarstrom', num(R.rodKw, 1) + ' kW']);
-    b += items.map(([i, k, t, u, v]) => `<div class="scard" style="display:flex;align-items:center;gap:5mm;padding:${items.length > 3 ? 3 : 4}mm 6mm;margin-bottom:2.5mm"><span class="sic" style="width:11mm;height:11mm">${sImg(i, 5.2, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div><div style="font-size:11.5pt;font-weight:700;line-height:1.3">${esc(t)}</div><div class="small" style="color:var(--ink2)">${esc(u)}</div></div><div style="font-size:19pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div>`).join('');
+    const wn = items.reduce((a, x) => a + (x[5] || []).length, 0), dense = items.length >= 4 || wn > 0; DENSE = dense && R.W && isNum(p.hp.spl);
+    const wLine = w => (w && w.length ? `<div style="margin-top:1mm;font-size:7.3pt;line-height:1.35;color:var(--p);font-weight:600">Garantie: ${w.map(esc).join(' · ')}</div>` : '');
+    if (items.length >= 5) {
+      // viele Komponenten: zweispaltig, Wert rechts oben – passt auf eine Seite
+      b += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2.5mm">${items.map(([i, k, t, u, v, w]) => `<div class="scard" style="padding:3mm 4mm"><div style="display:flex;align-items:center;gap:3mm"><span class="sic" style="width:8.5mm;height:8.5mm">${sImg(i, 4.4, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div></div><div style="font-size:14pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div><div style="font-size:9.6pt;font-weight:700;line-height:1.3;margin-top:1.5mm">${esc(t)}</div><div class="small" style="color:var(--ink2);line-height:1.35">${esc(u)}</div>${wLine(w)}</div>`).join('')}</div>`;
+    } else b += items.map(([i, k, t, u, v, w]) => `<div class="scard" style="display:flex;align-items:center;gap:5mm;padding:${dense ? 2.6 : 4}mm 6mm;margin-bottom:${dense ? 2 : 2.5}mm"><span class="sic" style="width:11mm;height:11mm">${sImg(i, 5.2, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div><div style="font-size:${dense ? 10.8 : 11.5}pt;font-weight:700;line-height:1.3">${esc(t)}</div><div class="small" style="color:var(--ink2)">${esc(u)}</div>${wLine(w)}</div><div style="font-size:19pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div>`).join('');
     const steps = p.type === 'pvwp' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr – auch bei bewölktem Himmel.`], R.bat ? ['Speichern', 'Was tagsüber übrig ist, lädt den Speicher – für den Abend und die Nacht.'] : ['Selbst nutzen', 'Ihr Haus und Ihre Wärmepumpe nutzen den Solarstrom direkt.'], ['Wärme aus der Luft', `Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser – leise und ohne Brennstofflager.']]
       : p.type === 'pv' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr.`], ['Selbst nutzen', 'Ihr Haushalt verbraucht den Solarstrom zuerst direkt.'], R.bat ? ['Speichern', 'Überschüsse laden den Speicher – für Abend und Nacht.'] : ['Einspeisen', 'Was übrig ist, fließt gegen Vergütung ins Netz.'], ['Unabhängig', `Rund ${pct(R.autarky * 100)} Ihres Stroms kommen künftig vom eigenen Dach.`]]
       : [['Wärme aus der Luft', 'Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost.'], ['Verdichten', `Mit wenig Strom wird die Wärme auf Heiztemperatur gebracht. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser.'], ['Ohne Öl und Gas', 'Kein Brennstofflager, kein Schornsteinfeger, kein CO₂-Preis.']];
-    b += `<h2 style="margin-top:5mm">So einfach funktioniert es</h2><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3mm">${steps.map(([t, x], i) => `<div class="sbox" style="padding:4mm">${sNum(i + 1)}<div style="font-size:9.2pt;font-weight:700;margin-top:2.5mm;line-height:1.3">${t}</div><div class="small" style="color:var(--ink2);font-size:7.6pt;line-height:1.45;margin-top:1mm">${x}</div></div>`).join('')}</div>`;
+    if (DENSE && (items.length >= 4 || wn >= 3)) b += `<h2 style="margin-top:3.5mm">So einfach funktioniert es</h2><div class="sbox" style="padding:3mm 4mm;display:grid;grid-template-columns:repeat(4,1fr);gap:3mm">${steps.map(([t], i) => `<div style="display:flex;align-items:center;gap:2mm">${sNum(i + 1)}<b style="font-size:8.6pt;line-height:1.25">${t}</b></div>`).join('')}</div>`;
+    else b += `<h2 style="margin-top:${DENSE ? 3.5 : 5}mm">So einfach funktioniert es</h2><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3mm">${steps.map(([t, x], i) => `<div class="sbox" style="padding:${DENSE ? 3 : 4}mm">${sNum(i + 1)}<div style="font-size:9.2pt;font-weight:700;margin-top:${DENSE ? 1.8 : 2.5}mm;line-height:1.3">${t}</div><div class="small" style="color:var(--ink2);font-size:${DENSE ? 7.1 : 7.6}pt;line-height:1.4;margin-top:1mm">${x}</div></div>`).join('')}</div>`;
     if (R.W && isNum(p.hp.spl)) b += salesNoise(p);
     return { title: 'Ihr neues Energiesystem', body: b };
   },
@@ -3206,10 +3271,11 @@ function salesContact(p) {
   const ph = a.photo ? `<div style="width:16mm;height:16mm;border-radius:50%;flex-shrink:0;background:#fff url('${a.photo}') center/cover no-repeat"></div>` : '';
   return `<div class="sbox" style="display:flex;align-items:center;gap:5mm;padding:5mm 7mm">${ph}<div style="flex:1"><div class="small">Ihr Ansprechpartner</div><div style="font-size:14pt;font-weight:800">${esc(a.name || coName())}</div><div class="small" style="color:var(--ink2)">${[a.phone, a.email].filter(Boolean).map(esc).join(' · ')}</div></div><div style="font-size:10.5pt;font-weight:700;color:var(--p);text-align:right">Fragen? Wir sind gern für Sie da.</div></div>`;
 }
+let DENSE = false;
 function salesNoise(p) {
   const v = p.hp.spl, X = d => Math.max(0, Math.min(100, (d - 15) / 60 * 100)), lim = 35;
   const marks = [[20, 'Blätterrauschen'], [30, 'Flüstern'], [40, 'Kühlschrank'], [50, 'leiser Regen'], [60, 'Gespräch'], [70, 'Staubsauger']];
-  return `<div class="sbar" style="margin-top:6mm"></div><h1 style="font-size:18pt;margin-top:1.5mm">Wie laut ist Ihre Wärmepumpe?</h1><p class="lead" style="font-size:9pt;margin-bottom:7mm">Moderne Wärmepumpen sind leise. Nachts arbeitet Ihre Anlage im geräuschreduzierten Modus${p.hp.splDist ? ` – in ${num(p.hp.splDist, 1)} m Abstand misst man dann <b>${num(v, 1)} dB(A)</b>` : ` – rund <b>${num(v, 1)} dB(A)</b>`}.</p>
+  return `<div class="sbar" style="margin-top:${DENSE ? 4 : 6}mm"></div><h1 style="font-size:${DENSE ? 16 : 18}pt;margin-top:1.5mm">Wie laut ist Ihre Wärmepumpe?</h1><p class="lead" style="font-size:9pt;margin-bottom:${DENSE ? 5 : 7}mm">Moderne Wärmepumpen sind leise. Nachts arbeitet Ihre Anlage im geräuschreduzierten Modus${p.hp.splDist ? ` – in ${num(p.hp.splDist, 1)} m Abstand misst man dann <b>${num(v, 1)} dB(A)</b>` : ` – rund <b>${num(v, 1)} dB(A)</b>`}.</p>
     <div style="position:relative;height:26mm">
       <div style="position:absolute;left:${X(v)}%;top:0;transform:translateX(-50%);background:var(--p);color:#fff;font-size:7.6pt;font-weight:700;border-radius:1.6mm;padding:1mm 3mm;white-space:nowrap">Ihre Wärmepumpe nachts: ${num(v, 1)} dB(A)</div>
       <div style="position:absolute;left:0;right:0;top:9mm;height:4mm;border-radius:2mm;background:linear-gradient(90deg,#BDE7C4 0%,#F4E3A1 45%,#F7C8A2 75%,#F5B5B0 100%)"></div>
@@ -3429,7 +3495,7 @@ const SET = {
         <div class="grid sm:grid-cols-2 gap-4 mt-4">${field('Gasnetzentgelt-Zuschlag', c + 'gasNet', { t: 'n', unit: 'ct/kWh', hint: 'steigt linear bis zum Zieljahr' })}${field('Zieljahr', c + 'gasNetYear', { t: 'y' })}</div>`)
       + sCard('euro', 'Standardpreise & Technik', 'Vorbelegung für neue Berechnungen.', `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${field('Heizöl', c + 'oilPrice', { t: 'n', unit: '€/l' })}${field('Erdgas', c + 'gasPrice', { t: 'n', unit: '€/kWh' })}${field('WP-Stromtarif', c + 'hpTariff', { t: 'n', unit: '€/kWh' })}${field('Haushaltsstrom', c + 'hhPrice', { t: 'n', unit: '€/kWh' })}${field('Haushaltsverbrauch', c + 'hhCons', { t: 'n', unit: 'kWh' })}${field('Standard-JAZ', c + 'jaz', { t: 'n' })}${field('Nutzungsgrad Kessel', c + 'efficiency', { t: 'n', unit: '%' })}${field('Wartung Ölheizung', c + 'oilMaint', { t: 'n', unit: '€' })}${field('Wartung Gasheizung', c + 'gasMaint', { t: 'n', unit: '€' })}${field('Grundpreis Gas', c + 'gasBase', { t: 'n', unit: '€' })}${field('WP-Grundpreis', c + 'hpBase', { t: 'n', unit: '€' })}${field('Wartung WP', c + 'hpMaint', { t: 'n', unit: '€' })}${field('PV-Ertrag', c + 'pvYield', { t: 'n', unit: 'kWh/kWp' })}${field('Einspeisevergütung', c + 'feedIn', { t: 'n', unit: 'ct/kWh' })}${field('PV-Degradation', c + 'pvDeg', { t: 'n', unit: '% p. a.' })}${field('WP-Strom-Anteil für PV', c + 'pvHpShare', { t: 'n', unit: '%' })}${field('Heizstab – Bezeichnung', c + 'rodName')}${field('Heizstab – Leistung', c + 'rodKw', { t: 'n', unit: 'kW' })}${field('Warmwasser-Anteil am Wärmebedarf', c + 'dhwShare', { t: 'n', unit: '%' })}${field('CO₂ Heizöl', c + 'co2Oil', { t: 'n', unit: 'kg/kWh' })}${field('CO₂ Erdgas', c + 'co2Gas', { t: 'n', unit: 'kg/kWh' })}${field('CO₂ Strom', c + 'co2El', { t: 'n', unit: 'kg/kWh' })}</div>`)
       + sCard('home', 'Sowieso-Kosten & Dokument', '', `<div class="grid sm:grid-cols-3 gap-4">${field('Neue Gasheizung', c + 'replaceGas', { t: 'n', unit: '€' })}${field('Neue Ölheizung', c + 'replaceOil', { t: 'n', unit: '€' })}${field('Finanzseite ausblenden ab', c + 'hideFinanceAbove', { t: 'n', unit: 'Jahren' })}</div>
-        <div class="rounded-[calc(var(--r)-4px)] bg-bg px-4 mt-4">${toggleRow('Berechnungsannahmen standardmäßig zeigen', c + 'showAssump2', 'Beim optimistischen Szenario werden sie immer gedruckt.')}</div><div class="mt-4">${area('Haftungshinweis', c + 'disclaimer', 4)}</div>`);
+        <div class="rounded-[calc(var(--r)-4px)] bg-bg px-4 mt-4">${toggleRow('Berechnungsannahmen standardmäßig zeigen', c + 'showAssump2', 'Beim optimistischen Szenario werden sie immer gedruckt.')}${toggleRow('Hinweis Puffer- und Warmwasserspeicher', c + 'storageNote', 'Unter „So funktioniert eine Wärmepumpe“ – Namen aus dem Angebot, sonst allgemein.')}</div><div class="mt-4">${area('Haftungshinweis', c + 'disclaimer', 4)}</div>`);
   },
   optimistisch: () => {
     const o = 's:optimistic.', co2 = Object.keys(S.optimistic.co2Path).sort();
@@ -3924,7 +3990,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107130914';
+const APP_VERSION = '20261107132741';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4080,7 +4146,7 @@ function qrBlock(p, mm, force) {
 const _salesContact14 = salesContact;
 salesContact = function (p) { const h = _salesContact14(p), q = qrWhere('why') ? qrBlock(p) : ''; return q ? h.replace(/<div style="font-size:10.5pt;font-weight:700;color:var\(--p\);text-align:right">[^<]*<\/div><\/div>$/, `<div style="display:flex;align-items:center;gap:4mm"><div style="font-size:10pt;font-weight:700;color:var(--p);text-align:right;max-width:45mm">Fragen? Wir sind gern für Sie da.</div>${q}</div></div>`) : h; };
 const _advisorCard14 = advisorCard;
-advisorCard = function (p, R, compact) { const h = _advisorCard14(p, R, compact), q = qrWhere(compact ? 'sign' : 'contact') ? qrBlock(p, Math.min(nz(S.sales.qrSize, 20), compact ? 20 : 22)) : ''; return q ? h.replace(/<\/div><\/div>\s*$/, `</div>${q}</div>`) : h; };
+advisorCard = function (p, R, compact) { const h = _advisorCard14(p, R, compact), q = qrWhere(compact ? 'sign' : 'contact') ? qrBlock(p, Math.min(nz(S.sales.qrSize, 20), compact ? 15 : 22)) : ''; return q ? h.replace(/<\/div><\/div>\s*$/, `</div>${q}</div>`) : h; };
 const _sSign14 = DOC.sSign;
 DOC.sSign = function (p, R) { const r = _sSign14(p, R), q = qrWhere('sign') ? qrBlock(p) : ''; if (q) r.body += `<div style="display:flex;justify-content:flex-end;margin-top:5mm">${q}</div>`; return r; };
 
