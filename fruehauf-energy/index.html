@@ -675,6 +675,8 @@ const THEME_PRESETS = [
 let S = clone(DEFAULT_SETTINGS);
 let PRODUCTS = [];
 let PROJECTS = [];
+let ARCHIVED = []; // archivierte Kunden
+const splitArchive = () => { const all = PROJECTS.concat(ARCHIVED); PROJECTS = all.filter(p => !p.archived); ARCHIVED = all.filter(p => p.archived); };
 const UI = { route: 'kunden', pid: null, step: 1, settingsTab: 'firma', search: '', resultTab: 'overview', busy: {}, chooseOpen: {}, editProduct: null, standSel: null };
 
 function currentStand(date = isoToday()) {
@@ -718,8 +720,8 @@ const curProject = () => findProject(UI.pid);
 /* ---------- Speichern ---------- */
 const saveSettingsNow = () => DB.put('kv', clone(S), 'settings');
 const saveProductsNow = () => DB.put('kv', clone(PRODUCTS), 'products');
-const saveSettings = debounce(saveSettingsNow, 250);
-const saveProducts = debounce(saveProductsNow, 250);
+let saveSettings = debounce(saveSettingsNow, 250);
+let saveProducts = debounce(saveProductsNow, 250);
 const pendingProjects = new Set();
 const flushProjects = debounce(() => { for (const id of pendingProjects) { const p = findProject(id); if (p) DB.put('projects', clone(p)); } pendingProjects.clear(); }, 250);
 function saveProject(p) { p.updated = Date.now(); pendingProjects.add(p.id); flushProjects(); }
@@ -743,7 +745,7 @@ async function loadAll() {
   if (!pr2) saveProductsNow();
   if (!st2) saveSettingsNow();
   if (!PROJECTS.length) PROJECTS = (await DB.all('projects')) || [];
-  PROJECTS = PROJECTS.map(p => deepMerge(newProject(p.type || 'wp'), p));
+  PROJECTS = PROJECTS.map(p => deepMerge(newProject(p.type || 'wp'), p)); ARCHIVED = []; splitArchive();
   await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file, S.design.mark && S.design.mark.file, ...(S.company.advisors || []).map(a => a.photo)]);
 }
 async function migrateLegacy() {
@@ -763,7 +765,7 @@ async function migrateLegacy() {
 async function exportBackup() {
   toast('Sicherung wird erstellt …', 'info');
   const files = await DB.all('files');
-  const out = { app: 'fruehauf-energy', version: 1, exported: new Date().toISOString(), settings: S, products: PRODUCTS, projects: PROJECTS, files: [] };
+  const out = { app: 'fruehauf-energy', version: 1, exported: new Date().toISOString(), settings: S, products: PRODUCTS, projects: PROJECTS.concat(ARCHIVED), files: [] };
   for (const f of files) out.files.push({ id: f.id, name: f.name || '', type: f.type || '', data: await blobToDataURL(f.blob) });
   const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
   if (await shareOrDownload(blob, `Frühauf-Energy-Sicherung_${isoToday()}.json`)) { PERSONAL.lastBackup = Date.now(); savePersonal(); toast('Sicherung erstellt.'); render(); }
@@ -778,9 +780,10 @@ async function importBackup(file) {
   for (const f of d.files || []) await DB.put('files', { id: f.id, name: f.name, type: f.type, blob: await dataURLToBlob(f.data) });
   S = keepS || deepMerge(clone(DEFAULT_SETTINGS), d.settings || {});
   PRODUCTS = d.products || [];
-  PROJECTS = (d.projects || []).map(p => deepMerge(newProject(p.type || 'wp'), p));
+  PROJECTS = (d.projects || []).map(p => deepMerge(newProject(p.type || 'wp'), p)); ARCHIVED = [];
   await saveSettingsNow(); await saveProductsNow();
   for (const p of PROJECTS) await DB.put('projects', clone(p));
+  splitArchive();
   await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file]);
   applyTheme(); toast('Sicherung eingespielt.'); go('kunden');
 }
@@ -2109,7 +2112,7 @@ function shell(inner) {
   </div>
   <nav class="md:hidden flex items-center gap-1 px-3 pt-1 pb-3 overflow-x-auto no-scrollbar">${links('!h-9 !px-3 !text-[13px]')}</nav>
 </header>
-<main class="pb-32">${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a> · <a href="#/einstellungen/ansicht" class="hover:text-ink">Version ${typeof WHATS_NEW !== 'undefined' ? WHATS_NEW.version : ''}</a></footer></main>`;
+<main class="pb-32">${UI.route !== 'kunden' ? `<div class="max-w-7xl mx-auto px-4 pt-3 -ml-2"><button class="btn-g !h-9 !px-2 text-[14px]" data-a="back">${ic('arrowL', 16)}${UI.route === 'projekt' ? 'Alle Kunden' : 'Zurück zur Übersicht'}</button></div>` : ''}${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a> · <a href="#/einstellungen/ansicht" class="hover:text-ink">Version ${typeof WHATS_NEW !== 'undefined' ? WHATS_NEW.version : ''}</a></footer></main>`;
 }
 /* Ansicht: Hell ↔ Dunkel */
 const curMode = () => (appDark() ? 'dark' : 'light');
@@ -2177,7 +2180,7 @@ function studioChart(months) {
 }
 function viewKundenStudio() {
   const q = UI.search.trim().toLowerCase();
-  const list = PROJECTS.slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || [p.customer.name, p.customer.city, p.customer.zip, p.offer.number].join(' ').toLowerCase().includes(q));
+  const list = (UI.statusFilter === 'archiv' ? ARCHIVED : q ? PROJECTS.concat(ARCHIVED) : PROJECTS).slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || custSearchText(p).includes(q));
   const res = PROJECTS.map(p => ({ p, R: compute(p, 'real') }));
   const now = new Date(), key = d => d.getFullYear() * 12 + d.getMonth(), nowK = key(now);
   const months = [];
@@ -2202,22 +2205,25 @@ function viewKundenStudio() {
       <div class="mt-4">${studioChart(months)}</div><div class="mono text-[12px] text-ink3 mt-1">Summe der Bruttopreise aller in diesem Monat angelegten Berechnungen, aufgeteilt nach Anlagentyp</div></div>
     <div class="mt-8">${backupBanner()}${followUpCard()}</div>
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6"><h2 class="text-[22px] font-medium tracking-[-0.01em]">Alle Kunden</h2>
-      <div class="relative sm:w-[360px]"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-10" placeholder="Kunde, Ort oder Angebots-Nr." value="${esc(UI.search)}" data-b="u:search" data-t="s" id="cust-search"></div></div>${statusFilterBar()}
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5" id="cust-list">${list.length ? list.map(customerCard).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3 text-ink3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div>`}</div></div>`;
+      <div class="relative sm:w-[360px]"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-10" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s" id="cust-search"></div></div>${statusFilterBar()}
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5 [&>*]:min-w-0" id="cust-list">${list.length ? list.map(customerCard).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3 text-ink3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div>`}</div></div>`;
 }
+/* Suche: Name, Ort, PLZ, Straße, Telefon, E-Mail, Angebots-Nr. – auch im Archiv */
+const custSearchText = p => [p.customer.salutation, p.customer.name, p.customer.street, p.customer.zip, p.customer.city, p.customer.phone, p.customer.email, p.offer.number, p.offer.advisor].join(' ').toLowerCase();
 function customerCard(p) {
     const R = compute(p, 'real'), c = p.customer, nd = p.docs.length;
-    return `<div class="card p-5 flex flex-col hover:border-line2 transition-colors cursor-pointer" data-a="open" data-id="${p.id}">
+    return `<div class="card p-5 flex flex-col min-w-0 overflow-hidden hover:border-line2 transition-colors cursor-pointer" data-a="open" data-id="${p.id}">
       <div class="flex items-start gap-3"><div class="w-12 h-12 rounded-full grid place-items-center text-white font-semibold shrink-0" style="background:linear-gradient(135deg,var(--p),var(--acc))">${esc(initials(c.name))}</div>
       <div class="min-w-0 flex-1"><div class="font-semibold text-[16px] truncate">${esc(c.name ? (c.salutation && c.salutation !== 'Firma' ? '' : '') + c.name : 'Neuer Kunde')}</div><div class="text-[13px] text-ink3 truncate">${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Noch keine Anschrift')}</div>
-      <div class="flex flex-wrap gap-1.5 mt-2">${typeBadge(p.type)}${statusBadge(p.status)}${nd ? `<span class="badge bg-bg text-ink3 border border-line">${ic('file', 12)} ${nd} ${nd === 1 ? 'Dokument' : 'Dokumente'}</span>` : ''}${p.offer.number ? `<span class="badge bg-bg text-ink3 border border-line">Nr. ${esc(p.offer.number)}</span>` : ''}</div></div></div>
+      <div class="flex flex-wrap gap-1.5 mt-2">${typeBadge(p.type)}${statusBadge(p.status)}${p.archived ? '<span class="badge bg-bg text-ink3 border border-line">Archiv</span>' : ''}${nd ? `<span class="badge bg-bg text-ink3 border border-line">${ic('file', 12)} ${nd} ${nd === 1 ? 'Dokument' : 'Dokumente'}</span>` : ''}${p.offer.number ? `<span class="badge bg-bg text-ink3 border border-line">Nr. ${esc(p.offer.number)}</span>` : ''}</div></div></div>
       <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-line text-[12px]"><div><div class="text-ink3 mono text-[11px]">Investition</div><div class="font-semibold text-[14px] text-ink mt-0.5">${R.gross ? eur(R.gross) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Ersparnis/Jahr</div><div class="font-semibold text-[14px] text-p mt-0.5">${R.gross || R.saving1 ? eur(R.avg) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Stand</div><div class="font-bold text-[13px] text-ink2 mt-0.5">${new Date(p.updated).toLocaleDateString('de-DE')}</div></div></div>
-      <div class="flex gap-1 mt-3 -mb-1 -mx-2"><button class="btn-g" data-a="dup" data-id="${p.id}">${ic('copy', 15)}Duplizieren</button><button class="btn-g hover:!text-ember2" data-a="del" data-id="${p.id}">${ic('trash', 15)}Löschen</button><span class="ml-auto btn-g !text-p">Öffnen ${ic('arrowR', 15)}</span></div></div>`;
+      <div class="flex flex-wrap gap-1 mt-3 -mb-1 -mx-2"><button class="btn-g" data-a="dup" data-id="${p.id}">${ic('copy', 15)}Duplizieren</button>${p.archived ? `<button class="btn-g !text-p" data-a="unarchive" data-id="${p.id}">${ic('refresh', 15)}Wiederherstellen</button><button class="btn-g hover:!text-ember2" data-a="del" data-id="${p.id}">${ic('trash', 15)}Löschen</button>` : `<button class="btn-g" data-a="archive" data-id="${p.id}">${ic('db', 15)}Archivieren</button><span class="ml-auto btn-g !text-p">Öffnen ${ic('arrowR', 15)}</span>`}</div>
+      ${!p.archived && p.status !== 'unterschrieben' && !(p.sign && p.sign.cust) ? `<button class="btn-s w-full mt-3" data-a="won" data-id="${p.id}">${ic('pen', 16)}Auftrag gewonnen? Jetzt unterschreiben</button>` : ''}</div>`;
   }
 function viewKunden() {
   if (isStudio()) return viewKundenStudio();
   const q = UI.search.trim().toLowerCase();
-  const list = PROJECTS.slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || [p.customer.name, p.customer.city, p.customer.zip, p.offer.number].join(' ').toLowerCase().includes(q));
+  const list = (UI.statusFilter === 'archiv' ? ARCHIVED : q ? PROJECTS.concat(ARCHIVED) : PROJECTS).slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || custSearchText(p).includes(q));
   const res = PROJECTS.map(p => compute(p, 'real'));
   const vol = res.reduce((a, r) => a + nz(r.gross), 0);
   const am = res.map(r => r.amortRise).filter(v => isNum(v) && v > 0);
@@ -2241,8 +2247,8 @@ function viewKunden() {
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]">${v}</div></div>`).join('')}</div>
     </div>
-    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde, Ort oder Angebots-Nr. suchen" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5" id="cust-list">${list.length ? list.map(card).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('users', 26)}</div><div class="font-semibold text-[17px] mt-3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div><p class="text-ink3 text-[14px] mt-1">${q ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Starten Sie mit Ihrer ersten Wirtschaftlichkeitsberechnung.'}</p>${q ? '' : `<button class="btn-p mt-5" data-a="new">${ic('plus', 17)}Neue Berechnung</button>`}</div>`}</div>
+    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5 [&>*]:min-w-0" id="cust-list">${list.length ? list.map(card).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('users', 26)}</div><div class="font-semibold text-[17px] mt-3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div><p class="text-ink3 text-[14px] mt-1">${q ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Starten Sie mit Ihrer ersten Wirtschaftlichkeitsberechnung.'}</p>${q ? '' : `<button class="btn-p mt-5" data-a="new">${ic('plus', 17)}Neue Berechnung</button>`}</div>`}</div>
   </section>`;
 }
 
@@ -3742,9 +3748,9 @@ function followUpCard() {
 function statusFilterBar() {
   const counts = Object.fromEntries(Object.keys(STATUS).map(k => [k, PROJECTS.filter(p => (p.status || 'offen') === k).length]));
   const f = UI.statusFilter || 'alle';
-  return `<div class="flex flex-wrap gap-2 mt-4">${[['alle', 'Alle', PROJECTS.length], ...Object.entries(STATUS).map(([k, [l]]) => [k, l, counts[k]])].map(([k, l, n]) => `<button class="chip ${f === k ? '!border-p !text-ink' : ''}" data-a="status-filter" data-v="${k}">${l} <span class="mono text-ink3">${n}</span></button>`).join('')}</div>`;
+  return `<div class="flex flex-wrap gap-2 mt-4">${[['alle', 'Alle', PROJECTS.length], ...Object.entries(STATUS).map(([k, [l]]) => [k, l, counts[k]]), ...(ARCHIVED.length ? [['archiv', 'Archiv', ARCHIVED.length]] : [])].map(([k, l, n]) => `<button class="chip ${f === k ? '!border-p !text-ink' : ''}" data-a="status-filter" data-v="${k}">${l} <span class="mono text-ink3">${n}</span></button>`).join('')}</div>`;
 }
-const statusMatch = p => !UI.statusFilter || UI.statusFilter === 'alle' || (p.status || 'offen') === UI.statusFilter;
+const statusMatch = p => !UI.statusFilter || UI.statusFilter === 'alle' || UI.statusFilter === 'archiv' || (p.status || 'offen') === UI.statusFilter;
 
 /* =========================================================
    Plausibilitätsprüfung vor dem PDF
@@ -3886,9 +3892,9 @@ function vfield(v, k, label, unit) { return `<label class="block"><span class="t
    ========================================================= */
 function signCard(p) {
   const sg = p.sign || {};
-  if (sg.cust) return `<div class="card p-5 sm:p-6">${cardHead('pen', 'Unterschrift im Termin', `Unterschrieben am ${deDate(sg.date)} in ${esc(sg.place || '–')}`)}<div class="flex flex-wrap gap-4 items-end"><div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.cust)}" class="h-20" alt="Unterschrift Kunde"></div>${sg.adv ? `<div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.adv)}" class="h-20" alt="Unterschrift Berater"></div>` : ''}</div>
+  if (sg.cust) return `<div class="card p-5 sm:p-6 scroll-mt-28" id="sign-card">${cardHead('pen', 'Unterschrift im Termin', `Unterschrieben am ${deDate(sg.date)} in ${esc(sg.place || '–')}`)}<div class="flex flex-wrap gap-4 items-end"><div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.cust)}" class="h-20" alt="Unterschrift Kunde"></div>${sg.adv ? `<div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.adv)}" class="h-20" alt="Unterschrift Berater"></div>` : ''}</div>
     <p class="hint">Die Unterschrift steht auf der Seite „Angebot annehmen“ im PDF.</p><button class="btn-g mt-2 hover:!text-ember" data-a="sign-del">${ic('trash', 15)}Unterschrift entfernen</button></div>`;
-  return `<div class="card p-5 sm:p-6">${cardHead('pen', 'Unterschrift im Termin', 'Der Kunde unterschreibt direkt auf dem iPad oder iPhone – die Unterschrift kommt ins PDF.')}
+  return `<div class="card p-5 sm:p-6 scroll-mt-28" id="sign-card">${cardHead('pen', 'Unterschrift im Termin', 'Der Kunde unterschreibt direkt auf dem iPad oder iPhone – die Unterschrift kommt ins PDF.')}
     <div class="grid sm:grid-cols-2 gap-4">${field('Ort', 'p:signDraft.place', { ph: p.customer.city || 'Ort' })}<div class="space-y-2 pt-6"><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-order" checked class="mt-0.5">Auftrag gemäß Angebot erteilen</label><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-cond" ${hasWP(p) ? 'checked' : ''} class="mt-0.5">unter der Bedingung der Förderzusage</label></div></div>
     ${['cust', 'adv'].map(k => `<div class="mt-4"><div class="flex items-center justify-between"><span class="lbl !mb-1">${k === 'cust' ? 'Unterschrift Kunde (' + esc(custName(p)) + ')' : 'Unterschrift Berater (optional)'}</span><button class="btn-g !h-8" data-a="pad-clear" data-k="${k}">Löschen</button></div>
       <canvas data-pad="${k}" class="w-full h-36 rounded-[calc(var(--r)-4px)] bg-white border border-line2" style="touch-action:none"></canvas></div>`).join('')}
@@ -3938,10 +3944,10 @@ const TUTORIAL = [
   ['calc', '4 · Daten ergänzen', 'Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
   ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät; die Unterschrift wird sofort gespeichert und die Haken gesetzt.'],
-  ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite.'],
+  ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite. Erledigte Kunden archivieren Sie – im Filter „Archiv“ lassen sie sich jederzeit wiederherstellen. Sagt der Kunde später zu, tippen Sie auf der Kundenkarte auf „Auftrag gewonnen?“ – Sie landen direkt bei der Unterschrift.'],
   ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
-  ['gear', 'Fertig', 'Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
+  ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
 ];
 function showTutorial(i = 0) {
   const [icon, title, text] = TUTORIAL[i], last = i === TUTORIAL.length - 1;
@@ -4115,7 +4121,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107214716';
+const APP_VERSION = '20261107215621';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4439,6 +4445,25 @@ function houseChoiceBox(p) {
 }
 const _pdfChooser15b = pdfChooser;
 pdfChooser = function (p) { _pdfChooser15b(p); const box = $('#disc-box'); if (box) box.insertAdjacentHTML('afterend', houseChoiceBox(p)); };
+
+/* Notfall-Knopf: gelöschten Kunden 5 Sekunden lang wiederherstellen; Dateien werden erst danach endgültig entfernt */
+let LAST_DEL = null;
+function undoDeletePopup(d) {
+  if (LAST_DEL) finalizeDelete();
+  LAST_DEL = { p: clone(d), t: setTimeout(finalizeDelete, 5000) };
+  const old = $('#del-pop'); if (old) old.remove();
+  document.body.insertAdjacentHTML('beforeend', `<div id="del-pop" class="fixed left-1/2 -translate-x-1/2 z-[80] card overflow-hidden shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);width:min(440px,calc(100vw - 24px))">
+    <div class="px-4 py-3 flex items-center gap-3"><span class="text-[14px] flex-1 min-w-0"><b class="font-semibold">„${esc(d.customer.name || 'Neue Berechnung')}“ endgültig gelöscht.</b></span><button class="btn-p btn-sm" data-a="restore-del">Wiederherstellen</button></div>
+    <div class="h-1 bg-p" style="transform-origin:left;animation:delbar 5s linear forwards"></div></div><style>@keyframes delbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}</style>`);
+}
+async function finalizeDelete() {
+  const x = LAST_DEL; LAST_DEL = null; const el = $('#del-pop'); if (el) el.remove();
+  if (x) { clearTimeout(x.t); await delFiles(x.p.docs.flatMap(d => d.pages).concat(x.p.sign ? [x.p.sign.cust, x.p.sign.adv] : [])); }
+}
+async function restoreDeleted() {
+  const x = LAST_DEL; if (!x) return; clearTimeout(x.t); LAST_DEL = null; const el = $('#del-pop'); if (el) el.remove();
+  (x.p.archived ? ARCHIVED : PROJECTS).push(x.p); await DB.put('projects', clone(x.p)); render(); toast('Kunde wiederhergestellt.');
+}
 /* =========================================================
    „Das sagen Kunden“ – letzte Seite der PDF (beide Layouts)
    Bewertungen werden in den Einstellungen gepflegt
@@ -4489,6 +4514,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.44', date: '2026-11-07', items: [
+    ['won', 'Auftrag gewonnen?', 'Neuer Knopf auf jeder Kundenkarte – springt direkt zur Unterschrift im Projekt.'],
+    ['restore', 'Kunden-Archiv', 'Kunden werden jetzt archiviert statt gelöscht (mit Rückfrage). Im Filter „Archiv“ stellen Sie sie wieder her – endgültiges Löschen gibt es nur dort, mit 5 Sekunden „Wiederherstellen“.'],
+    ['back', 'Zurück-Knopf', 'Oben auf jeder Seite: aus der Kundenansicht zurück zu allen Kunden, aus Einstellungen und Produkten zurück zur Übersicht.']
+  ] },
   { version: '1.43', date: '2026-11-07', items: [
     ['amortfin', 'Amortisation mit Finanzierung', 'Drittes Feld bei der Amortisation – im Projekt unter „Finanzierung“ ein- und ausschaltbar.']
   ] },
@@ -4513,7 +4543,10 @@ const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date:
 const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
 WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
 WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
-WN_BG.estimate = '#F5F7FA'; WN_BG.amortfin = '#F5F7FA';
+WN_BG.estimate = '#F5F7FA'; WN_BG.restore = '#141B24';
+WN_IMG.restore = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="8" y="46" width="104" height="22" rx="5" fill="#1C2530"/><text x="14" y="59.5" font-size="5.2" font-weight="700" fill="#ffffff">„Kunde“ gelöscht.</text><rect x="70" y="51" width="38" height="11" rx="5.5" fill="#ECEFF3"/><text x="89" y="58.3" text-anchor="middle" font-size="4.3" font-weight="600" fill="#0A0E13">Wiederherstellen</text><rect x="8" y="66" width="62" height="2" fill="#3FA98C"/></svg>`; WN_BG.won = '#141B24'; WN_BG.back = '#141B24';
+WN_IMG.won = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="12" y="10" width="96" height="60" rx="7" fill="#1C2530"/><circle cx="26" cy="24" r="7" fill="#2E8A78"/><rect x="38" y="20" width="44" height="4" rx="2" fill="#C9D3DD"/><rect x="38" y="27" width="30" height="3" rx="1.5" fill="#5A6878"/><rect x="20" y="48" width="80" height="13" rx="6.5" fill="#232E3A" stroke="#3FA98C"/><text x="60" y="56.8" text-anchor="middle" font-size="5.4" font-weight="700" fill="#ffffff">Auftrag gewonnen?</text></svg>`;
+WN_IMG.back = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="20" y="28" width="56" height="20" rx="6" fill="#1C2530"/><path d="M34 38 h-7 m3 -3.5 l-3.5 3.5 l3.5 3.5" stroke="#ffffff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="38" y="40.6" font-size="7" font-weight="600" fill="#ffffff">Zurück</text></svg>`; WN_BG.amortfin = '#F5F7FA';
 WN_IMG.amortfin = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[['gleichbleibend', '11,2 J.', '#ffffff', '#0F2A3D'], ['steigend', '8,7 J.', '#0E7C66', '#ffffff'], ['mit Finanzierung', '6,1 J.', '#E2F0ED', '#0F2A3D']].map(([k, v, bg, c], i) => `<rect x="${6 + i * 37}" y="24" width="34" height="32" rx="4" fill="${bg}"/><text x="${10 + i * 37}" y="33" font-size="4" fill="${c}" opacity=".8">${k}</text><text x="${10 + i * 37}" y="46" font-size="8.5" font-weight="700" fill="${c}">${v}</text>`).join('')}</svg>`; WN_BG.finance = '#F5F7FA'; WN_BG.signauto = '#F5F7FA';
 WN_IMG.finance = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[[6, 'Energie', '208 €', '#ffffff', '#0F2A3D'], [44, 'Rate', '306 €', '#ffffff', '#0F2A3D'], [82, 'Gesamt', '514 €', '#0E7C66', '#ffffff']].map(([x, k, v, bg, c]) => `<rect x="${x}" y="22" width="32" height="26" rx="4" fill="${bg}"/><text x="${x + 4}" y="31" font-size="4.6" fill="${c}" opacity=".8">${k}</text><text x="${x + 4}" y="42" font-size="8" font-weight="700" fill="${c}">${v}</text>`).join('')}<text x="40" y="39" font-size="8" font-weight="700" fill="#8A97A6">+</text><text x="78" y="39" font-size="8" font-weight="700" fill="#8A97A6">=</text><text x="6" y="62" font-size="5" fill="#0E7C66" font-weight="700">41 € weniger als heute (555 €)</text></svg>`;
 WN_IMG.signauto = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="14" y="12" width="92" height="34" rx="5" fill="#ffffff" stroke="#DCE6EE"/><path d="M24 36 C32 22 38 40 46 30 S60 22 64 34 C68 40 76 26 86 32" fill="none" stroke="#1B2A4A" stroke-width="1.8" stroke-linecap="round"/>${[52, 62].map(y => `<rect x="14" y="${y}" width="6" height="6" rx="1.2" fill="#0E7C66"/><path d="M15.4 ${y + 3} l1.6 1.6 l3 -3.2" stroke="#fff" stroke-width="1.1" fill="none"/><rect x="24" y="${y + 2}" width="${y === 52 ? 70 : 50}" height="2.2" rx="1.1" fill="#C9D3DD"/>`).join('')}</svg>`;
@@ -4741,12 +4774,18 @@ document.addEventListener('click', async e => {
     case 'modal-close': closeModal(); if (UI.route === 'produkte') render(); break;
     case 'new': newDialog(); break;
     case 'create': { const np = newProject(a.dataset.type); PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`); break; }
-    case 'open': if (e.target.closest('button[data-a="dup"],button[data-a="del"]')) break; go(`projekt/${a.dataset.id}/${findProject(a.dataset.id).step || 1}`); break;
+    case 'won': { e.stopPropagation(); const p = findProject(a.dataset.id); if (!p) break; p.step = 4; go(`projekt/${p.id}/4`); let n = 0; const t = setInterval(() => { const el = $('#sign-card'); if (el || ++n > 40) { clearInterval(t); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); el.classList.add('ring-2', 'ring-p'); setTimeout(() => el.classList.remove('ring-2', 'ring-p'), 2500); } } }, 100); break; }
+    case 'back': go('kunden'); break;
+    case 'restore-del': restoreDeleted(); break;
+    case 'archive': { e.stopPropagation(); const d = findProject(a.dataset.id); if (!d || !(await confirmDlg('Kunden archivieren?', `„${d.customer.name || 'Neue Berechnung'}“ wird ins Archiv verschoben. Sie finden ihn dort unter dem Filter „Archiv“ und können ihn jederzeit wiederherstellen.`, 'Archivieren', false))) break;
+      d.archived = true; d.archivedAt = Date.now(); await DB.put('projects', clone(d)); splitArchive(); toast('Kunde archiviert – zu finden unter „Archiv“.'); render(); break; }
+    case 'unarchive': { e.stopPropagation(); const d = ARCHIVED.find(x => x.id === a.dataset.id); if (!d) break; d.archived = false; await DB.put('projects', clone(d)); splitArchive(); if (!ARCHIVED.length) UI.statusFilter = 'alle'; toast('Kunde wiederhergestellt.'); render(); break; }
+    case 'open': if (e.target.closest('button[data-a="dup"],button[data-a="del"],button[data-a="won"],button[data-a="archive"],button[data-a="unarchive"]')) break; if (!findProject(a.dataset.id)) break; go(`projekt/${a.dataset.id}/${findProject(a.dataset.id).step || 1}`); break;
     case 'dup': { e.stopPropagation(); const src = findProject(a.dataset.id), cp = clone(src); cp.id = uid('p'); cp.created = cp.updated = Date.now(); cp.customer.name = (cp.customer.name || 'Kunde') + ' (Kopie)';
       for (const d of cp.docs) { const oldId = d.id; d.id = uid('d'); d.pages = (await Promise.all(d.pages.map(copyFile))).filter(Boolean); if (cp.rec[oldId]) { cp.rec[d.id] = cp.rec[oldId]; delete cp.rec[oldId]; } }
       PROJECTS.push(cp); await DB.put('projects', clone(cp)); toast('Berechnung dupliziert.'); render(); break; }
-    case 'del': { e.stopPropagation(); const d = findProject(a.dataset.id); if (!(await confirmDlg('Berechnung löschen?', `„${d.customer.name || 'Neue Berechnung'}“ und alle zugehörigen Dokumente werden gelöscht.`))) break;
-      await delFiles(d.docs.flatMap(x => x.pages)); await DB.del('projects', d.id); PROJECTS = PROJECTS.filter(x => x.id !== d.id); toast('Berechnung gelöscht.'); render(); break; }
+    case 'del': { e.stopPropagation(); const d = ARCHIVED.find(x => x.id === a.dataset.id) || findProject(a.dataset.id); if (!d || !(await confirmDlg('Endgültig löschen?', `„${d.customer.name || 'Neue Berechnung'}“ und alle zugehörigen Dokumente werden endgültig gelöscht.`, 'Endgültig löschen'))) break;
+      await DB.del('projects', d.id); PROJECTS = PROJECTS.filter(x => x.id !== d.id); ARCHIVED = ARCHIVED.filter(x => x.id !== d.id); if (!ARCHIVED.length && UI.statusFilter === 'archiv') UI.statusFilter = 'alle'; render(); undoDeletePopup(d); break; }
     case 'step': { const n = +a.dataset.n; p.step = n; saveProject(p); go(`projekt/${p.id}/${n}`); break; }
     case 'doc-attach': { const d = p.docs.find(x => x.id === a.dataset.id); d.attach = !d.attach; saveProject(p); render(); break; }
     case 'doc-choose': UI.chooseOpen[a.dataset.id] = !UI.chooseOpen[a.dataset.id]; render(); break;

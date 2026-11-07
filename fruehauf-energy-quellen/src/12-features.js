@@ -100,9 +100,9 @@ function followUpCard() {
 function statusFilterBar() {
   const counts = Object.fromEntries(Object.keys(STATUS).map(k => [k, PROJECTS.filter(p => (p.status || 'offen') === k).length]));
   const f = UI.statusFilter || 'alle';
-  return `<div class="flex flex-wrap gap-2 mt-4">${[['alle', 'Alle', PROJECTS.length], ...Object.entries(STATUS).map(([k, [l]]) => [k, l, counts[k]])].map(([k, l, n]) => `<button class="chip ${f === k ? '!border-p !text-ink' : ''}" data-a="status-filter" data-v="${k}">${l} <span class="mono text-ink3">${n}</span></button>`).join('')}</div>`;
+  return `<div class="flex flex-wrap gap-2 mt-4">${[['alle', 'Alle', PROJECTS.length], ...Object.entries(STATUS).map(([k, [l]]) => [k, l, counts[k]]), ...(ARCHIVED.length ? [['archiv', 'Archiv', ARCHIVED.length]] : [])].map(([k, l, n]) => `<button class="chip ${f === k ? '!border-p !text-ink' : ''}" data-a="status-filter" data-v="${k}">${l} <span class="mono text-ink3">${n}</span></button>`).join('')}</div>`;
 }
-const statusMatch = p => !UI.statusFilter || UI.statusFilter === 'alle' || (p.status || 'offen') === UI.statusFilter;
+const statusMatch = p => !UI.statusFilter || UI.statusFilter === 'alle' || UI.statusFilter === 'archiv' || (p.status || 'offen') === UI.statusFilter;
 
 /* =========================================================
    Plausibilitätsprüfung vor dem PDF
@@ -244,9 +244,9 @@ function vfield(v, k, label, unit) { return `<label class="block"><span class="t
    ========================================================= */
 function signCard(p) {
   const sg = p.sign || {};
-  if (sg.cust) return `<div class="card p-5 sm:p-6">${cardHead('pen', 'Unterschrift im Termin', `Unterschrieben am ${deDate(sg.date)} in ${esc(sg.place || '–')}`)}<div class="flex flex-wrap gap-4 items-end"><div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.cust)}" class="h-20" alt="Unterschrift Kunde"></div>${sg.adv ? `<div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.adv)}" class="h-20" alt="Unterschrift Berater"></div>` : ''}</div>
+  if (sg.cust) return `<div class="card p-5 sm:p-6 scroll-mt-28" id="sign-card">${cardHead('pen', 'Unterschrift im Termin', `Unterschrieben am ${deDate(sg.date)} in ${esc(sg.place || '–')}`)}<div class="flex flex-wrap gap-4 items-end"><div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.cust)}" class="h-20" alt="Unterschrift Kunde"></div>${sg.adv ? `<div class="rounded-[calc(var(--r)-4px)] bg-white p-3 border border-line"><img src="${fileUrl(sg.adv)}" class="h-20" alt="Unterschrift Berater"></div>` : ''}</div>
     <p class="hint">Die Unterschrift steht auf der Seite „Angebot annehmen“ im PDF.</p><button class="btn-g mt-2 hover:!text-ember" data-a="sign-del">${ic('trash', 15)}Unterschrift entfernen</button></div>`;
-  return `<div class="card p-5 sm:p-6">${cardHead('pen', 'Unterschrift im Termin', 'Der Kunde unterschreibt direkt auf dem iPad oder iPhone – die Unterschrift kommt ins PDF.')}
+  return `<div class="card p-5 sm:p-6 scroll-mt-28" id="sign-card">${cardHead('pen', 'Unterschrift im Termin', 'Der Kunde unterschreibt direkt auf dem iPad oder iPhone – die Unterschrift kommt ins PDF.')}
     <div class="grid sm:grid-cols-2 gap-4">${field('Ort', 'p:signDraft.place', { ph: p.customer.city || 'Ort' })}<div class="space-y-2 pt-6"><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-order" checked class="mt-0.5">Auftrag gemäß Angebot erteilen</label><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-cond" ${hasWP(p) ? 'checked' : ''} class="mt-0.5">unter der Bedingung der Förderzusage</label></div></div>
     ${['cust', 'adv'].map(k => `<div class="mt-4"><div class="flex items-center justify-between"><span class="lbl !mb-1">${k === 'cust' ? 'Unterschrift Kunde (' + esc(custName(p)) + ')' : 'Unterschrift Berater (optional)'}</span><button class="btn-g !h-8" data-a="pad-clear" data-k="${k}">Löschen</button></div>
       <canvas data-pad="${k}" class="w-full h-36 rounded-[calc(var(--r)-4px)] bg-white border border-line2" style="touch-action:none"></canvas></div>`).join('')}
@@ -296,10 +296,10 @@ const TUTORIAL = [
   ['calc', '4 · Daten ergänzen', 'Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
   ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät; die Unterschrift wird sofort gespeichert und die Haken gesetzt.'],
-  ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite.'],
+  ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite. Erledigte Kunden archivieren Sie – im Filter „Archiv“ lassen sie sich jederzeit wiederherstellen. Sagt der Kunde später zu, tippen Sie auf der Kundenkarte auf „Auftrag gewonnen?“ – Sie landen direkt bei der Unterschrift.'],
   ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
-  ['gear', 'Fertig', 'Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
+  ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
 ];
 function showTutorial(i = 0) {
   const [icon, title, text] = TUTORIAL[i], last = i === TUTORIAL.length - 1;

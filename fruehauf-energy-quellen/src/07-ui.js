@@ -70,7 +70,7 @@ function shell(inner) {
   </div>
   <nav class="md:hidden flex items-center gap-1 px-3 pt-1 pb-3 overflow-x-auto no-scrollbar">${links('!h-9 !px-3 !text-[13px]')}</nav>
 </header>
-<main class="pb-32">${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a> · <a href="#/einstellungen/ansicht" class="hover:text-ink">Version ${typeof WHATS_NEW !== 'undefined' ? WHATS_NEW.version : ''}</a></footer></main>`;
+<main class="pb-32">${UI.route !== 'kunden' ? `<div class="max-w-7xl mx-auto px-4 pt-3 -ml-2"><button class="btn-g !h-9 !px-2 text-[14px]" data-a="back">${ic('arrowL', 16)}${UI.route === 'projekt' ? 'Alle Kunden' : 'Zurück zur Übersicht'}</button></div>` : ''}${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a> · <a href="#/einstellungen/ansicht" class="hover:text-ink">Version ${typeof WHATS_NEW !== 'undefined' ? WHATS_NEW.version : ''}</a></footer></main>`;
 }
 /* Ansicht: Hell ↔ Dunkel */
 const curMode = () => (appDark() ? 'dark' : 'light');
@@ -138,7 +138,7 @@ function studioChart(months) {
 }
 function viewKundenStudio() {
   const q = UI.search.trim().toLowerCase();
-  const list = PROJECTS.slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || [p.customer.name, p.customer.city, p.customer.zip, p.offer.number].join(' ').toLowerCase().includes(q));
+  const list = (UI.statusFilter === 'archiv' ? ARCHIVED : q ? PROJECTS.concat(ARCHIVED) : PROJECTS).slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || custSearchText(p).includes(q));
   const res = PROJECTS.map(p => ({ p, R: compute(p, 'real') }));
   const now = new Date(), key = d => d.getFullYear() * 12 + d.getMonth(), nowK = key(now);
   const months = [];
@@ -163,22 +163,25 @@ function viewKundenStudio() {
       <div class="mt-4">${studioChart(months)}</div><div class="mono text-[12px] text-ink3 mt-1">Summe der Bruttopreise aller in diesem Monat angelegten Berechnungen, aufgeteilt nach Anlagentyp</div></div>
     <div class="mt-8">${backupBanner()}${followUpCard()}</div>
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6"><h2 class="text-[22px] font-medium tracking-[-0.01em]">Alle Kunden</h2>
-      <div class="relative sm:w-[360px]"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-10" placeholder="Kunde, Ort oder Angebots-Nr." value="${esc(UI.search)}" data-b="u:search" data-t="s" id="cust-search"></div></div>${statusFilterBar()}
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5" id="cust-list">${list.length ? list.map(customerCard).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3 text-ink3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div>`}</div></div>`;
+      <div class="relative sm:w-[360px]"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-10" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s" id="cust-search"></div></div>${statusFilterBar()}
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5 [&>*]:min-w-0" id="cust-list">${list.length ? list.map(customerCard).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3 text-ink3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div>`}</div></div>`;
 }
+/* Suche: Name, Ort, PLZ, Straße, Telefon, E-Mail, Angebots-Nr. – auch im Archiv */
+const custSearchText = p => [p.customer.salutation, p.customer.name, p.customer.street, p.customer.zip, p.customer.city, p.customer.phone, p.customer.email, p.offer.number, p.offer.advisor].join(' ').toLowerCase();
 function customerCard(p) {
     const R = compute(p, 'real'), c = p.customer, nd = p.docs.length;
-    return `<div class="card p-5 flex flex-col hover:border-line2 transition-colors cursor-pointer" data-a="open" data-id="${p.id}">
+    return `<div class="card p-5 flex flex-col min-w-0 overflow-hidden hover:border-line2 transition-colors cursor-pointer" data-a="open" data-id="${p.id}">
       <div class="flex items-start gap-3"><div class="w-12 h-12 rounded-full grid place-items-center text-white font-semibold shrink-0" style="background:linear-gradient(135deg,var(--p),var(--acc))">${esc(initials(c.name))}</div>
       <div class="min-w-0 flex-1"><div class="font-semibold text-[16px] truncate">${esc(c.name ? (c.salutation && c.salutation !== 'Firma' ? '' : '') + c.name : 'Neuer Kunde')}</div><div class="text-[13px] text-ink3 truncate">${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Noch keine Anschrift')}</div>
-      <div class="flex flex-wrap gap-1.5 mt-2">${typeBadge(p.type)}${statusBadge(p.status)}${nd ? `<span class="badge bg-bg text-ink3 border border-line">${ic('file', 12)} ${nd} ${nd === 1 ? 'Dokument' : 'Dokumente'}</span>` : ''}${p.offer.number ? `<span class="badge bg-bg text-ink3 border border-line">Nr. ${esc(p.offer.number)}</span>` : ''}</div></div></div>
+      <div class="flex flex-wrap gap-1.5 mt-2">${typeBadge(p.type)}${statusBadge(p.status)}${p.archived ? '<span class="badge bg-bg text-ink3 border border-line">Archiv</span>' : ''}${nd ? `<span class="badge bg-bg text-ink3 border border-line">${ic('file', 12)} ${nd} ${nd === 1 ? 'Dokument' : 'Dokumente'}</span>` : ''}${p.offer.number ? `<span class="badge bg-bg text-ink3 border border-line">Nr. ${esc(p.offer.number)}</span>` : ''}</div></div></div>
       <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-line text-[12px]"><div><div class="text-ink3 mono text-[11px]">Investition</div><div class="font-semibold text-[14px] text-ink mt-0.5">${R.gross ? eur(R.gross) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Ersparnis/Jahr</div><div class="font-semibold text-[14px] text-p mt-0.5">${R.gross || R.saving1 ? eur(R.avg) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Stand</div><div class="font-bold text-[13px] text-ink2 mt-0.5">${new Date(p.updated).toLocaleDateString('de-DE')}</div></div></div>
-      <div class="flex gap-1 mt-3 -mb-1 -mx-2"><button class="btn-g" data-a="dup" data-id="${p.id}">${ic('copy', 15)}Duplizieren</button><button class="btn-g hover:!text-ember2" data-a="del" data-id="${p.id}">${ic('trash', 15)}Löschen</button><span class="ml-auto btn-g !text-p">Öffnen ${ic('arrowR', 15)}</span></div></div>`;
+      <div class="flex flex-wrap gap-1 mt-3 -mb-1 -mx-2"><button class="btn-g" data-a="dup" data-id="${p.id}">${ic('copy', 15)}Duplizieren</button>${p.archived ? `<button class="btn-g !text-p" data-a="unarchive" data-id="${p.id}">${ic('refresh', 15)}Wiederherstellen</button><button class="btn-g hover:!text-ember2" data-a="del" data-id="${p.id}">${ic('trash', 15)}Löschen</button>` : `<button class="btn-g" data-a="archive" data-id="${p.id}">${ic('db', 15)}Archivieren</button><span class="ml-auto btn-g !text-p">Öffnen ${ic('arrowR', 15)}</span>`}</div>
+      ${!p.archived && p.status !== 'unterschrieben' && !(p.sign && p.sign.cust) ? `<button class="btn-s w-full mt-3" data-a="won" data-id="${p.id}">${ic('pen', 16)}Auftrag gewonnen? Jetzt unterschreiben</button>` : ''}</div>`;
   }
 function viewKunden() {
   if (isStudio()) return viewKundenStudio();
   const q = UI.search.trim().toLowerCase();
-  const list = PROJECTS.slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || [p.customer.name, p.customer.city, p.customer.zip, p.offer.number].join(' ').toLowerCase().includes(q));
+  const list = (UI.statusFilter === 'archiv' ? ARCHIVED : q ? PROJECTS.concat(ARCHIVED) : PROJECTS).slice().sort((a, b) => b.updated - a.updated).filter(statusMatch).filter(p => !q || custSearchText(p).includes(q));
   const res = PROJECTS.map(p => compute(p, 'real'));
   const vol = res.reduce((a, r) => a + nz(r.gross), 0);
   const am = res.map(r => r.amortRise).filter(v => isNum(v) && v > 0);
@@ -202,8 +205,8 @@ function viewKunden() {
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]">${v}</div></div>`).join('')}</div>
     </div>
-    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde, Ort oder Angebots-Nr. suchen" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5" id="cust-list">${list.length ? list.map(card).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('users', 26)}</div><div class="font-semibold text-[17px] mt-3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div><p class="text-ink3 text-[14px] mt-1">${q ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Starten Sie mit Ihrer ersten Wirtschaftlichkeitsberechnung.'}</p>${q ? '' : `<button class="btn-p mt-5" data-a="new">${ic('plus', 17)}Neue Berechnung</button>`}</div>`}</div>
+    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5 [&>*]:min-w-0" id="cust-list">${list.length ? list.map(card).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('users', 26)}</div><div class="font-semibold text-[17px] mt-3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div><p class="text-ink3 text-[14px] mt-1">${q ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Starten Sie mit Ihrer ersten Wirtschaftlichkeitsberechnung.'}</p>${q ? '' : `<button class="btn-p mt-5" data-a="new">${ic('plus', 17)}Neue Berechnung</button>`}</div>`}</div>
   </section>`;
 }
 

@@ -149,12 +149,18 @@ document.addEventListener('click', async e => {
     case 'modal-close': closeModal(); if (UI.route === 'produkte') render(); break;
     case 'new': newDialog(); break;
     case 'create': { const np = newProject(a.dataset.type); PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`); break; }
-    case 'open': if (e.target.closest('button[data-a="dup"],button[data-a="del"]')) break; go(`projekt/${a.dataset.id}/${findProject(a.dataset.id).step || 1}`); break;
+    case 'won': { e.stopPropagation(); const p = findProject(a.dataset.id); if (!p) break; p.step = 4; go(`projekt/${p.id}/4`); let n = 0; const t = setInterval(() => { const el = $('#sign-card'); if (el || ++n > 40) { clearInterval(t); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); el.classList.add('ring-2', 'ring-p'); setTimeout(() => el.classList.remove('ring-2', 'ring-p'), 2500); } } }, 100); break; }
+    case 'back': go('kunden'); break;
+    case 'restore-del': restoreDeleted(); break;
+    case 'archive': { e.stopPropagation(); const d = findProject(a.dataset.id); if (!d || !(await confirmDlg('Kunden archivieren?', `„${d.customer.name || 'Neue Berechnung'}“ wird ins Archiv verschoben. Sie finden ihn dort unter dem Filter „Archiv“ und können ihn jederzeit wiederherstellen.`, 'Archivieren', false))) break;
+      d.archived = true; d.archivedAt = Date.now(); await DB.put('projects', clone(d)); splitArchive(); toast('Kunde archiviert – zu finden unter „Archiv“.'); render(); break; }
+    case 'unarchive': { e.stopPropagation(); const d = ARCHIVED.find(x => x.id === a.dataset.id); if (!d) break; d.archived = false; await DB.put('projects', clone(d)); splitArchive(); if (!ARCHIVED.length) UI.statusFilter = 'alle'; toast('Kunde wiederhergestellt.'); render(); break; }
+    case 'open': if (e.target.closest('button[data-a="dup"],button[data-a="del"],button[data-a="won"],button[data-a="archive"],button[data-a="unarchive"]')) break; if (!findProject(a.dataset.id)) break; go(`projekt/${a.dataset.id}/${findProject(a.dataset.id).step || 1}`); break;
     case 'dup': { e.stopPropagation(); const src = findProject(a.dataset.id), cp = clone(src); cp.id = uid('p'); cp.created = cp.updated = Date.now(); cp.customer.name = (cp.customer.name || 'Kunde') + ' (Kopie)';
       for (const d of cp.docs) { const oldId = d.id; d.id = uid('d'); d.pages = (await Promise.all(d.pages.map(copyFile))).filter(Boolean); if (cp.rec[oldId]) { cp.rec[d.id] = cp.rec[oldId]; delete cp.rec[oldId]; } }
       PROJECTS.push(cp); await DB.put('projects', clone(cp)); toast('Berechnung dupliziert.'); render(); break; }
-    case 'del': { e.stopPropagation(); const d = findProject(a.dataset.id); if (!(await confirmDlg('Berechnung löschen?', `„${d.customer.name || 'Neue Berechnung'}“ und alle zugehörigen Dokumente werden gelöscht.`))) break;
-      await delFiles(d.docs.flatMap(x => x.pages)); await DB.del('projects', d.id); PROJECTS = PROJECTS.filter(x => x.id !== d.id); toast('Berechnung gelöscht.'); render(); break; }
+    case 'del': { e.stopPropagation(); const d = ARCHIVED.find(x => x.id === a.dataset.id) || findProject(a.dataset.id); if (!d || !(await confirmDlg('Endgültig löschen?', `„${d.customer.name || 'Neue Berechnung'}“ und alle zugehörigen Dokumente werden endgültig gelöscht.`, 'Endgültig löschen'))) break;
+      await DB.del('projects', d.id); PROJECTS = PROJECTS.filter(x => x.id !== d.id); ARCHIVED = ARCHIVED.filter(x => x.id !== d.id); if (!ARCHIVED.length && UI.statusFilter === 'archiv') UI.statusFilter = 'alle'; render(); undoDeletePopup(d); break; }
     case 'step': { const n = +a.dataset.n; p.step = n; saveProject(p); go(`projekt/${p.id}/${n}`); break; }
     case 'doc-attach': { const d = p.docs.find(x => x.id === a.dataset.id); d.attach = !d.attach; saveProject(p); render(); break; }
     case 'doc-choose': UI.chooseOpen[a.dataset.id] = !UI.chooseOpen[a.dataset.id]; render(); break;

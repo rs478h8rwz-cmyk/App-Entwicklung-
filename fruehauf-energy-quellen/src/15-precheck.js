@@ -51,3 +51,22 @@ function houseChoiceBox(p) {
 }
 const _pdfChooser15b = pdfChooser;
 pdfChooser = function (p) { _pdfChooser15b(p); const box = $('#disc-box'); if (box) box.insertAdjacentHTML('afterend', houseChoiceBox(p)); };
+
+/* Notfall-Knopf: gelöschten Kunden 5 Sekunden lang wiederherstellen; Dateien werden erst danach endgültig entfernt */
+let LAST_DEL = null;
+function undoDeletePopup(d) {
+  if (LAST_DEL) finalizeDelete();
+  LAST_DEL = { p: clone(d), t: setTimeout(finalizeDelete, 5000) };
+  const old = $('#del-pop'); if (old) old.remove();
+  document.body.insertAdjacentHTML('beforeend', `<div id="del-pop" class="fixed left-1/2 -translate-x-1/2 z-[80] card overflow-hidden shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);width:min(440px,calc(100vw - 24px))">
+    <div class="px-4 py-3 flex items-center gap-3"><span class="text-[14px] flex-1 min-w-0"><b class="font-semibold">„${esc(d.customer.name || 'Neue Berechnung')}“ endgültig gelöscht.</b></span><button class="btn-p btn-sm" data-a="restore-del">Wiederherstellen</button></div>
+    <div class="h-1 bg-p" style="transform-origin:left;animation:delbar 5s linear forwards"></div></div><style>@keyframes delbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}</style>`);
+}
+async function finalizeDelete() {
+  const x = LAST_DEL; LAST_DEL = null; const el = $('#del-pop'); if (el) el.remove();
+  if (x) { clearTimeout(x.t); await delFiles(x.p.docs.flatMap(d => d.pages).concat(x.p.sign ? [x.p.sign.cust, x.p.sign.adv] : [])); }
+}
+async function restoreDeleted() {
+  const x = LAST_DEL; if (!x) return; clearTimeout(x.t); LAST_DEL = null; const el = $('#del-pop'); if (el) el.remove();
+  (x.p.archived ? ARCHIVED : PROJECTS).push(x.p); await DB.put('projects', clone(x.p)); render(); toast('Kunde wiederhergestellt.');
+}

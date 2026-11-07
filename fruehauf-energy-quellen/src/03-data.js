@@ -115,6 +115,8 @@ const THEME_PRESETS = [
 let S = clone(DEFAULT_SETTINGS);
 let PRODUCTS = [];
 let PROJECTS = [];
+let ARCHIVED = []; // archivierte Kunden
+const splitArchive = () => { const all = PROJECTS.concat(ARCHIVED); PROJECTS = all.filter(p => !p.archived); ARCHIVED = all.filter(p => p.archived); };
 const UI = { route: 'kunden', pid: null, step: 1, settingsTab: 'firma', search: '', resultTab: 'overview', busy: {}, chooseOpen: {}, editProduct: null, standSel: null };
 
 function currentStand(date = isoToday()) {
@@ -158,8 +160,8 @@ const curProject = () => findProject(UI.pid);
 /* ---------- Speichern ---------- */
 const saveSettingsNow = () => DB.put('kv', clone(S), 'settings');
 const saveProductsNow = () => DB.put('kv', clone(PRODUCTS), 'products');
-const saveSettings = debounce(saveSettingsNow, 250);
-const saveProducts = debounce(saveProductsNow, 250);
+let saveSettings = debounce(saveSettingsNow, 250);
+let saveProducts = debounce(saveProductsNow, 250);
 const pendingProjects = new Set();
 const flushProjects = debounce(() => { for (const id of pendingProjects) { const p = findProject(id); if (p) DB.put('projects', clone(p)); } pendingProjects.clear(); }, 250);
 function saveProject(p) { p.updated = Date.now(); pendingProjects.add(p.id); flushProjects(); }
@@ -183,7 +185,7 @@ async function loadAll() {
   if (!pr2) saveProductsNow();
   if (!st2) saveSettingsNow();
   if (!PROJECTS.length) PROJECTS = (await DB.all('projects')) || [];
-  PROJECTS = PROJECTS.map(p => deepMerge(newProject(p.type || 'wp'), p));
+  PROJECTS = PROJECTS.map(p => deepMerge(newProject(p.type || 'wp'), p)); ARCHIVED = []; splitArchive();
   await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file, S.design.mark && S.design.mark.file, ...(S.company.advisors || []).map(a => a.photo)]);
 }
 async function migrateLegacy() {
@@ -203,7 +205,7 @@ async function migrateLegacy() {
 async function exportBackup() {
   toast('Sicherung wird erstellt …', 'info');
   const files = await DB.all('files');
-  const out = { app: 'fruehauf-energy', version: 1, exported: new Date().toISOString(), settings: S, products: PRODUCTS, projects: PROJECTS, files: [] };
+  const out = { app: 'fruehauf-energy', version: 1, exported: new Date().toISOString(), settings: S, products: PRODUCTS, projects: PROJECTS.concat(ARCHIVED), files: [] };
   for (const f of files) out.files.push({ id: f.id, name: f.name || '', type: f.type || '', data: await blobToDataURL(f.blob) });
   const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
   if (await shareOrDownload(blob, `Frühauf-Energy-Sicherung_${isoToday()}.json`)) { PERSONAL.lastBackup = Date.now(); savePersonal(); toast('Sicherung erstellt.'); render(); }
@@ -218,9 +220,10 @@ async function importBackup(file) {
   for (const f of d.files || []) await DB.put('files', { id: f.id, name: f.name, type: f.type, blob: await dataURLToBlob(f.data) });
   S = keepS || deepMerge(clone(DEFAULT_SETTINGS), d.settings || {});
   PRODUCTS = d.products || [];
-  PROJECTS = (d.projects || []).map(p => deepMerge(newProject(p.type || 'wp'), p));
+  PROJECTS = (d.projects || []).map(p => deepMerge(newProject(p.type || 'wp'), p)); ARCHIVED = [];
   await saveSettingsNow(); await saveProductsNow();
   for (const p of PROJECTS) await DB.put('projects', clone(p));
+  splitArchive();
   await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file]);
   applyTheme(); toast('Sicherung eingespielt.'); go('kunden');
 }
