@@ -1643,10 +1643,11 @@ function hpSceneSVG() {
   const p = S.design.primary, s = S.design.secondary, M = modColors(false), red = '#E4572E', blue = '#4F9BE0';
   const badge = (x, y, n) => `<circle cx="${x}" cy="${y}" r="11" fill="${p}" stroke="#fff" stroke-width="2.5"/><text x="${x}" y="${y + 4.3}" text-anchor="middle" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">${n}</text>`;
   const lab = (x, y, t, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="10.5" font-weight="600" fill="#3D5568">${esc(t)}</text>`;
-  const wave = (x, y, len, col, w = 2.6) => { let d = `M${x},${y}`; for (let i = 0; i < len; i += 20) d += ` q5,-6 10,0 t10,0`; return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`; };
-  const arrowHead = (x, y, col) => `<path d="M${x},${y - 6} L${x + 9},${y} L${x},${y + 6} Z" fill="${col}"/>`;
+  // Welle aus n Bögen, endet genau bei x + 20·n; Pfeilspitze sitzt direkt dort
+  const wave = (x, y, n, col, w = 3) => { let d = `M${x},${y}`; for (let i = 0; i < n; i++) d += ` q5,-7 10,0 t10,0`; return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/><path d="M${x + 20 * n - 1},${y - 8} L${x + 20 * n + 12},${y} L${x + 20 * n - 1},${y + 8} Z" fill="${col}"/>`; };
+  const arrowHead = (x, y, col) => `<path d="M${x},${y - 9} L${x + 14},${y} L${x},${y + 9} Z" fill="${col}"/>`;
   // Dach mit Modulen
-  const top = { y: 74, l: 455, r: 575 }, bot = { y: 120, l: 418, r: 612 }, lerp = (a, b, t) => a + (b - a) * t;
+  const top = { y: 70, l: 448, r: 582 }, bot = { y: 120, l: 400, r: 630 }, lerp = (a, b, t) => a + (b - a) * t;
   let mods = '';
   for (let r = 0; r < 2; r++) for (let c = 0; c < 5; c++) { const t0 = 0.14 + r * 0.42, t1 = t0 + 0.38, y0 = lerp(top.y, bot.y, t0), y1 = lerp(top.y, bot.y, t1); const l0 = lerp(top.l, bot.l, t0) + 9, r0 = lerp(top.r, bot.r, t0) - 9, l1 = lerp(top.l, bot.l, t1) + 9, r1 = lerp(top.r, bot.r, t1) - 9; const a0 = c / 5 + 0.01, a1 = (c + 1) / 5 - 0.01; mods += `<polygon points="${[[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]].map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#hsMod)" stroke="${M.s}" stroke-width=".7"/>`; }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 262" width="100%">
@@ -1661,8 +1662,8 @@ function hpSceneSVG() {
 <g fill="#fff" opacity=".95"><ellipse cx="150" cy="44" rx="34" ry="11"/><ellipse cx="172" cy="38" rx="20" ry="11"/><ellipse cx="330" cy="34" rx="26" ry="8"/></g>
 <path d="M0 214 C110 196 220 200 330 210 S540 196 640 204 V262 H0Z" fill="#A9DCA0"/><path d="M0 236 C160 222 330 230 460 236 S600 226 640 230 V262 H0Z" fill="#86C98A"/>
 <!-- Außenluft -->
-<rect x="14" y="68" width="176" height="28" rx="14" fill="#fff" stroke="#CFE3F5"/>${lab(102, 86.5, 'Außenluft · auch bei −20 °C')}
-${wave(26, 128, 130, blue)}${arrowHead(158, 128, blue)}${wave(36, 150, 120, blue)}${arrowHead(158, 150, blue)}${wave(26, 172, 130, blue)}${arrowHead(158, 172, blue)}
+<rect x="52" y="68" width="100" height="28" rx="14" fill="#fff" stroke="#CFE3F5"/>${lab(102, 86.5, 'Außenluft')}
+${wave(22, 128, 6, blue)}${wave(42, 150, 5, blue)}${wave(22, 172, 6, blue)}
 <!-- Außeneinheit -->
 <ellipse cx="248" cy="214" rx="78" ry="6" fill="#000" opacity=".08"/>
 <rect x="180" y="112" width="136" height="96" rx="9" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/>
@@ -1675,8 +1676,8 @@ ${badge(196, 124, 1)}${lab(226, 106, 'Verdampfer')}
 <path d="M300 66 V112" stroke="${s}" stroke-width="3" stroke-dasharray="4 3"/>
 ${badge(300, 186, 2)}${lab(300, 228, 'Verdichter')}
 <!-- Leitungen -->
-<path d="M316 140 H400" stroke="${red}" stroke-width="7" stroke-linecap="round"/>${arrowHead(392, 140, red)}
-<path d="M400 178 H316" stroke="${blue}" stroke-width="7" stroke-linecap="round"/><path d="M322 172 L313 178 L322 184 Z" fill="${blue}"/>
+<path d="M318 140 H388" stroke="${red}" stroke-width="7" stroke-linecap="round"/>${arrowHead(386, 140, red)}
+<path d="M398 178 H332" stroke="${blue}" stroke-width="7" stroke-linecap="round"/><path d="M334 169 L318 178 L334 187 Z" fill="${blue}"/>
 ${badge(358, 178, 4)}${lab(358, 202, 'Expansionsventil')}
 <text x="358" y="130" text-anchor="middle" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="9.5" font-weight="600" fill="${red}">warm · Vorlauf</text>
 <!-- Haus -->
@@ -1707,7 +1708,7 @@ function pvSceneSVG(R) {
   const badge = (x, y, n) => `<circle cx="${x}" cy="${y}" r="11" fill="${p}" stroke="#fff" stroke-width="2.5"/><text x="${x}" y="${y + 4.3}" text-anchor="middle" font-family="${F}" font-size="12" font-weight="700" fill="#fff">${n}</text>`;
   const lab = (x, y, t, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}" font-family="${F}" font-size="10.5" font-weight="600" fill="#3D5568">${esc(t)}</text>`;
   const chip = (x, y, w, t, bg, st, col) => `<rect x="${x}" y="${y}" width="${w}" height="22" rx="11" fill="${bg}" stroke="${st}"/><text x="${x + w / 2}" y="${y + 15}" text-anchor="middle" font-family="${F}" font-size="9.8" font-weight="600" fill="${col || '#3D5568'}">${esc(t)}</text>`;
-  const arrowR = (x, y, col) => `<path d="M${x},${y - 5.5} L${x + 9},${y} L${x},${y + 5.5} Z" fill="${col}"/>`, arrowL = (x, y, col) => `<path d="M${x},${y - 5.5} L${x - 9},${y} L${x},${y + 5.5} Z" fill="${col}"/>`;
+  const arrowR = (x, y, col) => `<path d="M${x - 4},${y - 8} L${x + 10},${y} L${x - 4},${y + 8} Z" fill="${col}"/>`, arrowL = (x, y, col) => `<path d="M${x + 4},${y - 8} L${x - 10},${y} L${x + 4},${y + 8} Z" fill="${col}"/>`;
   const top = { y: 66, l: 196, r: 336 }, bot = { y: 116, l: 152, r: 380 }, lerp = (a, b, t) => a + (b - a) * t;
   let mods = '';
   for (let r = 0; r < 2; r++) for (let c = 0; c < 6; c++) { const t0 = 0.12 + r * 0.44, t1 = t0 + 0.4, y0 = lerp(top.y, bot.y, t0), y1 = lerp(top.y, bot.y, t1); const l0 = lerp(top.l, bot.l, t0) + 8, r0 = lerp(top.r, bot.r, t0) - 8, l1 = lerp(top.l, bot.l, t1) + 8, r1 = lerp(top.r, bot.r, t1) - 8; const a0 = c / 6 + 0.008, a1 = (c + 1) / 6 - 0.008; mods += `<polygon points="${[[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]].map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#psMod)" stroke="${M.s}" stroke-width=".7"/>`; }
@@ -1739,7 +1740,7 @@ ${badge(98, 92, 1)}${lab(98, 116, 'Sonne einfangen')}
 <polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="#C8553D"/>
 <polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="#D9694F"/>${mods}
 <rect x="${bot.l - 8}" y="${bot.y}" width="${bot.r - bot.l + 16}" height="5" rx="2.5" fill="#A9432E"/>
-${[[0.3, 0.12], [0.42, 0.42], [0.55, 0.72]].map(([a, t]) => { const x2 = lerp(lerp(top.l, bot.l, 0.35), lerp(top.r, bot.r, 0.35), t), y2 = lerp(top.y, bot.y, 0.35); return `<path d="M${62 + Math.cos(a) * 44} ${50 + Math.sin(a) * 44} L${x2} ${y2}" stroke="${sunC}" stroke-width="2.2" stroke-dasharray="5 5" stroke-linecap="round" opacity=".8"/>`; }).join('')}
+${[[0.22, 0.16, 0.2], [0.42, 0.24, 0.55], [0.62, 0.3, 0.88]].map(([a, t, v]) => { const x1 = 62 + Math.cos(a) * 46, y1 = 50 + Math.sin(a) * 46, x2 = lerp(lerp(top.l, bot.l, v), lerp(top.r, bot.r, v), t), y2 = lerp(top.y, bot.y, v) - 3, ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI; return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${(x2 - Math.cos(ang * Math.PI / 180) * 8).toFixed(1)} ${(y2 - Math.sin(ang * Math.PI / 180) * 8).toFixed(1)}" stroke="${sunC}" stroke-width="2.6" stroke-dasharray="6 5" stroke-linecap="round"/><path d="M-9 -6 L4 0 L-9 6 Z" fill="${sunC}" transform="translate(${x2.toFixed(1)} ${y2.toFixed(1)}) rotate(${ang.toFixed(1)})"/>`; }).join('')}
 ${chip(250, 34, 116, `≈ ${num(Math.round(R.yield / 100) * 100)} kWh im Jahr`, '#FFF4DC', '#F7DFA6', '#8A5A06')}
 <!-- Wechselrichter -->
 <rect x="176" y="136" width="40" height="50" rx="6" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/><path d="M184 152 h10 M184 157 h10" stroke="#9FB1C1" stroke-width="2"/><path d="M196 172 q4 -8 8 0 t8 0" fill="none" stroke="${p}" stroke-width="2"/><circle cx="208" cy="146" r="2.5" fill="${p}"/>
@@ -1750,8 +1751,8 @@ ${battery}${bat ? lab(251, 230, 'Speicher') : ''}
 ${home}${badge(280, 134, 2)}${lab(326, 230, 'Selbst nutzen')}
 ${heatpump}${ecar}
 <!-- Netz -->
-<path d="M372 ${feedY + 30} H${gx - 22}" stroke="${p}" stroke-width="3"/>${arrowR(gx - 30, feedY + 30, p)}
-<path d="M${gx - 22} ${feedY + 52} H${hp || car ? 372 : 372}" stroke="${blue}" stroke-width="3" stroke-dasharray="6 4"/>${arrowL(382, feedY + 52, blue)}
+<path d="M372 ${feedY + 30} H${gx - 32}" stroke="${p}" stroke-width="3.5"/>${arrowR(gx - 30, feedY + 30, p)}
+<path d="M${gx - 22} ${feedY + 52} H384" stroke="${blue}" stroke-width="3.5" stroke-dasharray="7 4"/>${arrowL(382, feedY + 52, blue)}
 <text x="${(372 + gx) / 2}" y="${feedY + 23}" text-anchor="middle" font-family="${F}" font-size="9.5" font-weight="600" fill="${p}">Überschuss einspeisen</text>
 <text x="${(372 + gx) / 2}" y="${feedY + 66}" text-anchor="middle" font-family="${F}" font-size="9.5" font-weight="600" fill="${blue}">nur bei Bedarf: Strom aus dem Netz</text>
 <g stroke="#6B7F92" stroke-width="2.4" fill="none" stroke-linejoin="round"><path d="M${gx - 18} 214 L${gx} 64 L${gx + 18} 214"/><path d="M${gx - 26} 92 H${gx + 26} M${gx - 20} 118 H${gx + 20}"/><path d="M${gx - 13} 170 L${gx + 9} 118 M${gx + 13} 170 L${gx - 9} 118 M${gx - 15} 196 L${gx + 13} 170 M${gx + 15} 196 L${gx - 13} 170"/></g>
@@ -1766,7 +1767,7 @@ function hpCycleSVG() {
   const arr = (x1, y1, x2, y2, col) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="3" marker-end="url(#a-${col.slice(1)})"/>`;
   const mk = col => `<marker id="a-${col.slice(1)}" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="${col}"/></marker>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 250" width="100%"><defs>${mk('#5DA9E9')}${mk('#E4572E')}${mk(p)}${mk('#F5A524')}</defs>
-${box(4, 95, 110, 60, '', 'Außenluft', 'auch bei −20 °C', C().tBlue, C().stroke)}
+${box(4, 95, 110, 60, '', 'Außenluft', 'kostenlose Umweltwärme', C().tBlue, C().stroke)}
 ${box(150, 20, 150, 62, '1', 'Verdampfer', 'nimmt Wärme auf', C().surface, C().stroke)}
 ${box(340, 20, 150, 62, '2', 'Verdichter', 'erhöht Temperatur', C().surface, C().stroke)}
 ${box(340, 168, 150, 62, '3', 'Verflüssiger', 'gibt Wärme ab', C().surface, C().stroke)}
@@ -2750,13 +2751,13 @@ const DOC = {
   },
   year(p, R) {
     const A = annualProfile(p, R), hp = A.mode === 'hp';
-    const lead = hp ? (A.pot ? `Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. So würde eine Photovoltaikanlage mit ${num(A.kwp, 1)} kWp Ihre Wärmepumpe übers Jahr unterstützen.` : 'Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. So ergänzen sich Ihre beiden Anlagen übers Jahr.') : 'So verteilen sich Ihr Stromverbrauch und Ihre Solarerzeugung über die Monate.';
+    const lead = hp ? (A.pot ? `Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. Trotzdem könnte eine Photovoltaikanlage mit ${num(A.kwp, 1)} kWp einen großen Teil des Wärmepumpen-Stroms abdecken – vor allem im Frühjahr und im Herbst, wenn noch geheizt wird und die Sonne schon kräftig scheint.` : 'Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. Trotzdem kann Ihre Photovoltaikanlage einen großen Teil des Wärmepumpen-Stroms abdecken – vor allem im Frühjahr und im Herbst, wenn noch geheizt wird und die Sonne schon kräftig scheint.') : 'So verteilen sich Ihr Stromverbrauch und Ihre Solarerzeugung über die Monate.';
     let b = chap(txt('year', 'title'), S.doc.texts.year && S.doc.texts.year.lead ? S.doc.texts.year.lead : lead);
     b += `<div class="tile" style="padding:4mm 4mm 3mm">${annualChart(A, { h: 250 })}<div class="small" style="margin-top:2mm">${annualLegend(A)}</div></div>`;
     b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:6mm">${[[hp ? 'Anteil Solarstrom am WP-Strom' : 'Anteil Solarstrom am Verbrauch', pct(A.share * 100), 'rechnerisch übers Jahr', 'var(--p)'], ['Vom eigenen Dach', num(A.covered) + ' kWh', `von ${num(A.total)} kWh Bedarf`], [hp ? 'Weniger Stromkosten' : 'Wert des Eigenverbrauchs', eur(A.value), A.pot ? 'pro Jahr, zusätzlich möglich' : 'pro Jahr – bereits in Ihrer Ersparnis enthalten']].map(([k, v, u, col], i) => `<div style="padding:0 5mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}">${fig(k, v, u, col)}</div>`).join('')}</div>`;
     const seas = (a, z) => A.months.slice(a, z).reduce((s, m) => s + m.covered, 0) / Math.max(1, A.months.slice(a, z).reduce((s, m) => s + m.demand, 0));
     const winter = (A.months[0].covered + A.months[1].covered + A.months[10].covered + A.months[11].covered) / Math.max(1, A.months[0].demand + A.months[1].demand + A.months[10].demand + A.months[11].demand);
-    b += `<div class="sec g3">${[['Frühling und Herbst', `Die beste Zeit: Ihr Haus braucht noch Wärme, und die Sonne liefert schon viel Strom. Rund ${pct((A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.covered, 0) / Math.max(1, A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.demand, 0))) * 100)} des Bedarfs von März bis Mai und im September/Oktober kommen vom Dach.`], ['Sommer', hp ? (A.rod ? `Der Heizstab (${esc(R.rodName)}) erwärmt das Warmwasser mit überschüssigem Solarstrom. Ihre Wärmepumpe kann nahezu komplett pausieren – das schont sie und verlängert ihre Lebensdauer.` : 'Die Wärmepumpe bereitet fast nur Warmwasser – das läuft tagsüber nahezu komplett mit Solarstrom. Überschüsse fließen in den Speicher oder ins Netz.') : 'Die Anlage erzeugt mehr, als Sie verbrauchen. Überschüsse fließen in den Speicher oder ins Netz.'], ['Winter', `Der Bedarf ist am höchsten, die Sonne am schwächsten: Etwa ${pct(winter * 100)} kommen jetzt vom Dach, den Rest liefert ${hp && R.tariffOn ? 'Ihr günstiger Wärmepumpentarif' : 'das Stromnetz'}.`]].map(([t, x]) => `<div class="tile"><h3>${t}</h3><div class="small" style="font-size:8pt;line-height:1.45;color:var(--ink2)">${x}</div></div>`).join('')}</div>`;
+    b += `<div class="sec g3">${[['Frühling und Herbst', `Die beste Zeit: Ihr Haus braucht noch Wärme, und die Sonne liefert schon viel Strom. Rund ${pct((A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.covered, 0) / Math.max(1, A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.demand, 0))) * 100)} des Bedarfs von März bis Mai und im September/Oktober kommen vom Dach.`], ['Sommer', hp ? (A.rod ? `Der Heizstab (${esc(R.rodName)}) erwärmt das Warmwasser mit überschüssigem Solarstrom. Ihre Wärmepumpe kann nahezu komplett pausieren – das schont sie und verlängert ihre Lebensdauer.` : 'Die Wärmepumpe bereitet fast nur Warmwasser – das läuft tagsüber nahezu komplett mit Solarstrom. Überschüsse fließen in den Speicher oder ins Netz.') : 'Die Anlage erzeugt mehr, als Sie verbrauchen. Überschüsse fließen in den Speicher oder ins Netz.'], ['Winter', hp ? `Auch an kurzen Wintertagen liefert Ihr Dach Strom: Rund ${pct(winter * 100)} kommen jetzt von der eigenen Anlage, den Rest liefert ${R.tariffOn ? 'Ihr günstiger Wärmepumpentarif' : 'das Stromnetz'}. Ihre Wärmepumpe macht dabei aus jeder Kilowattstunde Strom rund ${num(R.jaz, 1)} Kilowattstunden Wärme – deutlich günstiger als Öl oder Gas.` : `Auch an kurzen Wintertagen liefert Ihr Dach Strom: Rund ${pct(winter * 100)} Ihres Bedarfs kommen jetzt von der eigenen Anlage, den Rest liefert das Stromnetz. Übers Jahr gerechnet sparen Sie trotzdem deutlich.`]].map(([t, x]) => `<div class="tile"><h3>${t}</h3><div class="small" style="font-size:8pt;line-height:1.45;color:var(--ink2)">${x}</div></div>`).join('')}</div>`;
     if (A.pot) b += `<div class="sec" style="background:var(--t-yel);border-radius:var(--dr);padding:4.5mm 5mm;display:flex;gap:4mm;align-items:center">${icC('sun', 26, S.design.secondary, 1.8)}<div style="font-size:8.8pt"><b style="font-weight:600">Die Photovoltaikanlage in diesem Diagramm ist nicht Teil Ihres Angebots.</b> Das Diagramm zeigt, wie viel Strom für Ihre Wärmepumpe eine eigene Solaranlage mit ${num(A.kwp, 1)} kWp liefern könnte. Gern erstellen wir Ihnen dafür ein Angebot.</div></div>`;
     b += `<p class="small" style="margin-top:3mm">Modellrechnung mit typischen Monatswerten für den Raum Münster/Osnabrück (Ertrag ${num(A.yieldY / Math.max(0.01, A.kwp))} kWh/kWp${hp ? ', Heizgradtage und jahreszeitliche Effizienz der Wärmepumpe' : ''}). Die tatsächliche Deckung hängt von Wetter, Laufzeiten und Speichergröße ab.</p>`;
     return { title: txt('year', 'title'), body: b };
@@ -3990,7 +3991,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107133653';
+const APP_VERSION = '20261107135945';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
