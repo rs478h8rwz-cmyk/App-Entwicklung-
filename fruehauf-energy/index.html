@@ -1682,12 +1682,13 @@ function simulateDay(R, month, p) {
   let hpNorm = 0; for (let i = 0; i < steps; i++) hpNorm += hpShape(6 + i * dt) * dt;
   const carDay = R.carKWh ? R.carKWh / 365 : 0, carD = carDay * R.carDay, carE = carDay - carD;
   const car = h => { const x = h % 24; return (x >= 10.5 && x < 15.5 ? carD / 5 : 0) + (x >= 18 && x < 21 ? carE / 3 : 0); };
-  const use = h => hh(h) + (hpDay ? hpDay * hpShape(h) / hpNorm : 0) + car(h);
+  const hpAt = h => (hpDay ? hpDay * hpShape(h) / hpNorm : 0);
+  const use = h => hh(h) + hpAt(h) + car(h);
   const cap = R.bat || 0, pMax = cap ? Math.max(2.5, cap * 0.5) : 0, minSoc = cap * 0.05, rodKw = R.rod ? R.rodKw : 0;
   let soc = cap * [0.1, 0.1, 0.15, 0.2, 0.3, 0.35, 0.35, 0.3, 0.2, 0.15, 0.1, 0.1][mi], rodLeft = rodDay / 0.98;
-  const pts = []; let sum = { g: 0, u: 0, self: 0, rod: 0 };
+  const pts = []; let sum = { g: 0, u: 0, self: 0, rod: 0, hp: 0 };
   for (let i = 0; i <= steps; i++) {
-    const h = 6 + i * dt, g = gen(h), uBase = use(h);
+    const h = 6 + i * dt, g = gen(h), uBase = use(h), hp = hpAt(h);
     let ch = 0, dis = 0, rod = 0;
     if (cap) {
       if (g > uBase) { ch = Math.min(g - uBase, pMax, (cap - soc) / dt); soc += ch * dt; }
@@ -1695,15 +1696,17 @@ function simulateDay(R, month, p) {
     }
     if (rodKw && rodLeft > 0 && g > uBase + ch) { rod = Math.min(g - uBase - ch, rodKw, rodLeft / dt); rodLeft -= rod * dt; }
     const u = uBase + rod;
-    if (i < steps) { sum.g += g * dt; sum.u += u * dt; sum.self += Math.min(u, g + dis) * dt; sum.rod += rod * dt; }
-    pts.push({ h, g, u, ch, dis, rod, soc: cap ? soc / cap : 0 });
+    if (i < steps) { sum.g += g * dt; sum.u += u * dt; sum.self += Math.min(u, g + dis) * dt; sum.rod += rod * dt; sum.hp += hp * dt; }
+    pts.push({ h, g, u, ch, dis, rod, hp, soc: cap ? soc / cap : 0 });
   }
-  return { pts, cap, month: mi + 1, max: Math.max(...pts.map(q => Math.max(q.g, q.u))), sum };
+  return { pts, cap, hasHp: hpDay > 0, month: mi + 1, max: Math.max(...pts.map(q => Math.max(q.g, q.u))), sum };
 }
 function dayInfo(D) {
   const s = D.sum, aut = s.u ? s.self / s.u : 0;
-  return `Ertrag ${num(s.g, 1)} kWh · Verbrauch ${num(s.u, 1)} kWh · aus Sonne und Speicher gedeckt: ${pct(Math.min(1, aut) * 100)}${s.rod > 0.05 ? ` · Heizstab ${num(s.rod, 1)} kWh` : ''}`;
+  return `Ertrag ${num(s.g, 1)} kWh · Verbrauch ${num(s.u, 1)} kWh · aus Sonne und Speicher gedeckt: ${pct(Math.min(1, aut) * 100)}${s.hp > 0.05 ? ` · davon Wärmepumpe ${num(s.hp, 1)} kWh` : ''}${s.rod > 0.05 ? ` · Heizstab ${num(s.rod, 1)} kWh` : ''}`;
 }
+/* Farbe der Wärmepumpe im Tagesverlauf */
+const hpDayCol = () => (C().dark ? '#A78BFA' : '#7C5CC4');
 function dayProfileSVG(R, o = {}) {
   const c = C(), D = o.D || simulateDay(R, o.month, o.p), W = o.w || 640, H = o.h || 230, pl = 40, pr = D.cap ? 40 : 12, pt = 16, pb = 28;
   const mx = niceMax(Math.max(D.max, 1) * 1.08), X = h => pl + (W - pl - pr) * (h - 6) / 24, Y = v => pt + (H - pt - pb) * (1 - v / mx), Ys = f => pt + (H - pt - pb) * (1 - f);
@@ -1720,6 +1723,7 @@ function dayProfileSVG(R, o = {}) {
     s += `<path d="${area(p => p.dis)}" fill="${dis}" fill-opacity=".45"/>`;
     s += `<path d="${line(p => Ys(p.soc))}" fill="none" stroke="${socC}" stroke-width="2.2" stroke-dasharray="3 3"/>`;
   } else s += `<path d="${area(p => Math.min(p.g, p.u))}" fill="${chg}" fill-opacity=".45"/>`;
+  if (D.hasHp) s += `<path d="${area(p => p.hp)}" fill="${hpDayCol()}" fill-opacity=".32"/><path d="${line(p => Y(p.hp))}" fill="none" stroke="${hpDayCol()}" stroke-width="1.6" stroke-linejoin="round"/>`;
   if (D.pts.some(q => q.rod > 0)) s += `<path d="${area(p => p.rod)}" fill="${mix(c.s, '#C2401F', 0.45)}" fill-opacity=".75"/>`;
   s += `<path d="${line(p => Y(p.g))}" fill="none" stroke="${sun}" stroke-width="2.4" stroke-linejoin="round"/>`;
   s += `<path d="${line(p => Y(p.u))}" fill="none" stroke="${c.ink}" stroke-width="2" stroke-linejoin="round"/>`;
@@ -1731,7 +1735,7 @@ function dayLegend(R, px) {
   const c = C(), cap = R.bat > 0, m = px ? '14px' : '4mm';
   const box = (col, op, t) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${m}"><span style="display:inline-block;width:${px ? '10px' : '3mm'};height:${px ? '10px' : '3mm'};border-radius:2px;background:${col};opacity:${op}"></span>${t}</span>`;
   const ln = (col, w, dash, t) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${m}"><span style="display:inline-block;width:${px ? '16px' : '5mm'};height:0;border-top:${w} ${dash ? 'dotted' : 'solid'} ${col}"></span>${t}</span>`;
-  return ln(mix(c.s, '#000000', 0.12), px ? '2.5px' : '0.7mm', false, 'Ertrag') + ln(c.ink, px ? '2px' : '0.6mm', false, 'Verbrauch') + (cap ? box(c.blue, 0.6, 'Speicher entladen') + ln(c.dark ? mix(c.blue, '#ffffff', 0.3) : mix(c.blue, '#000000', 0.1), px ? '2px' : '0.5mm', true, 'Ladezustand') : box(c.p, 0.6, 'direkt genutzt')) + (R.rod ? box(mix(c.s, '#C2401F', 0.45), 0.8, 'Heizstab') : '');
+  return ln(mix(c.s, '#000000', 0.12), px ? '2.5px' : '0.7mm', false, 'Ertrag') + ln(c.ink, px ? '2px' : '0.6mm', false, 'Verbrauch') + (cap ? box(c.blue, 0.6, 'Speicher entladen') + ln(c.dark ? mix(c.blue, '#ffffff', 0.3) : mix(c.blue, '#000000', 0.1), px ? '2px' : '0.5mm', true, 'Ladezustand') : box(c.p, 0.6, 'direkt genutzt')) + (R.W && R.hpPower > 0 ? box(hpDayCol(), 0.55, 'davon Wärmepumpe') : '') + (R.rod ? box(mix(c.s, '#C2401F', 0.45), 0.8, 'Heizstab') : '');
 }
 const legendDot = (col, txt, dashed) => `<span style="display:inline-flex;align-items:center;gap:1.5mm;margin-right:4mm"><span style="display:inline-block;width:${dashed ? '5mm' : '3mm'};height:${dashed ? '0' : '3mm'};border-radius:1mm;background:${dashed ? 'none' : col};border-top:${dashed ? '0.6mm dashed ' + col : 'none'}"></span>${txt}</span>`;
 /* Schallskala */
@@ -2265,7 +2269,7 @@ const dayMonth = p => clamp(+(p.docOpts.dayMonth || 4), 1, 12);
 function dayChartHtml(p, R) { const D = simulateDay(R, dayMonth(p), p); return { svg: dayProfileSVG(R, { D, w: appW(), h: appW() < 640 ? 220 : 250 }), info: dayInfo(D) }; }
 function dayCard(p, R) {
   const m = dayMonth(p), d = dayChartHtml(p, R);
-  return `<div class="card p-5 sm:p-6">${cardHead('sun', 'Ein typischer Tag – 6 Uhr bis 6 Uhr', R.bat ? `Ertrag, Verbrauch und Ihr ${num(R.bat, 1)}-kWh-Speicher im Tagesverlauf, Leistung in kW` : 'Ertrag und Verbrauch im Tagesverlauf, Leistung in kW')}
+  return `<div class="card p-5 sm:p-6">${cardHead('sun', 'Ein typischer Tag – 6 Uhr bis 6 Uhr', `Ertrag, Verbrauch${R.W ? ' (inkl. Wärmepumpe)' : ''}${R.bat ? ` und Ihr ${num(R.bat, 1)}-kWh-Speicher` : ''} im Tagesverlauf, Leistung in kW`)}
     <div class="rounded-[calc(var(--r)-4px)] bg-raised border border-line p-4 mb-4"><div class="flex items-baseline justify-between gap-3"><span class="text-[13px] text-ink2">Monat wählen</span><span class="h-font text-[24px]" id="day-month">${MONTH_NAMES[m - 1]}</span></div>
       <input type="range" min="1" max="12" step="1" value="${m}" class="w-full mt-3" data-daymonth aria-label="Monat">
       <div class="flex justify-between mono text-[11px] text-ink3 mt-1">${['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'].map((x, i) => `<span class="${i % 2 ? 'hidden sm:inline' : ''}">${x}</span>`).join('')}</div></div>
