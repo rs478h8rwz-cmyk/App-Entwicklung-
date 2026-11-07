@@ -204,6 +204,7 @@ function viewKunden() {
     <div class="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]">${v}</div></div>`).join('')}</div>
+      ${salesStats()}
     </div>
     <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5 [&>*]:min-w-0" id="cust-list">${list.length ? list.map(card).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('users', 26)}</div><div class="font-semibold text-[17px] mt-3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div><p class="text-ink3 text-[14px] mt-1">${q ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Starten Sie mit Ihrer ersten Wirtschaftlichkeitsberechnung.'}</p>${q ? '' : `<button class="btn-p mt-5" data-a="new">${ic('plus', 17)}Neue Berechnung</button>`}</div>`}</div>
@@ -422,4 +423,14 @@ function applyComponents(p) {
   if (kwp && hasPV(p)) { p.pv.kwp = Math.round(kwp * 1000) / 1000; const m = p.components.find(c => { const pr = PRODUCTS.find(x => x.id === c.id); return pr && pr.cat === 'mod'; }); if (m) { const pr = PRODUCTS.find(x => x.id === m.id); p.pv.modules = `${m.qty} × ${num(pr.power)} W`; } }
   if (bat && hasPV(p)) p.pv.bat = bat;
   if (wp && hasWP(p)) { if (wp.power) p.hp.kw = wp.power; if (wp.jaz) p.hp.jaz = wp.jaz; if (!p.hp.model) p.hp.model = wp.name; if (wp.dims && !p.hp.dims) p.hp.dims = wp.dims; if (wp.weight && !p.hp.weight) p.hp.weight = wp.weight; }
+}
+
+/* Vertriebs-Kennzahlen: Abschlüsse mit Quote, erhaltene Berechnungen, Archiv (inkl. archivierter Kunden) */
+function salesStats() {
+  const all = PROJECTS.concat(ARCHIVED), st = p => p.status || 'offen';
+  const signed = all.filter(p => st(p) === 'unterschrieben' || (p.sign && p.sign.cust)).length;
+  const got = all.filter(p => st(p) !== 'offen' || (p.sign && p.sign.cust)).length;
+  const rate = got ? signed / got * 100 : null;
+  const cell = (k, v, u, hl) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3" ${hl ? 'style="background:rgb(var(--p-rgb)/.10);border-color:rgb(var(--p-rgb)/.35)"' : ''}><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em] ${hl ? 'text-p' : ''}">${v}</div><div class="text-[11px] text-ink3 mt-0.5 leading-tight">${u}</div></div>`;
+  return `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-2 sm:mt-3">${cell('Berechnung erhalten', num(got), 'Kunden mit PDF')}${cell('Abgeschlossen', num(signed), 'unterschrieben')}${cell('Abschlussquote', rate === null ? '–' : pct(rate), got ? `${num(signed)} von ${num(got)}` : 'noch keine Daten', true)}${cell('Archiviert', num(ARCHIVED.length), 'Kunden im Archiv')}</div>`;
 }
