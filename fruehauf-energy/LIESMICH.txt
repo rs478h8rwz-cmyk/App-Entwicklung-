@@ -88,3 +88,16 @@ RECHTLICHES
    Widerrufsbelehrung + Muster-Widerrufsformular folgen im PDF automatisch
    direkt auf die Seite „Angebot annehmen“. Bitte alle Rechtstexte vor dem
    Einsatz von einer Fachperson prüfen lassen.
+
+NEU
+   Anleitung iPhone & Android (Startbildschirm, Sicherung, Wiederherstellen,
+   Firmen-Konfiguration, Update): Einstellungen → Ansicht & Tutorial.
+   Erinnerung an die Datensicherung nach 7 Tagen. Erinnerung an die Prüfung
+   von Preisen und Förderung nach 6 Monaten („Geprüft“ im Admin-Bereich).
+   Ratenrechner: im Projekt Schritt 4 → „Finanzierung“ (Hauptschalter und
+   Vorgaben unter Dokument & Verkauf). QR-Code: standardmäßig aus, im
+   Projekt anhakbar; Inhalt, Beschriftung, Farbe, Größe und Position unter
+   Dokument & Verkauf. PDF per E-Mail und „Für E-Mail verkleinern“ beim
+   Erstellen. Neue Versionen meldet die App selbst („Jetzt aktualisieren“).
+   QR-Code-Bibliothek: qrcode-generator (Kazuhiko Arase, MIT-Lizenz).
+
