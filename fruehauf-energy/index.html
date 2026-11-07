@@ -586,7 +586,7 @@ const DEFAULT_SETTINGS = {
     v: 3, mode: 'dark', pdfTheme: 'mixed',
     primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA', night: '#0A0E13',
     fontBody: 'Geist', fontHead: 'Instrument Serif', fontMono: 'Geist Mono', headWeight: 400, radius: 14, buttons: 'round', buttonStyle: 'light', highlight: 'solid',
-    moduleColor: 'black', hpIllu: 'scene', pvIllu: 'scene', pdfColors: 'cover',
+    moduleColor: 'black', hpIllu: 'scene', pvIllu: 'scene', houseStyle: 'classic', houseLight: 'auto', houseUserChoice: false, pdfColors: 'cover',
     coverInfo: { badge: true, title: true, subtitle: true, customer: true, address: true, offer: true, created: true, advisor: true, figures: true, contact: true, note: '' },
     chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', sigBox: { mode: 'auto', color: '#ffffff', alpha: 88, shape: 'round' }, hdrFrom: '', hdrTo: '', hdrHeight: 60, coverStyle: 'illu',
     mark: { style: 'sun', shape: 'rounded', bg: '', fg: '', line: '', text: '', file: '' },
@@ -1488,6 +1488,68 @@ function houseSVG(o = {}) {
     const pts = [[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]];
     mods += `<polygon points="${pts.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/>`;
   }
+  // Haus: klassisch oder modern, Licht an/aus, PV/WP/E-Auto je nach Angebot
+  const style = o.style || S.design.houseStyle || 'classic', lightMode = o.light || S.design.houseLight || 'auto';
+  const lit = lightMode === 'on' || (lightMode !== 'off' && dawn);
+  const winF = lit ? '#FFC870' : dawn ? '#1C2532' : '#CFE6F8', winS2 = lit ? '#FFE2A8' : dawn ? '#3A4656' : '#ffffff';
+  const glow = (x, y, w, h) => (lit ? `<rect x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="10" fill="#FFC870" opacity="${dawn ? 0.2 : 0.14}"/>` : '');
+  const batOn = !!o.bat, hpX = batOn ? 472 : 446;
+  const hpUnit = o.hp === false ? '' : `<g transform="translate(${hpX} 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
+<circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/>
+<rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
+<rect x="6" y="46" width="8" height="4" fill="${K.hpS}"/><rect x="60" y="46" width="8" height="4" fill="${K.hpS}"/></g>
+<path d="M${batOn ? 462 : 432} 300 H${hpX}" stroke="${K.hpS}" stroke-width="3"/>`;
+  // Carport mit E-Auto und Wallbox
+  const car = !!o.car;
+  const carport = !car ? '' : `<g>
+<ellipse cx="94" cy="333" rx="66" ry="6" fill="#000" opacity="${dawn ? 0.3 : 0.08}"/>
+${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill="${dawn ? '#1A2029' : '#2B3440'}"/>` : `<polygon points="22,266 166,266 154,250 34,250" fill="${K.roof1}"/><rect x="20" y="264" width="148" height="5" rx="2.5" fill="${K.eave}"/>`}
+<rect x="32" y="264" width="5" height="68" fill="${dawn ? '#3A4656' : '#8A97A6'}"/><rect x="148" y="264" width="5" height="68" fill="${dawn ? '#3A4656' : '#8A97A6'}"/>
+<defs><linearGradient id="${id('car')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(p, '#ffffff', 0.18)}"/><stop offset="1" stop-color="${mix(p, '#000000', 0.25)}"/></linearGradient></defs>
+<g transform="translate(34 296)"><path d="M2 27 Q2 20 12 18 L30 9 Q38 4 50 4 L68 5 Q80 7 90 15 L100 18 Q106 20 106 27 L106 31 Q106 35 102 35 H6 Q2 35 2 31 Z" fill="url(#${id('car')})"/>
+<path d="M33 10 Q40 7 50 7 L66 8 Q76 10 84 16 L36 16 Z" fill="${dawn ? '#1C2735' : '#25374A'}"/><path d="M38 9 L46 9 L41 15 L35 15 Z" fill="#ffffff" opacity="${dawn ? 0.08 : 0.25}"/><line x1="58" y1="8" x2="58" y2="16" stroke="${mix(p, '#000000', 0.3)}" stroke-width="1.6"/>
+<path d="M10 23 H98" stroke="#ffffff" stroke-width="0.8" opacity=".35"/>
+<rect x="96" y="21" width="9" height="2.4" rx="1.2" fill="${lit ? '#FFF1C2' : '#F2F6FA'}"/><rect x="2.5" y="21" width="6" height="2.4" rx="1.2" fill="#E5484D"/>
+${[22, 84].map(cx => `<circle cx="${cx}" cy="35" r="8.5" fill="#1B232C"/><circle cx="${cx}" cy="35" r="5.4" fill="${dawn ? '#5A6878' : '#C3CDD7'}"/><circle cx="${cx}" cy="35" r="2" fill="#1B232C"/>`).join('')}</g>
+<rect x="141" y="270" width="16" height="24" rx="3.5" fill="${dawn ? '#2C3644' : '#ffffff'}" stroke="${K.hpS}" stroke-width="1.5"/><circle cx="149" cy="278" r="2.4" fill="#3FBF6E"/><rect x="144" y="286" width="10" height="3" rx="1.5" fill="${p}"/>
+<path d="M149 294 C 150 316, 140 322, 132 316" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/></g>`;
+  // Stromspeicher als Tower zur Außenmontage (z. B. EcoFlow Ocean 2)
+  const tx = 432;
+  const tower = !batOn ? '' : `<g transform="translate(${tx} 262)"><ellipse cx="15" cy="71" rx="20" ry="3.5" fill="#000" opacity="${dawn ? 0.3 : 0.1}"/>
+<rect x="0" y="0" width="30" height="14" rx="4" fill="${dawn ? '#3B4756' : '#F7FAFC'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="5" y="5" width="12" height="3" rx="1.5" fill="${p}"/><circle cx="23" cy="7" r="1.8" fill="${lit || dawn ? '#5CE08F' : '#3FBF6E'}"/>
+${[0, 1, 2].map(i => `<rect x="0" y="${15 + i * 17}" width="30" height="16" rx="3" fill="${dawn ? '#33404F' : '#FFFFFF'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="4" y="${21 + i * 17}" width="22" height="2" rx="1" fill="${K.hpS}"/>`).join('')}
+<rect x="2" y="66" width="26" height="4" rx="1.5" fill="${K.hpS}"/></g>
+`;
+  const trees = `<g fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}${batOn && o.hp !== false ? '' : '<circle cx="540" cy="336" r="13"/>'}</g>`;
+  let houseBody;
+  if (style === 'modern') {
+    const roofC = dawn ? '#1A2029' : '#2B3440', wood = dawn ? '#6E4A2E' : '#C98B55', woodL = dawn ? '#5A3C25' : '#B37647', wing = dawn ? '#1E2630' : '#3D4752';
+    let rowMods = ''; const n = 7, x0 = 210, w = 30, gap = 2.5;
+    if (o.pv !== false) for (let i = 0; i < n; i++) { const x = x0 + i * (w + gap); rowMods += `<polygon points="${x},186 ${x + w},186 ${x + w + 7},168 ${x + 7},168" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/><line x1="${x + w - 2}" y1="186" x2="${x + w + 4}" y2="176" stroke="${dawn ? '#3A4656' : '#8A97A6'}" stroke-width="1.5"/>`; }
+    houseBody = `<ellipse cx="300" cy="333" rx="185" ry="10" fill="#000" opacity="${dawn ? 0.3 : 0.08}"/>
+<rect x="150" y="236" width="56" height="96" fill="${wing}"/><rect x="146" y="230" width="64" height="7" rx="2" fill="${roofC}"/>
+${glow(162, 252, 32, 46)}<rect x="162" y="252" width="32" height="46" rx="2" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.2 : 2.5}"/>
+<rect x="200" y="196" width="232" height="136" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
+<rect x="334" y="196" width="98" height="136" fill="${wood}"/>${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<line x1="${342 + i * 10.5}" y1="196" x2="${342 + i * 10.5}" y2="332" stroke="${woodL}" stroke-width="1.6"/>`).join('')}
+<rect x="192" y="188" width="248" height="10" rx="2" fill="${roofC}"/>${rowMods}
+${[[220, 212, 44, 36], [276, 212, 44, 36], [220, 262, 100, 40]].map(([x, y, w, h]) => `${glow(x, y, w, h)}<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${winF}" stroke="${roofC}" stroke-width="3"/>${w > 60 ? `<line x1="${x + w / 2}" y1="${y}" x2="${x + w / 2}" y2="${y + h}" stroke="${roofC}" stroke-width="2.5"/>` : ''}${lit ? '' : `<path d="M${x + 6} ${y + h - 4} L${x + 16} ${y + 4}" stroke="#ffffff" stroke-width="2.5" opacity="${dawn ? 0.06 : 0.4}"/>`}`).join('')}
+${glow(350, 214, 66, 34)}<rect x="350" y="214" width="66" height="34" rx="2" fill="${winF}" stroke="${roofC}" stroke-width="3"/>
+<rect x="364" y="268" width="36" height="64" rx="2" fill="${p}"/><rect x="368" y="274" width="8" height="52" rx="2" fill="${lit ? '#FFC870' : '#ffffff'}" opacity="${lit ? 0.75 : 0.25}"/><circle cx="394" cy="300" r="2.5" fill="#ffffff" opacity=".9"/>
+${lit ? '<circle cx="356" cy="282" r="14" fill="#FFC870" opacity=".18"/><rect x="353" y="276" width="6" height="8" rx="2" fill="#FFE2A8"/>' : ''}
+${carport}${tower}${hpUnit}${trees}`;
+  } else {
+    houseBody = `<ellipse cx="300" cy="333" rx="190" ry="10" fill="#000" opacity="${dawn ? 0.3 : 0.08}"/>
+<rect x="168" y="222" width="264" height="110" rx="4" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
+<polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="${K.roof1}"/>
+<polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="${K.roof2}"/>
+${o.pv === false ? '' : mods}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
+<rect x="${bot.l - 10}" y="${bot.y}" width="${bot.r - bot.l + 20}" height="6" rx="3" fill="${K.eave}"/>
+<g>${glow(190, 248, 52, 40)}${glow(358, 248, 52, 40)}
+<rect x="190" y="248" width="52" height="40" rx="4" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="216" y1="248" x2="216" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/>
+<rect x="358" y="248" width="52" height="40" rx="4" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="384" y1="248" x2="384" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/></g>
+<rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${lit ? '#FFC870' : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${lit ? '#FFC870' : '#fff'}" opacity="${lit ? 0.6 : 0.18}"/>
+${carport}${tower}${hpUnit}${trees}`;
+  }
   // Sonne: tagsüber hoch oben, in der Dämmerung knapp über dem Horizont
   const sx = dawn ? (wide ? 700 : 120) : 480 + dx, sy = dawn ? 268 : 78;
   let rays = '';
@@ -1511,22 +1573,7 @@ ${rays}<circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s,
 <g fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
 ${hills}
 <g transform="translate(${dx} 0)">
-<ellipse cx="300" cy="333" rx="190" ry="10" fill="#000" opacity="${dawn ? 0.3 : 0.08}"/>
-<rect x="168" y="222" width="264" height="110" rx="4" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
-<polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="${K.roof1}"/>
-<polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="${K.roof2}"/>
-${o.pv === false ? '' : mods}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
-<rect x="${bot.l - 10}" y="${bot.y}" width="${bot.r - bot.l + 20}" height="6" rx="3" fill="${K.eave}"/>
-<g>${dawn ? `<rect x="182" y="240" width="68" height="56" rx="10" fill="${K.win}" opacity=".18"/><rect x="350" y="240" width="68" height="56" rx="10" fill="${K.win}" opacity=".18"/>` : ''}
-<rect x="190" y="248" width="52" height="40" rx="4" fill="${K.win}" stroke="${K.winS}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="216" y1="248" x2="216" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/>
-<rect x="358" y="248" width="52" height="40" rx="4" fill="${K.win}" stroke="${K.winS}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="384" y1="248" x2="384" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/></g>
-<rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${dawn ? K.win : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${dawn ? K.win : '#fff'}" opacity="${dawn ? 0.55 : 0.18}"/>
-${o.hp === false ? '' : `<g transform="translate(446 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
-<circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/>
-<rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
-<rect x="6" y="46" width="8" height="4" fill="${K.hpS}"/><rect x="60" y="46" width="8" height="4" fill="${K.hpS}"/></g>
-<path d="M432 300 H446" stroke="${K.hpS}" stroke-width="3"/>`}
-<g fill="${K.tree}"><circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/><circle cx="540" cy="336" r="13"/></g></g>
+${houseBody}</g>
 ${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
 </svg>`;
 }
@@ -2699,7 +2746,7 @@ function docCover(p, R, n, N) {
       <div style="position:absolute;right:-20mm;top:20mm;width:150mm;height:82.5mm"><img src="${svgDataUri(coverBigSun())}" style="width:150mm;height:82.5mm;display:block"></div>${coverLogoHtml()}
       <div style="position:absolute;left:14mm;right:14mm;top:118mm;background:#fff;border-radius:var(--dr);padding:9mm 9mm 8mm">${textBlock}</div>${pageFooter(n, N)}</section>`;
   }
-  return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;left:0;right:0;top:0;height:130mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, pv: hasPV(p), hp: hasWP(p) }))}" style="width:210mm;height:130mm;display:block"><div style="position:absolute;left:0;right:0;bottom:0;height:18mm;background:linear-gradient(180deg,${pageCls('cover') === 'page dk' ? 'rgba(11,17,24,0),#0B1118' : 'rgba(255,255,255,0),#fff'})"></div>${coverLogoHtml()}</div>
+  return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;left:0;right:0;top:0;height:130mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, pv: hasPV(p), hp: hasWP(p), car: !!(p.car && p.car.on), bat: hasPV(p) && nz(p.pv.bat) > 0, ...coverHouseOpts(p) }))}" style="width:210mm;height:130mm;display:block"><div style="position:absolute;left:0;right:0;bottom:0;height:18mm;background:linear-gradient(180deg,${pageCls('cover') === 'page dk' ? 'rgba(11,17,24,0),#0B1118' : 'rgba(255,255,255,0),#fff'})"></div>${coverLogoHtml()}</div>
     <div style="position:absolute;left:14mm;right:14mm;top:133mm">${textBlock}</div>${pageFooter(n, N)}</section>`;
 }
 /* Puffer- und separater Warmwasserspeicher – Namen aus dem Angebot, sonst allgemein */
@@ -3149,7 +3196,7 @@ function salesCover(p, R, n, N) {
   if (S.design.coverStyle === 'image' && fileUrl(S.design.cover.file)) return docCover(p, R, n, N).replace('class="page', `style="${slVars()}" class="page`);
   const I = CI(), a = advisorOf(p), badge = sTxt('sCover', 'badge', p, R), head = sTxt('sCover', 'title', p, R);
   const meta = [I.title && ['Dokument', esc(p.offer.title)], I.offer && p.offer.number && ['Angebot', esc(p.offer.number)], I.created && ['Datum', new Date().toLocaleDateString('de-DE')], I.advisor && a.name && ['Ihr Berater', esc(a.name)]].filter(Boolean);
-  return `<section class="page sl" data-key="cover" style="${slVars()}"><div style="position:absolute;left:0;right:0;top:0;height:128mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, dawn: false, pv: hasPV(p), hp: hasWP(p) }))}" style="width:210mm;height:130mm;display:block">${coverLogoHtml()}</div>
+  return `<section class="page sl" data-key="cover" style="${slVars()}"><div style="position:absolute;left:0;right:0;top:0;height:128mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, dawn: false, pv: hasPV(p), hp: hasWP(p), car: !!(p.car && p.car.on), bat: hasPV(p) && nz(p.pv.bat) > 0, ...coverHouseOpts(p) }))}" style="width:210mm;height:130mm;display:block">${coverLogoHtml()}</div>
     <div style="position:absolute;left:16mm;right:16mm;top:140mm">
       ${I.badge && badge ? `<span class="sbadge">${esc(badge)}</span>` : ''}
       ${I.customer ? `<div style="font-size:27pt;font-weight:800;line-height:1.2;margin-top:3mm">${esc(custName(p))}</div>` : ''}
@@ -3437,7 +3484,7 @@ function sigBoxSettings() {
 }
 function coverPreview() { return withDoc(coverPreviewInner); }
 function coverPreviewInner() {
-  const p = sampleProject(), R = compute(p, 'real'); CUR_KEY = 'summary';
+  const p = sampleProject(); p.car.on = true; const R = compute(p, 'real'); CUR_KEY = 'summary';
   const sum = DOC.summary(p, R); CUR_KEY = 'sign';
   const scribble = d => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60" width="220" height="60"><path d="${d}" fill="none" stroke="#1B2A4A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
   p.sign = { cust: scribble('M8 44 C30 10 40 52 58 30 S88 8 96 40 C104 58 120 18 140 34 S176 46 210 22'), adv: scribble('M10 40 C26 20 44 22 52 40 S78 50 90 24 C98 10 112 46 130 38 S170 20 206 30'), place: 'Münster', date: isoToday(), order: true, cond: true };
@@ -3468,6 +3515,9 @@ const SET = {
       + sCard('file', 'Kundendokument', 'Stil von Deckblatt, Kopfzeile und Kapitelmarke.', `
       <div class="grid xl:grid-cols-[minmax(0,1fr)_300px] gap-6"><div class="space-y-5">
       <div><span class="lbl">Deckblatt</span>${seg('s:design.coverStyle', [['illu', 'Illustration'], ['type', 'Typografisch'], ['image', 'Eigenes Bild']], { cls: 'flex-wrap' })}</div>
+      <div class="rounded-[calc(var(--r)-4px)] border border-line p-4"><div class="font-medium text-[15px]">Haus auf dem Deckblatt</div><p class="text-[13px] text-ink3 mt-0.5">Photovoltaik, Wärmepumpe und Carport mit E-Auto erscheinen automatisch nur, wenn sie zum Angebot gehören. Gilt für die Illustration und das Vertriebs-PDF.</p>
+        <div class="grid sm:grid-cols-2 gap-4 mt-3"><div><span class="lbl">Haus</span>${seg('s:design.houseStyle', [['classic', 'Klassisch'], ['modern', 'Modern']])}</div><div><span class="lbl">Licht in den Fenstern</span>${seg('s:design.houseLight', [['auto', 'Automatisch'], ['on', 'An'], ['off', 'Aus']], { cls: 'flex-wrap' })}<div class="hint">Automatisch: an im dunklen Design, aus im hellen.</div></div></div>
+        <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 mt-3">${toggleRow('Vertriebler dürfen Haus und Licht pro PDF wählen', 's:design.houseUserChoice', 'Aus = gesperrt, es gilt Ihre Vorgabe.')}</div></div>
       <div class="rounded-[calc(var(--r)-4px)] border border-line p-4"><div class="font-medium text-[15px]">Angaben auf dem Deckblatt</div><p class="text-[13px] text-ink3 mt-0.5">Gilt für alle Deckblatt-Stile, auch für Ihr eigenes Bild.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-3">${[['badge', '„Ihr Energiekonzept 2026“'], ['title', 'Titel'], ['subtitle', 'Untertitel'], ['customer', 'Kundenname'], ['address', 'Anschrift'], ['offer', 'Angebots-Nr. und Datum'], ['created', 'Erstellungsdatum'], ['advisor', 'Berater'], ['figures', 'Kennzahlen (Ersparnis, Förderung, Überschuss)'], ['contact', 'Ansprechpartner mit Foto']].map(([k, l]) => `<label class="flex items-center gap-2.5 text-[14px] text-ink2 cursor-pointer"><input type="checkbox" data-tgcheck="s:design.coverInfo.${k}" ${CI()[k] ? 'checked' : ''}>${l}</label>`).join('')}</div>
         <div class="mt-3">${area('Eigener Text (optional)', 's:design.coverInfo.note', 2, { hint: 'z. B. ein Slogan oder „Ihr Partner für Sonne und Wärme im Münsterland“' })}</div></div>
@@ -4049,7 +4099,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107204939';
+const APP_VERSION = '20261107210047';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4325,6 +4375,19 @@ document.addEventListener('input', e => {
   if (!e.target.closest || !e.target.closest('#disc-box')) return;
   const p = curProject(), el = $('#disc-prev'); if (p && el) setTimeout(() => { el.textContent = discPreview(p); }, 0);
 });
+
+/* Deckblatt-Haus: Stil und Licht – Vorgabe vom Admin, pro PDF änderbar nur wenn freigegeben */
+function coverHouseOpts(p) {
+  const d = S.design, allow = !!d.houseUserChoice, o = (p && p.docOpts) || {};
+  return { style: (allow && o.houseStyle) || d.houseStyle || 'classic', light: (allow && o.houseLight) || d.houseLight || 'auto' };
+}
+function houseChoiceBox(p) {
+  if (!S.design.houseUserChoice) return '';
+  const c = coverHouseOpts(p), b = (k, v, l) => `<button type="button" class="${c[k] === v ? 'on' : ''}" data-a="house-pick" data-k="${k}" data-v="${v}">${l}</button>`;
+  return `<div class="mt-5"><span class="lbl">Deckblatt</span><div class="flex flex-wrap gap-2"><div class="seg">${b('style', 'classic', 'Klassisches Haus')}${b('style', 'modern', 'Modernes Haus')}</div><div class="seg">${b('light', 'auto', 'Licht automatisch')}${b('light', 'on', 'An')}${b('light', 'off', 'Aus')}</div></div></div>`;
+}
+const _pdfChooser15b = pdfChooser;
+pdfChooser = function (p) { _pdfChooser15b(p); const box = $('#disc-box'); if (box) box.insertAdjacentHTML('afterend', houseChoiceBox(p)); };
 /* =========================================================
    „Das sagen Kunden“ – letzte Seite der PDF (beide Layouts)
    Bewertungen werden in den Einstellungen gepflegt
@@ -4544,6 +4607,7 @@ document.addEventListener('click', async e => {
     case 'logo-del': await delFiles([S.company.logoFile]); S.company.logoFile = ''; saveSettings(); render(); break;
     case 'color-quick': S.design[a.dataset.k] = a.dataset.v; applyTheme(); saveSettings(); render(); break;
     case 'a2hs-install': if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; render(); }); } break;
+    case 'house-pick': { const p = curProject(); if (p) { p.docOpts[a.dataset.k === 'style' ? 'houseStyle' : 'houseLight'] = a.dataset.v; saveProject(p); pdfChooser(p); } break; }
     case 'disc-on': { const p = curProject(); if (p) { p.discount.on = !p.discount.on; if (p.discount.on && !p.discount.until) p.discount.until = addDays(isoToday(), S.discount.days); if (p.discount.on && !isNum(p.discount.amount)) p.discount.amount = S.discount.amount; saveProject(p); pdfChooser(p); renderSoon(); } break; }
     case 'qr-proj': { const p = curProject(); if (p) { p.docOpts.qr = !!a.checked; saveProject(p); render(); } break; }
     case 'a2hs-off': PERSONAL.a2hsOff = true; savePersonal(); render(); break;
