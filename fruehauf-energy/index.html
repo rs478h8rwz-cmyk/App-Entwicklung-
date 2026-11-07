@@ -1506,18 +1506,12 @@ function houseSVG(o = {}) {
 ${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill="${dawn ? '#1A2029' : '#2B3440'}"/>` : `<polygon points="22,266 166,266 154,250 34,250" fill="${K.roof1}"/><rect x="20" y="264" width="148" height="5" rx="2.5" fill="${K.eave}"/>`}
 <rect x="32" y="264" width="5" height="68" fill="${dawn ? '#3A4656' : '#8A97A6'}"/><rect x="148" y="264" width="5" height="68" fill="${dawn ? '#3A4656' : '#8A97A6'}"/>
 <defs><linearGradient id="${id('car')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(p, '#ffffff', 0.18)}"/><stop offset="1" stop-color="${mix(p, '#000000', 0.25)}"/></linearGradient></defs>
-<g transform="translate(28 290)">
-<path d="M4 29 Q3 23 9 21.5 L23 18.5 Q37 6 57 5 Q75 5 87 12 L100 18.5 Q110 20.5 111 26 L111 30 Q111 33.5 107 33.5 H8 Q4 33.5 4 29 Z" fill="url(#${id('car')})"/>
-<path d="M28 18 Q39 8.5 57 8 Q72 8 83 13.5 L89.5 18 Z" fill="${dawn ? '#1C2735' : '#22344A'}"/>
-<path d="M57.5 8 V18" stroke="${mix(p, '#000000', 0.35)}" stroke-width="1.6"/>
-<path d="M35 15 Q41 10.5 48 9.6" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="${dawn ? 0.1 : 0.35}" fill="none"/>
-<path d="M14 24 Q60 22 104 24" stroke="#ffffff" stroke-width="0.8" opacity=".3" fill="none"/>
-<rect x="46" y="21" width="6" height="1.2" rx="0.6" fill="#ffffff" opacity=".45"/><rect x="68" y="21" width="6" height="1.2" rx="0.6" fill="#ffffff" opacity=".45"/>
-<path d="M101 21.5 Q106 21.8 109 23.5" stroke="${lit ? '#FFF1C2' : '#F2F6FA'}" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-<path d="M4.5 22.5 H11" stroke="#E5484D" stroke-width="2.4" stroke-linecap="round"/>
-${[25, 88].map(cx => `<circle cx="${cx}" cy="33" r="9.6" fill="#1B232C"/><circle cx="${cx}" cy="33" r="6.6" fill="${dawn ? '#4C5968' : '#AEB9C4'}"/><circle cx="${cx}" cy="33" r="4.4" fill="none" stroke="${dawn ? '#36414E' : '#8C99A6'}" stroke-width="1"/><circle cx="${cx}" cy="33" r="1.6" fill="#1B232C"/>`).join('')}</g>
+<g transform="translate(44 294)"><path d="M4 24 L12 10 Q15 5 21 5 H64 Q71 5 75 11 L84 24 Z" fill="${p}"/><rect x="0" y="22" width="92" height="13" rx="6" fill="${p}"/>
+<path d="M22 9 H40 V21 H15 Z" fill="${dawn ? '#2C3E55' : '#DDEFF9'}"/><path d="M44 9 H62 Q67 9 70 14 L74 21 H44 Z" fill="${dawn ? '#2C3E55' : '#DDEFF9'}"/>
+<circle cx="20" cy="36" r="8" fill="#26303B"/><circle cx="20" cy="36" r="3.5" fill="#9AA8B6"/><circle cx="72" cy="36" r="8" fill="#26303B"/><circle cx="72" cy="36" r="3.5" fill="#9AA8B6"/>
+<rect x="86" y="25" width="5" height="4" rx="1.5" fill="${lit ? '#FFE9A8' : '#FFF4D6'}"/></g>
 <rect x="141" y="270" width="16" height="24" rx="3.5" fill="${dawn ? '#2C3644' : '#ffffff'}" stroke="${K.hpS}" stroke-width="1.5"/><circle cx="149" cy="278" r="2.4" fill="#3FBF6E"/><rect x="144" y="286" width="10" height="3" rx="1.5" fill="${p}"/>
-<path d="M149 294 C 151 312, 147 318, 141 316" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/></g>`;
+<path d="M149 294 C 150 312, 144 320, 136 320" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/></g>`;
   // Stromspeicher als Tower zur Außenmontage (z. B. EcoFlow Ocean 2)
   const tx = style === 'modern' ? 255 : 201;
   const tower = !batOn ? '' : `<g transform="translate(${tx} 262)"><ellipse cx="15" cy="71" rx="20" ry="3.5" fill="#000" opacity="${dawn ? 0.3 : 0.1}"/>
@@ -4104,7 +4098,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107210644';
+const APP_VERSION = '20261107210810';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
