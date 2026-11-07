@@ -1285,7 +1285,17 @@ function warrantyOf(text) {
   const t = String(Array.isArray(text) ? joinLines(text) : text || '').replace(/\s+/g, ' '), out = [];
   for (const m of t.matchAll(/(\d{1,2})\s*Jahre?\s+([^•]{0,140}?garantie[^•]*?)(?=\s*•|\s*\d{1,3}\.\d{3}\b|$)/gi)) out.push(`${m[1]} Jahre ${m[2].trim()}`);
   for (const m of t.matchAll(/Garantie(?:erweiterung|verlängerung)[^•]{0,80}?(?=\s*•|\s*\d{1,3}\.\d{3}\b|$)/gi)) out.push(m[0].trim());
-  return [...new Set(out.map(x => x.replace(/\s*\(keine Folgekosten im Garantiefall\)/i, '').replace(/\s{2,}/g, ' ').replace(/[,;.\s]+$/, '').slice(0, 150)))].join(' · ');
+  return cleanWarranty([...new Set(out.map(x => x.replace(/\s*\(keine Folgekosten im Garantiefall\)/i, '').replace(/\s{2,}/g, ' ').replace(/[,;.\s]+$/, '').slice(0, 150)))].join(' · '));
+}
+/* „30 Jahre Leistungsgarantie“ fällt weg, wenn „30 Jahre Produkt und Leistungsgarantie“ schon dasteht */
+function cleanWarranty(s) {
+  const parts = [...new Set(String(s || '').split(/\s*·\s*/).map(x => x.trim()).filter(Boolean))];
+  const yrs = x => (x.match(/^(\d{1,2})\s*Jahre/) || [])[1];
+  return parts.filter(a => {
+    const key = (a.toLowerCase().match(/([a-zäöüß]+)garantie\b/) || [])[1];
+    if (!key) return true;
+    return !parts.some(b => b !== a && b.length > a.length && yrs(b) === yrs(a) && b.toLowerCase().includes(key) && /garantie/i.test(b));
+  }).join(' · ');
 }
 const itemName = b => b.title.replace(/\((alternative|bedarf)[^)]*\)/gi, '').replace(/\s{2,}/g, ' ').trim();
 function parseOffer(read, role) {
@@ -2483,6 +2493,7 @@ function docPreview(p, R) {
 }
 function fitPreview() {
   const w = $('#docwrap'), d = $('#docpv'); if (!w || !d) return;
+  d.style.zoom = 1; fitPages(d);
   const z = Math.min(1, w.clientWidth / 794); d.style.zoom = z;
 }
 window.addEventListener('resize', debounce(fitPreview, 100));
@@ -2698,9 +2709,9 @@ function storageNote(p, mode) {
 /* Hersteller und Garantien – genau so, wie sie im Angebot stehen */
 function makersBlock(p, R) {
   const pv = p.pv || {}, rows = [];
-  if (R.V && (pv.modMaker || pv.modWarranty)) rows.push(['Solarmodule', pv.modMaker, pv.modWarranty]);
-  if (R.V && (pv.invMaker || pv.invWarranty)) rows.push(['Wechselrichter', pv.invMaker, pv.invWarranty]);
-  if (R.V && R.bat && (pv.batMaker || pv.batWarranty)) rows.push(['Stromspeicher', pv.batMaker, pv.batWarranty]);
+  if (R.V && (pv.modMaker || pv.modWarranty)) rows.push(['Solarmodule', pv.modMaker, cleanWarranty(pv.modWarranty)]);
+  if (R.V && (pv.invMaker || pv.invWarranty)) rows.push(['Wechselrichter', pv.invMaker, cleanWarranty(pv.invWarranty)]);
+  if (R.V && R.bat && (pv.batMaker || pv.batWarranty)) rows.push(['Stromspeicher', pv.batMaker, cleanWarranty(pv.batWarranty)]);
   if (R.W && (p.hp.model || p.hp.warranty)) rows.push(['Wärmepumpe', p.hp.model, p.hp.warranty]);
   if (!rows.some(r => r[2])) return '';
   return `<div class="sec" style="margin-top:4.5mm"><h2>Hersteller & Garantien</h2><table class="t" style="font-size:7.4pt"><thead><tr><th>Komponente</th><th style="text-align:left">Hersteller / Typ</th><th style="text-align:left">Garantie laut Angebot</th></tr></thead><tbody>${rows.map(([k, m, w]) => `<tr><td style="font-weight:600;white-space:nowrap">${k}</td><td style="text-align:left">${esc(m || '–')}</td><td style="text-align:left;color:var(--ink2)">${esc(w || '–')}</td></tr>`).join('')}</tbody></table></div>`;
@@ -2785,7 +2796,7 @@ const DOC = {
       const mk = !!makersBlock(p, R), kv = [...(mk ? [] : [['Modell', p.hp.model || '–']]), ['Heizleistung', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–'], ['Jahresarbeitszahl', num(R.jaz, 2)], ['Maße Außeneinheit', p.hp.dims || '–'], ['Gewicht', p.hp.weight ? num(p.hp.weight) + ' kg' : '–'], ['Schallleistung', p.hp.sw ? num(p.hp.sw, 1) + ' dB(A)' : '–']];
       b += `<div class="sec tile" style="padding:4mm 5mm"><h3>Ihre Wärmepumpe</h3><div style="display:grid;grid-template-columns:${mk ? 'repeat(5,1fr)' : '1fr 1fr 1fr'};gap:2mm 5mm;margin-top:1.5mm">${kv.map(([k, v]) => `<div><div class="small">${k}</div><div style="font-weight:600;font-size:9pt">${esc(v)}</div></div>`).join('')}</div></div>`;
     }
-    const comps = p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr).slice(0, 4);
+    const hasMk = !!makersBlock(p, R), comps = p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr && !(hasMk && /wechselrichter|speicher|modul|wärmepumpe/i.test(x.pr.name))).slice(0, 4);
     if (comps.length) b += `<div class="sec"><h2>Ihre Komponenten</h2><div class="g${Math.min(4, Math.max(2, comps.length))}">${comps.map(({ c, pr }) => { const u = fileUrl(pr.img) || pr.imgUrl; return `<div class="tile" style="text-align:center;padding:3mm">${u ? `<img src="${esc(u)}" style="max-height:${R.W ? 16 : 24}mm;max-width:100%;width:auto;height:auto;margin:0 auto 1.5mm;display:block">` : ''}<div style="font-weight:600;font-size:8.4pt;line-height:1.25">${c.qty > 1 ? c.qty + ' × ' : ''}${esc(pr.name)}</div><div class="small">${esc(pr.maker || '')}</div></div>`; }).join('')}</div></div>`;
     if (R.W) b += soundBlock(p);
     return { title: 'Ausgangssituation', body: b };
@@ -2953,6 +2964,16 @@ function assumptionItems(p, R) {
 /* =========================================================
    PDF-Erzeugung
    ========================================================= */
+function fitPages(root) {
+  $$('section.page .pb', root).forEach(pb => {
+    pb.style.transform = ''; pb.style.width = ''; pb.style.right = '';
+    const box = pb.getBoundingClientRect(); if (!box.height) return;
+    const bottom = [...pb.querySelectorAll('*')].reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), box.top);
+    const over = bottom - box.bottom; if (over <= 1) return;
+    const s = Math.max(0.8, box.height / (box.height + over + 2));
+    pb.style.width = (box.width / s) + 'px'; pb.style.right = 'auto'; pb.style.transformOrigin = 'top left'; pb.style.transform = `scale(${s.toFixed(4)})`;
+  });
+}
 function checkBeforePdf(p) {
   if (hasWP(p) && !(p.heating.year > 1900)) { toast('Bitte zuerst das Baujahr der Heizung eintragen – es bestimmt die Förderung.', 'err', 4500); UI.step = 3; p.step = 3; saveProject(p); go('projekt/' + p.id + '/3'); setTimeout(() => { const el = $('[data-b="p:heating.year"]'); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 120); return false; }
   return true;
@@ -2968,7 +2989,7 @@ async function waitImages(root) { await Promise.all($$('img', root).map(img => i
 async function preparePrintRoot(p, R) {
   await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(c => (PRODUCTS.find(x => x.id === c.id) || {}).img)));
   const root = $('#print-root'); root.innerHTML = buildDocHtml(p, R);
-  fixSvgColors(root);
+  fixSvgColors(root); fitPages(root);
   await document.fonts.ready; await waitImages(root);
   return root;
 }
@@ -3146,9 +3167,9 @@ Object.assign(DOC, {
     let b = sChap('sSystem', p, R);
     const items = [];
     const pv = p.pv, short = s => String(s || '').replace(/\s*\(.*$/, '').trim();
-    if (R.V) { const m = String(pv.modules || '').match(/(\d+)\s*[×x]\s*(\d+)\s*W/i); items.push(['sun', 'Photovoltaikanlage', m ? `${m[1]} Solarmodule à ${m[2]} Watt` : (pv.modules || 'Ihre Solaranlage'), [pv.modMaker, `rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr`].filter(Boolean).join(' · '), num(R.kwp, 2) + ' kWp', pv.modWarranty ? [pv.modWarranty] : []]); }
-    if (R.V && (pv.invMaker || pv.invWarranty)) { const kw = /(\d{1,2}(?:[.,]\d{1,2})?)\s*kW\b(?!h)/i.exec(pv.invMaker || ''); items.push(['bolt', 'Wechselrichter', short(pv.invMaker) || 'Wechselrichter', 'Wandelt Solarstrom in Haushaltsstrom um und steuert den Speicher', kw ? num(parseFloat(kw[1].replace(',', '.')), 1) + ' kW' : '', pv.invWarranty ? [pv.invWarranty] : []]); }
-    if (R.V && R.bat) items.push(['battery', 'Stromspeicher', pv.batMaker || 'Batteriespeicher', 'Speichert Solarstrom für Abend und Nacht', num(R.bat, 1) + ' kWh', pv.batWarranty ? [pv.batWarranty] : []]);
+    if (R.V) { const m = String(pv.modules || '').match(/(\d+)\s*[×x]\s*(\d+)\s*W/i); items.push(['sun', 'Photovoltaikanlage', m ? `${m[1]} Solarmodule à ${m[2]} Watt` : (pv.modules || 'Ihre Solaranlage'), [pv.modMaker, `rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr`].filter(Boolean).join(' · '), num(R.kwp, 2) + ' kWp', pv.modWarranty ? [cleanWarranty(pv.modWarranty)] : []]); }
+    if (R.V && (pv.invMaker || pv.invWarranty)) { const kw = /(\d{1,2}(?:[.,]\d{1,2})?)\s*kW\b(?!h)/i.exec(pv.invMaker || ''); items.push(['bolt', 'Wechselrichter', short(pv.invMaker) || 'Wechselrichter', 'Wandelt Solarstrom in Haushaltsstrom um und steuert den Speicher', kw ? num(parseFloat(kw[1].replace(',', '.')), 1) + ' kW' : '', pv.invWarranty ? [cleanWarranty(pv.invWarranty)] : []]); }
+    if (R.V && R.bat) items.push(['battery', 'Stromspeicher', pv.batMaker || 'Batteriespeicher', 'Speichert Solarstrom für Abend und Nacht', num(R.bat, 1) + ' kWh', pv.batWarranty ? [cleanWarranty(pv.batWarranty)] : []]);
     if (R.W) items.push(['flame', 'Wärmepumpe', p.hp.model || 'Luft-Wasser-Wärmepumpe', [`Jahresarbeitszahl ${num(R.jaz, 2)}`, p.hp.dims && `Außeneinheit ${p.hp.dims.replace(/\s*x\s*/gi, ' × ')}`, p.hp.weight && `${num(p.hp.weight)} kg`].filter(Boolean).join(' · '), p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '', p.hp.warranty ? [p.hp.warranty] : []]);
     if (R.rod) items.push(['sun', 'Heizstab', R.rodName || 'Heizstab', 'Warmwasser mit überschüssigem Solarstrom', num(R.rodKw, 1) + ' kW']);
     const wn = items.reduce((a, x) => a + (x[5] || []).length, 0), dense = items.length >= 4 || wn > 0; DENSE = dense && R.W && isNum(p.hp.spl);
@@ -3991,7 +4012,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107140137';
+const APP_VERSION = '20261107141702';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
