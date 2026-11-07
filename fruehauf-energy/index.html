@@ -1676,8 +1676,8 @@ ${badge(196, 124, 1)}${lab(226, 106, 'Verdampfer')}
 <path d="M300 66 V112" stroke="${s}" stroke-width="3" stroke-dasharray="4 3"/>
 ${badge(300, 186, 2)}${lab(300, 228, 'Verdichter')}
 <!-- Leitungen -->
-<path d="M318 140 H388" stroke="${red}" stroke-width="7" stroke-linecap="round"/>${arrowHead(386, 140, red)}
-<path d="M398 178 H332" stroke="${blue}" stroke-width="7" stroke-linecap="round"/><path d="M334 169 L318 178 L334 187 Z" fill="${blue}"/>
+<path d="M318 140 H390" stroke="${red}" stroke-width="7" stroke-linecap="round"/>${arrowHead(388, 140, red)}
+<path d="M404 178 H332" stroke="${blue}" stroke-width="7"/><path d="M334 169 L318 178 L334 187 Z" fill="${blue}"/>
 ${badge(358, 178, 4)}${lab(358, 202, 'Expansionsventil')}
 <text x="358" y="130" text-anchor="middle" font-family="${esc(S.design.fontBody)}, Arial, sans-serif" font-size="9.5" font-weight="600" fill="${red}">warm · Vorlauf</text>
 <!-- Haus -->
@@ -1689,7 +1689,7 @@ ${badge(358, 178, 4)}${lab(358, 202, 'Expansionsventil')}
 <!-- Innen: Speicher, Heizkörper, Dusche -->
 <rect x="414" y="134" width="40" height="70" rx="12" fill="#fff" stroke="#C9D6E1" stroke-width="2"/><rect x="418" y="150" width="32" height="50" rx="9" fill="#FDEEE8"/>
 ${badge(434, 140, 3)}${lab(434, 228, 'Verflüssiger')}
-<path d="M400 140 H418" stroke="${red}" stroke-width="5"/><path d="M418 178 H400" stroke="${blue}" stroke-width="5"/>
+
 <circle cx="520" cy="166" r="34" fill="url(#hsWarm)"/>
 <rect x="494" y="160" width="54" height="34" rx="5" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/>${[0, 1, 2, 3, 4].map(i => `<rect x="${499 + i * 10}" y="164" width="5" height="26" rx="2.5" fill="#E3EBF2"/>`).join('')}
 ${[504, 520, 536].map(x => `<path d="M${x} 152 q-5 -7 0 -14 t0 -14" fill="none" stroke="${red}" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>`).join('')}
@@ -3991,7 +3991,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107135945';
+const APP_VERSION = '20261107140137';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
