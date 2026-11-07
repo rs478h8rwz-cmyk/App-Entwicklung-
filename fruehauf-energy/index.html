@@ -148,6 +148,37 @@ details[open] .chev{transform:rotate(180deg)}
 .page .att{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff}
 .page .att img{max-width:100%;max-height:100%}
 .page .att .lab{position:absolute;top:4mm;right:5mm;background:rgba(255,255,255,.94);border-radius:10mm;padding:1mm 3mm;font-size:7.2pt;color:#3D5568;box-shadow:0 0 0 0.3mm #DCE6EE}
+/* Rechtliches */
+.legal h3{font-weight:600;font-size:15px;margin:18px 0 4px;color:var(--ink)}
+.legal p{font-size:14px;line-height:1.6;color:var(--ink2);margin:0 0 8px}
+.page .wdr h3{font-size:9pt;font-weight:700;margin:3.2mm 0 0.8mm}
+.page .wdr p{font-size:7.9pt;line-height:1.45;margin:0 0 1.4mm;color:var(--ink2)}
+.page .wdr-form{margin-top:5mm;border:0.3mm solid var(--line2);border-radius:var(--dr);padding:4.5mm 5mm;font-size:8pt;line-height:1.45}
+/* Vertriebs-PDF */
+.page.sl{font-family:var(--sf),var(--fb),Arial,sans-serif;font-size:9.2pt}
+.page.sl .sh{height:24mm;display:flex;align-items:center;justify-content:space-between;padding:0 16mm}
+.page.sl .sh .lg{height:10mm;display:flex;align-items:center;gap:2.5mm;font-weight:700;font-size:10.5pt}
+.page.sl .sh .lg img{max-height:9mm;max-width:50mm;width:auto;height:auto}
+.page.sl .sh .tt{font-size:7.8pt;color:var(--ink3);display:flex;align-items:center;gap:2mm}
+.page.sl .sh .tt b{color:var(--ink);font-weight:700}
+.page.sl .sh .dot{display:inline-block;width:1.4mm;height:1.4mm;border-radius:50%;background:var(--s)}
+.page.sl .pb{left:16mm;right:16mm;top:27mm;bottom:18mm}
+.page.sl .sf{position:absolute;left:16mm;right:16mm;bottom:8mm;border-top:0.25mm solid var(--line);padding-top:2.5mm;display:flex;justify-content:space-between;font-size:7pt;color:var(--ink3)}
+.page.sl .sf b{color:var(--ink);font-weight:700}
+.page.sl h1{font-family:var(--sf),var(--fb),Arial,sans-serif;font-weight:800;font-size:24pt;line-height:1.15;margin:3mm 0 2.5mm}
+.page.sl h2{font-family:var(--sf),var(--fb),Arial,sans-serif;font-weight:700;font-size:12.5pt;margin:0 0 3mm}
+.page.sl .lead{font-size:10.2pt;color:var(--ink2);margin-bottom:7mm;max-width:160mm;line-height:1.5}
+.page.sl .sbadge{display:inline-block;height:6.4mm;line-height:6.4mm;border-radius:10mm;padding:0 3.5mm;font-size:7.6pt;font-weight:700;background:var(--t-yel);color:var(--s-dark);white-space:nowrap}
+.page.sl .sbar{width:10mm;height:1.6mm;border-radius:1mm;background:linear-gradient(90deg,var(--s),var(--p));margin-bottom:2mm}
+.page.sl .sgrad{background:linear-gradient(115deg,var(--p) 0%,var(--sacc) 100%);color:#fff;border-radius:var(--dr)}
+.page.sl .scard{background:var(--tile);border-radius:var(--dr);padding:5mm}
+.page.sl .sbox{background:#fff;border:0.3mm solid var(--line);border-radius:var(--dr)}
+.page.sl .sic{display:inline-flex;width:8.5mm;height:8.5mm;border-radius:50%;background:#fff;align-items:center;justify-content:center;flex-shrink:0}
+.page.sl .sdisc{background:var(--t-yel);border-radius:var(--dr);padding:5mm 6mm;display:flex;justify-content:space-between;align-items:center;gap:5mm}
+.page.sl table.st{width:100%;border-collapse:separate;border-spacing:0;font-size:8.6pt}
+.page.sl table.st th{background:var(--tile);font-weight:700;text-align:right;padding:2.6mm 3mm;font-size:7.8pt;color:var(--ink2)}
+.page.sl table.st th:first-child{border-radius:2mm 0 0 2mm}.page.sl table.st th:last-child{border-radius:0 2mm 2mm 0}
+.page.sl table.st td{padding:2.6mm 3mm;text-align:right;border-bottom:0.25mm solid var(--line)}
 .docpv .page{box-shadow:0 0 0 1px rgba(255,255,255,.06),0 24px 48px -24px rgba(0,0,0,.6);border-radius:4px;margin:0 auto 24px}
 @media print{
   @page{size:A4;margin:0}
@@ -273,7 +304,7 @@ const SERIFS = ['Instrument Serif', 'Fraunces', 'Newsreader', 'DM Serif Display'
 const MONOS = ['Geist Mono', 'IBM Plex Mono', 'JetBrains Mono'];
 let THEME_CTX = 'app';
 const sysDark = () => { try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return true; } };
-const isStudio = () => S.design.mode === 'studio';
+const isStudio = () => false; /* Studio-Ansicht entfernt – alte Einstellung „studio“ zählt als Dunkel */
 const appDark = () => (S.design.mode === 'system' ? sysDark() : S.design.mode !== 'light');
 const STUDIO = { base: '#141415', side: '#0f0f10', card: '#19191b', raised: '#232325', field: '#111112', ink: '#ededed', ink2: '#a1a1a6', ink3: '#85858b' };
 const docDark = () => S.design.pdfTheme === 'dark';
@@ -547,7 +578,7 @@ const DEFAULT_SETTINGS = {
     hideFinanceAbove: 15, showAssumptions: true,
     disclaimer: 'Diese Berechnung ist eine unverbindliche Prognose auf Basis der angegebenen Verbrauchsdaten, aktueller Energiepreise und der zum Erstellungszeitpunkt gültigen Förderbedingungen. Tatsächliche Erträge, Verbräuche, Preisentwicklungen und Förderbewilligungen können abweichen. Maßgeblich für die Förderung ist ausschließlich die Zusage des Fördergebers.'
   },
-  doc: { order: null, defaults: {}, texts: {} },
+  doc: { order: null, salesOrder: null, defaults: {}, texts: {}, pdfAsk: 'ask', salesFont: 'Inter' },
   sales: {
     trustOn: true,
     trust: [
@@ -637,7 +668,7 @@ function newProject(type) {
     docs: [],
     rec: {},
     pages: {},
-    docOpts: {}
+    docOpts: { layout: 'full' }
   };
 }
 const hasWP = p => p.type !== 'pv';
@@ -1396,17 +1427,17 @@ ${hills}
 <rect x="168" y="222" width="264" height="110" rx="4" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
 <polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="${K.roof1}"/>
 <polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="${K.roof2}"/>
-${mods}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
+${o.pv === false ? '' : mods}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
 <rect x="${bot.l - 10}" y="${bot.y}" width="${bot.r - bot.l + 20}" height="6" rx="3" fill="${K.eave}"/>
 <g>${dawn ? `<rect x="182" y="240" width="68" height="56" rx="10" fill="${K.win}" opacity=".18"/><rect x="350" y="240" width="68" height="56" rx="10" fill="${K.win}" opacity=".18"/>` : ''}
 <rect x="190" y="248" width="52" height="40" rx="4" fill="${K.win}" stroke="${K.winS}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="216" y1="248" x2="216" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/>
 <rect x="358" y="248" width="52" height="40" rx="4" fill="${K.win}" stroke="${K.winS}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="384" y1="248" x2="384" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/></g>
 <rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${dawn ? K.win : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${dawn ? K.win : '#fff'}" opacity="${dawn ? 0.55 : 0.18}"/>
-<g transform="translate(446 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
+${o.hp === false ? '' : `<g transform="translate(446 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
 <circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/>
 <rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
 <rect x="6" y="46" width="8" height="4" fill="${K.hpS}"/><rect x="60" y="46" width="8" height="4" fill="${K.hpS}"/></g>
-<path d="M432 300 H446" stroke="${K.hpS}" stroke-width="3"/>
+<path d="M432 300 H446" stroke="${K.hpS}" stroke-width="3"/>`}
 <g fill="${K.tree}"><circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/><circle cx="540" cy="336" r="13"/></g></g>
 ${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
 </svg>`;
@@ -1629,7 +1660,7 @@ ${arr(80, 60, 113, 60, s)}${arr(248, 60, 285, 60, s)}
 ${arr(420, 52, 465, 34, p)}${arr(420, 64, 465, 110, s)}${arr(420, 76, 465, 186, C().blue)}
 </svg>`;
 }
-/* Tagesverlauf 6 bis 6 Uhr: Ertrag, Verbrauch, Laden und Entladen des Speichers übereinander */
+/* Tagesverlauf 6 bis 6 Uhr: Ertrag, Verbrauch, Entladen und Ladezustand des Speichers übereinander */
 const MONTH_NAMES = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const SUN_RISE = [8.5, 7.8, 6.9, 6.9, 5.9, 5.3, 5.6, 6.3, 7.2, 8.0, 7.6, 8.4];   // Münster, Ortszeit
 const SUN_SET = [16.8, 17.7, 18.6, 20.4, 21.3, 21.9, 21.8, 21.0, 19.9, 18.8, 16.9, 16.4];
@@ -1686,9 +1717,8 @@ function dayProfileSVG(R, o = {}) {
   s += T(pl - 6, pt - 5, 'kW', { a: 'end', fs: 9, fw: 600 }) + (D.cap ? T(W - 2, pt - 5, 'Ladung', { a: 'end', fs: 9, fw: 600 }) : '');
   s += `<path d="${area(p => p.g)}" fill="${c.s}" fill-opacity=".22"/>`;
   if (D.cap) {
-    s += `<path d="${area(p => p.ch)}" fill="${chg}" fill-opacity=".55"/>`;
     s += `<path d="${area(p => p.dis)}" fill="${dis}" fill-opacity=".45"/>`;
-    s += `<path d="${line(p => Ys(p.soc))}" fill="none" stroke="${socC}" stroke-width="1.6" stroke-dasharray="2 3"/>`;
+    s += `<path d="${line(p => Ys(p.soc))}" fill="none" stroke="${socC}" stroke-width="2.2" stroke-dasharray="3 3"/>`;
   } else s += `<path d="${area(p => Math.min(p.g, p.u))}" fill="${chg}" fill-opacity=".45"/>`;
   if (D.pts.some(q => q.rod > 0)) s += `<path d="${area(p => p.rod)}" fill="${mix(c.s, '#C2401F', 0.45)}" fill-opacity=".75"/>`;
   s += `<path d="${line(p => Y(p.g))}" fill="none" stroke="${sun}" stroke-width="2.4" stroke-linejoin="round"/>`;
@@ -1701,7 +1731,7 @@ function dayLegend(R, px) {
   const c = C(), cap = R.bat > 0, m = px ? '14px' : '4mm';
   const box = (col, op, t) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${m}"><span style="display:inline-block;width:${px ? '10px' : '3mm'};height:${px ? '10px' : '3mm'};border-radius:2px;background:${col};opacity:${op}"></span>${t}</span>`;
   const ln = (col, w, dash, t) => `<span style="display:inline-flex;align-items:center;gap:${px ? '6px' : '1.5mm'};margin-right:${m}"><span style="display:inline-block;width:${px ? '16px' : '5mm'};height:0;border-top:${w} ${dash ? 'dotted' : 'solid'} ${col}"></span>${t}</span>`;
-  return ln(mix(c.s, '#000000', 0.12), px ? '2.5px' : '0.7mm', false, 'Ertrag') + ln(c.ink, px ? '2px' : '0.6mm', false, 'Verbrauch') + (cap ? box(c.p, 0.7, 'Speicher laden') + box(c.blue, 0.6, 'Speicher entladen') + ln(c.dark ? mix(c.blue, '#ffffff', 0.3) : mix(c.blue, '#000000', 0.1), px ? '2px' : '0.5mm', true, 'Ladezustand') : box(c.p, 0.6, 'direkt genutzt')) + (R.rod ? box(mix(c.s, '#C2401F', 0.45), 0.8, 'Heizstab') : '');
+  return ln(mix(c.s, '#000000', 0.12), px ? '2.5px' : '0.7mm', false, 'Ertrag') + ln(c.ink, px ? '2px' : '0.6mm', false, 'Verbrauch') + (cap ? box(c.blue, 0.6, 'Speicher entladen') + ln(c.dark ? mix(c.blue, '#ffffff', 0.3) : mix(c.blue, '#000000', 0.1), px ? '2px' : '0.5mm', true, 'Ladezustand') : box(c.p, 0.6, 'direkt genutzt')) + (R.rod ? box(mix(c.s, '#C2401F', 0.45), 0.8, 'Heizstab') : '');
 }
 const legendDot = (col, txt, dashed) => `<span style="display:inline-flex;align-items:center;gap:1.5mm;margin-right:4mm"><span style="display:inline-block;width:${dashed ? '5mm' : '3mm'};height:${dashed ? '0' : '3mm'};border-radius:1mm;background:${dashed ? 'none' : col};border-top:${dashed ? '0.6mm dashed ' + col : 'none'}"></span>${txt}</span>`;
 /* Schallskala */
@@ -1879,14 +1909,14 @@ function shell(inner) {
   </div>
   <nav class="md:hidden flex gap-1 px-3 pb-2 overflow-x-auto no-scrollbar">${links('!h-9 !px-3 !text-[13px]')}</nav>
 </header>
-<main class="pb-32">${inner}</main>`;
+<main class="pb-32">${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a></footer></main>`;
 }
-/* Ansicht: Hell → Dunkel → Studio */
-const curMode = () => (isStudio() ? 'studio' : appDark() ? 'dark' : 'light');
-const MODE_LABEL = { light: 'Hell', dark: 'Dunkel', studio: 'Studio' };
+/* Ansicht: Hell ↔ Dunkel */
+const curMode = () => (appDark() ? 'dark' : 'light');
+const MODE_LABEL = { light: 'Hell', dark: 'Dunkel' };
 function themeButton(cls = '') {
-  const m = curMode(), next = { light: 'dark', dark: 'studio', studio: 'light' }[m];
-  return `<button class="btn-g ${cls} !h-10 !px-2.5 gap-1.5" data-a="theme-toggle" aria-label="Ansicht wechseln, jetzt ${MODE_LABEL[m]}" title="Ansicht: ${MODE_LABEL[m]} – weiter zu ${MODE_LABEL[next]}">${ic(m === 'light' ? 'sun' : m === 'dark' ? 'moon' : 'studio', 18)}<span class="hidden sm:inline text-[13px]">${MODE_LABEL[m]}</span></button>`;
+  const m = curMode(), next = m === 'light' ? 'dark' : 'light';
+  return `<button class="btn-g ${cls} !h-10 !px-2.5 gap-1.5" data-a="theme-toggle" aria-label="Ansicht wechseln, jetzt ${MODE_LABEL[m]}" title="Ansicht: ${MODE_LABEL[m]} – weiter zu ${MODE_LABEL[next]}">${ic(m === 'light' ? 'sun' : 'moon', 18)}<span class="hidden sm:inline text-[13px]">${MODE_LABEL[m]}</span></button>`;
 }
 function studioShell(inner) {
   const active = UI.route === 'projekt' ? 'kunden' : UI.route;
@@ -2292,7 +2322,7 @@ function overview(p, R) {
 const legendHtml = items => items.map(([col, t, dashed]) => `<span class="inline-flex items-center gap-1.5 mr-3"><span class="inline-block ${dashed ? 'w-5 border-t-2 border-dashed' : 'w-3 h-3 rounded'}" style="${dashed ? 'border-color:' + col : 'background:' + col}"></span>${t}</span>`).join('');
 function docCreateCard(p, R) {
   const pages = visiblePages(p, R), n = pages.reduce((a, x) => a + x.count, 0);
-  return `<div class="card p-5 sm:p-6">${cardHead('file', 'Kundendokument erstellen', `${n} Seiten · A4`)}<div class="flex flex-wrap gap-2"><button class="btn-p" data-a="pdf">${ic('download', 17)}PDF erstellen</button><button class="btn-s" data-a="rtab" data-v="doc">${ic('eye', 17)}Vorschau</button></div></div>`;
+  return `<div class="card p-5 sm:p-6">${cardHead('file', 'Kundendokument erstellen', `${n} Seiten · A4`)}<div class="mb-4"><span class="lbl">Layout</span>${seg('p:docOpts.layout', [['full', 'Komplette PDF'], ['sales', 'Vertriebs-PDF']], { cls: 'flex-wrap' })}<div class="hint">Vorschau und Seitenauswahl zeigen das gewählte Layout.</div></div><div class="flex flex-wrap gap-2"><button class="btn-p" data-a="pdf">${ic('download', 17)}PDF erstellen</button><button class="btn-s" data-a="rtab" data-v="doc">${ic('eye', 17)}Vorschau</button></div></div>`;
 }
 function docOptionsCard(p, R) {
   const all = docPageDefs(p, R);
@@ -2411,17 +2441,19 @@ const withDoc = fn => {
   THEME_CTX = 'doc'; if (pal) Object.assign(S.design, pal);
   try { return fn(); } finally { THEME_CTX = prev; if (pal) Object.assign(S.design, saved); }
 };
-const pageCls = key => (docDark() || (key === 'cover' && S.design.pdfTheme === 'mixed') ? 'page dk' : 'page');
-function buildDocHtml(p, R) { return withDoc(() => buildDocHtmlInner(p, R)); }
+const pageCls = key => (CUR_LAYOUT === 'sales' ? 'page sl' : docDark() || (key === 'cover' && S.design.pdfTheme === 'mixed') ? 'page dk' : 'page');
+let CUR_LAYOUT = 'full';
+function buildDocHtml(p, R) { return withDoc(() => { CUR_LAYOUT = layoutOf(p); try { return buildDocHtmlInner(p, R); } finally { CUR_LAYOUT = 'full'; } }); }
 function buildDocHtmlInner(p, R) {
   const pages = visiblePages(p, R), N = pages.reduce((a, x) => a + x.count, 0);
   let n = 0, html = '';
   for (const d of pages) {
     if (d.key === 'attach') { attachmentPages(p).forEach(a => { n++; html += `<section class="page" data-key="attach" data-file="${a.file}" data-label="${esc(a.label)}"><div class="att"><img src="${fileUrl(a.file)}" alt=""><div class="lab">${esc(a.label)}</div></div></section>`; }); continue; }
     n++; CUR_KEY = d.key;
-    if (d.key === 'cover') { html += docCover(p, R, n, N); continue; }
+    const sales = layoutOf(p) === 'sales';
+    if (d.key === 'cover') { html += sales ? salesCover(p, R, n, N) : docCover(p, R, n, N); continue; }
     const f = DOC[d.key]; if (!f) continue;
-    const r = f(p, R); html += pageWrap(p, r.title, r.body, n, N, d.key);
+    const r = f(p, R); html += sales ? salesWrap(p, r, n, N, d.key) : pageWrap(p, r.title, r.body, n, N, d.key);
   }
   CUR_KEY = '';
   return html;
@@ -2431,10 +2463,20 @@ function subtitleOf(p, R) {
   if (p.type === 'pv') return (R.bat ? 'Photovoltaik und Stromspeicher' : 'Ihre Photovoltaikanlage') + ' – individuell für Ihr Zuhause berechnet';
   return 'Photovoltaik, Stromspeicher und Wärmepumpe – individuell für Ihr Zuhause berechnet';
 }
+/* Hintergrund hinter Logo und Deckblatt-Texten: Art und Stärke (Deckkraft) wählbar */
+const BG_KINDS = [['none', 'Kein'], ['white', 'Weiß'], ['dark', 'Dunkel'], ['brand', 'Hausfarbe']];
+function bgOf(o, legacy, dflt) { return { kind: o.bg || (o[legacy] === false ? 'none' : 'white'), a: isNum(o.bgAlpha) ? o.bgAlpha : dflt }; }
+function bgCss(o, legacy, dflt, shape) {
+  const { kind, a } = bgOf(o, legacy, dflt); if (kind === 'none' || a <= 0) return '';
+  const rgb = kind === 'white' ? '255,255,255' : kind === 'dark' ? '12,20,28' : hexToRgb(S.design.primary).join(',');
+  return `background:rgba(${rgb},${(a / 100).toFixed(2)});${shape}${a >= 70 ? 'box-shadow:0 2mm 8mm rgba(15,42,61,.12);' : ''}`;
+}
+/* Schrift auf dunklem Hintergrund (Dunkel/Hausfarbe) automatisch hell */
+const coverInkDark = cv => { const { kind, a } = bgOf(cv, 'whiteBox', 95); return (kind === 'dark' || kind === 'brand') && a >= 45 ? false : cv.dark; };
 function coverLogoHtml() {
   const L = S.design.coverLogo, url = L.source === 'custom' ? fileUrl(L.file) : logoImgUrl();
-  const inner = url ? `<img src="${esc(url)}" style="max-height:${L.size}mm;max-width:90mm;width:auto;height:auto;display:block">` : `<span style="display:flex;align-items:center;gap:2.5mm;font-weight:600;font-size:${Math.max(9, L.size * 0.85)}pt;color:${L.whiteBg ? '#0F2A3D' : 'var(--ink)'};height:${L.size}mm">${sunMark(Math.round(L.size * 3.2))}${esc(coName())}</span>`;
-  return `<div style="position:absolute;left:${L.x}%;top:${L.y}%;transform:translate(-${L.x}%,-${L.y}%);${L.whiteBg ? 'background:#fff;border-radius:30mm;padding:3mm 6mm;box-shadow:0 1mm 4mm rgba(15,42,61,.10);' : ''}z-index:3">${inner}</div>`;
+  const inner = url ? `<img src="${esc(url)}" style="max-height:${L.size}mm;max-width:90mm;width:auto;height:auto;display:block">` : `<span style="display:flex;align-items:center;gap:2.5mm;font-weight:600;font-size:${Math.max(9, L.size * 0.85)}pt;color:${(() => { const k = bgOf(L, 'whiteBg', 100); return k.kind === 'white' && k.a >= 45 ? '#0F2A3D' : (k.kind === 'dark' || k.kind === 'brand') && k.a >= 45 ? '#ffffff' : 'var(--ink)'; })()};height:${L.size}mm">${sunMark(Math.round(L.size * 3.2))}${esc(coName())}</span>`;
+  return `<div style="position:absolute;left:${L.x}%;top:${L.y}%;transform:translate(-${L.x}%,-${L.y}%);${bgCss(L, 'whiteBg', 100, 'border-radius:30mm;padding:3mm 6mm;')}z-index:3">${inner}</div>`;
 }
 function coverFigures(p, R, first, compact) {
   const fin = visiblePages(p, R).some(d => d.key === 'finance');
@@ -2482,16 +2524,16 @@ function coverBlocks(p, R, cv, vars) {
   const B = cv.blocks || {};
   return COVER_BLOCKS.map(([k]) => {
     const b = { x: 0, y: 50, w: 100, ...(B[k] || {}) }, w = Math.max(30, Math.min(100, b.w));
-    const html = coverText(p, R, { size: w < 60 ? 18 : 22, dark: cv.dark, part: k, w }); if (!html) return '';
-    return `<div style="${vars}color:var(--ink);position:absolute;width:calc((100% - 28mm) * ${w / 100});left:calc(14mm + (100% - 28mm) * ${(100 - w) / 100} * ${b.x / 100});top:calc(12mm + (100% - 24mm) * ${b.y / 100});transform:translateY(-${b.y}%);box-sizing:border-box;${cv.whiteBox ? `background:rgba(255,255,255,.95);border-radius:var(--dr);padding:${k === 'contact' ? '4mm 6mm' : '7mm 8mm'};box-shadow:0 2mm 8mm rgba(15,42,61,.12);` : ''}">${html}</div>`;
+    const html = coverText(p, R, { size: w < 60 ? 18 : 22, dark: coverInkDark(cv), part: k, w }); if (!html) return '';
+    return `<div style="${vars}color:var(--ink);position:absolute;width:calc((100% - 28mm) * ${w / 100});left:calc(14mm + (100% - 28mm) * ${(100 - w) / 100} * ${b.x / 100});top:calc(12mm + (100% - 24mm) * ${b.y / 100});transform:translateY(-${b.y}%);box-sizing:border-box;${bgCss(cv, 'whiteBox', 95, `border-radius:var(--dr);padding:${k === 'contact' ? '4mm 6mm' : '7mm 8mm'};`)}">${html}</div>`;
   }).join('');
 }
 function docCover(p, R, n, N) {
   const cv = S.design.cover, st = S.design.coverStyle, year = R.startYear;
   if (st === 'image' && fileUrl(cv.file)) {
-    const vars = cv.dark ? '--ink:#0F2A3D;--ink2:#3D5568;--ink3:#64788A;--line:rgba(15,42,61,.12);--line2:rgba(15,42,61,.2);--p-light:#E2F0ED;--t-yel:#FFF4DC;--s-dark:#8A5A06;' : '--ink:#ffffff;--ink2:rgba(255,255,255,.88);--ink3:rgba(255,255,255,.75);--line:rgba(255,255,255,.25);--line2:rgba(255,255,255,.35);--p-light:rgba(255,255,255,.18);--t-yel:rgba(245,165,36,.25);--s-dark:#FFE3A3;';
+    const vars = coverInkDark(cv) ? '--ink:#0F2A3D;--ink2:#3D5568;--ink3:#64788A;--line:rgba(15,42,61,.12);--line2:rgba(15,42,61,.2);--p-light:#E2F0ED;--t-yel:#FFF4DC;--s-dark:#8A5A06;' : '--ink:#ffffff;--ink2:rgba(255,255,255,.88);--ink3:rgba(255,255,255,.75);--line:rgba(255,255,255,.25);--line2:rgba(255,255,255,.35);--p-light:rgba(255,255,255,.18);--t-yel:rgba(245,165,36,.25);--s-dark:#FFE3A3;';
     return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;inset:0;background:#fff url('${fileUrl(cv.file)}') center/cover no-repeat"></div>${coverLogoHtml()}
-      ${cv.showCustomer ? (cv.layout === 'split' ? coverBlocks(p, R, cv, vars) : `<div style="${vars}color:var(--ink);position:absolute;left:14mm;right:14mm;top:calc(12mm + (100% - 24mm) * ${cv.pos / 100});transform:translateY(-${cv.pos}%);${cv.whiteBox ? 'background:rgba(255,255,255,.95);border-radius:var(--dr);padding:7mm 8mm;box-shadow:0 2mm 8mm rgba(15,42,61,.12);' : ''}">${coverText(p, R, { size: 22, dark: cv.dark })}</div>`) : ''}</section>`;
+      ${cv.showCustomer ? (cv.layout === 'split' ? coverBlocks(p, R, cv, vars) : `<div style="${vars}color:var(--ink);position:absolute;left:14mm;right:14mm;top:calc(12mm + (100% - 24mm) * ${cv.pos / 100});transform:translateY(-${cv.pos}%);${bgCss(cv, 'whiteBox', 95, 'border-radius:var(--dr);padding:7mm 8mm;')}">${coverText(p, R, { size: 22, dark: coverInkDark(cv) })}</div>`) : ''}</section>`;
   }
   const textBlock = coverText(p, R);
   if (st === 'type') {
@@ -2499,7 +2541,7 @@ function docCover(p, R, n, N) {
       <div style="position:absolute;right:-20mm;top:20mm;width:150mm;height:82.5mm"><img src="${svgDataUri(coverBigSun())}" style="width:150mm;height:82.5mm;display:block"></div>${coverLogoHtml()}
       <div style="position:absolute;left:14mm;right:14mm;top:118mm;background:#fff;border-radius:var(--dr);padding:9mm 9mm 8mm">${textBlock}</div>${pageFooter(n, N)}</section>`;
   }
-  return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;left:0;right:0;top:0;height:130mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true }))}" style="width:210mm;height:130mm;display:block"><div style="position:absolute;left:0;right:0;bottom:0;height:18mm;background:linear-gradient(180deg,${pageCls('cover') === 'page dk' ? 'rgba(11,17,24,0),#0B1118' : 'rgba(255,255,255,0),#fff'})"></div>${coverLogoHtml()}</div>
+  return `<section class="${pageCls('cover')}" data-key="cover"><div style="position:absolute;left:0;right:0;top:0;height:130mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, pv: hasPV(p), hp: hasWP(p) }))}" style="width:210mm;height:130mm;display:block"><div style="position:absolute;left:0;right:0;bottom:0;height:18mm;background:linear-gradient(180deg,${pageCls('cover') === 'page dk' ? 'rgba(11,17,24,0),#0B1118' : 'rgba(255,255,255,0),#fff'})"></div>${coverLogoHtml()}</div>
     <div style="position:absolute;left:14mm;right:14mm;top:133mm">${textBlock}</div>${pageFooter(n, N)}</section>`;
 }
 function soundBlock(p) {
@@ -2722,6 +2764,10 @@ const DOC = {
   }
 };
 function assumptionsBlock(p, R, show) {
+  const items = assumptionItems(p, R), c = S.calc;
+  return `${show ? `<div class="sec"><h2>Berechnungsannahmen</h2><ul class="dl">${items.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}<div class="sec small" style="border-top:0.3mm solid #E6EDF3;padding-top:3mm;line-height:1.5"><b style="color:var(--ink2)">Haftungshinweis:</b> ${esc(c.disclaimer)}</div>`;
+}
+function assumptionItems(p, R) {
   const c = S.calc, P = R.scen === 'opt' ? { ...c, ...S.optimistic } : c, F = R.fund, items = [];
   if (R.scen === 'opt') items.push(`Szenario: ${esc(S.optimistic.label)} (Standardannahmen: Amortisation ${amortTxt(R.real.amortRise)} Jahre)`);
   items.push(`Betrachtungszeitraum ${R.N} Jahre ab ${R.startYear}`);
@@ -2738,7 +2784,7 @@ function assumptionsBlock(p, R, show) {
   if (R.V) items.push(R.yieldSrc === 'pvgis' ? `PV-Ertrag laut PVGIS (EU-Kommission): ${num(R.yield)} kWh/Jahr` : `PV-Ertrag ${num(c.pvYield)} kWh/kWp bei Süd 30–35°, Ihr Dach ${pct(R.roofFactor * 100)} davon`, `Degradation ${num(c.pvDeg, 1)} % pro Jahr`, ...(R.carKWh ? [`E-Auto: ${num(R.carKWh)} kWh Ladestrom zu Hause, davon rund ${num(R.carPV)} kWh Solarstrom`] : []), `Einspeisevergütung ${num(c.feedIn, 2)} ct/kWh`, `Eigenverbrauch ${pct(R.selfShare * 100)} (Modell inkl. Speicher)`, `Haushaltsstrom ${num(R.hhCons)} kWh zu ${ct(R.hhPrice)}/kWh`);
   if (R.sowieso) items.push(`Sowieso-Kosten neue ${R.fuel === 'oil' ? 'Öl' : 'Gas'}heizung: ${eur(R.sowieso)}`);
   items.push(`Kalkulationszins ${num(P.rate, 1)} %`, `CO₂-Faktoren: Öl ${num(c.co2Oil, 2)}, Gas ${num(c.co2Gas, 2)}, Strom ${num(c.co2El, 2)} kg/kWh`);
-  return `${show ? `<div class="sec"><h2>Berechnungsannahmen</h2><ul class="dl">${items.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}<div class="sec small" style="border-top:0.3mm solid #E6EDF3;padding-top:3mm;line-height:1.5"><b style="color:var(--ink2)">Haftungshinweis:</b> ${esc(c.disclaimer)}</div>`;
+  return items;
 }
 
 /* =========================================================
@@ -2764,9 +2810,13 @@ async function preparePrintRoot(p, R) {
   return root;
 }
 let pdfBusy = false;
-async function makePdf(force) {
+async function makePdf(force, layout) {
   const p = curProject(); if (!p || pdfBusy) return;
   if (!checkBeforePdf(p)) return;
+  const ask = S.doc.pdfAsk || 'ask';
+  if (!layout) layout = ask === 'ask' ? null : ask;
+  if (!layout) { pdfChooser(p); return; }
+  UI.pdfLayout = layout; p.docOpts.layout = layout; saveProject(p);
   if (!force) { const w = plausibility(p, compute(p)); if (w.length) { modal(`<h3 class="text-[20px] font-semibold pr-8">Bitte kurz prüfen</h3><p class="text-ink3 text-[14px] mt-1">Einige Angaben sind ungewöhnlich. Stimmen sie, können Sie das PDF trotzdem erstellen.</p><ul class="mt-4 space-y-2 text-[14px] text-ink2 list-disc pl-5">${w.map(t => `<li>${esc(t)}</li>`).join('')}</ul><div class="flex flex-wrap justify-end gap-2 mt-6"><button class="btn-s" data-a="plaus-back">Zurück zu den Daten</button><button class="btn-p" data-a="pdf-force">Trotzdem erstellen</button></div>`); return; } }
   pdfBusy = true;
   modal(`<div class="text-center py-4"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto"><span class="spin inline-block">${ic('refresh', 26)}</span></div><div class="font-extrabold text-[18px] mt-4">PDF wird erstellt …</div><div class="text-ink3 text-[14px] mt-1" id="pdf-prog">Vorbereitung</div></div>`);
@@ -2795,11 +2845,16 @@ async function makePdf(force) {
     }
     const blob = pdf.output('blob');
     root.innerHTML = '';
-    const name = `Wirtschaftlichkeit_${(p.customer.name || 'Kunde').replace(/[^\wäöüÄÖÜß-]+/g, '_')}_${isoToday()}.pdf`;
+    const name = `${layoutOf(p) === 'sales' ? 'Energiekonzept' : 'Wirtschaftlichkeit'}_${(p.customer.name || 'Kunde').replace(/[^\wäöüÄÖÜß-]+/g, '_')}_${isoToday()}.pdf`;
     if ((p.status || 'offen') === 'offen') { p.status = 'gesendet'; p.statusDate = isoToday(); saveProject(p); }
     pdfReady(blob, name);
   } catch (e) { console.error(e); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (e.message || e), 'err', 5000); }
   pdfBusy = false;
+}
+function pdfChooser(p) {
+  const R = compute(p), cnt = l => { const prev = UI.docLayout; UI.docLayout = l; try { return visiblePages(p, R).reduce((a, x) => a + x.count, 0); } finally { UI.docLayout = prev; } };
+  const opt = (l, t, x) => `<button class="w-full text-left rounded-[calc(var(--r)-2px)] border border-line2 hover:border-p p-4 flex items-start gap-3 ${layoutOf(p) === l ? 'ring-2 ring-p/40' : ''}" data-a="pdf-go" data-v="${l}"><span class="icon-box shrink-0">${ic(l === 'full' ? 'file' : 'sparkle', 18)}</span><span class="flex-1"><span class="block font-semibold text-[15px]">${t} <span class="text-ink3 font-normal text-[13px]">· ${cnt(l)} Seiten</span></span><span class="block text-[13px] text-ink3 mt-0.5">${x}</span></span></button>`;
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Welche PDF möchten Sie erstellen?</h3><div class="space-y-3 mt-5">${opt('full', 'Komplette PDF', 'Alle Seiten mit Erklärungen, Diagrammen und Hintergründen.')}${opt('sales', 'Vertriebs-PDF', 'Kompakt und verkaufsstark: die wichtigsten Zahlen, Förderung, Ersparnis und Auftrag.')}</div><p class="hint mt-4">Die Frage lässt sich unter Einstellungen → Dokument & Verkauf abschalten.</p>`);
 }
 function pdfReady(blob, name) {
   const url = URL.createObjectURL(blob), file = new File([blob], name, { type: 'application/pdf' });
@@ -2813,6 +2868,282 @@ async function printDoc() {
   await preparePrintRoot(p, compute(p));
   window.print();
   setTimeout(() => { $('#print-root').innerHTML = ''; }, 1500);
+}
+/* =========================================================
+   Vertriebs-PDF – kompaktes Verkaufsdokument (zweites Layout)
+   Seiten, Reihenfolge, Texte, Schrift und Farben sind in den
+   Einstellungen anpassbar. *Wort* in Überschriften = Akzentfarbe.
+   ========================================================= */
+const SALES_KEYS = ['cover', 'sGlance', 'sSystem', 'sInvest', 'sMonthly', 'sLong', 'sWhy', 'sSign', 'sBasis', 'attach'];
+Object.assign(DOC_TEXT, {
+  sCover: { label: 'Deckblatt (Vertrieb)', badge: 'Ihr persönliches Energiekonzept', title: 'Mit {system} zahlen Sie künftig *{monat} weniger* Energiekosten – jeden Monat.', lead: '' },
+  sGlance: { label: 'Auf einen Blick', badge: 'Auf einen Blick', title: 'Das bringt Ihnen Ihr neues *Energiesystem*', lead: '{kunde}, hier sehen Sie die wichtigsten Zahlen Ihres Energiekonzepts – berechnet mit Ihren eigenen Verbrauchsdaten.' },
+  sSystem: { label: 'Ihr neues Energiesystem', badge: 'Ihr neues Energiesystem', title: 'Das bauen wir *für Sie* ein', lead: 'Gemäß unserem Angebot {angebot} – fachgerecht geplant und montiert von {firma}.' },
+  sInvest: { label: 'Ihre Investition', badge: 'Ihre Investition', title: 'Der Staat zahlt *mit*', lead: '' },
+  sMonthly: { label: 'Ihre monatlichen Kosten', badge: 'Ihre monatlichen Kosten', title: 'Jeden Monat *{monat}* mehr in Ihrer Tasche', lead: 'Was Sie jeden Monat für {was} bezahlen – heute und in den kommenden Jahren.' },
+  sLong: { label: 'Langfristig gerechnet', badge: 'Langfristig gerechnet', title: '*{gesamt}* Ersparnis in {jahre} Jahren', lead: '' },
+  sWhy: { label: 'Warum jetzt?', badge: 'Warum jetzt?', title: 'Warten wird *teurer*', lead: 'Gute Gründe, Ihr neues Energiesystem jetzt umzusetzen.' },
+  sSign: { label: 'Angebot annehmen', badge: 'Angebot annehmen', title: 'Ihr Weg zum neuen *Energiesystem*', lead: 'Sie möchten Ihr neues Energiesystem beauftragen? Dann unterschreiben Sie bitte hier und senden uns diese Seite zurück.' },
+  sBasis: { label: 'Rechengrundlagen', badge: '', title: 'Rechengrundlagen', lead: 'Transparenz ist uns wichtig: Auf diesen Annahmen beruht Ihre Berechnung.' }
+});
+const SALES_FONTS = ['Inter', 'Plus Jakarta Sans', 'Manrope', 'Figtree', 'DM Sans', 'Geist', 'Instrument Sans', 'IBM Plex Sans'];
+const layoutOf = p => UI.docLayout || (p && p.docOpts && p.docOpts.layout) || 'full';
+const salesOrder = () => { const o = (S.doc.salesOrder || []).filter(k => SALES_KEYS.includes(k)); return o.concat(SALES_KEYS.filter(k => !o.includes(k))); };
+
+/* Seitenauswahl je Layout */
+const _fullPageDefs = docPageDefs, _fullVisible = visiblePages;
+docPageDefs = function (p, R) { return layoutOf(p) === 'sales' ? salesPageDefs(p, R) : _fullPageDefs(p, R); };
+visiblePages = function (p, R) { return layoutOf(p) === 'sales' ? salesPageDefs(p, R).filter(d => d.on) : _fullVisible(p, R); };
+function salesPageDefs(p, R) {
+  const o = p.pages || {}, att = attachmentPages(p), dflt = S.doc.defaults || {};
+  const spec = { cover: true, sGlance: true, sSystem: true, sInvest: true, sMonthly: true, sLong: true, sWhy: true, sSign: true, sBasis: true, attach: att.length > 0 };
+  return salesOrder().map(key => {
+    const applies = spec[key], def = dflt[key] !== false;
+    const label = key === 'attach' ? `Anlagen (${att.length} ${att.length === 1 ? 'Seite' : 'Seiten'})` : key === 'cover' ? 'Deckblatt' : DOC_TEXT[key].label;
+    return { key, label, applies, on: applies && (o[key] !== undefined ? !!o[key] : def), note: '', count: key === 'attach' ? att.length : 1 };
+  });
+}
+
+/* Texte mit Platzhaltern; *Wort* wird farbig hervorgehoben */
+function sysName(p) { return p.type === 'pvwp' ? 'Solarstrom und Wärmepumpe' : p.type === 'pv' ? 'Ihrer Solaranlage' : 'Ihrer Wärmepumpe'; }
+function sFill(s, p, R) {
+  const mon = Math.max(0, R.monthOld1 - R.monthNew1);
+  return String(s || '').replace(/\{kunde\}/g, custName(p)).replace(/\{angebot\}/g, p.offer.number ? `Nr. ${p.offer.number}${p.offer.date ? ' vom ' + deDate(p.offer.date) : ''}` : '').replace(/\{firma\}/g, coName())
+    .replace(/\{monat\}/g, eur(mon)).replace(/\{gesamt\}/g, eur(R.total)).replace(/\{jahre\}/g, R.N).replace(/\{system\}/g, sysName(p))
+    .replace(/\{was\}/g, R.W && R.V ? 'Heizung und Haushaltsstrom' : R.W ? 'Ihre Heizung' : 'Ihren Haushaltsstrom').replace(/Gemäß unserem Angebot  –/, 'Nach Ihrem Angebot –');
+}
+const sMark = s => esc(s).replace(/\*([^*]+)\*/g, '<span style="color:var(--p);white-space:nowrap">$1</span>').replace(/(\d) €/g, '$1&nbsp;€');
+const sTxt = (key, field, p, R) => sFill(txt(key, field), p, R);
+function sChap(key, p, R, o = {}) {
+  const badge = sTxt(key, 'badge', p, R), title = o.title || sTxt(key, 'title', p, R), lead = o.lead !== undefined && !(S.doc.texts[key] || {}).lead ? o.lead : sTxt(key, 'lead', p, R);
+  return `${badge ? `<span class="sbadge">${esc(badge)}</span>` : '<div class="sbar"></div>'}<h1>${sMark(title)}</h1>${lead ? `<p class="lead">${esc(lead)}</p>` : ''}`;
+}
+const slVars = () => `--sf:'${S.doc.salesFont || 'Inter'}';--s:${S.design.secondary};--sacc:${S.design.accent || mix(S.design.primary, '#1E4C86', 0.7)}`;
+const gradBg = () => `linear-gradient(115deg,${S.design.primary} 0%,${S.design.accent || mix(S.design.primary, '#1E4C86', 0.7)} 100%)`;
+/* Symbole als Bild – so zeichnet html2canvas sie zuverlässig */
+const sImg = (n, mm, col, sw = 1.8) => `<img src="${svgDataUri(icC(n, 24, col, sw).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '))}" style="width:${mm}mm;height:${mm}mm;display:block">`;
+const sIcon = (n, col) => `<div class="sic" style="display:flex">${sImg(n, 4.4, col || S.design.primary)}</div>`;
+const sNum = n => numCircle(n, 6.5, { fill: S.design.secondary, color: '#fff', fs: 12 });
+const sDiscount = (p, R, big) => R.discount ? `<div class="sdisc" style="${big ? 'padding:6mm 7mm' : ''}"><div><div style="font-size:7.8pt;font-weight:600;color:var(--s-dark)">Ihr Vorteil bei schneller Entscheidung</div><div style="font-size:${big ? 11.5 : 10.5}pt;font-weight:700;margin-top:1mm">${esc(S.discount.text.replace('{datum}', deDate(p.discount.until)))}</div></div><div style="font-size:${big ? 24 : 19}pt;font-weight:700;color:var(--p);white-space:nowrap">– ${eur(R.discount)}</div></div>` : '';
+function nextFunding(p, R) {
+  if (!R.W || !R.fund.stand) return null;
+  const st = S.funding.stands.slice().sort((a, b) => a.from.localeCompare(b.from)), i = st.findIndex(s => s.id === R.fund.stand.id), nx = st[i + 1];
+  if (!nx) return null;
+  const f2 = fundingOf({ ...p, fund: { ...p.fund, stand: nx.id } });
+  return f2.amount < R.funding - 1 ? { from: nx.from, amount: f2.amount, rate: f2.rate, diff: R.funding - f2.amount } : null;
+}
+
+/* Kopf- und Fußzeile im Vertriebs-Layout */
+function salesWrap(p, r, n, N, key) {
+  const lab = key === 'sBasis' ? 'Rechengrundlagen' : DOC_TEXT[key] ? DOC_TEXT[key].label : r.title;
+  return `<section class="page sl" data-key="${key}" style="${slVars()}"><div class="sh"><div class="lg">${docLogo()}</div><div class="tt">${esc(lab)}<span class="dot"></span><b>${esc(custName(p))}</b></div></div><div class="pb">${r.body}</div><div class="sf"><b>${esc(coName())}</b><span>Seite ${n} / ${N}</span></div></section>`;
+}
+function salesCover(p, R, n, N) {
+  if (S.design.coverStyle === 'image' && fileUrl(S.design.cover.file)) return docCover(p, R, n, N).replace('class="page', `style="${slVars()}" class="page`);
+  const I = CI(), a = advisorOf(p), badge = sTxt('sCover', 'badge', p, R), head = sTxt('sCover', 'title', p, R);
+  const meta = [I.title && ['Dokument', esc(p.offer.title)], I.offer && p.offer.number && ['Angebot', esc(p.offer.number)], I.created && ['Datum', new Date().toLocaleDateString('de-DE')], I.advisor && a.name && ['Ihr Berater', esc(a.name)]].filter(Boolean);
+  return `<section class="page sl" data-key="cover" style="${slVars()}"><div style="position:absolute;left:0;right:0;top:0;height:128mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, dawn: false, pv: hasPV(p), hp: hasWP(p) }))}" style="width:210mm;height:130mm;display:block">${coverLogoHtml()}</div>
+    <div style="position:absolute;left:16mm;right:16mm;top:140mm">
+      ${I.badge && badge ? `<span class="sbadge">${esc(badge)}</span>` : ''}
+      ${I.customer ? `<div style="font-size:27pt;font-weight:800;line-height:1.1;margin-top:3mm">${esc(custName(p))}</div>` : ''}
+      ${I.address ? `<div style="font-size:10pt;color:var(--ink3);margin-top:2mm">${esc(custAddr(p))}</div>` : ''}
+      ${I.subtitle && head ? `<div style="margin-top:10mm;border-left:1.6mm solid var(--s);padding:1mm 0 1mm 6mm;font-size:15pt;font-weight:700;line-height:1.35;max-width:150mm">${sMark(head)}</div>` : ''}
+      ${I.note ? `<div style="margin-top:6mm;font-size:10pt;color:var(--ink2);white-space:pre-line">${esc(I.note)}</div>` : ''}
+      ${I.figures ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:9mm">${[['Ersparnis pro Monat', eur(Math.max(0, R.monthOld1 - R.monthNew1))], R.W && R.funding > 0 ? ['Zuschuss vom Staat', eur(R.funding)] : ['Solarstrom pro Jahr', num(R.yield) + ' kWh'], ['Bezahlt nach', R.amortRise === null ? `über ${R.N} J.` : num(R.amortRise, 1) + ' Jahren']].map(([k, v]) => `<div class="scard" style="padding:4mm 5mm"><div class="small">${k}</div><div style="font-size:16pt;font-weight:700;margin-top:1mm">${v}</div></div>`).join('')}</div>` : ''}
+    </div>
+    ${meta.length ? `<div style="position:absolute;left:16mm;right:16mm;bottom:12mm;border-top:0.25mm solid var(--line);padding-top:4mm;display:grid;grid-template-columns:${meta.map((m, i) => (i === 0 && m[0] === 'Dokument' ? '2.4fr' : '1fr')).join(' ')};gap:5mm">${meta.map(([k, v]) => `<div><div style="font-size:7pt;color:var(--ink3)">${k}</div><div style="font-size:8.4pt;font-weight:700;margin-top:0.6mm;line-height:1.3">${v}</div></div>`).join('')}</div>` : ''}
+    ${I.contact && a.photo ? `<div style="position:absolute;right:16mm;top:140mm;width:20mm;height:20mm;border-radius:50%;background:#fff url('${a.photo}') center/cover no-repeat;border:0.8mm solid #fff;box-shadow:0 0 0 0.25mm var(--line)"></div>` : ''}</section>`;
+}
+
+/* Seiten */
+Object.assign(DOC, {
+  sGlance(p, R) {
+    const mOld = R.monthOld1, mNew = R.monthNew1, mSave = Math.max(0, mOld - mNew), credit = mNew < 0;
+    let b = sChap('sGlance', p, R);
+    b += `<div class="sgrad" style="padding:7mm 7mm 7mm 8mm;display:grid;grid-template-columns:1fr 8mm 1fr 1.25fr;align-items:center;gap:2mm">
+      <div><div style="font-size:9pt;font-weight:600">Heute</div><div style="font-size:24pt;font-weight:700;opacity:.62;margin-top:1mm">${eur(mOld)}</div><div style="font-size:7.8pt;opacity:.8">pro Monat</div></div>
+      <div style="font-size:16pt;opacity:.8;text-align:center">→</div>
+      <div><div style="font-size:9pt;font-weight:600">Künftig</div><div style="font-size:24pt;font-weight:700;margin-top:1mm">${credit ? '+ ' + eur(-mNew) : eur(mNew)}</div><div style="font-size:7.8pt;opacity:.8">${credit ? 'Gutschrift pro Monat' : 'pro Monat'}</div></div>
+      <div style="background:#fff;color:var(--ink);border-radius:var(--dr);padding:5mm 6mm"><div style="font-size:8.6pt;font-weight:600;color:var(--ink2)">Ihre Ersparnis</div><div style="font-size:26pt;font-weight:800;color:var(--p);line-height:1.15;margin-top:0.5mm">${eur(mSave)}</div><div style="font-size:7.6pt;color:var(--ink3)">jeden Monat · ${eur(R.saving1)} im Jahr</div></div></div>`;
+    const t = [];
+    if (R.W && R.funding > 0) t.push(['gift', eur(R.funding), 'Zuschuss vom Staat', `${pct(R.fund.rate)} Förderung`]);
+    if (R.V) t.push(['sun', pct(R.autarky * 100), 'Strom selbst erzeugt', R.W ? 'Ihres Bedarfs inkl. Wärmepumpe' : 'Ihres Strombedarfs']);
+    t.push(['clock', R.amortRise === null ? `> ${R.N} Jahre` : num(R.amortRise, 1) + ' Jahre', 'bis zur Amortisation', 'mit steigenden Energiepreisen']);
+    if (t.length < 3) t.push(['leaf', num(R.co2Save / 1000, 1) + ' t', 'weniger CO₂ pro Jahr', 'gegenüber heute']);
+    if (t.length < 3) t.push(['bolt', num(R.yield) + ' kWh', 'Solarstrom pro Jahr', 'vom eigenen Dach']);
+    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:4mm">${t.slice(0, 3).map(([i, v, k, u]) => `<div class="scard">${sIcon(i)}<div style="font-size:17pt;font-weight:700;margin-top:3.5mm">${v}</div><div style="font-size:8.6pt;font-weight:700;margin-top:0.5mm">${k}</div><div class="small">${u}</div></div>`).join('')}</div>`;
+    const ben = salesBenefits(p, R);
+    b += `<h2 style="margin-top:8mm">Ihre Vorteile</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:1mm 8mm">${ben.map(sCheck).join('')}</div>`;
+    const minus = R.funding + R.other + R.discount;
+    b += `<h2 style="margin-top:7mm">Ihre Investition</h2><div class="sbox" style="display:grid;grid-template-columns:1fr 6mm 1fr 6mm 1fr;align-items:center;padding:5mm 7mm"><div><div class="small">Angebotspreis</div><div style="font-size:14pt;font-weight:700">${eur(R.gross)}</div></div><div style="color:var(--ink3);font-size:14pt">–</div><div><div class="small">${[R.W && 'Förderung', R.other && 'Zuschüsse', R.discount && 'Rabatt'].filter(Boolean).join(', ') || 'Förderung'}</div><div style="font-size:14pt;font-weight:700">${eur(minus)}</div></div><div style="color:var(--ink3);font-size:14pt">=</div><div><div class="small">Ihre Kosten</div><div style="font-size:16pt;font-weight:800;color:var(--p)">${eur(R.net)}</div></div></div>`;
+    return { title: 'Auf einen Blick', body: b };
+  },
+  sSystem(p, R) {
+    let b = sChap('sSystem', p, R);
+    const items = [];
+    if (R.V) { const m = String(p.pv.modules || '').match(/(\d+)\s*[×x]\s*(\d+)\s*W/i); items.push(['sun', 'Photovoltaikanlage', m ? `${m[1]} Solarmodule à ${m[2]} Watt` : (p.pv.modules || 'Ihre Solaranlage'), `Rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr`, num(R.kwp, 2) + ' kWp']); }
+    if (R.V && R.bat) items.push(['battery', 'Stromspeicher', 'Batteriespeicher', 'Speichert Solarstrom für Abend und Nacht', num(R.bat, 1) + ' kWh']);
+    if (R.W) items.push(['flame', 'Wärmepumpe', p.hp.model || 'Luft-Wasser-Wärmepumpe', [`Jahresarbeitszahl ${num(R.jaz, 2)}`, p.hp.dims && `Außeneinheit ${p.hp.dims.replace(/\s*x\s*/gi, ' × ')}`, p.hp.weight && `${num(p.hp.weight)} kg`].filter(Boolean).join(' · '), p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '']);
+    if (R.rod) items.push(['sun', 'Heizstab', R.rodName || 'Heizstab', 'Warmwasser mit überschüssigem Solarstrom', num(R.rodKw, 1) + ' kW']);
+    b += items.map(([i, k, t, u, v]) => `<div class="scard" style="display:flex;align-items:center;gap:5mm;padding:${items.length > 3 ? 3 : 4}mm 6mm;margin-bottom:2.5mm"><span class="sic" style="width:11mm;height:11mm">${sImg(i, 5.2, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div><div style="font-size:11.5pt;font-weight:700;line-height:1.3">${esc(t)}</div><div class="small" style="color:var(--ink2)">${esc(u)}</div></div><div style="font-size:19pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div>`).join('');
+    const steps = p.type === 'pvwp' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr – auch bei bewölktem Himmel.`], R.bat ? ['Speichern', 'Was tagsüber übrig ist, lädt den Speicher – für den Abend und die Nacht.'] : ['Selbst nutzen', 'Ihr Haus und Ihre Wärmepumpe nutzen den Solarstrom direkt.'], ['Wärme aus der Luft', `Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser – leise und ohne Brennstofflager.']]
+      : p.type === 'pv' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr.`], ['Selbst nutzen', 'Ihr Haushalt verbraucht den Solarstrom zuerst direkt.'], R.bat ? ['Speichern', 'Überschüsse laden den Speicher – für Abend und Nacht.'] : ['Einspeisen', 'Was übrig ist, fließt gegen Vergütung ins Netz.'], ['Unabhängig', `Rund ${pct(R.autarky * 100)} Ihres Stroms kommen künftig vom eigenen Dach.`]]
+      : [['Wärme aus der Luft', 'Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost.'], ['Verdichten', `Mit wenig Strom wird die Wärme auf Heiztemperatur gebracht. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser.'], ['Ohne Öl und Gas', 'Kein Brennstofflager, kein Schornsteinfeger, kein CO₂-Preis.']];
+    b += `<h2 style="margin-top:5mm">So einfach funktioniert es</h2><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3mm">${steps.map(([t, x], i) => `<div class="sbox" style="padding:4mm">${sNum(i + 1)}<div style="font-size:9.2pt;font-weight:700;margin-top:2.5mm;line-height:1.3">${t}</div><div class="small" style="color:var(--ink2);font-size:7.6pt;line-height:1.45;margin-top:1mm">${x}</div></div>`).join('')}</div>`;
+    if (R.W && isNum(p.hp.spl)) b += salesNoise(p);
+    return { title: 'Ihr neues Energiesystem', body: b };
+  },
+  sInvest(p, R) {
+    const F = R.fund, nx = nextFunding(p, R);
+    let b = sChap('sInvest', p, R, { title: R.W ? undefined : 'Ihre *Investition*', lead: R.W ? `Für Ihre neue Wärmepumpe erhalten Sie ${eur(R.funding)} Zuschuss. So setzen sich Ihre Kosten zusammen:` : 'So setzen sich Ihre Kosten zusammen:' });
+    const row = (k, u, v, st = '', vc = '') => `<div style="display:flex;justify-content:space-between;align-items:center;gap:4mm;padding:4mm 5mm;border-bottom:0.25mm solid var(--line);${st}"><div><div style="font-size:9.6pt;font-weight:700">${k}</div>${u ? `<div class="small">${u}</div>` : ''}</div><div style="font-size:10.5pt;font-weight:700;white-space:nowrap;${vc}">${v}</div></div>`;
+    let rows = '';
+    if (p.type === 'pvwp' && !(p.offer.total > 0)) rows += row('Angebot Wärmepumpe', 'brutto inkl. Montage', eur(p.offer.grossWP, 2)) + row('Angebot Photovoltaik', 'brutto inkl. Montage', eur(p.offer.grossPV, 2));
+    else rows += row('Angebotspreis', 'brutto inkl. Montage', eur(R.gross, 2));
+    if (R.W) rows += row('Staatliche Förderung (BEG)', `${pct(F.rate)} auf ${eur(F.base)} förderfähige Kosten`, '– ' + eur(R.funding, 2), 'background:#fff', 'color:var(--p)');
+    if (R.other) rows += row('Weitere Zuschüsse', '', '– ' + eur(R.other, 2), 'background:#fff', 'color:var(--p)');
+    if (R.discount) rows += row(esc(S.discount.text.replace('{datum}', deDate(p.discount.until))), 'gilt nur bei Auftrag bis zu diesem Datum', '– ' + eur(R.discount, 2), 'background:var(--t-yel)', 'color:var(--p)');
+    rows += `<div class="sgrad" style="border-radius:0;display:flex;justify-content:space-between;align-items:center;padding:5mm"><div><div style="font-size:10pt;font-weight:700">Ihre Kosten</div><div style="font-size:7.6pt;opacity:.85">${R.W ? 'nach Abzug der Förderung' : R.discount ? 'nach Abzug des Rabatts' : 'brutto'}</div></div><div style="font-size:19pt;font-weight:800">${eur(R.net, 2)}</div></div>`;
+    const right = R.W ? `<div class="sgrad" style="padding:6mm"><div style="font-size:8.6pt;opacity:.9">Ihr Fördersatz</div><div style="font-size:30pt;font-weight:800;line-height:1.15;margin-top:1mm">${pct(F.rate)}</div><div style="margin-top:1.5mm;font-size:10pt;font-weight:700;color:${mix(S.design.secondary, '#ffffff', 0.15)}">= ${eur(R.funding)} Zuschuss</div>
+        <div style="margin-top:4mm">${F.parts.map(([k, v]) => `<div style="display:flex;justify-content:space-between;border-top:0.25mm solid rgba(255,255,255,.25);padding:2mm 0;font-size:8pt"><span>${esc(k)}</span><b>${pct(v)}</b></div>`).join('')}</div>
+        <div style="font-size:6.8pt;opacity:.75;margin-top:2mm">BEG EM / KfW 458 · Förderstand für Anträge ab ${deDate(F.stand.from)}</div></div>`
+      : (() => { let gen = 0; for (let t = 0; t < R.N; t++) gen += R.yield * Math.pow(1 - S.calc.pvDeg / 100, t); const own = gen ? R.net / gen : 0; return `<div class="sgrad" style="padding:6mm"><div style="font-size:8.6pt;opacity:.9">Ihr Solarstrom kostet</div><div style="font-size:30pt;font-weight:800;line-height:1.1">${ct(own)}</div><div style="font-size:9pt;font-weight:600;margin-top:1mm">pro kWh – statt ${ct(R.hhPrice)} aus dem Netz</div><div style="font-size:6.8pt;opacity:.75;margin-top:3mm">Ihre Kosten geteilt durch die Erzeugung in ${R.N} Jahren</div></div>`; })();
+    b += `<div style="display:grid;grid-template-columns:1.3fr 1fr;gap:5mm;align-items:start"><div style="border-radius:var(--dr);overflow:hidden;background:var(--tile)">${rows}</div>${right}</div>`;
+    if (nx) b += `<div style="margin-top:5mm;background:var(--t-red);border-radius:var(--dr);padding:5mm 6mm;display:flex;gap:4mm;align-items:flex-start">${numCircleIcon()}<div><div style="font-size:9.6pt;font-weight:700">Förderung jetzt sichern</div><div style="font-size:8.8pt;margin-top:0.5mm">Bei einem Förderantrag ab ${deDate(nx.from)} sinkt Ihr Zuschuss voraussichtlich auf ${eur(nx.amount)} (${pct(nx.rate)}) – das wären <b>${eur(nx.diff)} weniger</b>.</div></div></div>`;
+    const steps = R.W ? [['Auftrag mit Förderbedingung', 'Sie beauftragen uns – unter der Bedingung, dass die Förderung bewilligt wird.'], ['Antrag bei der KfW', 'Der Förderantrag wird vor Beginn der Arbeiten online gestellt.'], ['Auszahlung', 'Nach Einbau und Nachweis wird der Zuschuss direkt an Sie ausgezahlt.']]
+      : [['Auftrag', 'Sie unterschreiben – wir planen Ihre Anlage im Detail.'], ['Anmeldung', 'Wir melden die Anlage beim Netzbetreiber an.'], ['Montage', 'Unser Team montiert und nimmt die Anlage in Betrieb.']];
+    b += `<h2 style="margin-top:7mm">${R.W ? 'So kommen Sie an Ihre Förderung' : 'So geht es los'}</h2><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm">${steps.map(([t, x], i) => `<div class="sbox" style="padding:4.5mm 5mm">${sNum(i + 1)}<div style="font-size:10pt;font-weight:700;margin-top:3mm;line-height:1.3">${t}</div><div class="small" style="color:var(--ink2);font-size:8pt;margin-top:1mm">${x}</div></div>`).join('')}</div>`;
+    return { title: 'Ihre Investition', body: b };
+  },
+  sMonthly(p, R) {
+    const oil = R.fuel === 'oil', last = R.rows[R.rows.length - 1];
+    let b = sChap('sMonthly', p, R);
+    const oldL = R.W ? `Heute: Weiter mit ${oil ? 'Ölheizung' : 'Gasheizung'}${R.V ? ' und Netzstrom' : ''}` : 'Heute: Strom aus dem Netz';
+    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm">${[[oldL, eur(R.monthOld1), 'pro Monat', 'var(--t-red)', 'var(--old)'], ['Künftig mit neuem System', R.monthNew1 < 0 ? '+ ' + eur(-R.monthNew1) : eur(R.monthNew1), R.monthNew1 < 0 ? 'Gutschrift pro Monat – Ihre Anlage verdient mehr, als Sie für Strom zahlen' : 'pro Monat', 'var(--p-light)', 'var(--p)'], ['Ihre Ersparnis', eur(R.monthOld1 - R.monthNew1), `pro Monat · in ${R.N} Jahren ${eur(last.monthSave)}`, 'var(--t-yel)', 'var(--s-dark)']].map(([k, v, u, bg, c]) => `<div style="background:${bg};border-radius:var(--dr);padding:5mm"><div style="font-size:8.4pt;font-weight:700;color:${c}">${k}</div><div style="font-size:21pt;font-weight:800;color:${c};margin-top:1.5mm">${v}</div><div style="font-size:7.6pt;color:${c};opacity:.85">${u}</div></div>`).join('')}</div>`;
+    const ys = [R.startYear].concat([2030, 2035, 2040, 2045, 2050].filter(y => y > R.startYear + 1 && y <= R.startYear + R.N - 1)).slice(0, 5);
+    b += `<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">${salesMonthChart(R, ys)}<div class="small" style="margin-top:2mm;font-size:8pt">${legendDot(S.design.old, R.W ? `Weiter mit ${oil ? 'Ölheizung' : 'Gasheizung'}${R.V ? ' und Netzstrom' : ''}` : 'Ohne Solaranlage')}${legendDot(S.design.primary, 'Mit Ihrem neuen Energiesystem')}</div></div>`;
+    const P = R.scen === 'opt' ? { ...S.calc, ...S.optimistic } : S.calc;
+    b += `<p class="small" style="margin-top:4mm">Preisentwicklung laut Prognose: ${R.W ? `${oil ? 'Heizöl' : 'Erdgas'} +${num(P.fuelInc, 1)} % pro Jahr, zuzüglich CO₂-Preis von ${num(interpPath(P.co2Path, R.startYear))} €/t auf ${num(interpPath(P.co2Path, R.startYear + R.N - 1))} €/t; ` : ''}Strom +${num(P.elecInc, 1)} % pro Jahr.${R.W ? ' Heizkosten inklusive Grundpreis und Wartung.' : ''}${R.V ? ' Beim neuen System ist der Nutzen der PV-Anlage (Eigenverbrauch und Einspeisung) abgezogen.' : ''}</p>`;
+    return { title: 'Ihre monatlichen Kosten', body: b };
+  },
+  sLong(p, R) {
+    const am = R.amortRise;
+    let b = sChap('sLong', p, R, { lead: am !== null ? `Nach rund ${num(am, 1)} Jahren hat sich Ihr neues Energiesystem bezahlt gemacht – danach bleibt jeder gesparte Euro bei Ihnen.` : `Über ${R.N} Jahre sparen Sie insgesamt ${eur(R.total)} Energiekosten.` });
+    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm">${[['Amortisation', R.amortStatic !== null && R.amortStatic <= R.N * 2 ? yrs(R.amortStatic) : `über ${R.N} Jahre`, 'bei gleichbleibenden Energiepreisen', 0], ['Amortisation', yrs(am), 'mit steigenden Energiepreisen', 1], [`Überschuss nach ${R.N} Jahren`, eur(R.surplus), 'nach Abzug Ihrer Kosten', 0]].map(([k, v, u, g]) => `<div class="${g ? 'sgrad' : 'scard'}" style="padding:5mm"><div style="font-size:8.4pt;font-weight:600;${g ? 'opacity:.9' : 'color:var(--ink2)'}">${k}</div><div style="font-size:19pt;font-weight:800;margin-top:1.5mm">${v}</div><div style="font-size:7.6pt;${g ? 'opacity:.85' : 'color:var(--ink3)'}">${u}</div></div>`).join('')}</div>`;
+    b += `<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">${salesAmortChart(R)}<div class="small" style="margin-top:1mm;font-size:8pt">${legendDot(S.design.primary, 'Mit steigenden Energiepreisen')}${legendDot(S.design.ink || '#0F2A3D', 'Bei gleichbleibenden Energiepreisen', true)}</div></div>`;
+    const comps = R.surplus > 0 ? comparisonsOf(R).slice(0, 4) : [];
+    if (comps.length) b += `<h2 style="margin-top:7mm">Davon könnten Sie sich zum Beispiel leisten</h2><div style="display:grid;grid-template-columns:repeat(${comps.length},1fr);gap:4mm">${comps.map(i => `<div style="background:${mix(S.design.secondary, '#ffffff', 0.9)};border-radius:var(--dr);padding:5mm">${sIcon(i.icon, mix(S.design.secondary, '#000000', 0.25))}<div style="font-size:18pt;font-weight:800;margin-top:3mm">${num(Math.floor(i.times))}×</div><div style="font-size:8.8pt;font-weight:700">${esc(i.label)}</div><div class="small">à ${eur(i.price)}</div></div>`).join('')}</div><p class="small" style="margin-top:2.5mm">Grundlage: ${S.comparisons.basis === 'total' ? `Ihre Gesamtersparnis von ${eur(R.total)}` : `Ihr Überschuss nach Abzug Ihrer Kosten von ${eur(R.surplus)}`}.</p>`;
+    b += `<p class="small" style="margin-top:3mm">Alle Annahmen finden Sie unter „Rechengrundlagen“ am Ende des Dokuments.</p>`;
+    return { title: 'Ihre Ersparnis', body: b };
+  },
+  sWhy(p, R) {
+    const nx = nextFunding(p, R), cards = [['Warten kostet', eur(R.saving1), 'Jedes Jahr ohne neues System', `So viel sparen Sie schon im ersten Jahr – Geld, das sonst weiter für ${R.W ? (R.fuel === 'oil' ? 'Heizöl' : 'Erdgas') + (R.V ? ' und Netzstrom' : '') : 'Netzstrom'} ausgegeben wird.`]];
+    if (R.W) {
+      const y2 = Math.min(R.startYear + 9, 2035), now = R.cons * co2Share(R.fuel, interpPath(S.calc.co2Path, R.startYear)), later = R.cons * co2Share(R.fuel, interpPath(S.calc.co2Path, y2));
+      cards.push(['CO₂-Preis steigt', `${eur(now)} → ${eur(later)}`, `CO₂-Kosten pro Jahr bis ${y2}`, `Auf jeden ${R.fuel === 'oil' ? 'Liter Heizöl' : 'Kubikmeter Erdgas'} kommt ein CO₂-Preis. Ab 2028 bildet er sich im europäischen Emissionshandel – mit sinkender Zertifikatsmenge.`]);
+    } else {
+      const r10 = R.rows[Math.min(9, R.rows.length - 1)];
+      cards.push(['Strompreis steigt', `${ct(R.hhPrice)} → ${ct(r10.hhPrice)}`, `pro kWh in ${r10.t} Jahren`, 'Netzentgelte, Abgaben und Energiepreise steigen. Jede selbst erzeugte kWh ist davon unabhängig.']);
+    }
+    if (nx) cards.push(['Förderung sinkt', `– ${eur(nx.diff)}`, `bei Antrag ab ${deDate(nx.from)}`, `Heute erhalten Sie ${eur(R.funding)} (${pct(R.fund.rate)}). Danach voraussichtlich nur noch ${eur(nx.amount)}.`]);
+    else cards.push(['Unabhängig werden', pct((R.V ? R.autarky : 1) * 100), R.V ? 'Ihres Stroms vom eigenen Dach' : 'Wärme ohne Öl und Gas', 'Je früher Sie umsteigen, desto länger profitieren Sie von stabilen Kosten.']);
+    let b = sChap('sWhy', p, R);
+    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm">${cards.map(([k, v, t, x]) => `<div class="scard" style="padding:5mm"><div style="font-size:8.4pt;font-weight:700;color:var(--p)">${k}</div><div style="font-size:${v.length > 14 ? 14 : 18}pt;font-weight:800;margin-top:2mm;white-space:nowrap">${v}</div><div style="font-size:9pt;font-weight:700;margin-top:1mm;line-height:1.3">${t}</div><div class="small" style="color:var(--ink2);font-size:7.8pt;margin-top:2mm;line-height:1.45">${x}</div></div>`).join('')}</div>`;
+    if (R.discount) b += `<div style="margin-top:5mm">${sDiscount(p, R, true)}</div>`;
+    const steps = [['Auftrag', R.W ? 'Sie unterschreiben – mit Förderbedingung.' : 'Sie unterschreiben – wir planen im Detail.'], [R.W ? 'Förderung & Planung' : 'Planung & Anmeldung', R.W ? 'Förderantrag stellen, Termin und Details abstimmen.' : 'Netzanmeldung, Termin und Details abstimmen.'], ['Installation', 'Unser Team baut Ihr neues System ein – sauber und zügig.'], ['Sparen', 'Ab dem ersten Tag sinken Ihre Energiekosten.']];
+    b += `<h2 style="margin-top:8mm">So geht es weiter</h2><div style="position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:4mm"><div style="position:absolute;left:8mm;right:25%;top:4mm;height:0.5mm;background:var(--line2)"></div>${steps.map(([t, x], i) => `<div style="position:relative">${numCircle(i + 1, 8, { fill: S.design.primary, color: '#fff', fs: 12 })}<div style="font-size:10pt;font-weight:700;margin-top:3mm">${t}</div><div class="small" style="color:var(--ink2);font-size:8pt;margin-top:1mm">${x}</div></div>`).join('')}</div>`;
+    b += `<div style="margin-top:8mm">${salesContact(p)}</div>`;
+    return { title: 'Warum jetzt?', body: b };
+  },
+  sSign(p, R) {
+    let b = sChap('sSign', p, R);
+    if (R.discount) b += sDiscount(p, R, false);
+    const T = S.discount.orderText.replace('{firma}', coName()).replace('{angebot}', p.offer.number || '–').replace('{angebotsdatum}', p.offer.date ? deDate(p.offer.date) : '–').replace('{preis}', eur(R.gross, 2)).replace('{rabatt}', R.discount ? ` abzüglich ${eur(R.discount, 2)} Sonderrabatt` : '');
+    const meta = [['Angebot', p.offer.number || '–'], ['vom', p.offer.date ? deDate(p.offer.date) : '–'], ['Bruttopreis', eur(R.gross, 2)]].concat(R.discount ? [['Sonderrabatt', '– ' + eur(R.discount, 2)]] : []);
+    b += `<div style="display:flex;gap:9mm;padding:6mm 5mm 4mm;border-bottom:0.25mm solid var(--line);margin-top:3mm">${meta.map(([k, v]) => `<div><div class="small">${k}</div><div style="font-size:11pt;font-weight:700">${esc(v)}</div></div>`).join('')}</div>`;
+    const sg = p.sign && p.sign.cust ? p.sign : null, box = on => `<span style="flex-shrink:0;display:inline-block;width:5mm;height:5mm;border:0.35mm solid var(--ink);border-radius:1.2mm;position:relative;margin-top:0.3mm">${on ? '<svg viewBox="0 0 16 16" style="position:absolute;left:0.3mm;top:0.3mm;width:3.6mm;height:3.6mm"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="#0F2A3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</span>`;
+    b += `<div style="padding:5mm 5mm 0;font-size:9.4pt;line-height:1.5"><div style="display:flex;gap:4mm;margin-bottom:3mm">${box(sg && sg.order)}<span>${esc(T)}</span></div><div style="display:flex;gap:4mm">${box(sg && sg.cond)}<span>Der Auftrag steht unter der aufschiebenden Bedingung der Förderzusage${R.W ? ' (BEG/KfW)' : ''}.</span></div></div>`;
+    const a = advisorOf(p), line = (l, inner = '') => `<div><div style="height:20mm;display:flex;align-items:flex-end;padding-bottom:1mm">${inner}</div><div style="border-top:0.35mm solid var(--ink);padding-top:1.5mm;font-size:7.8pt;color:var(--ink3)">${l}</div></div>`;
+    const sigImg = id => (id && fileUrl(id) ? `<img src="${fileUrl(id)}" style="max-height:18mm;max-width:80mm;width:auto;height:auto">` : '');
+    const od = sg ? `<span style="font-size:10pt">${esc(sg.place || '')}, ${deDate(sg.date)}</span>` : '';
+    b += `<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:4mm 10mm;margin-top:10mm;padding:0 5mm">${line('Ort, Datum', od)}${line(`Unterschrift Auftraggeber · ${esc(custName(p))}`, sg ? sigImg(sg.cust) : '')}${line('Ort, Datum', sg && sg.adv ? od : '')}${line(`Unterschrift ${esc(coName())}${a.name ? ' · ' + esc(a.name) : ''}`, sg ? sigImg(sg.adv) : '')}</div>`;
+    b += `<p class="small" style="margin-top:7mm">Es gelten die Bedingungen und Hinweise des zugrunde liegenden Angebots einschließlich der Widerrufsbelehrung.</p>`;
+    return { title: 'Angebot annehmen', body: b };
+  },
+  sBasis(p, R) {
+    let b = sChap('sBasis', p, R);
+    const ys = [1, 2, 3, 5, 10, 15, 20, 25].filter(t => t <= R.N), npv = R.zins > 0;
+    const cols = [['Jahr', r => r.t, 1]].concat(R.W ? [['Heizkosten alt', r => eur(r.costOld)], ['Heizkosten neu', r => eur(r.costNew)]] : [], R.V ? [['PV-Nutzen', r => eur(r.pv)]] : [], [['Ersparnis', r => eur(r.saving)], ['Saldo', r => `<span style="color:${r.saldo < 0 ? 'var(--old)' : 'var(--p)'}">${eur(r.saldo)}</span>`]], npv ? [['Saldo Barwert', r => `<span style="color:${r.saldoNpv < 0 ? 'var(--old)' : 'var(--p)'}">${eur(r.saldoNpv)}</span>`]] : []);
+    b += `<table class="st"><thead><tr>${cols.map(([k], i) => `<th style="${i ? '' : 'text-align:left'}">${k}</th>`).join('')}</tr></thead><tbody>${ys.map(t => { const r = R.rows[t - 1]; return `<tr>${cols.map(([, f], i) => `<td style="${i ? '' : 'text-align:left'}">${f(r)}</td>`).join('')}</tr>`; }).join('')}</tbody></table>`;
+    b += `<ul class="dl" style="margin-top:7mm;font-size:8pt">${assumptionItems(p, R).map(i => `<li>${i}</li>`).join('')}</ul>`;
+    b += `<p class="small" style="margin-top:6mm;line-height:1.5">${esc(S.calc.disclaimer)}</p>`;
+    return { title: 'Rechengrundlagen', body: b };
+  }
+});
+function salesBenefits(p, R) {
+  const b = [], oil = R.fuel === 'oil';
+  if (R.W) b.push(oil ? 'Nie wieder Heizöl kaufen – Sie heizen mit Strom und kostenloser Umweltwärme.' : 'Kein Gas mehr – Sie heizen mit Strom und kostenloser Umweltwärme.');
+  if (R.W && R.funding > 0) b.push(`<b>${eur(R.funding)}</b> Zuschuss vom Staat – ${pct(R.fund.rate)} Förderung.`);
+  if (R.V) b.push(`Rund <b>${num(Math.round(R.yield / 100) * 100)} kWh</b> Solarstrom pro Jahr vom eigenen Dach.`);
+  if (R.V && R.bat) b.push(`Speicher mit ${num(R.bat, 1)} kWh – Ihr Solarstrom auch abends und nachts.`);
+  if (p.type === 'pvwp') b.push('Ihre Wärmepumpe heizt zum Teil mit eigenem Solarstrom.');
+  if (R.rod) b.push('Im Sommer Warmwasser per Heizstab mit Solarstrom – die Wärmepumpe kann pausieren.');
+  if (R.carKWh) b.push(`Ihr E-Auto lädt rund <b>${num(R.carPV)} kWh</b> Solarstrom pro Jahr.`);
+  b.push(R.W ? `Unabhängiger von steigenden ${oil ? 'Heizöl' : 'Gas'}- und CO₂-Preisen.` : 'Unabhängiger von steigenden Strompreisen.');
+  b.push(`<b>${num(R.co2Save / 1000, 1)} t</b> weniger CO₂ pro Jahr.`);
+  return b.slice(0, 6);
+}
+const sCheck = t => `<div style="display:flex;gap:3mm;align-items:flex-start;margin-bottom:2.5mm"><span style="flex-shrink:0;display:inline-flex;width:5.5mm;height:5.5mm;border-radius:50%;background:var(--p);align-items:center;justify-content:center;margin-top:0.2mm">${sImg('check', 3.2, '#ffffff', 3)}</span><span style="font-size:9.2pt;line-height:1.4">${t}</span></div>`;
+const numCircleIcon = () => `<span style="flex-shrink:0;display:inline-flex;width:9mm;height:9mm;border-radius:50%;background:${S.design.old};align-items:center;justify-content:center">${sImg('clock', 5, '#ffffff', 2)}</span>`;
+function salesContact(p) {
+  const a = advisorOf(p);
+  const ph = a.photo ? `<div style="width:16mm;height:16mm;border-radius:50%;flex-shrink:0;background:#fff url('${a.photo}') center/cover no-repeat"></div>` : '';
+  return `<div class="sbox" style="display:flex;align-items:center;gap:5mm;padding:5mm 7mm">${ph}<div style="flex:1"><div class="small">Ihr Ansprechpartner</div><div style="font-size:14pt;font-weight:800">${esc(a.name || coName())}</div><div class="small" style="color:var(--ink2)">${[a.phone, a.email].filter(Boolean).map(esc).join(' · ')}</div></div><div style="font-size:10.5pt;font-weight:700;color:var(--p);text-align:right">Fragen? Wir sind gern für Sie da.</div></div>`;
+}
+function salesNoise(p) {
+  const v = p.hp.spl, X = d => Math.max(0, Math.min(100, (d - 15) / 60 * 100)), lim = 35;
+  const marks = [[20, 'Blätterrauschen'], [30, 'Flüstern'], [40, 'Kühlschrank'], [50, 'leiser Regen'], [60, 'Gespräch'], [70, 'Staubsauger']];
+  return `<div class="sbar" style="margin-top:6mm"></div><h1 style="font-size:18pt;margin-top:1.5mm">Wie laut ist Ihre Wärmepumpe?</h1><p class="lead" style="font-size:9pt;margin-bottom:7mm">Moderne Wärmepumpen sind leise. Nachts arbeitet Ihre Anlage im geräuschreduzierten Modus${p.hp.splDist ? ` – in ${num(p.hp.splDist, 1)} m Abstand misst man dann <b>${num(v, 1)} dB(A)</b>` : ` – rund <b>${num(v, 1)} dB(A)</b>`}.</p>
+    <div style="position:relative;height:26mm">
+      <div style="position:absolute;left:${X(v)}%;top:0;transform:translateX(-50%);background:var(--p);color:#fff;font-size:7.6pt;font-weight:700;border-radius:1.6mm;padding:1mm 3mm;white-space:nowrap">Ihre Wärmepumpe nachts: ${num(v, 1)} dB(A)</div>
+      <div style="position:absolute;left:0;right:0;top:9mm;height:4mm;border-radius:2mm;background:linear-gradient(90deg,#BDE7C4 0%,#F4E3A1 45%,#F7C8A2 75%,#F5B5B0 100%)"></div>
+      <div style="position:absolute;left:${X(v)}%;top:7.5mm;width:0.7mm;height:7mm;background:var(--ink);transform:translateX(-50%)"></div>
+      <div style="position:absolute;left:${X(lim)}%;top:7.5mm;width:0.7mm;height:7mm;background:var(--ink2);transform:translateX(-50%)"></div>
+      <div style="position:absolute;left:${X(lim)}%;top:15.5mm;transform:translateX(-50%);font-size:7pt;font-weight:600;color:var(--ink2);text-align:center;line-height:1.25">${lim} dB(A) nachts<br>reines Wohngebiet</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);text-align:center;margin-top:1mm">${marks.map(([d, l]) => `<div><div style="font-size:8pt;font-weight:700">${d} dB</div><div class="small" style="font-size:6.8pt">${l}</div></div>`).join('')}</div>
+    <p class="small" style="margin-top:4mm;font-size:6.8pt">Schalldruckpegel der Außeneinheit, frei aufgestellt.${isNum(p.hp.sw) ? ` Schallleistungspegel im Nennbetrieb: ${num(p.hp.sw, 1)} dB(A)${isNum(p.hp.swNight) ? `, im Nachtbetrieb ${num(p.hp.swNight, 1)} dB(A)` : ''}.` : ''} Richtwert TA Lärm für reine Wohngebiete nachts: 35 dB(A) am Nachbarhaus. Jede Verdopplung des Abstands senkt den Pegel um etwa 6 dB.</p>`;
+}
+function salesMonthChart(R, ys) {
+  const W = 640, H = 230, L = 46, B = 196, T = 22, rows = ys.map(y => rowOfYear(R, y));
+  const max = Math.max(...rows.map(r => r.monthOld), 1), step = max > 600 ? 200 : max > 300 ? 100 : 50, top = Math.ceil(max * 1.1 / step) * step, Y = v => B - (B - T) * v / top;
+  const gw = (W - L - 10) / rows.length, bw = Math.min(36, gw * 0.3);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" style="font-family:inherit">`;
+  for (let v = 0; v <= top; v += step) s += `<line x1="${L}" x2="${W - 6}" y1="${Y(v)}" y2="${Y(v)}" stroke="#E6ECF2"/><text x="${L - 8}" y="${Y(v) + 3.5}" text-anchor="end" font-size="10" fill="#8A97A6">${num(v)} €</text>`;
+  rows.forEach((r, i) => {
+    const cx = L + gw * i + gw / 2, x1 = cx - bw - 3, x2 = cx + 3;
+    s += `<rect x="${x1}" y="${Y(r.monthOld)}" width="${bw}" height="${B - Y(r.monthOld)}" rx="4" fill="${S.design.old}"/><text x="${x1 + bw / 2}" y="${Y(r.monthOld) - 6}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${S.design.old}">${eur(r.monthOld)}</text>`;
+    const nv = Math.max(0, r.monthNew); s += `<rect x="${x2}" y="${Y(nv)}" width="${bw}" height="${Math.max(2, B - Y(nv))}" rx="${nv > 0 ? 4 : 1}" fill="${S.design.primary}"/><text x="${x2 + bw / 2}" y="${Y(nv) - 6}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${S.design.primary}">${r.monthNew < 0 ? '+' + eur(-r.monthNew) : eur(r.monthNew)}</text>`;
+    s += `<text x="${cx}" y="${B + 16}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#10283A">${i ? r.year : 'Heute'}</text><text x="${cx}" y="${B + 29}" text-anchor="middle" font-size="9.5" fill="#8A97A6">${i ? `in ${r.t - 1} J.` : 'Jahr 1'}</text>`;
+  });
+  return s + '</svg>';
+}
+function salesAmortChart(R) {
+  const W = 640, H = 230, L = 52, Rr = 8, T = 16, B = 196, n = R.rows.length;
+  const vals = R.rows.map(r => r.saldo).concat(R.rows.map(r => r.saldoStatic), [-R.invest]);
+  const step = Math.max(...vals.map(Math.abs)) > 60000 ? 20000 : 10000;
+  const mn = Math.floor(Math.min(...vals, 0) / step) * step, mx = Math.ceil(Math.max(...vals, 0) / step) * step || step, Y = v => T + (B - T) * (mx - v) / (mx - mn);
+  const gw = (W - L - Rr) / (n + 1), bw = gw * 0.62, X = i => L + gw * (i + 0.5);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
+  for (let v = mn; v <= mx; v += step) s += `<line x1="${L}" x2="${W - Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? '#9AA8B6' : '#E6ECF2'}" ${v ? 'stroke-dasharray="4 4"' : ''}/><text x="${L - 8}" y="${Y(v) + 3.5}" text-anchor="end" font-size="10" fill="#8A97A6">${num(v / 1000)} T€</text>`;
+  const pts = [-R.invest].concat(R.rows.map(r => r.saldo));
+  pts.forEach((v, i) => { const y0 = Y(0), y = Y(v); s += `<rect x="${X(i) - bw / 2}" y="${Math.min(y, y0)}" width="${bw}" height="${Math.max(1, Math.abs(y - y0))}" rx="3" fill="${v < 0 ? '#CBD5E0' : S.design.primary}"/>`; });
+  const st = [-R.invest].concat(R.rows.map(r => r.saldoStatic));
+  s += `<polyline points="${st.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}" fill="none" stroke="#24364A" stroke-width="2" stroke-dasharray="6 5"/>`;
+  const mk = (a, lab, col, dy) => { if (a === null || a > n) return ''; const x = X(0) + (X(1) - X(0)) * a; const left = x > W - 170; return `<line x1="${x}" x2="${x}" y1="${T}" y2="${B}" stroke="${col}" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${left ? x - 4 : x + 4}" y="${T + dy}" font-size="10" font-weight="700" fill="${col}" text-anchor="${left ? 'end' : 'start'}">${lab}</text>`; };
+  s += mk(R.amortRise, `steigende Preise ${num(R.amortRise, 1)} J.`, S.design.primary, 2) + mk(R.amortStatic, `gleichbleibende Preise ${num(R.amortStatic, 1)} J.`, '#24364A', 15);
+  [0, 5, 10, 15, 20, 25, 30].filter(t => t <= n).forEach(t => { s += `<text x="${X(t)}" y="${B + 16}" text-anchor="middle" font-size="10" fill="#8A97A6">${t ? 'J. ' + t : 'Start'}</text>`; });
+  return s + '</svg>';
 }
 
 /* =========================================================
@@ -2870,6 +3201,13 @@ const sCard = (icon, title, sub, body) => `<div class="card p-5 sm:p-6">${cardHe
 function sampleProject() {
   const p = newProject('pvwp'); p.customer = { salutation: 'Familie', name: 'Mustermann', street: 'Sonnenweg 12', zip: '48143', city: 'Münster' }; p.offer.number = 'A-2026-0815'; p.offer.advisor = 'Max Berater'; p.offer.grossWP = 32000; p.offer.grossPV = 21000; p.heating.year = 1998; p.heating.cons = 24000; p.pv.kwp = 10; p.pv.bat = 10; return p;
 }
+/* Auswahl Hintergrund + Stärke (Deckkraft) für Logo bzw. Deckblatt-Angaben */
+function bgPicker(key, label) {
+  const o = S.design[key], legacy = key === 'cover' ? 'whiteBox' : 'whiteBg', dflt = key === 'cover' ? 95 : 100, cur = bgOf(o, legacy, dflt);
+  if (!o.bg) o.bg = cur.kind; if (!isNum(o.bgAlpha)) o.bgAlpha = cur.a;
+  const range = `<label class="block mt-3"><span class="lbl flex justify-between">Stärke<span class="text-ink3 num" data-rv="s:design.${key}.bgAlpha">${num(o.bgAlpha)} %</span></span><input type="range" class="w-full" min="10" max="100" step="5" data-b="s:design.${key}.bgAlpha" data-t="r" value="${o.bgAlpha}"></label><div class="flex flex-wrap gap-2 mt-2">${[[30, 'Leicht'], [60, 'Ausgeblichen'], [85, 'Kräftig'], [100, 'Voll']].map(([v, l]) => `<button class="chip ${o.bgAlpha === v ? 'on' : ''}" data-a="bg-alpha" data-k="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
+  return `<span class="lbl">${label}</span>${seg(`s:design.${key}.bg`, BG_KINDS, { cls: 'flex-wrap' })}${o.bg !== 'none' ? range : ''}`;
+}
 function coverPreview() { return withDoc(coverPreviewInner); }
 function coverPreviewInner() {
   const p = sampleProject(), R = compute(p, 'real'); CUR_KEY = 'summary';
@@ -2904,13 +3242,13 @@ const SET = {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-3">${[['badge', '„Ihr Energiekonzept 2026“'], ['title', 'Titel'], ['subtitle', 'Untertitel'], ['customer', 'Kundenname'], ['address', 'Anschrift'], ['offer', 'Angebots-Nr. und Datum'], ['created', 'Erstellungsdatum'], ['advisor', 'Berater'], ['figures', 'Kennzahlen (Ersparnis, Förderung, Überschuss)'], ['contact', 'Ansprechpartner mit Foto']].map(([k, l]) => `<label class="flex items-center gap-2.5 text-[14px] text-ink2 cursor-pointer"><input type="checkbox" data-tgcheck="s:design.coverInfo.${k}" ${CI()[k] ? 'checked' : ''}>${l}</label>`).join('')}</div>
         <div class="mt-3">${area('Eigener Text (optional)', 's:design.coverInfo.note', 2, { hint: 'z. B. ein Slogan oder „Ihr Partner für Sonne und Wärme im Münsterland“' })}</div></div>
       <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Solarmodule in Illustrationen</span>${seg('s:design.moduleColor', [['black', 'Schwarz'], ['blue', 'Blau']])}</div><div><span class="lbl">„So funktioniert eine Wärmepumpe“</span>${seg('s:design.hpIllu', [['scene', 'Illustration'], ['diagram', 'Schema (alt)']])}</div></div>
-      ${d.coverStyle === 'image' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 divide-y divide-line"><div class="py-3 flex flex-wrap items-center gap-3">${fileUrl(cv.file) ? `<img src="${fileUrl(cv.file)}" class="h-20 rounded-lg border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Illustration verwendet.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${cv.file ? 'Ersetzen' : 'Bild oder PDF hochladen'}<input type="file" accept="image/*,application/pdf" class="hidden" data-imgup="cover"></label></div><div class="py-3"><span class="lbl">Farben im PDF</span>${seg('s:design.pdfColors', [['cover', 'Vom Deckblatt übernehmen'], ['own', 'Eigene Farbwelt']], { cls: 'flex-wrap' })}${S.design.pdfColors !== 'own' ? (S.design.coverPalette ? `<div class="flex items-center gap-2 mt-3">${['primary', 'secondary', 'accent'].map(k => `<span class="w-8 h-8 rounded-full border border-line2" style="background:${S.design.coverPalette[k]}" title="${S.design.coverPalette[k]}"></span>`).join('')}<span class="text-[12px] text-ink3 ml-1">aus Ihrem Deckblatt ermittelt</span><button class="btn-g ml-auto" data-a="cover-pal">${ic('refresh', 15)}Neu ermitteln</button></div>` : '<div class="hint">Noch keine Farben ermittelt – laden Sie ein Deckblatt hoch.</div>') : '<div class="hint">Das PDF verwendet Ihre Farbwelt oben.</div>'}</div>${toggleRow('Kundendaten einblenden', 's:design.cover.showCustomer')}${toggleRow('Weißer Kasten', 's:design.cover.whiteBox')}${toggleRow('Dunkle Schrift', 's:design.cover.dark')}<div class="py-3"><span class="lbl">Anordnung der Angaben</span>${seg('s:design.cover.layout', [['block', 'Zusammen in einem Kasten'], ['split', 'Einzeln verschieben']], { cls: 'flex-wrap' })}</div>${cv.layout === 'split' ? COVER_BLOCKS.map(([k, l]) => `<div class="py-3"><div class="font-medium text-[14px] mb-2">${l}</div><div class="grid sm:grid-cols-3 gap-4">${range('Von oben', `s:design.cover.blocks.${k}.y`, 0, 100, ' %')}${range('Von links', `s:design.cover.blocks.${k}.x`, 0, 100, ' %')}${range('Breite', `s:design.cover.blocks.${k}.w`, 30, 100, ' %')}</div></div>`).join('') + `<div class="py-3 flex flex-wrap gap-2"><button class="chip" data-a="cover-blocks-reset">Standard-Anordnung</button></div>` : `<div class="py-3">${range('Position Kundendaten (von oben)', 's:design.cover.pos', 5, 85, ' %')}</div>`}</div>` : ''}
+      ${d.coverStyle === 'image' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 divide-y divide-line"><div class="py-3 flex flex-wrap items-center gap-3">${fileUrl(cv.file) ? `<img src="${fileUrl(cv.file)}" class="h-20 rounded-lg border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Illustration verwendet.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${cv.file ? 'Ersetzen' : 'Bild oder PDF hochladen'}<input type="file" accept="image/*,application/pdf" class="hidden" data-imgup="cover"></label></div><div class="py-3"><span class="lbl">Farben im PDF</span>${seg('s:design.pdfColors', [['cover', 'Vom Deckblatt übernehmen'], ['own', 'Eigene Farbwelt']], { cls: 'flex-wrap' })}${S.design.pdfColors !== 'own' ? (S.design.coverPalette ? `<div class="flex items-center gap-2 mt-3">${['primary', 'secondary', 'accent'].map(k => `<span class="w-8 h-8 rounded-full border border-line2" style="background:${S.design.coverPalette[k]}" title="${S.design.coverPalette[k]}"></span>`).join('')}<span class="text-[12px] text-ink3 ml-1">aus Ihrem Deckblatt ermittelt</span><button class="btn-g ml-auto" data-a="cover-pal">${ic('refresh', 15)}Neu ermitteln</button></div>` : '<div class="hint">Noch keine Farben ermittelt – laden Sie ein Deckblatt hoch.</div>') : '<div class="hint">Das PDF verwendet Ihre Farbwelt oben.</div>'}</div>${toggleRow('Kundendaten einblenden', 's:design.cover.showCustomer')}<div class="py-3">${bgPicker('cover', 'Hintergrund hinter den Angaben')}</div>${['none', 'white'].includes(bgOf(cv, 'whiteBox', 95).kind) ? toggleRow('Dunkle Schrift', 's:design.cover.dark') : ''}<div class="py-3"><span class="lbl">Anordnung der Angaben</span>${seg('s:design.cover.layout', [['block', 'Zusammen in einem Kasten'], ['split', 'Einzeln verschieben']], { cls: 'flex-wrap' })}</div>${cv.layout === 'split' ? COVER_BLOCKS.map(([k, l]) => `<div class="py-3"><div class="font-medium text-[14px] mb-2">${l}</div><div class="grid sm:grid-cols-3 gap-4">${range('Von oben', `s:design.cover.blocks.${k}.y`, 0, 100, ' %')}${range('Von links', `s:design.cover.blocks.${k}.x`, 0, 100, ' %')}${range('Breite', `s:design.cover.blocks.${k}.w`, 30, 100, ' %')}</div></div>`).join('') + `<div class="py-3 flex flex-wrap gap-2"><button class="chip" data-a="cover-blocks-reset">Standard-Anordnung</button></div>` : `<div class="py-3">${range('Position Kundendaten (von oben)', 's:design.cover.pos', 5, 85, ' %')}</div>`}</div>` : ''}
       <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband']])}</div></div>
       <div class="pt-2"><div class="font-medium text-[15px]">Logo auf dem Deckblatt</div><div class="mt-3">${seg('s:design.coverLogo.source', [['company', 'Firmenlogo'], ['custom', 'Eigenes Logo']])}</div>
       ${L.source === 'custom' ? `<div class="mt-3 flex items-center gap-3">${fileUrl(L.file) ? `<img src="${fileUrl(L.file)}" class="h-12 max-w-[160px] object-contain rounded-lg bg-card border border-line p-1">` : ''}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="coverlogo"></label></div>` : ''}
       <div class="grid sm:grid-cols-3 gap-4 mt-4">${range('Horizontal', 's:design.coverLogo.x', 0, 100, ' %')}${range('Vertikal', 's:design.coverLogo.y', 0, 100, ' %')}${range('Größe', 's:design.coverLogo.size', 6, 40, ' mm')}</div>
       <div class="flex flex-wrap gap-2 mt-3">${qp.map(([l, x, y]) => `<button class="chip" data-a="logo-pos" data-x="${x}" data-y="${y}">${l}</button>`).join('')}</div>
-      <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 mt-4">${toggleRow('Weißer Hintergrund hinter dem Logo', 's:design.coverLogo.whiteBg')}</div></div></div>
+      <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 py-3 mt-4">${bgPicker('coverLogo', 'Hintergrund hinter dem Logo')}</div></div></div>
       <div><span class="lbl">Live-Vorschau</span><div id="cover-prev">${coverPreview()}</div></div></div>`);
   },
   rabatt: () => sCard('tag', 'Rabatt & Unterschrift', 'Platzhalter: {datum}, {firma}, {angebot}, {angebotsdatum}, {preis}, {rabatt}', `
@@ -2951,7 +3289,13 @@ const SET = {
     const order = docOrder(), dflt = S.doc.defaults || {};
     const rows = order.map((k, i) => `<div class="flex items-center gap-2 py-2"><span class="w-6 text-[12px] text-ink3 num">${i + 1}</span><div class="flex-1 min-w-0 text-[14px] font-medium truncate">${esc(txt(k, 'label').replace('{jahre}', S.calc.years))}</div><button class="btn-g !px-2" data-a="ord" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="nach oben">${ic('chevD', 16, 'rotate-180')}</button><button class="btn-g !px-2" data-a="ord" data-k="${k}" data-d="1" ${i === order.length - 1 ? 'disabled' : ''} aria-label="nach unten">${ic('chevD', 16)}</button>${tgl('', dflt[k] !== false, `data-a="docdef" data-k="${k}"`)}</div>`).join('');
     const texts = PAGE_KEYS.filter(k => !['cover', 'attach'].includes(k)).concat(['assump']).map(k => det('tx-' + k, esc(DOC_TEXT[k].label.replace('{jahre}', S.calc.years)), `<div class="space-y-3 pt-1">${field('Überschrift', `s:doc.texts.${k}.title`, { ph: DOC_TEXT[k].title })}${area('Einleitung', `s:doc.texts.${k}.lead`, 2, { hint: k === 'year' ? 'Leer = automatischer Text je nach Projektart' : 'Leer = Standardtext' })}</div>`)).join('');
-    return sCard('file', 'Seiten und Reihenfolge', 'Reihenfolge per Pfeil, Schalter = standardmäßig enthalten. Im Projekt lässt sich jede Seite einzeln ein- und ausschalten.', `<div class="divide-y divide-line">${rows}</div><button class="btn-g mt-2" data-a="ord-reset">${ic('refresh', 15)}Standardreihenfolge</button>`)
+    const sOrder = salesOrder(), sRows = sOrder.map((k, i) => `<div class="flex items-center gap-2 py-2"><span class="w-6 text-[12px] text-ink3 num">${i + 1}</span><div class="flex-1 min-w-0 text-[14px] font-medium truncate">${esc(k === 'cover' ? 'Deckblatt' : k === 'attach' ? 'Anlagen' : DOC_TEXT[k].label)}</div><button class="btn-g !px-2" data-a="ord" data-l="s" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="nach oben">${ic('chevD', 16, 'rotate-180')}</button><button class="btn-g !px-2" data-a="ord" data-l="s" data-k="${k}" data-d="1" ${i === sOrder.length - 1 ? 'disabled' : ''} aria-label="nach unten">${ic('chevD', 16)}</button>${k === 'cover' || k === 'attach' ? '<span class="w-[46px]"></span>' : tgl('', dflt[k] !== false, `data-a="docdef" data-k="${k}"`)}</div>`).join('');
+    const sTexts = ['sCover'].concat(SALES_KEYS.filter(k => DOC_TEXT[k] && k !== 'cover' && k !== 'attach')).map(k => det('stx-' + k, esc(DOC_TEXT[k].label), `<div class="space-y-3 pt-1">${field('Kleines Etikett', `s:doc.texts.${k}.badge`, { ph: DOC_TEXT[k].badge || '(keins)' })}${field(k === 'sCover' ? 'Kernaussage' : 'Überschrift', `s:doc.texts.${k}.title`, { ph: DOC_TEXT[k].title })}${k === 'sCover' ? '' : area('Einleitung', `s:doc.texts.${k}.lead`, 2, { hint: DOC_TEXT[k].lead ? 'Leer = Standardtext' : 'Leer = automatischer Text' })}</div>`)).join('');
+    const salesCard = sCard('sparkle', 'Vertriebs-PDF', 'Das kompakte Verkaufsdokument – zusätzlich zur kompletten PDF.', `<div><span class="lbl">Beim Erstellen</span>${seg('s:doc.pdfAsk', [['ask', 'Jedes Mal fragen'], ['full', 'Immer komplett'], ['sales', 'Immer Vertrieb']], { cls: 'flex-wrap' })}</div>
+      <label class="block mt-5"><span class="lbl">Schrift</span><select class="inp" data-b="s:doc.salesFont" data-t="s">${SALES_FONTS.map(f => `<option ${(S.doc.salesFont || 'Inter') === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label>
+      <div class="font-medium text-[15px] mt-6">Seiten und Reihenfolge</div><div class="divide-y divide-line mt-1">${sRows}</div><button class="btn-g mt-2" data-a="ord-reset" data-l="s">${ic('refresh', 15)}Standardreihenfolge</button>
+      <div class="font-medium text-[15px] mt-6">Texte</div><p class="hint !mt-1">Platzhalter: {kunde}, {angebot}, {firma}, {monat} (Ersparnis pro Monat), {gesamt}, {jahre}, {system}, {was}. Ein Wort in *Sternchen* erscheint in Ihrer Hauptfarbe.</p>${sTexts}`);
+    return salesCard + sCard('file', 'Seiten und Reihenfolge (komplette PDF)', 'Reihenfolge per Pfeil, Schalter = standardmäßig enthalten. Im Projekt lässt sich jede Seite einzeln ein- und ausschalten.', `<div class="divide-y divide-line">${rows}</div><button class="btn-g mt-2" data-a="ord-reset">${ic('refresh', 15)}Standardreihenfolge</button>`)
       + sCard('pen', 'Texte im Dokument', 'Überschrift und Einleitung jeder Seite. {jahre} wird durch den Betrachtungszeitraum ersetzt.', texts.replace(/mt-4 rounded/, 'rounded'))
       + sCard('sparkle', 'Verkaufsargumente', 'Erscheinen auf der Seite „Ihr Angebot auf einen Blick“. Bitte nur Aussagen verwenden, die für Ihren Betrieb zutreffen.', `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4">${toggleRow('„Warum wir“ anzeigen', 's:sales.trustOn')}</div>
         <div class="space-y-3 mt-4">${S.sales.trust.map(t => `<div class="rounded-[calc(var(--r)-4px)] border border-line p-3 flex flex-wrap sm:flex-nowrap gap-3 items-start">${tgl(`tr:${t.id}:on`, t.on)}<div class="w-32 shrink-0"><select class="inp !h-10" data-b="tr:${t.id}:icon" data-t="s">${ICON_CHOICES.map(([x, l]) => `<option value="${x}" ${t.icon === x ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="flex-1 min-w-[200px] space-y-2">${inp(`tr:${t.id}:title`, { icls: '!h-10' })}${inp(`tr:${t.id}:text`, { icls: '!h-10' })}</div><button class="btn-g !px-2 hover:!text-ember" data-a="tr-del" data-id="${t.id}" aria-label="Löschen">${ic('trash', 16)}</button></div>`).join('')}</div>
@@ -2994,7 +3338,7 @@ const SET = {
       + sCard('download', 'Firmen-Konfiguration', 'Design, Förderung, Preise, Texte und Produkte Ihrer Firma – vom Admin bereitgestellt.', `<label class="btn-s cursor-pointer">${ic('upload', 17)}Firmen-Konfiguration einspielen<input type="file" accept="application/json,.json" class="hidden" data-import-config></label><p class="hint">Ihre Kunden, Ihre Ansicht und Ihr Profil bleiben dabei erhalten.</p>`)
       + (UI.admin ? sCard('trash', 'Alles löschen', 'Nur im Admin-Modus.', `<button class="btn bg-tred text-ember2 hover:brightness-125" data-a="wipe">${ic('trash', 17)}Alles löschen</button>`) : '');
   },
-  ansicht: () => sCard('eye', 'Ansicht', 'Nur für Sie auf diesem Gerät – das Kundendokument ändert sich nicht.', `${seg('me:mode', [['light', 'Hell'], ['dark', 'Dunkel'], ['studio', 'Studio'], ['system', 'Wie System']], { cls: 'flex-wrap' })}<div class="hint">Schnell wechseln: Schalter in der Kopfleiste bzw. unten in der Seitenleiste.</div>`)
+  ansicht: () => sCard('eye', 'Ansicht', 'Nur für Sie auf diesem Gerät – das Kundendokument ändert sich nicht.', `${seg('me:mode', [['light', 'Hell'], ['dark', 'Dunkel'], ['system', 'Wie System']], { cls: 'flex-wrap' })}<div class="hint">Schnell wechseln: Schalter in der Kopfleiste bzw. unten in der Seitenleiste.</div>`)
     + sCard('sparkle', 'Tutorial', 'Die Einführung in die App noch einmal ansehen.', `<button class="btn-s" data-a="tut" data-i="0">${ic('arrowR', 16)}Tutorial starten</button>`),
   profil: () => {
     const m = PERSONAL.profile, img = fileUrl(m.photo);
@@ -3020,11 +3364,12 @@ const savePersonal = debounce(() => DB.put('kv', clone(PERSONAL), 'personal'), 2
 async function loadPersonal() {
   const v = await DB.get('kv', 'personal');
   if (v) PERSONAL = deepMerge(PERSONAL, v);
+  if (PERSONAL.mode === 'studio') PERSONAL.mode = 'dark'; if (S.design.mode === 'studio') S.design.mode = 'dark';
   if (PERSONAL.mode) S.design.mode = PERSONAL.mode; else PERSONAL.mode = S.design.mode;
   if (PERSONAL.profile.photo) await loadFiles([PERSONAL.profile.photo]);
   if (PERSONAL.keepAdmin) UI.admin = true;
 }
-function setMode(m) { S.design.mode = m; PERSONAL.mode = m; savePersonal(); applyTheme(); }
+function setMode(m) { if (m === 'studio') m = 'dark'; S.design.mode = m; PERSONAL.mode = m; savePersonal(); applyTheme(); }
 const _scope12 = scopeOf;
 scopeOf = function (b) { if (b.startsWith('me:')) return { obj: PERSONAL, path: b.slice(3), kind: 'me' }; return _scope12(b); };
 const _bset12 = bset;
@@ -3297,7 +3642,7 @@ const TUTORIAL = [
   ['file', '5 · PDF und Unterschrift', '„PDF erstellen“ prüft zuerst Ihre Eingaben auf Tippfehler. Im Termin kann der Kunde direkt auf dem Gerät unterschreiben – die Unterschrift kommt ins PDF.'],
   ['clock', '6 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite.'],
   ['db', '7 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive – die App erinnert Sie regelmäßig.'],
-  ['gear', 'Fertig', 'Ansicht (Hell, Dunkel, Studio) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial jederzeit wiederholen.']
+  ['gear', 'Fertig', 'Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial jederzeit wiederholen.']
 ];
 function showTutorial(i = 0) {
   const [icon, title, text] = TUTORIAL[i], last = i === TUTORIAL.length - 1;
@@ -3344,6 +3689,128 @@ async function updateCoverPalette(silent) {
   if (!silent) toast(pal ? 'PDF-Farben aus dem Deckblatt übernommen.' : 'Im Deckblatt wurden keine kräftigen Farben gefunden – es bleibt bei Ihrer Farbwelt.', pal ? 'ok' : 'warn');
 }
 async function ensureCoverPalette() { const d = S.design; if (d.coverStyle === 'image' && d.cover.file && d.coverPalette === undefined) await updateCoverPalette(true); }
+/* =========================================================
+   Rechtliches: Widerrufsbelehrung (folgt im PDF direkt auf
+   „Angebot annehmen“), Impressum und Datenschutz in der App
+   ========================================================= */
+const WIDERRUF_DEFAULT = `## Widerrufsrecht
+Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen.
+Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses.
+Um Ihr Widerrufsrecht auszuüben, müssen Sie uns ({firma}, {adresse}, Telefon {telefon}, E-Mail {email}) mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief, Telefax oder E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren. Sie können dafür das beigefügte Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist.
+Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.
+## Folgen des Widerrufs
+Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen erhalten haben, einschließlich der Lieferkosten (mit Ausnahme der zusätzlichen Kosten, die sich daraus ergeben, dass Sie eine andere Art der Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt haben), unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe Zahlungsmittel, das Sie bei der ursprünglichen Transaktion eingesetzt haben, es sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in keinem Fall werden Ihnen wegen dieser Rückzahlung Entgelte berechnet.
+Haben Sie verlangt, dass die Dienstleistungen während der Widerrufsfrist beginnen sollen, so haben Sie uns einen angemessenen Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt, zu dem Sie uns von der Ausübung des Widerrufsrechts hinsichtlich dieses Vertrags unterrichten, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im Vertrag vorgesehenen Dienstleistungen entspricht.
+## Besondere Hinweise
+Ihr Widerrufsrecht erlischt vorzeitig, wenn der Vertrag von beiden Seiten auf Ihren ausdrücklichen Wunsch hin vollständig erfüllt ist, bevor Sie Ihr Widerrufsrecht ausgeübt haben.
+## Widerruf gegen Entschädigungszahlung
+Nach Ablauf der Widerrufsfrist von vierzehn Tagen ist ein Rücktritt vom Kaufvertrag gegen eine Entschädigungszahlung von 5 % des Kaufpreises möglich.`;
+
+const IMPRESSUM_EXTRA_DEFAULT = `## Verbraucherstreitbeilegung
+Wir sind nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.`;
+
+const DATENSCHUTZ_DEFAULT = `## Verantwortlicher
+{firma}, {adresse}
+Telefon {telefon} · E-Mail {email}
+## Worum es geht
+Diese Web-App ist ein Arbeitswerkzeug für unsere Energieberater. Sie berechnet die Wirtschaftlichkeit von Photovoltaikanlagen, Stromspeichern und Wärmepumpen und erstellt daraus Kundendokumente.
+## Speicherung auf Ihrem Gerät
+Alle Eingaben – auch Kundendaten, hochgeladene Angebote, Fotos und Unterschriften – werden ausschließlich lokal im Browser des verwendeten Geräts gespeichert (IndexedDB). Sie werden nicht an uns oder an Dritte übertragen. Eine Weitergabe erfolgt nur, wenn Sie selbst eine Datensicherung, Konfigurationsdatei oder ein PDF exportieren und versenden. Die Angebotserkennung (Texterkennung) läuft vollständig auf dem Gerät.
+## Hosting und Server-Logfiles
+Die App wird bei Netlify, Inc. (512 2nd Street, Suite 200, San Francisco, CA 94107, USA) bereitgestellt. Beim Aufruf verarbeitet Netlify technisch notwendige Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene Datei und Browserkennung, um die App auszuliefern und vor Missbrauch zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren und stabilen Betrieb). Die Übermittlung in die USA stützt sich auf das EU-US Data Privacy Framework bzw. die Standardvertragsklauseln der EU-Kommission.
+## Solarertrag (PVGIS)
+Wenn Sie den Solarertrag für einen Standort berechnen lassen, werden ausschließlich die aus der Postleitzahl ermittelten Koordinaten sowie Dachneigung und -ausrichtung über unseren Server an PVGIS der Gemeinsamen Forschungsstelle der Europäischen Kommission (Joint Research Centre, Ispra, Italien) übermittelt. Namen oder Adressen werden dabei nicht übertragen.
+## Keine Cookies, kein Tracking
+Die App setzt keine Cookies, verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von fremden Servern nach. Schriften und Programmbibliotheken werden von unserem eigenen Server geladen.
+## Kundendaten
+Personenbezogene Daten unserer Kundinnen und Kunden verarbeiten wir zur Erstellung von Angeboten und Berechnungen, also zur Durchführung vorvertraglicher Maßnahmen (Art. 6 Abs. 1 lit. b DSGVO). Wir löschen sie, sobald sie dafür nicht mehr benötigt werden und keine gesetzlichen Aufbewahrungspflichten bestehen.
+## Ihre Rechte
+Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch (Art. 15–21 DSGVO). Wenden Sie sich dazu an die oben genannten Kontaktdaten. Außerdem können Sie sich bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel bei der Landesbeauftragten für den Datenschutz Niedersachsen.`;
+
+const LEGAL_DEFAULT = { withdrawOn: true, withdrawForm: true, withdrawal: WIDERRUF_DEFAULT, imprintExtra: IMPRESSUM_EXTRA_DEFAULT, privacy: DATENSCHUTZ_DEFAULT };
+DEFAULT_SETTINGS.legal = clone(LEGAL_DEFAULT);
+if (!S.legal) S.legal = clone(LEGAL_DEFAULT);
+const legalOf = k => { const v = (S.legal || {})[k]; return v === undefined ? LEGAL_DEFAULT[k] : v; };
+
+/* Platzhalter mit den Firmendaten füllen */
+function legalFill(s) {
+  const c = S.company, addr = [c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  return String(s || '').replace(/\{firma\}/g, coName()).replace(/\{adresse\}/g, addr || '[Adresse]')
+    .replace(/\{telefon\}/g, c.phone || '[Telefon]').replace(/\{email\}/g, c.email || '[E-Mail]');
+}
+/* Einfaches Format: „## Überschrift“, sonst Absätze */
+function legalHtml(s, h = 'h3') {
+  return legalFill(s).split('\n').map(l => l.trim()).filter(Boolean).map(l => l.startsWith('## ') ? `<${h}>${esc(l.slice(3))}</${h}>` : `<p>${esc(l)}</p>`).join('');
+}
+
+/* Widerrufsbelehrung folgt im PDF immer direkt auf „Angebot annehmen“ */
+const withdrawActive = () => !!legalOf('withdrawOn') && !!String(legalOf('withdrawal')).trim();
+DOC_TEXT.withdraw = { label: 'Widerrufsbelehrung', badge: 'Angebot annehmen', title: 'Widerrufsbelehrung', lead: 'Ihr Recht, diesen Vertrag innerhalb von vierzehn Tagen zu widerrufen.' };
+const _visible13 = visiblePages;
+visiblePages = function (p, R) {
+  const defs = _visible13(p, R);
+  if (!withdrawActive()) return defs;
+  const i = defs.findIndex(d => d.key === 'sign' || d.key === 'sSign');
+  if (i >= 0) defs.splice(i + 1, 0, { key: 'withdraw', label: 'Widerrufsbelehrung', on: true, count: 1 });
+  return defs;
+};
+DOC.withdraw = function (p, R) {
+  const sales = CUR_LAYOUT === 'sales', c = S.company, addr = [coName(), c.street, [c.zip, c.city].filter(Boolean).join(' '), c.email].filter(Boolean).join(', ');
+  let b = sales ? sChap('withdraw', p, R) : chap(txt('withdraw', 'title'), txt('withdraw', 'lead'));
+  b += `<div class="wdr">${legalHtml(legalOf('withdrawal'))}</div>`;
+  if (legalOf('withdrawForm')) {
+    const ln = l => `<div style="display:flex;gap:3mm;align-items:flex-end;margin-top:3.2mm"><span style="white-space:nowrap">${l}</span><span style="flex:1;border-bottom:0.25mm solid var(--ink3);height:3.5mm"></span></div>`;
+    b += `<div class="wdr-form"><div style="font-weight:700;font-size:9.4pt">Muster-Widerrufsformular</div><div style="font-size:7.6pt;color:var(--ink3);margin-top:0.5mm">(Wenn Sie den Vertrag widerrufen wollen, dann füllen Sie bitte dieses Formular aus und senden Sie es zurück.)</div>
+      <div style="margin-top:2.5mm">An: ${esc(addr)}</div>
+      <div style="margin-top:2mm">Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über den Kauf der folgenden Waren (*) / die Erbringung der folgenden Dienstleistung (*)${p.offer.number ? ` gemäß Angebot ${esc(p.offer.number)}` : ''}:</div>
+      ${ln('')}${ln('Bestellt am (*) / erhalten am (*):')}${ln('Name des/der Verbraucher(s):')}${ln('Anschrift des/der Verbraucher(s):')}<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:6mm">${ln('Datum:')}${ln('Unterschrift (nur bei Mitteilung auf Papier):')}</div>
+      <div style="font-size:7.2pt;color:var(--ink3);margin-top:2.5mm">(*) Unzutreffendes streichen.</div></div>`;
+  }
+  return { title: 'Widerrufsbelehrung', body: b };
+};
+/* Hinweis auf der Seite „Angebot annehmen“ */
+const _sign13 = DOC.sign, _sSign13 = DOC.sSign;
+const withdrawHint = () => (withdrawActive() ? `<p class="small" style="margin-top:2mm">Die Widerrufsbelehrung${legalOf('withdrawForm') ? ' und das Muster-Widerrufsformular' : ''} finden Sie auf der folgenden Seite.</p>` : '');
+DOC.sign = function (p, R) { const r = _sign13(p, R); r.body = r.body.replace('<div style="margin-top:6mm">', withdrawHint() + '<div style="margin-top:6mm">'); return r; };
+DOC.sSign = function (p, R) { const r = _sSign13(p, R); r.body += withdrawHint(); return r; };
+
+/* App: Impressum & Datenschutz – für alle sichtbar, bearbeitbar im Admin-Bereich */
+STABS.splice(STABS_ME.length, 0, ['recht', 'Impressum & Datenschutz', 'file']);
+function imprintHtml() {
+  const c = S.company, rows = [];
+  rows.push(`<p><b>${esc(coName())}</b>${c.street ? '<br>' + esc(c.street) : ''}${c.zip || c.city ? '<br>' + esc([c.zip, c.city].filter(Boolean).join(' ')) : ''}</p>`);
+  if (c.ceo) rows.push(`<p>Vertreten durch: ${esc(c.ceo)}</p>`);
+  const kontakt = [c.phone && 'Telefon: ' + esc(c.phone), c.email && 'E-Mail: ' + esc(c.email), c.web && 'Web: ' + esc(c.web)].filter(Boolean);
+  if (kontakt.length) rows.push(`<h3>Kontakt</h3><p>${kontakt.join('<br>')}</p>`);
+  if (c.register) rows.push(`<h3>Registereintrag</h3><p>${esc(c.register)}</p>`);
+  const st = [c.vatId && 'Umsatzsteuer-Identifikationsnummer gemäß § 27 a UStG: ' + esc(c.vatId), c.taxNo && 'Steuernummer: ' + esc(c.taxNo)].filter(Boolean);
+  if (st.length) rows.push(`<h3>Steuern</h3><p>${st.join('<br>')}</p>`);
+  return `<p class="text-ink3">Angaben gemäß § 5 DDG</p>${rows.join('')}${legalHtml(legalOf('imprintExtra'))}`;
+}
+SET.recht = () => {
+  const c = S.company, miss = [!c.street && 'Straße', !c.city && 'Ort', !c.phone && 'Telefon', !c.email && 'E-Mail'].filter(Boolean);
+  const warn = miss.length ? `<div class="rounded-[calc(var(--r)-4px)] bg-tyel ring-1 ring-s/30 p-4 text-[13.5px] text-ink flex gap-3 mb-5">${ic('info', 18, 'shrink-0 mt-0.5')}<div>Für ein vollständiges Impressum fehlen noch: ${miss.join(', ')}. Bitte unter Einstellungen → Unternehmen eintragen${UI.admin ? '' : ' (Admin-Bereich)'}.</div></div>` : '';
+  const edit = UI.admin ? sCard('pen', 'Texte bearbeiten', 'Platzhalter: {firma}, {adresse}, {telefon}, {email} – werden mit den Firmendaten gefüllt. „## “ am Zeilenanfang = Überschrift.', `
+      ${area('Impressum – Zusatz (z. B. Berufshaftpflicht, Streitbeilegung)', 's:legal.imprintExtra', 4)}
+      <div class="mt-4">${area('Datenschutzerklärung', 's:legal.privacy', 14)}</div>
+      <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 mt-5 divide-y divide-line">${toggleRow('Widerrufsbelehrung im Kundendokument', 's:legal.withdrawOn', 'Steht immer direkt hinter der Seite „Angebot annehmen“ – in der kompletten und in der Vertriebs-PDF.')}${toggleRow('Muster-Widerrufsformular anfügen', 's:legal.withdrawForm')}</div>
+      <div class="mt-4">${area('Widerrufsbelehrung', 's:legal.withdrawal', 14)}</div>
+      <button class="btn-g mt-3" data-a="legal-reset">${ic('refresh', 15)}Standardtexte wiederherstellen</button>`) : `<div class="hint">Bearbeiten im Admin-Bereich (Einstellungen → Unternehmen bzw. hier nach dem Entsperren).</div>`;
+  return sCard('building', 'Impressum', 'So erscheint es in der App.', `${warn}<div class="legal">${imprintHtml()}</div>`)
+    + sCard('info', 'Datenschutzerklärung', '', `<div class="legal">${legalHtml(legalOf('privacy'))}</div>`)
+    + (UI.admin ? sCard('file', 'Widerrufsbelehrung (Vorschau)', 'Folgt im PDF direkt auf „Angebot annehmen“.', `<div class="legal">${legalHtml(legalOf('withdrawal'))}</div>`) : '')
+    + edit;
+};
+/* Vor dem PDF: fehlende Firmendaten für die Widerrufsbelehrung melden */
+const _plaus13 = plausibility;
+plausibility = function (p, R) {
+  const w = _plaus13(p, R), c = S.company;
+  if (withdrawActive() && visiblePages(p, R).some(d => d.key === 'withdraw')) {
+    const miss = [!(c.street && c.city) && 'Adresse', !c.phone && 'Telefon', !c.email && 'E-Mail'].filter(Boolean);
+    if (miss.length) w.push(`In der Widerrufsbelehrung fehlen Ihre Firmendaten (${miss.join(', ')}). Bitte unter Einstellungen → Unternehmen eintragen.`);
+  }
+  return w;
+};
 
 /* =========================================================
    Router & Rendern
@@ -3527,6 +3994,8 @@ document.addEventListener('click', async e => {
     case 'prod-img-del': { const pr = PRODUCTS.find(x => x.id === a.dataset.id); await delFiles([pr.img]); pr.img = ''; saveProducts(); productModal(pr.id); break; }
     case 'logo-del': await delFiles([S.company.logoFile]); S.company.logoFile = ''; saveSettings(); render(); break;
     case 'color-quick': S.design[a.dataset.k] = a.dataset.v; applyTheme(); saveSettings(); render(); break;
+    case 'legal-reset': if (!confirm('Impressum-Zusatz, Datenschutzerklärung und Widerrufsbelehrung auf die Standardtexte zurücksetzen?')) break; S.legal = clone(LEGAL_DEFAULT); saveSettings(); render(); break;
+    case 'bg-alpha': S.design[a.dataset.k].bgAlpha = +a.dataset.v; saveSettings(); render(); break;
     case 'cover-blocks-reset': S.design.cover.blocks = clone(DEFAULT_SETTINGS.design.cover.blocks); saveSettings(); render(); break;
     case 'logo-pos': S.design.coverLogo.x = +a.dataset.x; S.design.coverLogo.y = +a.dataset.y; saveSettings(); render(); break;
     case 'stand-sel': UI.standSel = a.dataset.id; render(); break;
@@ -3549,7 +4018,8 @@ document.addEventListener('click', async e => {
     case 'pad-clear': { const st = PADS[a.dataset.k]; if (st) { st.ctx.clearRect(0, 0, st.cv.width, st.cv.height); st.drawn = false; } break; }
     case 'sign-save': saveSignature(p); break;
     case 'sign-del': if (await confirmDlg('Unterschrift entfernen?', 'Die gespeicherte Unterschrift wird gelöscht.', 'Entfernen')) { await delFiles([p.sign.cust, p.sign.adv].filter(Boolean)); p.sign = null; if (p.status === 'unterschrieben') p.status = 'gesendet'; saveProject(p); render(); } break;
-    case 'pdf-force': closeModal(); makePdf(true); break;
+    case 'pdf-force': closeModal(); makePdf(true, UI.pdfLayout); break;
+    case 'pdf-go': closeModal(); makePdf(false, a.dataset.v); break;
     case 'plaus-back': closeModal(); p.step = 3; saveProject(p); go(`projekt/${p.id}/3`); break;
     case 'tut': showTutorial(+a.dataset.i); break;
     case 'tut-skip': closeModal(); PERSONAL.tutorialDone = true; savePersonal(); break;
@@ -3558,11 +4028,11 @@ document.addEventListener('click', async e => {
     case 'admin-pw': { const a1 = $('#pw-new1').value, a2 = $('#pw-new2').value; if (a1.length < 8) { toast('Bitte mindestens 8 Zeichen.', 'err'); break; } if (a1 !== a2) { toast('Die Passwörter stimmen nicht überein.', 'err'); break; } await setAdminPassword(a1); toast('Admin-Passwort geändert. Bitte die Konfiguration neu exportieren.'); render(); break; }
     case 'cover-pal': updateCoverPalette().then(render); break;
     case 'clear-color': bset(a.dataset.b, ''); applyTheme(); render(); break;
-    case 'theme-toggle': setMode({ light: 'dark', dark: 'studio', studio: 'light' }[curMode()]); render(); toast('Ansicht: ' + MODE_LABEL[curMode()]); break;
+    case 'theme-toggle': setMode(curMode() === 'light' ? 'dark' : 'light'); render(); toast('Ansicht: ' + MODE_LABEL[curMode()]); break;
     case 'focus-search': focusSearch(); break;
     case 'theme-preset': { const t = THEME_PRESETS[+a.dataset.i]; Object.assign(S.design, { primary: t.primary, secondary: t.secondary, accent: t.accent, old: t.old, ink: t.ink, bg: t.bg, night: t.night }); applyTheme(); saveSettings(); render(); break; }
-    case 'ord': { const o = docOrder(), i = o.indexOf(a.dataset.k), j = i + +a.dataset.d; if (j < 0 || j >= o.length) break; [o[i], o[j]] = [o[j], o[i]]; S.doc.order = o; saveSettings(); render(); break; }
-    case 'ord-reset': S.doc.order = null; saveSettings(); render(); break;
+    case 'ord': { const sl = a.dataset.l === 's', o = sl ? salesOrder() : docOrder(), i = o.indexOf(a.dataset.k), j = i + +a.dataset.d; if (j < 0 || j >= o.length) break; [o[i], o[j]] = [o[j], o[i]]; if (sl) S.doc.salesOrder = o; else S.doc.order = o; saveSettings(); render(); break; }
+    case 'ord-reset': if (a.dataset.l === 's') { S.doc.salesOrder = null; saveSettings(); render(); break; } S.doc.order = null; saveSettings(); render(); break;
     case 'docdef': { const k = a.dataset.k, on = S.doc.defaults[k] === false; S.doc.defaults[k] = on; if (on && k === 'sign') S.discount.signPage = true; if (on && (k === 'prices' || k === 'why')) S.prices.showPages = true; saveSettings(); render(); break; }
     case 'tr-add': S.sales.trust.push({ id: uid('t'), on: true, icon: 'check', title: 'Neues Argument', text: '' }); saveSettings(); render(); break;
     case 'tr-del': S.sales.trust = S.sales.trust.filter(t => t.id !== a.dataset.id); saveSettings(); render(); break;

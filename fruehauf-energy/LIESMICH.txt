@@ -34,8 +34,8 @@ Erste Schritte
    Deckblatt-Stil, Kopfzeile und Kapitelmarke anpassen.
    Einstellungen → Dokument & Verkauf: Seitenreihenfolge, alle Seitentexte,
    Verkaufsargumente und Kontaktbox.
-   Ansicht Hell / Dunkel / Studio: Schalter in der Kopfleiste bzw. unten in der
-   Seitenleiste (oder Einstellungen → Design → Erscheinungsbild).
+   Ansicht Hell / Dunkel: Schalter in der Kopfleiste
+   (oder Einstellungen → Ansicht).
    Einstellungen → Berater: Berater mit Name, E-Mail, Telefon und Foto anlegen
    und einen Standard-Berater wählen. Im Projekt per Auswahlliste änderbar.
    Einstellungen → Roadmap: Schritte nach der Unterschrift (PV und WP).
@@ -74,3 +74,17 @@ Hinweise
 - Aktualisieren: Einfach den neuen Ordner erneut per Drag & Drop auf die
   bestehende Seite unter „Deploys“ ziehen. Ihre Daten bleiben erhalten,
   solange die Adresse gleich bleibt.
+
+VERTRIEBS-PDF
+   Beim Klick auf „PDF erstellen“ fragt die App: Komplette PDF oder
+   Vertriebs-PDF (kompakt, 9 Seiten). Abschaltbar unter Einstellungen →
+   Dokument & Verkauf → Vertriebs-PDF. Dort auch Seiten, Reihenfolge,
+   Schrift und alle Texte ({kunde}, {monat} … ; *Wort* = Hauptfarbe).
+
+RECHTLICHES
+   Impressum & Datenschutz: Einstellungen → Impressum & Datenschutz (für
+   alle sichtbar, Link auch unten auf jeder Seite). Das Impressum baut sich
+   aus Einstellungen → Unternehmen auf. Texte im Admin-Bereich änderbar.
+   Widerrufsbelehrung + Muster-Widerrufsformular folgen im PDF automatisch
+   direkt auf die Seite „Angebot annehmen“. Bitte alle Rechtstexte vor dem
+   Einsatz von einer Fachperson prüfen lassen.
