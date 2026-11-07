@@ -4046,7 +4046,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107204325';
+const APP_VERSION = '20261107204524';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4250,7 +4250,7 @@ let updShown = false;
 async function checkUpdate() {
   if (updShown || APP_VERSION.startsWith('__') || !navigator.onLine) return;
   try {
-    const t = await (await fetch('sw.js', { cache: 'no-store' })).text(), m = t.match(/VERSION = '(\d+)'/);
+    const t = await (await fetch('sw.js?check=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/VERSION = '(\d+)'/);
     if (m && m[1] !== APP_VERSION) {
       updShown = true;
       document.body.insertAdjacentHTML('beforeend', `<div id="upd-bar" class="fixed left-1/2 -translate-x-1/2 z-[60] card px-4 py-3 flex items-center gap-3 shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);max-width:calc(100vw - 24px)"><span class="text-[14px]"><b class="font-semibold">Neue Version verfügbar.</b> <span class="text-ink3">Ihre Daten bleiben erhalten.</span></span><button class="btn-p btn-sm" data-a="app-update">Jetzt aktualisieren</button></div>`);
