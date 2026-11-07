@@ -2107,7 +2107,7 @@ function shell(inner) {
   </div>
   <nav class="md:hidden flex items-center gap-1 px-3 pt-1 pb-3 overflow-x-auto no-scrollbar">${links('!h-9 !px-3 !text-[13px]')}</nav>
 </header>
-<main class="pb-32">${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a></footer></main>`;
+<main class="pb-32">${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a> · <a href="#/einstellungen/ansicht" class="hover:text-ink">Version ${typeof WHATS_NEW !== 'undefined' ? WHATS_NEW.version : ''}</a></footer></main>`;
 }
 /* Ansicht: Hell ↔ Dunkel */
 const curMode = () => (appDark() ? 'dark' : 'light');
@@ -4098,7 +4098,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107211418';
+const APP_VERSION = '20261107211635';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4302,10 +4302,10 @@ let updShown = false;
 async function checkUpdate() {
   if (updShown || APP_VERSION.startsWith('__') || !navigator.onLine) return;
   try {
-    const t = await (await fetch('sw.js?check=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/VERSION = '(\d+)'/);
+    const t = await (await fetch('sw.js?check=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/VERSION = '(\d+)'/), sv = (t.match(/SEMVER = '([\d.]+)'/) || [])[1];
     if (m && m[1] !== APP_VERSION) {
       updShown = true;
-      document.body.insertAdjacentHTML('beforeend', `<div id="upd-bar" class="fixed left-1/2 -translate-x-1/2 z-[60] card px-4 py-3 flex items-center gap-3 shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);max-width:calc(100vw - 24px)"><span class="text-[14px]"><b class="font-semibold">Neue Version verfügbar.</b> <span class="text-ink3">Ihre Daten bleiben erhalten.</span></span><button class="btn-p btn-sm" data-a="app-update">Jetzt aktualisieren</button></div>`);
+      document.body.insertAdjacentHTML('beforeend', `<div id="upd-bar" class="fixed left-1/2 -translate-x-1/2 z-[60] card px-4 py-3 flex items-center gap-3 shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);max-width:calc(100vw - 24px)"><span class="text-[14px]"><b class="font-semibold">${sv ? `Version ${sv} verfügbar.` : 'Neue Version verfügbar.'}</b> <span class="text-ink3">Ihre Daten bleiben erhalten.</span></span><button class="btn-p btn-sm" data-a="app-update">Jetzt aktualisieren</button></div>`);
     }
   } catch (e) { /* offline – später erneut */ }
 }
@@ -4436,7 +4436,7 @@ const WN_IMG = {
 };
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 const WHATS_NEW = {
-  id: '2026-11-07',
+  version: '1.40', id: '1.40', date: '2026-11-07',
   items: [
     ['house', 'Neues Deckblatt-Haus', 'Klassisch oder modern, Licht an oder aus. PV, Wärmepumpe, Speicher und E-Auto mit Wallbox erscheinen automatisch, wenn sie zum Angebot gehören.'],
     ['sign', 'Schönere Unterschriftsfelder', 'Im dunklen PDF mit hellem Hintergrund – Form, Farbe und Stärke einstellbar. Ort und Datum in Handschrift.'],
@@ -4445,7 +4445,7 @@ const WHATS_NEW = {
   ]
 };
 function showWhatsNew() {
-  modal(`<div><div class="mono text-[12px] text-ink3">Update · ${deDate(WHATS_NEW.id)}</div><h3 class="h-font text-[26px] mt-1 pr-8">Neu in dieser Version</h3>
+  modal(`<div><div class="mono text-[12px] text-ink3">Version ${WHATS_NEW.version} · ${deDate(WHATS_NEW.date)}</div><h3 class="h-font text-[26px] mt-1 pr-8">Neu in Version ${WHATS_NEW.version}</h3>
     <div class="space-y-4 mt-5">${WHATS_NEW.items.map(([img, t, x]) => `<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start"><div class="w-full sm:w-[120px] h-[130px] sm:h-[80px] shrink-0 rounded-xl overflow-hidden border border-line" style="background:${WN_BG[img] || 'transparent'}">${WN_IMG[img] ? WN_IMG[img]() : ''}</div><div class="min-w-0"><div class="font-semibold text-[15px]">${esc(t)}</div><div class="text-[13px] text-ink2 mt-0.5 leading-relaxed">${esc(x)}</div></div></div>`).join('')}</div>
     <div class="flex justify-end mt-6"><button class="btn-p" data-a="modal-close">Alles klar</button></div></div>`);
   PERSONAL.seenRelease = WHATS_NEW.id; savePersonal();
@@ -4458,7 +4458,7 @@ function maybeWhatsNew() {
 }
 /* Einstellungen → Ansicht: Neuigkeiten erneut ansehen */
 const _setAnsicht17 = SET.ansicht;
-SET.ansicht = () => _setAnsicht17() + sCard('sparkle', 'Neuigkeiten', `Stand ${deDate(WHATS_NEW.id)}`, `<button class="btn-s" data-a="whatsnew">${ic('sparkle', 16)}Was ist neu?</button>`);
+SET.ansicht = () => _setAnsicht17() + sCard('sparkle', 'Neuigkeiten', `Sie nutzen Version ${WHATS_NEW.version} vom ${deDate(WHATS_NEW.date)}`, `<button class="btn-s" data-a="whatsnew">${ic('sparkle', 16)}Was ist neu?</button>`);
 
 /* =========================================================
    Router & Rendern

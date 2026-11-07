@@ -106,3 +106,7 @@ NEU
    Unterschriftsfelder: Hintergrund (Form, Farbe, Stärke) unter Design &
    Deckblatt; Ort/Datum in Handschrift (Schrift Caveat, SIL Open Font License).
 
+VERSIONEN
+   Aktuelle Version steht unten in der App und unter Einstellungen → Ansicht.
+   Nach einem Update zeigt die App einmalig „Neu in Version …“.
+
