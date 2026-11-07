@@ -585,7 +585,7 @@ const DEFAULT_SETTINGS = {
     fontBody: 'Geist', fontHead: 'Instrument Serif', fontMono: 'Geist Mono', headWeight: 400, radius: 14, buttons: 'round', buttonStyle: 'light', highlight: 'solid',
     moduleColor: 'black', hpIllu: 'scene', pvIllu: 'scene', pdfColors: 'cover',
     coverInfo: { badge: true, title: true, subtitle: true, customer: true, address: true, offer: true, created: true, advisor: true, figures: true, contact: true, note: '' },
-    chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', hdrFrom: '', hdrTo: '', hdrHeight: 60, coverStyle: 'illu',
+    chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', sigBox: { mode: 'auto', color: '#ffffff', alpha: 88, shape: 'round' }, hdrFrom: '', hdrTo: '', hdrHeight: 60, coverStyle: 'illu',
     mark: { style: 'sun', shape: 'rounded', bg: '', fg: '', line: '', text: '', file: '' },
     cover: { use: false, file: '', showCustomer: true, whiteBox: true, dark: true, pos: 62, layout: 'block', blocks: { head: { x: 0, y: 14, w: 100 }, cust: { x: 0, y: 72, w: 100 }, contact: { x: 0, y: 96, w: 70 } } },
     coverLogo: { source: 'company', file: '', x: 6, y: 6, size: 14, whiteBg: true }
@@ -2542,7 +2542,7 @@ function docPageDefs(p, R) {
   const spec = {
     cover: [true, true], summary: [true, true], situation: [true, true], year: [yearOk, true, yearOk ? '' : (R.W ? 'Braucht den Verbrauch der Heizung' : 'Braucht die Anlagenleistung')],
     howWP: [R.W, true], howPV: [R.V, true], invest: [true, true], monthly: [true, true], finance: [true, !fin, finNote],
-    prices: [true, !!S.prices.showPages], why: [R.W, !!S.prices.showPages], leisure: [true, !fin, finNote], variants: [(p.variants || []).length > 0, true], roadmap: [true, true], sign: [true, !!S.discount.signPage], attach: [att.length > 0, true]
+    prices: [true, !!S.prices.showPages], why: [R.W, !!S.prices.showPages], leisure: [true, !fin, finNote], variants: [(p.variants || []).length > 0, true], roadmap: [true, true], reviews: [reviewsOn(), true], sign: [true, !!S.discount.signPage], attach: [att.length > 0, true]
   };
   return docOrder().map(key => {
     const [applies, auto, note = ''] = spec[key];
@@ -2586,7 +2586,7 @@ function pageFooter(n, N) {
 const pageWrap = (p, title, body, n, N, key) => `<section class="${pageCls(key)}" data-key="${key}">${S.design.pdfHeader === 'fade' ? '<div class="phg"></div>' : ''}<div class="ph ${S.design.pdfHeader}"><div class="lg">${docLogo()}</div><div class="tt"><b>${esc(title)}</b><span>${esc(custName(p))}</span></div></div><div class="pb">${body}</div>${pageFooter(n, N)}</section>`;
 function chap(t, lead = '') {
   const o = S.doc.texts[CUR_KEY] || {};
-  const title = (o.title || t).replace('{jahre}', S.calc.years), ld = o.lead !== undefined && o.lead !== '' ? o.lead : lead;
+  const title = (o.title || t).replace('{jahre}', S.calc.years).replace(/\*/g, ''), ld = o.lead !== undefined && o.lead !== '' ? o.lead : lead;
   return `${kmHtml()}<h1>${title}</h1>${ld ? `<p class="lead">${esc(ld)}</p>` : '<div style="height:3mm"></div>'}`;
 }
 const tile = (k, v, u = '', cls = '') => `<div class="tile ${cls}"><div class="k">${k}</div><div class="v">${v}</div>${u ? `<div class="u">${u}</div>` : ''}</div>`;
@@ -2756,7 +2756,9 @@ const DOC = {
     b += `<div class="sec" style="display:grid;grid-template-columns:1fr 1fr;gap:7mm"><div><h2>Ihre Vorteile</h2>${benefitsOf(p, R).map(checkLi).join('')}</div>`;
     const tr = S.sales.trustOn ? S.sales.trust.filter(t => t.on).slice(0, 4) : [];
     b += `<div>${tr.length ? `<h2>Warum ${esc(coName())}</h2>${tr.map(t => `<div style="display:flex;gap:3mm;margin-bottom:3mm"><span style="flex-shrink:0;display:inline-flex;width:8mm;height:8mm;border-radius:calc(var(--dr) * .7);background:var(--tile);align-items:center;justify-content:center">${icC(t.icon, 16, S.design.primary, 1.8)}</span><div><div style="font-weight:600;font-size:9pt">${esc(t.title)}</div><div class="small" style="font-size:7.8pt;line-height:1.4">${esc(t.text)}</div></div></div>`).join('')}` : ''}</div></div>`;
-    b += `<div class="sec">${advisorCard(p, R)}</div>`;
+    // Ansprechpartner nur einmal: steht er schon auf dem Deckblatt, entfällt der Kasten hier
+    const coverContact = CI().contact && !!advisorOf(p).name && visiblePages(p, R).some(d => d.key === 'cover');
+    if (!coverContact) b += `<div class="sec">${advisorCard(p, R)}</div>`;
     if (R.discount) b += `<div style="margin-top:3mm;background:var(--t-yel);border-radius:var(--dr);padding:4.5mm 6mm;display:flex;justify-content:space-between;align-items:center;gap:5mm"><div><div style="font-size:8pt;font-weight:600;color:var(--s-dark)">Ihr Vorteil bei schneller Entscheidung</div><div style="font-size:10pt;font-weight:600;margin-top:0.8mm">${esc(S.discount.text.replace('{datum}', deDate(p.discount.until)))}</div></div><div style="font-size:18pt;font-weight:600;color:var(--p);white-space:nowrap">− ${eur(R.discount)}</div></div>`;
     return { title: txt('summary', 'title'), body: b };
   },
@@ -2929,9 +2931,9 @@ const DOC = {
     b += `<div class="sec tile"><div style="display:grid;grid-template-columns:1fr 1fr;gap:2.5mm 6mm;font-size:9pt"><span class="muted">Angebot</span><b>${esc(p.offer.number || '–')}</b><span class="muted">Angebotsdatum</span><b>${p.offer.date ? deDate(p.offer.date) : '–'}</b><span class="muted">Bruttopreis</span><b>${eur(R.gross, 2)}</b>${R.discount ? `<span class="muted">Sonderrabatt</span><b>− ${eur(R.discount, 2)}</b><span class="muted">Preis nach Rabatt</span><b>${eur(R.gross - R.discount, 2)}</b>` : ''}</div></div>`;
     const sg = p.sign && p.sign.cust ? p.sign : null, box = on => (on ? `<span class="chk" style="position:relative"><svg viewBox="0 0 16 16" style="position:absolute;left:0.2mm;top:0.2mm;width:3.2mm;height:3.2mm"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="#0F2A3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : '<span class="chk"></span>');
     b += `<div class="sec" style="font-size:9.6pt;line-height:1.55"><p>${box(sg && sg.order)}${esc(T)}</p><p>${box(sg && sg.cond)}Die Beauftragung erfolgt unter der aufschiebenden Bedingung der Förderzusage.</p></div>`;
-    const line = (l, inner = '') => `<div><div style="height:16mm;display:flex;align-items:flex-end;padding-bottom:1mm">${inner}</div><div style="border-top:0.35mm solid var(--ink);padding-top:1.5mm;font-size:8pt;color:var(--ink3)">${l}</div></div>`;
-    const sigImg = id => (id && fileUrl(id) ? `<img src="${fileUrl(id)}" style="max-height:15mm;max-width:70mm;width:auto;height:auto">` : '');
-    const od = sg ? `<span style="font-size:10pt">${esc(sg.place || '')}, ${deDate(sg.date)}</span>` : '';
+    const line = (l, inner = '') => `<div><div style="height:16mm;display:flex;align-items:flex-end;padding-bottom:1mm;${sigBoxStyle()}">${inner}</div><div style="border-top:0.35mm solid var(--ink);padding-top:1.5mm;font-size:8pt;color:var(--ink3)">${l}</div></div>`;
+    const sigImg = id => (sigSrc(id) ? `<img src="${sigSrc(id)}" style="max-height:15mm;max-width:70mm;width:auto;height:auto">` : '');
+    const od = sg ? `<span style="font-family:'Caveat',cursive;font-weight:500;font-size:16pt;line-height:1.1">${esc(sg.place || '')}, ${deDate(sg.date)}</span>` : '';
     b += `<div class="g2" style="margin-top:8mm;gap:12mm">${line('Ort, Datum', od)}${line('Ort, Datum', sg && sg.adv ? od : '')}${line(`Unterschrift Kunde (${esc(custName(p))})`, sg ? sigImg(sg.cust) : '')}${line(`Unterschrift ${esc(coName())}`, sg ? sigImg(sg.adv) : '')}</div>`;
     b += `<p class="small" style="margin-top:6mm">Es gelten die Bedingungen und die Widerrufsbelehrung des zugrunde liegenden Angebots.</p><div style="margin-top:6mm">${advisorCard(p, R, true)}</div>`;
     return { title: 'Angebot annehmen', body: b };
@@ -2974,6 +2976,16 @@ function fitPages(root) {
     pb.style.width = (box.width / s) + 'px'; pb.style.right = 'auto'; pb.style.transformOrigin = 'top left'; pb.style.transform = `scale(${s.toFixed(4)})`;
   });
 }
+/* Hintergrund hinter den Unterschriftsfeldern – Form, Farbe, Stärke einstellbar */
+function sigBoxStyle() {
+  const o = { mode: 'auto', color: '#ffffff', alpha: 88, shape: 'round', ...(S.design.sigBox || {}) };
+  const dark = CUR_LAYOUT !== 'sales' && docDark();
+  if (o.mode === 'off' || (o.mode === 'auto' && !dark)) return '';
+  const [r, g, b] = hexToRgb(o.color), lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255, a = Math.max(5, Math.min(100, nz(o.alpha, 88))) / 100;
+  const rad = o.shape === 'pill' ? '10mm' : o.shape === 'square' ? '0.6mm' : '2.5mm';
+  return `background:rgba(${r},${g},${b},${a.toFixed(2)});border-radius:${rad};padding:0 5mm;align-items:center;${a >= 0.45 ? `color:${lum > 0.55 ? '#0F2A3D' : '#ffffff'};` : ''}`;
+}
+const sigSrc = id => (id && String(id).startsWith('data:') ? id : id ? fileUrl(id) : '');
 function checkBeforePdf(p) {
   if (hasWP(p) && !(p.heating.year > 1900)) { toast('Bitte zuerst das Baujahr der Heizung eintragen – es bestimmt die Förderung.', 'err', 4500); UI.step = 3; p.step = 3; saveProject(p); go('projekt/' + p.id + '/3'); setTimeout(() => { const el = $('[data-b="p:heating.year"]'); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 120); return false; }
   return true;
@@ -3080,7 +3092,7 @@ docPageDefs = function (p, R) { return layoutOf(p) === 'sales' ? salesPageDefs(p
 visiblePages = function (p, R) { return layoutOf(p) === 'sales' ? salesPageDefs(p, R).filter(d => d.on) : _fullVisible(p, R); };
 function salesPageDefs(p, R) {
   const o = p.pages || {}, att = attachmentPages(p), dflt = S.doc.defaults || {};
-  const spec = { cover: true, sGlance: true, sSystem: true, sInvest: true, sMonthly: true, sLong: true, sWhy: true, sSign: true, sBasis: true, attach: att.length > 0 };
+  const spec = { reviews: reviewsOn(), cover: true, sGlance: true, sSystem: true, sInvest: true, sMonthly: true, sLong: true, sWhy: true, sSign: true, sBasis: true, attach: att.length > 0 };
   return salesOrder().map(key => {
     const applies = spec[key], def = key === 'sBasis' ? dflt.sBasis === true : dflt[key] !== false;
     if (key === 'sBasis' && R.scen === 'opt') return { key, label: DOC_TEXT[key].label, applies, on: true, note: 'Beim optimistischen Szenario immer enthalten', count: 1 };
@@ -3256,9 +3268,9 @@ Object.assign(DOC, {
     b += `<div style="display:flex;gap:9mm;padding:6mm 5mm 4mm;border-bottom:0.25mm solid var(--line);margin-top:3mm">${meta.map(([k, v]) => `<div><div class="small">${k}</div><div style="font-size:11pt;font-weight:700">${esc(v)}</div></div>`).join('')}</div>`;
     const sg = p.sign && p.sign.cust ? p.sign : null, box = on => `<span style="flex-shrink:0;display:inline-block;width:5mm;height:5mm;border:0.35mm solid var(--ink);border-radius:1.2mm;position:relative;margin-top:0.3mm">${on ? '<svg viewBox="0 0 16 16" style="position:absolute;left:0.3mm;top:0.3mm;width:3.6mm;height:3.6mm"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="#0F2A3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</span>`;
     b += `<div style="padding:5mm 5mm 0;font-size:9.4pt;line-height:1.5"><div style="display:flex;gap:4mm;margin-bottom:3mm">${box(sg && sg.order)}<span>${esc(T)}</span></div><div style="display:flex;gap:4mm">${box(sg && sg.cond)}<span>Der Auftrag steht unter der aufschiebenden Bedingung der Förderzusage${R.W ? ' (BEG/KfW)' : ''}.</span></div></div>`;
-    const a = advisorOf(p), line = (l, inner = '') => `<div><div style="height:20mm;display:flex;align-items:flex-end;padding-bottom:1mm">${inner}</div><div style="border-top:0.35mm solid var(--ink);padding-top:1.5mm;font-size:7.8pt;color:var(--ink3)">${l}</div></div>`;
-    const sigImg = id => (id && fileUrl(id) ? `<img src="${fileUrl(id)}" style="max-height:18mm;max-width:80mm;width:auto;height:auto">` : '');
-    const od = sg ? `<span style="font-size:10pt">${esc(sg.place || '')}, ${deDate(sg.date)}</span>` : '';
+    const a = advisorOf(p), line = (l, inner = '') => `<div><div style="height:20mm;display:flex;align-items:flex-end;padding-bottom:1mm;${sigBoxStyle()}">${inner}</div><div style="border-top:0.35mm solid var(--ink);padding-top:1.5mm;font-size:7.8pt;color:var(--ink3)">${l}</div></div>`;
+    const sigImg = id => (sigSrc(id) ? `<img src="${sigSrc(id)}" style="max-height:18mm;max-width:80mm;width:auto;height:auto">` : '');
+    const od = sg ? `<span style="font-family:'Caveat',cursive;font-weight:500;font-size:16pt;line-height:1.1">${esc(sg.place || '')}, ${deDate(sg.date)}</span>` : '';
     b += `<div style="display:grid;grid-template-columns:1fr 1.4fr;gap:4mm 10mm;margin-top:10mm;padding:0 5mm">${line('Ort, Datum', od)}${line(`Unterschrift Auftraggeber · ${esc(custName(p))}`, sg ? sigImg(sg.cust) : '')}${line('Ort, Datum', sg && sg.adv ? od : '')}${line(`Unterschrift ${esc(coName())}${a.name ? ' · ' + esc(a.name) : ''}`, sg ? sigImg(sg.adv) : '')}</div>`;
     b += `<p class="small" style="margin-top:7mm">Es gelten die Bedingungen und Hinweise des zugrunde liegenden Angebots einschließlich der Widerrufsbelehrung.</p>`;
     return { title: 'Angebot annehmen', body: b };
@@ -3402,11 +3414,25 @@ function bgPicker(key, label) {
   const range = `<label class="block mt-3"><span class="lbl flex justify-between">Stärke<span class="text-ink3 num" data-rv="s:design.${key}.bgAlpha">${num(o.bgAlpha)} %</span></span><input type="range" class="w-full" min="10" max="100" step="5" data-b="s:design.${key}.bgAlpha" data-t="r" value="${o.bgAlpha}"></label><div class="flex flex-wrap gap-2 mt-2">${[[30, 'Leicht'], [60, 'Ausgeblichen'], [85, 'Kräftig'], [100, 'Voll']].map(([v, l]) => `<button class="chip ${o.bgAlpha === v ? 'on' : ''}" data-a="bg-alpha" data-k="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
   return `<span class="lbl">${label}</span>${seg(`s:design.${key}.bg`, BG_KINDS, { cls: 'flex-wrap' })}${o.bg !== 'none' ? range : ''}`;
 }
+function sigBoxSettings() {
+  const o = { mode: 'auto', color: '#ffffff', alpha: 88, shape: 'round', ...(S.design.sigBox || {}) };
+  if (!S.design.sigBox) S.design.sigBox = { ...o };
+  return `<div class="rounded-[calc(var(--r)-4px)] border border-line p-4"><div class="font-medium text-[15px]">Hintergrund der Unterschriftsfelder</div><p class="text-[13px] text-ink3 mt-0.5">Damit Unterschriften auch im dunklen PDF gut sichtbar sind. Die Seite „Angebot annehmen“ sehen Sie rechts in der Live-Vorschau.</p>
+    <div class="mt-3"><span class="lbl">Anzeigen</span>${seg('s:design.sigBox.mode', [['auto', 'Nur im dunklen PDF'], ['always', 'Immer'], ['off', 'Aus']], { cls: 'flex-wrap' })}</div>
+    ${o.mode !== 'off' ? `<div class="mt-4"><span class="lbl">Form</span>${seg('s:design.sigBox.shape', [['pill', 'Pille'], ['round', 'Abgerundet'], ['square', 'Eckig']], { cls: 'flex-wrap' })}</div>
+    <div class="grid sm:grid-cols-[auto_minmax(0,1fr)] gap-4 mt-4 items-end"><div><span class="lbl">Farbe</span><div class="flex items-center gap-2"><input type="color" class="w-11 h-11 rounded-[var(--rb)] border border-line2 p-0.5 bg-card cursor-pointer" data-b="s:design.sigBox.color" data-t="color" value="${esc(o.color)}">${['#ffffff', '#F3F1EA', '#E8F0F4'].map(c => `<button class="w-8 h-8 rounded-full border border-line2" style="background:${c}" data-a="sig-color" data-v="${c}" title="${c}"></button>`).join('')}</div></div>
+      <label class="block"><span class="lbl flex justify-between">Stärke<span class="text-ink3 num" data-rv="s:design.sigBox.alpha">${num(o.alpha)} %</span></span><input type="range" class="w-full" min="10" max="100" step="5" data-b="s:design.sigBox.alpha" data-t="r" value="${o.alpha}"></label></div>
+    <div class="flex flex-wrap gap-2 mt-2">${[[35, 'Leicht'], [65, 'Ausgeblichen'], [88, 'Kräftig'], [100, 'Voll']].map(([v, l]) => `<button class="chip ${o.alpha === v ? 'on' : ''}" data-a="sig-alpha" data-v="${v}">${l}</button>`).join('')}</div>` : ''}
+  </div>`;
+}
 function coverPreview() { return withDoc(coverPreviewInner); }
 function coverPreviewInner() {
   const p = sampleProject(), R = compute(p, 'real'); CUR_KEY = 'summary';
-  const sum = DOC.summary(p, R); CUR_KEY = '';
-  return `<div class="space-y-3">${[docCover(p, R, 1, 12), pageWrap(p, sum.title, sum.body, 2, 12, 'summary')].map(h => `<div class="rounded-[calc(var(--r)-4px)] bg-raised p-3 overflow-hidden" style="height:${Math.round(1123 * 0.34) + 24}px"><div style="zoom:0.34;width:794px;margin:0 auto" class="docpv">${h}</div></div>`).join('')}</div>`;
+  const sum = DOC.summary(p, R); CUR_KEY = 'sign';
+  const scribble = d => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60" width="220" height="60"><path d="${d}" fill="none" stroke="#1B2A4A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+  p.sign = { cust: scribble('M8 44 C30 10 40 52 58 30 S88 8 96 40 C104 58 120 18 140 34 S176 46 210 22'), adv: scribble('M10 40 C26 20 44 22 52 40 S78 50 90 24 C98 10 112 46 130 38 S170 20 206 30'), place: 'Münster', date: isoToday(), order: true, cond: true };
+  const sg = DOC.sign(p, R); CUR_KEY = '';
+  return `<div class="space-y-3">${[docCover(p, R, 1, 12), pageWrap(p, sum.title, sum.body, 2, 12, 'summary'), pageWrap(p, sg.title, sg.body, 12, 12, 'sign')].map(h => `<div class="rounded-[calc(var(--r)-4px)] bg-raised p-3 overflow-hidden" style="height:${Math.round(1123 * 0.34) + 24}px"><div style="zoom:0.34;width:794px;margin:0 auto" class="docpv">${h}</div></div>`).join('')}</div>`;
 }
 const SET = {
   firma: () => sCard('building', 'Unternehmen', 'Erscheint in Kopf- und Fußzeile des Kundendokuments.', `
@@ -3440,6 +3466,7 @@ const SET = {
       <div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband'], ['fade', 'Farbverlauf']], { cls: 'flex-wrap' })}
       ${d.pdfHeader === 'fade' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised p-4 mt-3 space-y-4"><div class="grid grid-cols-2 gap-4">${[['Farbe oben', 's:design.hdrFrom', d.primary], ['Endfarbe', 's:design.hdrTo', docDark() ? '#0B1118' : '#ffffff']].map(([l, b, fb]) => `<div><span class="lbl">${l}</span><div class="flex items-center gap-2"><input type="color" class="w-11 h-11 rounded-[var(--rb)] border border-line2 p-0.5 bg-card cursor-pointer shrink-0" data-b="${b}" data-t="color" value="${bval(b) || fb}">${bval(b) ? `<button class="btn-g !px-2 text-[12px]" data-a="hdr-auto" data-k="${b.split('.').pop()}">Automatisch</button>` : '<span class="text-[12px] text-ink3">automatisch</span>'}</div></div>`).join('')}</div>
         ${range('Länge des Verlaufs (297 mm = ganze Seite)', 's:design.hdrHeight', 25, 297, ' mm')}<div class="hint !mt-0">Der Verlauf läuft weich von oben bis zur Endfarbe; darunter bleibt die Endfarbe. Für gute Lesbarkeit passt die App Schriftfarbe, zu helle bzw. zu dunkle Endfarben und die Länge hinter dem Text automatisch an. „Automatisch“: oben Ihre Hauptfarbe (bei eigenem Deckblatt dessen Farbe), unten der normale Seitenhintergrund.</div></div>` : ''}</div>
+      ${sigBoxSettings()}
       <div class="pt-2"><div class="font-medium text-[15px]">Logo auf dem Deckblatt</div><div class="mt-3">${seg('s:design.coverLogo.source', [['company', 'Firmenlogo'], ['custom', 'Eigenes Logo']])}</div>
       ${L.source === 'custom' ? `<div class="mt-3 flex items-center gap-3">${fileUrl(L.file) ? `<img src="${fileUrl(L.file)}" class="h-12 max-w-[160px] object-contain rounded-lg bg-white border border-line p-1">` : ''}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="coverlogo"></label></div>` : ''}
       <div class="grid sm:grid-cols-3 gap-4 mt-4">${range('Horizontal', 's:design.coverLogo.x', 0, 100, ' %')}${range('Vertikal', 's:design.coverLogo.y', 0, 100, ' %')}${range('Größe', 's:design.coverLogo.size', 6, 40, ' mm')}</div>
@@ -4012,7 +4039,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107144804';
+const APP_VERSION = '20261107203940';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4288,6 +4315,41 @@ document.addEventListener('input', e => {
   if (!e.target.closest || !e.target.closest('#disc-box')) return;
   const p = curProject(), el = $('#disc-prev'); if (p && el) setTimeout(() => { el.textContent = discPreview(p); }, 0);
 });
+/* =========================================================
+   „Das sagen Kunden“ – letzte Seite der PDF (beide Layouts)
+   Bewertungen werden in den Einstellungen gepflegt
+   ========================================================= */
+const REVIEWS_DEFAULT = { on: true, summary: '', items: [] };
+DEFAULT_SETTINGS.reviews = clone(REVIEWS_DEFAULT);
+if (!S.reviews) S.reviews = clone(REVIEWS_DEFAULT);
+DOC_TEXT.reviews = { label: 'Das sagen Kunden', badge: 'Kundenstimmen', title: 'Das sagen unsere *Kunden*', lead: 'Echte Stimmen von Kundinnen und Kunden, die wir bereits begleiten durften.' };
+PAGE_KEYS.push('reviews'); SALES_KEYS.push('reviews');
+const reviewList = () => ((S.reviews || {}).items || []).filter(r => r.on !== false && String(r.text || '').trim());
+const reviewsOn = () => (S.reviews || {}).on !== false && reviewList().length > 0;
+const starSvg = (n, size = 4) => { const one = on => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" fill="${on ? '#F5A524' : '#D9DEE5'}"/></svg>`); return `<span style="display:inline-flex;gap:0.6mm">${[1, 2, 3, 4, 5].map(i => `<img src="${one(i <= n)}" style="width:${size}mm;height:${size}mm;display:block">`).join('')}</span>`; };
+DOC.reviews = function (p, R) {
+  const sales = CUR_LAYOUT === 'sales', list = reviewList().slice(0, 8), many = list.length > 4;
+  let b = sales ? sChap('reviews', p, R) : chap(sMark(txt('reviews', 'title')).replace(/<[^>]+>/g, ''), txt('reviews', 'lead'));
+  if (S.reviews.summary) b += `<div style="display:flex;align-items:center;gap:3mm;margin:-2mm 0 5mm">${starSvg(5, 4.6)}<b style="font-size:10pt">${esc(S.reviews.summary)}</b></div>`;
+  b += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm">${list.map(r => `<div style="background:var(--tile);border-radius:var(--dr);padding:${many ? '4.5mm 5mm' : '6mm'}">
+      <div style="display:flex;justify-content:space-between;align-items:center">${starSvg(Math.max(1, Math.min(5, nz(r.stars, 5))), many ? 3.6 : 4.2)}<span style="font-family:Georgia,serif;font-size:${many ? 26 : 32}pt;line-height:0.6;color:var(--p);opacity:.35">“</span></div>
+      <div style="font-size:${many ? 8.8 : 9.8}pt;line-height:1.5;margin-top:2.5mm;color:var(--ink)">${esc(r.text)}</div>
+      <div style="margin-top:3mm;font-size:8.6pt;font-weight:700">${esc(r.name || '')}${r.place ? `<span style="font-weight:400;color:var(--ink3)"> · ${esc(r.place)}</span>` : ''}</div></div>`).join('')}</div>`;
+  b += `<div style="margin-top:7mm">${typeof salesContact === 'function' && sales ? salesContact(p) : advisorCard(p, R)}</div>`;
+  return { title: 'Das sagen Kunden', body: b };
+};
+/* Einstellungen → Dokument & Verkauf: Bewertungen pflegen */
+const _setDok16 = SET.dokument;
+SET.dokument = () => _setDok16() + sCard('users', 'Das sagen Kunden', 'Letzte Seite im Dokument (komplette und Vertriebs-PDF). Bitte nur echte Bewertungen mit Einverständnis der Kunden verwenden.', `
+  <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4">${toggleRow('Seite „Das sagen Kunden“ anzeigen', 's:reviews.on', 'Erscheint nur, wenn mindestens eine Bewertung eingetragen und aktiv ist.')}</div>
+  <div class="mt-4">${field('Zusammenfassung (optional)', 's:reviews.summary', { ph: 'z. B. 4,9 von 5 Sternen bei Google (120 Bewertungen)' })}</div>
+  <div class="space-y-3 mt-5">${(S.reviews.items || []).map((r, i) => `<div class="rounded-[calc(var(--r)-4px)] border border-line p-3">
+    <div class="flex flex-wrap items-center gap-3">${tgl(`s:reviews.items.${i}.on`, r.on !== false)}<div class="flex-1 min-w-[140px]">${inp(`s:reviews.items.${i}.name`, { ph: 'Vorname, z. B. Frank' })}</div><div class="flex-1 min-w-[140px]">${inp(`s:reviews.items.${i}.place`, { ph: 'Ort (optional)' })}</div>
+      <select class="inp !w-auto !h-10" data-b="s:reviews.items.${i}.stars" data-t="n">${[5, 4, 3, 2, 1].map(n => `<option value="${n}" ${nz(r.stars, 5) === n ? 'selected' : ''}>${'★'.repeat(n)}</option>`).join('')}</select>
+      <button class="btn-g !px-2" data-a="rv-del" data-i="${i}" aria-label="Bewertung löschen">${ic('x', 16)}</button></div>
+    <div class="mt-2">${area('', `s:reviews.items.${i}.text`, 3, { ph: 'Bewertungstext' }).replace('<span class="lbl"></span>', '')}</div></div>`).join('') || '<div class="hint">Noch keine Bewertungen – fügen Sie Ihre erste hinzu.</div>'}</div>
+  <button class="chip mt-3" data-a="rv-add">${ic('plus', 14)}Bewertung hinzufügen</button>
+  <div class="grid sm:grid-cols-2 gap-4 mt-6">${field('Überschrift (*Wort* = Hauptfarbe)', 's:doc.texts.reviews.title', { ph: DOC_TEXT.reviews.title })}${field('Einleitung', 's:doc.texts.reviews.lead', { ph: DOC_TEXT.reviews.lead })}</div>`);
 
 /* =========================================================
    Router & Rendern
@@ -4480,6 +4542,10 @@ document.addEventListener('click', async e => {
     case 'app-update': { const done = () => location.reload(); if (navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(r => (r ? r.update() : null)).then(done, done); else done(); break; }
     case 'legal-reset': if (!confirm('Impressum-Zusatz, Datenschutzerklärung und Widerrufsbelehrung auf die Standardtexte zurücksetzen?')) break; S.legal = clone(LEGAL_DEFAULT); saveSettings(); render(); break;
     case 'hdr-auto': S.design[a.dataset.k] = ''; saveSettings(); applyTheme(); render(); break;
+    case 'rv-add': S.reviews.items = (S.reviews.items || []).concat([{ id: uid('rv'), on: true, name: '', place: '', stars: 5, text: '' }]); saveSettings(); render(); break;
+    case 'rv-del': if (!confirm('Diese Bewertung löschen?')) break; S.reviews.items.splice(+a.dataset.i, 1); saveSettings(); render(); break;
+    case 'sig-alpha': S.design.sigBox = { ...(S.design.sigBox || {}), alpha: +a.dataset.v }; saveSettings(); render(); break;
+    case 'sig-color': S.design.sigBox = { ...(S.design.sigBox || {}), color: a.dataset.v }; saveSettings(); render(); break;
     case 'bg-alpha': S.design[a.dataset.k].bgAlpha = +a.dataset.v; saveSettings(); render(); break;
     case 'cover-blocks-reset': S.design.cover.blocks = clone(DEFAULT_SETTINGS.design.cover.blocks); saveSettings(); render(); break;
     case 'logo-pos': S.design.coverLogo.x = +a.dataset.x; S.design.coverLogo.y = +a.dataset.y; saveSettings(); render(); break;

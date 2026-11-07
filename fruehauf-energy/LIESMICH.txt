@@ -101,3 +101,8 @@ NEU
    Erstellen. Neue Versionen meldet die App selbst („Jetzt aktualisieren“).
    QR-Code-Bibliothek: qrcode-generator (Kazuhiko Arase, MIT-Lizenz).
 
+   „Das sagen Kunden“: letzte PDF-Seite, Bewertungen unter Einstellungen →
+   Dokument & Verkauf pflegen (nur echte Bewertungen mit Einverständnis).
+   Unterschriftsfelder: Hintergrund (Form, Farbe, Stärke) unter Design &
+   Deckblatt; Ort/Datum in Handschrift (Schrift Caveat, SIL Open Font License).
+
