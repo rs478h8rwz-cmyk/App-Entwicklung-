@@ -800,6 +800,10 @@ function fundingOf(p) {
   return out;
 }
 
+/* Monate (0 = Januar), in denen der Heizstab übernimmt und die Wärmepumpe pausiert */
+const rodSpan = R => ({ 3: [5, 6, 7], 4: [4, 5, 6, 7], 5: [4, 5, 6, 7, 8], 6: [4, 5, 6, 7, 8, 9] }[R.rodMonths] || [4, 5, 6, 7, 8]);
+const rodPause = (R, month) => !!R.rod && rodSpan(R).includes(month - 1);
+function rodPauseText(R) { const s = rodSpan(R); return `Von ${MONTH_NAMES[s[0]]} bis ${MONTH_NAMES[s[s.length - 1]]} macht Ihre Wärmepumpe Sommerpause: Der Heizstab${R.rodName ? ` (${R.rodName})` : ''} erwärmt das Warmwasser mit überschüssigem Solarstrom. Das schont die Wärmepumpe und verlängert ihre Lebensdauer.`; }
 function compute(p, scen) {
   scen = scen || p.scenario || 'real';
   const c = S.calc, opt = scen === 'opt';
@@ -938,7 +942,7 @@ function annualProfile(p, R) {
   let rodM = MONTHS.map(() => 0);
   if (mode === 'hp') {
     const dhw = nz(S.calc.dhwShare, 18) / 100; demM = norm(norm(HEAT_SHARE).map((h, i) => (h * (1 - dhw) + dhw / 12) * COP_F[i])).map(f => f * total);
-    if (R.rod) { const span = { 3: [5, 6, 7], 4: [4, 5, 6, 7], 5: [4, 5, 6, 7, 8], 6: [4, 5, 6, 7, 8, 9] }[R.rodMonths] || [4, 5, 6, 7, 8]; span.forEach(i => { rodM[i] = R.heat * dhw / 12; demM[i] = demM[i] * 0.04; }); }
+    if (R.rod) { rodSpan(R).forEach(i => { rodM[i] = R.heat * dhw / 12; demM[i] = demM[i] * 0.04; }); }
   }
   else demM = hhM;
   const bf = Math.min(1, bat / 10);
@@ -2266,7 +2270,11 @@ function applyComponents(p) {
 /* ---------- Schritt 4: Ergebnis ---------- */
 const withChart = fn => fn();
 const dayMonth = p => clamp(+(p.docOpts.dayMonth || 4), 1, 12);
-function dayChartHtml(p, R) { const D = simulateDay(R, dayMonth(p), p); return { svg: dayProfileSVG(R, { D, w: appW(), h: appW() < 640 ? 220 : 250 }), info: dayInfo(D) }; }
+function dayChartHtml(p, R) {
+  const m = dayMonth(p), D = simulateDay(R, m, p);
+  const note = rodPause(R, m) ? `<div class="rounded-[calc(var(--r)-4px)] bg-tyel ring-1 ring-s/30 p-3.5 mb-3 text-[13.5px] text-ink flex gap-3">${ic('sun', 18, 'shrink-0 mt-0.5')}<div><b class="font-semibold">Sommerpause der Wärmepumpe.</b> ${esc(rodPauseText(R))}</div></div>` : '';
+  return { svg: note + dayProfileSVG(R, { D, w: appW(), h: appW() < 640 ? 220 : 250 }), info: dayInfo(D) };
+}
 function dayCard(p, R) {
   const m = dayMonth(p), d = dayChartHtml(p, R);
   return `<div class="card p-5 sm:p-6">${cardHead('sun', 'Ein typischer Tag – 6 Uhr bis 6 Uhr', `Ertrag, Verbrauch${R.W ? ' (inkl. Wärmepumpe)' : ''}${R.bat ? ` und Ihr ${num(R.bat, 1)}-kWh-Speicher` : ''} im Tagesverlauf, Leistung in kW`)}
@@ -2660,7 +2668,7 @@ const DOC = {
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
     b += `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
-    b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2><p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE, h: 205 })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
+    b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2>${rodPause(R, dayMonth(p)) ? `<div style="background:var(--t-yel);border-radius:var(--dr);padding:2.5mm 4mm;margin-bottom:2mm;font-size:8.4pt;display:flex;gap:3mm;align-items:flex-start">${icC('sun', 16, S.design.secondary, 2)}<div><b style="font-weight:600">Sommerpause der Wärmepumpe.</b> ${esc(rodPauseText(R))}</div></div>` : ''}<p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE, h: 205 })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
     b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
     return { title: 'So funktioniert Ihre Photovoltaikanlage', body: b };
   },
