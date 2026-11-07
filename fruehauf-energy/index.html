@@ -148,6 +148,10 @@ details[open] .chev{transform:rotate(180deg)}
 .page .att{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff}
 .page .att img{max-width:100%;max-height:100%}
 .page .att .lab{position:absolute;top:4mm;right:5mm;background:rgba(255,255,255,.94);border-radius:10mm;padding:1mm 3mm;font-size:7.2pt;color:#3D5568;box-shadow:0 0 0 0.3mm #DCE6EE}
+/* iPhone: Datumsfeld nicht breiter als die Spalte */
+input.inp[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;text-align:left}
+input.inp[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
+label{min-width:0}
 /* Rechtliches */
 .legal h3{font-weight:600;font-size:15px;margin:18px 0 4px;color:var(--ink)}
 .legal p{font-size:14px;line-height:1.6;color:var(--ink2);margin:0 0 8px}
@@ -550,7 +554,7 @@ const DEFAULT_SETTINGS = {
     v: 3, mode: 'dark', pdfTheme: 'mixed',
     primary: '#0E7C66', secondary: '#F5A524', accent: '#1E4C86', old: '#D9482B', ink: '#0F2A3D', bg: '#F5F7FA', night: '#0A0E13',
     fontBody: 'Geist', fontHead: 'Instrument Serif', fontMono: 'Geist Mono', headWeight: 400, radius: 14, buttons: 'round', buttonStyle: 'light', highlight: 'solid',
-    moduleColor: 'black', hpIllu: 'scene', pdfColors: 'cover',
+    moduleColor: 'black', hpIllu: 'scene', pvIllu: 'scene', pdfColors: 'cover',
     coverInfo: { badge: true, title: true, subtitle: true, customer: true, address: true, offer: true, created: true, advisor: true, figures: true, contact: true, note: '' },
     chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', coverStyle: 'illu',
     mark: { style: 'sun', shape: 'rounded', bg: '', fg: '', line: '', text: '', file: '' },
@@ -1630,6 +1634,65 @@ ${lab(515, 248, 'Ihr Haus · Heizung und Warmwasser')}
 }
 
 /* Wärmepumpen-Kreislauf */
+/* „So funktioniert Ihre Photovoltaikanlage“ – Illustration im Stil der Wärmepumpen-Szene */
+function pvSceneSVG(R) {
+  const p = S.design.primary, s = S.design.secondary, M = modColors(false), blue = '#4F9BE0', sunC = mix(s, '#000000', 0.08), F = `${esc(S.design.fontBody)}, Arial, sans-serif`;
+  const badge = (x, y, n) => `<circle cx="${x}" cy="${y}" r="11" fill="${p}" stroke="#fff" stroke-width="2.5"/><text x="${x}" y="${y + 4.3}" text-anchor="middle" font-family="${F}" font-size="12" font-weight="700" fill="#fff">${n}</text>`;
+  const lab = (x, y, t, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}" font-family="${F}" font-size="10.5" font-weight="600" fill="#3D5568">${esc(t)}</text>`;
+  const chip = (x, y, w, t, bg, st, col) => `<rect x="${x}" y="${y}" width="${w}" height="22" rx="11" fill="${bg}" stroke="${st}"/><text x="${x + w / 2}" y="${y + 15}" text-anchor="middle" font-family="${F}" font-size="9.8" font-weight="600" fill="${col || '#3D5568'}">${esc(t)}</text>`;
+  const arrowR = (x, y, col) => `<path d="M${x},${y - 5.5} L${x + 9},${y} L${x},${y + 5.5} Z" fill="${col}"/>`, arrowL = (x, y, col) => `<path d="M${x},${y - 5.5} L${x - 9},${y} L${x},${y + 5.5} Z" fill="${col}"/>`;
+  const top = { y: 66, l: 196, r: 336 }, bot = { y: 116, l: 152, r: 380 }, lerp = (a, b, t) => a + (b - a) * t;
+  let mods = '';
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 6; c++) { const t0 = 0.12 + r * 0.44, t1 = t0 + 0.4, y0 = lerp(top.y, bot.y, t0), y1 = lerp(top.y, bot.y, t1); const l0 = lerp(top.l, bot.l, t0) + 8, r0 = lerp(top.r, bot.r, t0) - 8, l1 = lerp(top.l, bot.l, t1) + 8, r1 = lerp(top.r, bot.r, t1) - 8; const a0 = c / 6 + 0.008, a1 = (c + 1) / 6 - 0.008; mods += `<polygon points="${[[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]].map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#psMod)" stroke="${M.s}" stroke-width=".7"/>`; }
+  let rays = ''; for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; rays += `<line x1="${62 + Math.cos(a) * 29}" y1="${50 + Math.sin(a) * 29}" x2="${62 + Math.cos(a) * 38}" y2="${50 + Math.sin(a) * 38}" stroke="${s}" stroke-width="3.5" stroke-linecap="round"/>`; }
+  const bat = R.bat > 0, hp = false, car = R.carKWh > 0; // Wärmepumpe bewusst nicht in der PV-Szene
+  // Haushalt: Lampe, Fernseher, Steckdose
+  const home = `<path d="M312 132 V140" stroke="#9FB1C1" stroke-width="2"/><path d="M300 150 q12 -14 24 0 z" fill="${s}"/><circle cx="312" cy="156" r="16" fill="${s}" opacity=".18"/>
+<rect x="290" y="168" width="44" height="28" rx="4" fill="#3D5568"/><rect x="294" y="172" width="36" height="20" rx="2" fill="#6FA8DC"/><rect x="308" y="196" width="8" height="5" fill="#3D5568"/>
+<rect x="346" y="176" width="20" height="20" rx="5" fill="#fff" stroke="#C9D6E1" stroke-width="1.6"/><circle cx="352.5" cy="186" r="1.8" fill="#9FB1C1"/><circle cx="359.5" cy="186" r="1.8" fill="#9FB1C1"/>`;
+  const battery = bat ? `<rect x="234" y="138" width="34" height="62" rx="7" fill="#fff" stroke="#C9D6E1" stroke-width="2"/><rect x="245" y="133" width="12" height="6" rx="2" fill="#C9D6E1"/>${[0, 1, 2, 3].map(i => `<rect x="240" y="${186 - i * 13}" width="22" height="9" rx="2.5" fill="${i < 3 ? p : '#E3EBF2'}"/>`).join('')}${badge(251, 122, 3)}` : '';
+  const heatpump = hp ? `<g transform="translate(392 170)"><rect x="0" y="0" width="52" height="38" rx="5" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/><circle cx="18" cy="19" r="12" fill="#E3EBF2" stroke="#B8C7D4" stroke-width="1.6"/><path d="M18 8v22M7 19h22" stroke="#B8C7D4" stroke-width="1.4"/><rect x="34" y="9" width="12" height="3.5" rx="1.7" fill="#C9D6E1"/><rect x="34" y="16" width="12" height="3.5" rx="1.7" fill="#C9D6E1"/><rect x="34" y="23" width="7" height="3.5" rx="1.7" fill="${p}"/></g><path d="M380 190 H392" stroke="${p}" stroke-width="3"/>${lab(418, 230, 'Wärmepumpe')}` : '';
+  const ecar = car ? `<path d="M372 196 H398" stroke="${p}" stroke-width="3"/><g transform="translate(${hp ? 452 : 398} 182)"><path d="M4 22 L10 9 Q12 5 17 5 H39 Q44 5 47 10 L53 22 Z" fill="${p}"/><rect x="0" y="20" width="58" height="12" rx="5" fill="${p}"/><rect x="14" y="9" width="12" height="10" rx="2" fill="#DDEFF9"/><rect x="29" y="9" width="12" height="10" rx="2" fill="#DDEFF9"/><circle cx="14" cy="32" r="6" fill="#3D5568"/><circle cx="45" cy="32" r="6" fill="#3D5568"/></g>${lab(hp ? 481 : 427, 230, 'E-Auto')}` : '';
+  const feedY = 98, gx = 572;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 262" width="100%">
+<defs><linearGradient id="psSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CFE6F9"/><stop offset="1" stop-color="#F3F9FE"/></linearGradient>
+<linearGradient id="psMod" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${M.m1}"/><stop offset="1" stop-color="${M.m2}"/></linearGradient>
+<linearGradient id="psWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#EEF3F7"/></linearGradient>
+<radialGradient id="psGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFE7A8" stop-opacity=".95"/><stop offset="1" stop-color="#FFE7A8" stop-opacity="0"/></radialGradient>
+<clipPath id="psClip"><rect x="0" y="0" width="640" height="262" rx="16"/></clipPath></defs>
+<g clip-path="url(#psClip)">
+<rect width="640" height="262" fill="url(#psSky)"/>
+<circle cx="62" cy="50" r="58" fill="url(#psGlow)"/>${rays}<circle cx="62" cy="50" r="22" fill="${s}"/><circle cx="62" cy="50" r="15" fill="#FFD36B" opacity=".75"/>
+<g fill="#fff" opacity=".95"><ellipse cx="430" cy="34" rx="30" ry="9"/><ellipse cx="450" cy="28" rx="18" ry="9"/><ellipse cx="140" cy="22" rx="22" ry="7"/></g>
+${badge(98, 92, 1)}${lab(98, 116, 'Sonne einfangen')}
+<path d="M0 214 C110 198 220 202 330 210 S540 198 640 204 V262 H0Z" fill="#A9DCA0"/><path d="M0 236 C160 222 330 230 460 236 S600 226 640 230 V262 H0Z" fill="#86C98A"/>
+<!-- Haus -->
+<ellipse cx="266" cy="216" rx="128" ry="6" fill="#000" opacity=".07"/>
+<rect x="160" y="116" width="212" height="98" rx="4" fill="url(#psWall)" stroke="#DCE6EE"/>
+<polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="#C8553D"/>
+<polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="#D9694F"/>${mods}
+<rect x="${bot.l - 8}" y="${bot.y}" width="${bot.r - bot.l + 16}" height="5" rx="2.5" fill="#A9432E"/>
+${[[0.3, 0.12], [0.42, 0.42], [0.55, 0.72]].map(([a, t]) => { const x2 = lerp(lerp(top.l, bot.l, 0.35), lerp(top.r, bot.r, 0.35), t), y2 = lerp(top.y, bot.y, 0.35); return `<path d="M${62 + Math.cos(a) * 44} ${50 + Math.sin(a) * 44} L${x2} ${y2}" stroke="${sunC}" stroke-width="2.2" stroke-dasharray="5 5" stroke-linecap="round" opacity=".8"/>`; }).join('')}
+${chip(250, 34, 116, `≈ ${num(Math.round(R.yield / 100) * 100)} kWh im Jahr`, '#FFF4DC', '#F7DFA6', '#8A5A06')}
+<!-- Wechselrichter -->
+<rect x="176" y="136" width="40" height="50" rx="6" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/><path d="M184 152 h10 M184 157 h10" stroke="#9FB1C1" stroke-width="2"/><path d="M196 172 q4 -8 8 0 t8 0" fill="none" stroke="${p}" stroke-width="2"/><circle cx="208" cy="146" r="2.5" fill="${p}"/>
+<path d="M196 122 V136" stroke="${sunC}" stroke-width="3" stroke-dasharray="4 3"/>
+${lab(196, bat ? 246 : 230, 'Wechselrichter')}
+<path d="M216 168 H${bat ? 234 : 290}" stroke="${p}" stroke-width="3"/>${bat ? `<path d="M268 168 H290" stroke="${p}" stroke-width="3"/>` : ''}
+${battery}${bat ? lab(251, 230, 'Speicher') : ''}
+${home}${badge(280, 134, 2)}${lab(326, 230, 'Selbst nutzen')}
+${heatpump}${ecar}
+<!-- Netz -->
+<path d="M372 ${feedY + 30} H${gx - 22}" stroke="${p}" stroke-width="3"/>${arrowR(gx - 30, feedY + 30, p)}
+<path d="M${gx - 22} ${feedY + 52} H${hp || car ? 372 : 372}" stroke="${blue}" stroke-width="3" stroke-dasharray="6 4"/>${arrowL(382, feedY + 52, blue)}
+<text x="${(372 + gx) / 2}" y="${feedY + 23}" text-anchor="middle" font-family="${F}" font-size="9.5" font-weight="600" fill="${p}">Überschuss einspeisen</text>
+<text x="${(372 + gx) / 2}" y="${feedY + 66}" text-anchor="middle" font-family="${F}" font-size="9.5" font-weight="600" fill="${blue}">nur bei Bedarf: Strom aus dem Netz</text>
+<g stroke="#6B7F92" stroke-width="2.4" fill="none" stroke-linejoin="round"><path d="M${gx - 18} 214 L${gx} 64 L${gx + 18} 214"/><path d="M${gx - 26} 92 H${gx + 26} M${gx - 20} 118 H${gx + 20}"/><path d="M${gx - 13} 170 L${gx + 9} 118 M${gx + 13} 170 L${gx - 9} 118 M${gx - 15} 196 L${gx + 13} 170 M${gx + 15} 196 L${gx - 13} 170"/></g>
+<path d="M${gx + 26} 92 Q620 98 640 96 M${gx + 20} 118 Q622 124 640 122" stroke="#9FB1C1" stroke-width="1.4" fill="none"/>
+${badge(gx + 28, 64, 4)}${lab(gx, 230, 'Stromnetz')}
+${chip(418, 62, 132, `≈ ${num(Math.round(R.feed / 100) * 100)} kWh Einspeisung`, '#fff', '#CFE3F5')}
+</g></svg>`;
+}
 function hpCycleSVG() {
   const c = C(), p = c.p;
   const box = (x, y, w, h, n, t1, t2, fill, stroke) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>` + (n ? `<circle cx="${x + 18}" cy="${y + 18}" r="11" fill="${p}"/>` + T(x + 18, y + 22, n, { a: 'middle', fs: 11, fw: 800, c: '#fff' }) : '') + T(x + w / 2 + (n ? 8 : 0), y + h / 2 - 2, t1, { a: 'middle', fs: 12, fw: 800, c: C().ink }) + T(x + w / 2 + (n ? 8 : 0), y + h / 2 + 14, t2, { a: 'middle', fs: 10 });
@@ -1900,7 +1963,7 @@ UI.open = {};
    ========================================================= */
 function logoMark(size = 40) {
   const url = fileUrl(S.company.logoFile) || S.company.logoUrl;
-  if (url) return `<img src="${esc(url)}" alt="" class="max-h-10 max-w-[140px] object-contain">`;
+  if (url) return `<span class="inline-flex items-center ${appDark() ? 'bg-white rounded-lg px-2 py-1' : ''}"><img src="${esc(url)}" alt="" class="${appDark() ? 'max-h-8' : 'max-h-10'} max-w-[140px] object-contain"></span>`;
   return sunMark(size - 4);
 }
 function shell(inner) {
@@ -2666,7 +2729,7 @@ const DOC = {
     const own = gen20 ? price / gen20 : null;
     const steps = [['Sonne einfangen', `Ihre ${num(R.kwp, 2)} kWp erzeugen rund ${num(R.yield)} kWh Strom im Jahr.`], ['Selbst nutzen', `Etwa ${num(R.self)} kWh nutzen Sie direkt oder über den Speicher.`], ['Speichern', R.bat ? `Der ${num(R.bat, 1)}-kWh-Speicher versorgt Sie abends und nachts.` : 'Ein Speicher lässt sich jederzeit nachrüsten.'], ['Einspeisen', `Rund ${num(R.feed)} kWh gehen ins Netz – vergütet mit ${num(S.calc.feedIn, 2)} ct/kWh.`]];
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
-    b += `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>`;
+    b += S.design.pvIllu === 'diagram' ? `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>` : `<div style="border-radius:var(--dr);overflow:hidden">${pvSceneSVG(R)}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
     b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2>${rodPause(R, dayMonth(p)) ? `<div style="background:var(--t-yel);border-radius:var(--dr);padding:2.5mm 4mm;margin-bottom:2mm;font-size:8.4pt;display:flex;gap:3mm;align-items:flex-start">${icC('sun', 16, S.design.secondary, 2)}<div><b style="font-weight:600">Sommerpause der Wärmepumpe.</b> ${esc(rodPauseText(R))}</div></div>` : ''}<p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE, h: 205 })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
     b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
@@ -3253,7 +3316,7 @@ const SET = {
       <div class="rounded-[calc(var(--r)-4px)] border border-line p-4"><div class="font-medium text-[15px]">Angaben auf dem Deckblatt</div><p class="text-[13px] text-ink3 mt-0.5">Gilt für alle Deckblatt-Stile, auch für Ihr eigenes Bild.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-3">${[['badge', '„Ihr Energiekonzept 2026“'], ['title', 'Titel'], ['subtitle', 'Untertitel'], ['customer', 'Kundenname'], ['address', 'Anschrift'], ['offer', 'Angebots-Nr. und Datum'], ['created', 'Erstellungsdatum'], ['advisor', 'Berater'], ['figures', 'Kennzahlen (Ersparnis, Förderung, Überschuss)'], ['contact', 'Ansprechpartner mit Foto']].map(([k, l]) => `<label class="flex items-center gap-2.5 text-[14px] text-ink2 cursor-pointer"><input type="checkbox" data-tgcheck="s:design.coverInfo.${k}" ${CI()[k] ? 'checked' : ''}>${l}</label>`).join('')}</div>
         <div class="mt-3">${area('Eigener Text (optional)', 's:design.coverInfo.note', 2, { hint: 'z. B. ein Slogan oder „Ihr Partner für Sonne und Wärme im Münsterland“' })}</div></div>
-      <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Solarmodule in Illustrationen</span>${seg('s:design.moduleColor', [['black', 'Schwarz'], ['blue', 'Blau']])}</div><div><span class="lbl">„So funktioniert eine Wärmepumpe“</span>${seg('s:design.hpIllu', [['scene', 'Illustration'], ['diagram', 'Schema (alt)']])}</div></div>
+      <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Solarmodule in Illustrationen</span>${seg('s:design.moduleColor', [['black', 'Schwarz'], ['blue', 'Blau']])}</div><div><span class="lbl">„So funktioniert eine Wärmepumpe“</span>${seg('s:design.hpIllu', [['scene', 'Illustration'], ['diagram', 'Schema (alt)']])}</div><div><span class="lbl">„So funktioniert Ihre Photovoltaikanlage“</span>${seg('s:design.pvIllu', [['scene', 'Illustration'], ['diagram', 'Schema (alt)']])}</div></div>
       ${d.coverStyle === 'image' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 divide-y divide-line"><div class="py-3 flex flex-wrap items-center gap-3">${fileUrl(cv.file) ? `<img src="${fileUrl(cv.file)}" class="h-20 rounded-lg border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Illustration verwendet.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${cv.file ? 'Ersetzen' : 'Bild oder PDF hochladen'}<input type="file" accept="image/*,application/pdf" class="hidden" data-imgup="cover"></label></div><div class="py-3"><span class="lbl">Farben im PDF</span>${seg('s:design.pdfColors', [['cover', 'Vom Deckblatt übernehmen'], ['own', 'Eigene Farbwelt']], { cls: 'flex-wrap' })}${S.design.pdfColors !== 'own' ? (S.design.coverPalette ? `<div class="flex items-center gap-2 mt-3">${['primary', 'secondary', 'accent'].map(k => `<span class="w-8 h-8 rounded-full border border-line2" style="background:${S.design.coverPalette[k]}" title="${S.design.coverPalette[k]}"></span>`).join('')}<span class="text-[12px] text-ink3 ml-1">aus Ihrem Deckblatt ermittelt</span><button class="btn-g ml-auto" data-a="cover-pal">${ic('refresh', 15)}Neu ermitteln</button></div>` : '<div class="hint">Noch keine Farben ermittelt – laden Sie ein Deckblatt hoch.</div>') : '<div class="hint">Das PDF verwendet Ihre Farbwelt oben.</div>'}</div>${toggleRow('Kundendaten einblenden', 's:design.cover.showCustomer')}<div class="py-3">${bgPicker('cover', 'Hintergrund hinter den Angaben')}</div>${['none', 'white'].includes(bgOf(cv, 'whiteBox', 95).kind) ? toggleRow('Dunkle Schrift', 's:design.cover.dark') : ''}<div class="py-3"><span class="lbl">Anordnung der Angaben</span>${seg('s:design.cover.layout', [['block', 'Zusammen in einem Kasten'], ['split', 'Einzeln verschieben']], { cls: 'flex-wrap' })}</div>${cv.layout === 'split' ? COVER_BLOCKS.map(([k, l]) => `<div class="py-3"><div class="font-medium text-[14px] mb-2">${l}</div><div class="grid sm:grid-cols-3 gap-4">${range('Von oben', `s:design.cover.blocks.${k}.y`, 0, 100, ' %')}${range('Von links', `s:design.cover.blocks.${k}.x`, 0, 100, ' %')}${range('Breite', `s:design.cover.blocks.${k}.w`, 30, 100, ' %')}</div></div>`).join('') + `<div class="py-3 flex flex-wrap gap-2"><button class="chip" data-a="cover-blocks-reset">Standard-Anordnung</button></div>` : `<div class="py-3">${range('Position Kundendaten (von oben)', 's:design.cover.pos', 5, 85, ' %')}</div>`}</div>` : ''}
       <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband']])}</div></div>
       <div class="pt-2"><div class="font-medium text-[15px]">Logo auf dem Deckblatt</div><div class="mt-3">${seg('s:design.coverLogo.source', [['company', 'Firmenlogo'], ['custom', 'Eigenes Logo']])}</div>
