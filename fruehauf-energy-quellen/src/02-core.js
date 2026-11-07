@@ -23,6 +23,8 @@ const nfmt = (d, g = true) => NF[d + '' + g] || (NF[d + '' + g] = new Intl.Numbe
 const num = (v, d = 0) => (isNum(v) ? nfmt(d).format(v) : '–');
 const eur = (v, d = 0) => (isNum(v) ? nfmt(d).format(v) + ' €' : '–');
 const eur2 = v => eur(v, 2);
+/* Erzeugter Strom ist eine Schätzung: immer auf volle 100 kWh abrunden */
+const kwh100 = v => (isNum(v) ? nfmt(0).format(Math.max(0, Math.floor(v / 100) * 100)) : '–');
 const pct = (v, d = 0) => (isNum(v) ? nfmt(d).format(v) + ' %' : '–');
 const ct = v => (isNum(v) ? nfmt(1).format(v * 100) + ' ct' : '–');
 const yrs = (v, d = 1) => (isNum(v) ? nfmt(d).format(v) + ' Jahre' : 'über 20 Jahre');

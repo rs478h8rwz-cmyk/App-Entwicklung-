@@ -332,7 +332,7 @@ ${badge(98, 92, 1)}${lab(98, 116, 'Sonne einfangen')}
 <polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="#D9694F"/>${mods}
 <rect x="${bot.l - 8}" y="${bot.y}" width="${bot.r - bot.l + 16}" height="5" rx="2.5" fill="#A9432E"/>
 ${[[0.22, 0.16, 0.2], [0.42, 0.24, 0.55], [0.62, 0.3, 0.88]].map(([a, t, v]) => { const x1 = 62 + Math.cos(a) * 46, y1 = 50 + Math.sin(a) * 46, x2 = lerp(lerp(top.l, bot.l, v), lerp(top.r, bot.r, v), t), y2 = lerp(top.y, bot.y, v) - 3, ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI; return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${(x2 - Math.cos(ang * Math.PI / 180) * 8).toFixed(1)} ${(y2 - Math.sin(ang * Math.PI / 180) * 8).toFixed(1)}" stroke="${sunC}" stroke-width="2.6" stroke-dasharray="6 5" stroke-linecap="round"/><path d="M-9 -6 L4 0 L-9 6 Z" fill="${sunC}" transform="translate(${x2.toFixed(1)} ${y2.toFixed(1)}) rotate(${ang.toFixed(1)})"/>`; }).join('')}
-${chip(250, 34, 116, `≈ ${num(Math.round(R.yield / 100) * 100)} kWh im Jahr`, '#FFF4DC', '#F7DFA6', '#8A5A06')}
+${chip(250, 34, 116, `≈ ${kwh100(R.yield)} kWh im Jahr`, '#FFF4DC', '#F7DFA6', '#8A5A06')}
 <!-- Wechselrichter -->
 <rect x="176" y="136" width="40" height="50" rx="6" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/><path d="M184 152 h10 M184 157 h10" stroke="#9FB1C1" stroke-width="2"/><path d="M196 172 q4 -8 8 0 t8 0" fill="none" stroke="${p}" stroke-width="2"/><circle cx="208" cy="146" r="2.5" fill="${p}"/>
 <path d="M196 122 V136" stroke="${sunC}" stroke-width="3" stroke-dasharray="4 3"/>
@@ -349,7 +349,7 @@ ${heatpump}${ecar}
 <g stroke="#6B7F92" stroke-width="2.4" fill="none" stroke-linejoin="round"><path d="M${gx - 18} 214 L${gx} 64 L${gx + 18} 214"/><path d="M${gx - 26} 92 H${gx + 26} M${gx - 20} 118 H${gx + 20}"/><path d="M${gx - 13} 170 L${gx + 9} 118 M${gx + 13} 170 L${gx - 9} 118 M${gx - 15} 196 L${gx + 13} 170 M${gx + 15} 196 L${gx - 13} 170"/></g>
 <path d="M${gx + 26} 92 Q620 98 640 96 M${gx + 20} 118 Q622 124 640 122" stroke="#9FB1C1" stroke-width="1.4" fill="none"/>
 ${badge(gx + 28, 64, 4)}${lab(gx, 230, 'Stromnetz')}
-${chip(418, 62, 132, `≈ ${num(Math.round(R.feed / 100) * 100)} kWh Einspeisung`, '#fff', '#CFE3F5')}
+${chip(418, 62, 132, `≈ ${kwh100(R.feed)} kWh Einspeisung`, '#fff', '#CFE3F5')}
 </g></svg>`;
 }
 function hpCycleSVG() {
@@ -429,7 +429,7 @@ function simulateDay(R, month, p) {
 }
 function dayInfo(D) {
   const s = D.sum, aut = s.u ? s.self / s.u : 0;
-  return `Ertrag ${num(s.g, 1)} kWh · Verbrauch ${num(s.u, 1)} kWh · aus Sonne und Speicher gedeckt: ${pct(Math.min(1, aut) * 100)}${s.hp > 0.05 ? ` · davon Wärmepumpe ${num(s.hp, 1)} kWh` : ''}${s.rod > 0.05 ? ` · Heizstab ${num(s.rod, 1)} kWh` : ''}`;
+  return `Ertrag ca. ${num(Math.floor(s.g))} kWh · Verbrauch ca. ${num(Math.round(s.u))} kWh · aus Sonne und Speicher gedeckt: ${pct(Math.min(1, aut) * 100)}${s.hp > 0.05 ? ` · davon Wärmepumpe ca. ${num(Math.round(s.hp))} kWh` : ''}${s.rod > 0.05 ? ` · Heizstab ca. ${num(Math.round(s.rod))} kWh` : ''}`;
 }
 /* Farbe der Wärmepumpe im Tagesverlauf */
 const hpDayCol = () => (C().dark ? '#A78BFA' : '#7C5CC4');

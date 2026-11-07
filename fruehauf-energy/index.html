@@ -267,6 +267,8 @@ const nfmt = (d, g = true) => NF[d + '' + g] || (NF[d + '' + g] = new Intl.Numbe
 const num = (v, d = 0) => (isNum(v) ? nfmt(d).format(v) : '–');
 const eur = (v, d = 0) => (isNum(v) ? nfmt(d).format(v) + ' €' : '–');
 const eur2 = v => eur(v, 2);
+/* Erzeugter Strom ist eine Schätzung: immer auf volle 100 kWh abrunden */
+const kwh100 = v => (isNum(v) ? nfmt(0).format(Math.max(0, Math.floor(v / 100) * 100)) : '–');
 const pct = (v, d = 0) => (isNum(v) ? nfmt(d).format(v) + ' %' : '–');
 const ct = v => (isNum(v) ? nfmt(1).format(v * 100) + ' ct' : '–');
 const yrs = (v, d = 1) => (isNum(v) ? nfmt(d).format(v) + ' Jahre' : 'über 20 Jahre');
@@ -1800,7 +1802,7 @@ ${badge(98, 92, 1)}${lab(98, 116, 'Sonne einfangen')}
 <polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="#D9694F"/>${mods}
 <rect x="${bot.l - 8}" y="${bot.y}" width="${bot.r - bot.l + 16}" height="5" rx="2.5" fill="#A9432E"/>
 ${[[0.22, 0.16, 0.2], [0.42, 0.24, 0.55], [0.62, 0.3, 0.88]].map(([a, t, v]) => { const x1 = 62 + Math.cos(a) * 46, y1 = 50 + Math.sin(a) * 46, x2 = lerp(lerp(top.l, bot.l, v), lerp(top.r, bot.r, v), t), y2 = lerp(top.y, bot.y, v) - 3, ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI; return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${(x2 - Math.cos(ang * Math.PI / 180) * 8).toFixed(1)} ${(y2 - Math.sin(ang * Math.PI / 180) * 8).toFixed(1)}" stroke="${sunC}" stroke-width="2.6" stroke-dasharray="6 5" stroke-linecap="round"/><path d="M-9 -6 L4 0 L-9 6 Z" fill="${sunC}" transform="translate(${x2.toFixed(1)} ${y2.toFixed(1)}) rotate(${ang.toFixed(1)})"/>`; }).join('')}
-${chip(250, 34, 116, `≈ ${num(Math.round(R.yield / 100) * 100)} kWh im Jahr`, '#FFF4DC', '#F7DFA6', '#8A5A06')}
+${chip(250, 34, 116, `≈ ${kwh100(R.yield)} kWh im Jahr`, '#FFF4DC', '#F7DFA6', '#8A5A06')}
 <!-- Wechselrichter -->
 <rect x="176" y="136" width="40" height="50" rx="6" fill="#F7FAFC" stroke="#C9D6E1" stroke-width="2"/><path d="M184 152 h10 M184 157 h10" stroke="#9FB1C1" stroke-width="2"/><path d="M196 172 q4 -8 8 0 t8 0" fill="none" stroke="${p}" stroke-width="2"/><circle cx="208" cy="146" r="2.5" fill="${p}"/>
 <path d="M196 122 V136" stroke="${sunC}" stroke-width="3" stroke-dasharray="4 3"/>
@@ -1817,7 +1819,7 @@ ${heatpump}${ecar}
 <g stroke="#6B7F92" stroke-width="2.4" fill="none" stroke-linejoin="round"><path d="M${gx - 18} 214 L${gx} 64 L${gx + 18} 214"/><path d="M${gx - 26} 92 H${gx + 26} M${gx - 20} 118 H${gx + 20}"/><path d="M${gx - 13} 170 L${gx + 9} 118 M${gx + 13} 170 L${gx - 9} 118 M${gx - 15} 196 L${gx + 13} 170 M${gx + 15} 196 L${gx - 13} 170"/></g>
 <path d="M${gx + 26} 92 Q620 98 640 96 M${gx + 20} 118 Q622 124 640 122" stroke="#9FB1C1" stroke-width="1.4" fill="none"/>
 ${badge(gx + 28, 64, 4)}${lab(gx, 230, 'Stromnetz')}
-${chip(418, 62, 132, `≈ ${num(Math.round(R.feed / 100) * 100)} kWh Einspeisung`, '#fff', '#CFE3F5')}
+${chip(418, 62, 132, `≈ ${kwh100(R.feed)} kWh Einspeisung`, '#fff', '#CFE3F5')}
 </g></svg>`;
 }
 function hpCycleSVG() {
@@ -1897,7 +1899,7 @@ function simulateDay(R, month, p) {
 }
 function dayInfo(D) {
   const s = D.sum, aut = s.u ? s.self / s.u : 0;
-  return `Ertrag ${num(s.g, 1)} kWh · Verbrauch ${num(s.u, 1)} kWh · aus Sonne und Speicher gedeckt: ${pct(Math.min(1, aut) * 100)}${s.hp > 0.05 ? ` · davon Wärmepumpe ${num(s.hp, 1)} kWh` : ''}${s.rod > 0.05 ? ` · Heizstab ${num(s.rod, 1)} kWh` : ''}`;
+  return `Ertrag ca. ${num(Math.floor(s.g))} kWh · Verbrauch ca. ${num(Math.round(s.u))} kWh · aus Sonne und Speicher gedeckt: ${pct(Math.min(1, aut) * 100)}${s.hp > 0.05 ? ` · davon Wärmepumpe ca. ${num(Math.round(s.hp))} kWh` : ''}${s.rod > 0.05 ? ` · Heizstab ca. ${num(Math.round(s.rod))} kWh` : ''}`;
 }
 /* Farbe der Wärmepumpe im Tagesverlauf */
 const hpDayCol = () => (C().dark ? '#A78BFA' : '#7C5CC4');
@@ -2410,7 +2412,7 @@ function step3(p, R) {
       <div class="grid sm:grid-cols-2 gap-4">${field('Anlagenleistung', 'p:pv.kwp', { t: 'n', unit: 'kWp', hint: p.pv.modules ? esc(p.pv.modules) : '' })}${field('Batteriespeicher', 'p:pv.bat', { t: 'n', unit: 'kWh', ph: '0' })}</div>
       ${det('pv-maker', 'Hersteller & Garantien', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Module (Hersteller / Typ)', 'p:pv.modMaker', { ph: 'z. B. Winaico WST-BKX54' })}${field('Garantie Module', 'p:pv.modWarranty', { ph: 'z. B. 30 Jahre Produkt- und Leistungsgarantie' })}${field('Speicher (Hersteller / Typ)', 'p:pv.batMaker', { ph: 'z. B. EcoFlow Ocean 2' })}${field('Garantie Speicher', 'p:pv.batWarranty', { ph: 'z. B. 15 Jahre Produktgarantie' })}${field('Wechselrichter (Hersteller / Typ)', 'p:pv.invMaker')}${field('Garantie Wechselrichter', 'p:pv.invWarranty')}</div><p class="hint">Wird aus dem Angebot übernommen und erscheint im Kundendokument.</p>`, [p.pv.modMaker, p.pv.batMaker].filter(Boolean).map(esc).join(' · '))}
       ${roofsCard(p, R)}
-      <div class="mt-4 text-[13px] text-ink3">Einspeisevergütung ${num(c.feedIn, 2)} ct/kWh · Ertrag pro Jahr <b class="text-ink2">${num(R.yield)} kWh</b></div></div>`;
+      <div class="mt-4 text-[13px] text-ink3">Einspeisevergütung ${num(c.feedIn, 2)} ct/kWh · Ertrag pro Jahr <b class="text-ink2">ca. ${kwh100(R.yield)} kWh</b></div></div>`;
     out += carCard(p, R);
   }
   if (p.type === 'wp') out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Potenzielle PV-Anlage', 'Nur für das Diagramm „Ihr Strom übers Jahr“ – zeigt, wie viel Solarstrom die Wärmepumpe nutzen könnte. Nicht Teil der Berechnung.')}<div class="grid sm:grid-cols-2 gap-4">${field('Anlagenleistung', 'p:pvPot.kwp', { t: 'n', unit: 'kWp', ph: num(S.calc.potKwp), hint: `Leer = ${num(S.calc.potKwp)} kWp` })}${field('Batteriespeicher', 'p:pvPot.bat', { t: 'n', unit: 'kWh', ph: num(S.calc.potBat) })}</div></div>`;
@@ -2504,7 +2506,7 @@ function overview(p, R) {
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3"><div class="rounded-[calc(var(--r)-4px)] p-4 bg-tred"><div class="kpi-k">Heute</div><div class="kpi-v">${eur(R.monthOld1)}</div><div class="text-[12px] text-ink3">pro Monat</div></div><div class="rounded-[calc(var(--r)-4px)] p-4 bg-pl"><div class="kpi-k">Künftig</div><div class="kpi-v">${eur(R.monthNew1)}</div><div class="text-[12px] text-ink3">pro Monat</div></div><div class="rounded-[calc(var(--r)-4px)] p-4 bg-tyel"><div class="kpi-k">Ersparnis</div><div class="kpi-v">${eur(R.monthOld1 - R.monthNew1)}</div><div class="text-[12px] text-ink3">in ${R.N} Jahren: ${eur(last.monthSave)} pro Monat</div></div></div>
     <div class="mt-4">${groupBars(monthlyGroups(R), { w: appW(), h: appW() < 640 ? 220 : 230 })}</div><div class="text-[12px] text-ink3 mt-1">${legendHtml([[c.red2, 'Heute-System'], [c.p, 'Neues System']])} Prognose mit ${R.scen === 'opt' ? 'optimistischen' : 'Standard'}-Annahmen: Öl/Gas +${num(R.scen === 'opt' ? S.optimistic.fuelInc : S.calc.fuelInc, 1)} % p. a. zzgl. CO₂-Preis, Strom +${num(R.scen === 'opt' ? S.optimistic.elecInc : S.calc.elecInc, 1)} % p. a.</div></div>`;
   if (R.W) h += `<div class="card p-5 sm:p-6">${cardHead('flame', 'Heizkostenvergleich', 'Kosten im 1. Jahr inkl. Grundpreis und Wartung')}${hBars([{ label: R.fuel === 'oil' ? 'Ölheizung' : 'Gasheizung', sub: 'bisher', v: R.costOld1, c: c.red, txt: eur(R.costOld1) }, { label: 'Wärmepumpe', sub: 'künftig', v: R.costNew1, c: c.p, txt: eur(R.costNew1) }], { w: appW(), lw: appW() < 640 ? 100 : 130 })}</div>`;
-  if (R.V) h += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik', `${num(R.kwp, 2)} kWp · ${num(R.yield)} kWh Ertrag pro Jahr`)}<div class="flex flex-wrap justify-around gap-4">${ring(R.autarky, 'Autarkie', c.p, 140)}${ring(R.selfShare, 'Eigenverbrauch', S.design.secondary, 140)}</div><div class="grid grid-cols-3 gap-2 mt-4 text-center">${[['Selbst genutzt', num(R.self) + ' kWh'], ['Eingespeist', num(R.feed) + ' kWh'], ['PV-Nutzen 1. Jahr', eur(R.pvBenefit1)]].map(([k, v]) => `<div class="kpi !p-3"><div class="kpi-k !text-[11.5px]">${k}</div><div class="font-semibold text-[15px] mt-0.5">${v}</div></div>`).join('')}</div></div>`;
+  if (R.V) h += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik', `${num(R.kwp, 2)} kWp · ca. ${kwh100(R.yield)} kWh Ertrag pro Jahr`)}<div class="flex flex-wrap justify-around gap-4">${ring(R.autarky, 'Autarkie', c.p, 140)}${ring(R.selfShare, 'Eigenverbrauch', S.design.secondary, 140)}</div><div class="grid grid-cols-3 gap-2 mt-4 text-center">${[['Selbst genutzt', 'ca. ' + kwh100(R.self) + ' kWh'], ['Eingespeist', 'ca. ' + kwh100(R.feed) + ' kWh'], ['PV-Nutzen 1. Jahr', eur(R.pvBenefit1)]].map(([k, v]) => `<div class="kpi !p-3"><div class="kpi-k !text-[11.5px]">${k}</div><div class="font-semibold text-[15px] mt-0.5">${v}</div></div>`).join('')}</div></div>`;
   h += `<div class="card p-5 sm:p-6">${cardHead('chart', 'Amortisation', 'Kumulierter Saldo nach Abzug der Investition')}${amortChart(R, { w: appW(), h: appW() < 640 ? 240 : 250 })}<div class="text-[12px] text-ink3 mt-1">${legendHtml([[c.p, 'Saldo mit steigenden Preisen'], [c.blue, 'gleichbleibende Preise', true]])}</div>
     <div class="overflow-x-auto mt-4 -mx-1"><table class="w-full text-[13px] min-w-[520px]"><thead><tr class="text-ink3 text-[12px]"><th class="text-left font-semibold py-2 px-1">Jahr</th><th class="text-right font-semibold">Kosten alt</th><th class="text-right font-semibold">Kosten neu</th>${R.V ? '<th class="text-right font-semibold">PV-Nutzen</th>' : ''}<th class="text-right font-semibold">Ersparnis</th><th class="text-right font-semibold px-1">Saldo</th>${R.zins > 0 ? '<th class="text-right font-semibold px-1">Barwert-Saldo</th>' : ''}</tr></thead><tbody>${R.rows.filter(r => [1, 2, 3, 5, 10, 15, 20, R.N].includes(r.t)).filter((r, i, a) => a.indexOf(r) === i).map(r => `<tr class="border-t border-line ${R.amortRise && Math.ceil(R.amortRise) === r.t ? 'bg-tyel' : ''}"><td class="py-2 px-1 font-semibold">${r.t} <span class="text-ink4">(${r.year})</span></td><td class="text-right">${eur(r.costOld + (R.V ? (R.hhCons + R.carKWh) * r.hhPrice : 0))}</td><td class="text-right">${eur(r.costNew + (R.V ? (R.hhCons + R.carKWh) * r.hhPrice : 0))}</td>${R.V ? `<td class="text-right">${eur(r.pv)}</td>` : ''}<td class="text-right font-semibold text-p">${eur(r.saving)}</td><td class="text-right font-bold px-1 ${r.saldo < 0 ? 'text-ember2' : ''}">${eur(r.saldo)}</td>${R.zins > 0 ? `<td class="text-right px-1">${eur(r.saldoNpv)}</td>` : ''}</tr>`).join('')}</tbody></table></div>
     ${R.zins > 0 ? `<p class="hint">Barwert mit Kalkulationszins ${num(R.zins, 1)} %: Überschuss ${eur(R.npvSurplus)} (nur als Hinweis).</p>` : ''}</div>`;
@@ -2513,7 +2515,7 @@ function overview(p, R) {
     const A = annualProfile(p, R), hp = A.mode === 'hp';
     h += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Ihr Strom übers Jahr', hp ? (A.pot ? `Wärmepumpen-Strom gegenüber einer möglichen PV-Anlage mit ${num(A.kwp, 1)} kWp` : 'Wann die Wärmepumpe Strom braucht – und wann Ihre PV-Anlage ihn liefert') : 'Haushaltsstrom und Solarerzeugung je Monat')}
       ${annualChart(A, { w: appW(), h: appW() < 640 ? 230 : 260 })}<div class="text-[12px] text-ink3 mt-2 leading-6">${annualLegend(A, true)}</div>
-      <div class="grid grid-cols-3 gap-3 mt-4">${[[hp ? 'Solaranteil am WP-Strom' : 'Solaranteil', pct(A.share * 100)], ['Vom eigenen Dach', num(A.covered) + ' kWh'], ['Wert pro Jahr', eur(A.value)]].map(([k, v]) => `<div class="kpi !p-3"><div class="kpi-k !text-[12px]">${k}</div><div class="text-[18px] font-semibold mt-1">${v}</div></div>`).join('')}</div>
+      <div class="grid grid-cols-3 gap-3 mt-4">${[[hp ? 'Solaranteil am WP-Strom' : 'Solaranteil', pct(A.share * 100)], ['Vom eigenen Dach', 'ca. ' + kwh100(A.covered) + ' kWh'], ['Wert pro Jahr', eur(A.value)]].map(([k, v]) => `<div class="kpi !p-3"><div class="kpi-k !text-[12px]">${k}</div><div class="text-[18px] font-semibold mt-1">${v}</div></div>`).join('')}</div>
       ${A.pot ? `<p class="hint">Die PV-Anlage ist nur ein Vorschlag (Schritt 3 → Potenzielle PV-Anlage) und nicht Teil der Berechnung.</p>` : ''}</div>`;
   }
   if (R.V && R.kwp > 0) h += dayCard(p, R);
@@ -2774,11 +2776,11 @@ function benefitsOf(p, R) {
   const b = [];
   if (R.W) b.push(`Unabhängig von ${R.fuel === 'oil' ? 'Heizöl' : 'Erdgas'}, CO₂-Preis und steigenden Netzentgelten`);
   if (R.W && R.funding > 0) b.push(`<b>${eur(R.funding)}</b> staatliche Förderung – ${pct(R.fund.rate)} Ihrer förderfähigen Kosten`);
-  if (R.V) b.push(`<b>${num(R.yield)} kWh</b> eigener Solarstrom pro Jahr – ${pct(R.autarky * 100)} Autarkie`);
+  if (R.V) b.push(`Rund <b>${kwh100(R.yield)} kWh</b> eigener Solarstrom pro Jahr – ${pct(R.autarky * 100)} Autarkie`);
   if (p.type === 'pvwp') { const A = annualProfile(p, R); if (A.share > 0) b.push(`Rund <b>${pct(A.share * 100)}</b> des Wärmepumpen-Stroms kommen vom eigenen Dach`); }
   if (R.V && R.bat) b.push(`Speicher mit ${num(R.bat, 1)} kWh – Solarstrom auch am Abend`);
   b.push(`<b>${num(R.co2Save / 1000, 1)} t</b> weniger CO₂ pro Jahr`);
-  if (R.carKWh) b.push(`Ihr E-Auto lädt rund <b>${num(R.carPV)} kWh</b> Solarstrom pro Jahr`);
+  if (R.carKWh) b.push(`Ihr E-Auto lädt rund <b>${kwh100(R.carPV)} kWh</b> Solarstrom pro Jahr`);
   if (R.rod) b.push(`Im Sommer Warmwasser per Heizstab mit Solarstrom – die Wärmepumpe pausiert ${R.rodMonths} Monate und hält länger`);
   if (R.W) b.push('Wärme und Warmwasser aus Umweltwärme – zuverlässig auch bei Frost');
   return b.slice(0, 5);
@@ -2816,7 +2818,7 @@ const DOC = {
     const lead = hp ? (A.pot ? `Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. Trotzdem könnte eine Photovoltaikanlage mit ${num(A.kwp, 1)} kWp einen großen Teil des Wärmepumpen-Stroms abdecken – vor allem im Frühjahr und im Herbst, wenn noch geheizt wird und die Sonne schon kräftig scheint.` : 'Ihre Wärmepumpe braucht vor allem im Winter Strom, die Sonne liefert vor allem im Sommer. Trotzdem kann Ihre Photovoltaikanlage einen großen Teil des Wärmepumpen-Stroms abdecken – vor allem im Frühjahr und im Herbst, wenn noch geheizt wird und die Sonne schon kräftig scheint.') : 'So verteilen sich Ihr Stromverbrauch und Ihre Solarerzeugung über die Monate.';
     let b = chap(txt('year', 'title'), S.doc.texts.year && S.doc.texts.year.lead ? S.doc.texts.year.lead : lead);
     b += `<div class="tile" style="padding:4mm 4mm 3mm">${annualChart(A, { h: 250 })}<div class="small" style="margin-top:2mm">${annualLegend(A)}</div></div>`;
-    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:6mm">${[[hp ? 'Anteil Solarstrom am WP-Strom' : 'Anteil Solarstrom am Verbrauch', pct(A.share * 100), 'rechnerisch übers Jahr', 'var(--p)'], ['Vom eigenen Dach', num(A.covered) + ' kWh', `von ${num(A.total)} kWh Bedarf`], [hp ? 'Weniger Stromkosten' : 'Wert des Eigenverbrauchs', eur(A.value), A.pot ? 'pro Jahr, zusätzlich möglich' : 'pro Jahr – bereits in Ihrer Ersparnis enthalten']].map(([k, v, u, col], i) => `<div style="padding:0 5mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}">${fig(k, v, u, col)}</div>`).join('')}</div>`;
+    b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:6mm">${[[hp ? 'Anteil Solarstrom am WP-Strom' : 'Anteil Solarstrom am Verbrauch', pct(A.share * 100), 'rechnerisch übers Jahr', 'var(--p)'], ['Vom eigenen Dach', 'ca. ' + kwh100(A.covered) + ' kWh', `von ${num(A.total)} kWh Bedarf`], [hp ? 'Weniger Stromkosten' : 'Wert des Eigenverbrauchs', eur(A.value), A.pot ? 'pro Jahr, zusätzlich möglich' : 'pro Jahr – bereits in Ihrer Ersparnis enthalten']].map(([k, v, u, col], i) => `<div style="padding:0 5mm;${i ? 'border-left:0.25mm solid var(--line);' : 'padding-left:0;'}">${fig(k, v, u, col)}</div>`).join('')}</div>`;
     const seas = (a, z) => A.months.slice(a, z).reduce((s, m) => s + m.covered, 0) / Math.max(1, A.months.slice(a, z).reduce((s, m) => s + m.demand, 0));
     const winter = (A.months[0].covered + A.months[1].covered + A.months[10].covered + A.months[11].covered) / Math.max(1, A.months[0].demand + A.months[1].demand + A.months[10].demand + A.months[11].demand);
     b += `<div class="sec g3">${[['Frühling und Herbst', `Die beste Zeit: Ihr Haus braucht noch Wärme, und die Sonne liefert schon viel Strom. Rund ${pct((A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.covered, 0) / Math.max(1, A.months.filter((m, i) => [2, 3, 4, 8, 9].includes(i)).reduce((a, m) => a + m.demand, 0))) * 100)} des Bedarfs von März bis Mai und im September/Oktober kommen vom Dach.`], ['Sommer', hp ? (A.rod ? `Der Heizstab (${esc(R.rodName)}) erwärmt das Warmwasser mit überschüssigem Solarstrom. Ihre Wärmepumpe kann nahezu komplett pausieren – das schont sie und verlängert ihre Lebensdauer.` : 'Die Wärmepumpe bereitet fast nur Warmwasser – das läuft tagsüber nahezu komplett mit Solarstrom. Überschüsse fließen in den Speicher oder ins Netz.') : 'Die Anlage erzeugt mehr, als Sie verbrauchen. Überschüsse fließen in den Speicher oder ins Netz.'], ['Winter', hp ? `Auch an kurzen Wintertagen liefert Ihr Dach Strom: Rund ${pct(winter * 100)} kommen jetzt von der eigenen Anlage, den Rest liefert ${R.tariffOn ? 'Ihr günstiger Wärmepumpentarif' : 'das Stromnetz'}. Ihre Wärmepumpe macht dabei aus jeder Kilowattstunde Strom rund ${num(R.jaz, 1)} Kilowattstunden Wärme – deutlich günstiger als Öl oder Gas.` : `Auch an kurzen Wintertagen liefert Ihr Dach Strom: Rund ${pct(winter * 100)} Ihres Bedarfs kommen jetzt von der eigenen Anlage, den Rest liefert das Stromnetz. Übers Jahr gerechnet sparen Sie trotzdem deutlich.`]].map(([t, x]) => `<div class="tile"><h3>${t}</h3><div class="small" style="font-size:8pt;line-height:1.45;color:var(--ink2)">${x}</div></div>`).join('')}</div>`;
@@ -2838,7 +2840,7 @@ const DOC = {
       b += `<div class="g4">${tile('Stromverbrauch', num(R.hhCons) + ' kWh', 'pro Jahr', 'tred')}${tile('Strompreis', ct(R.hhPrice), 'pro kWh')}${tile('Stromkosten', eur(R.hhCons * R.hhPrice), 'pro Jahr')}${tile('CO₂', num(R.hhCons * S.calc.co2El / 1000, 1) + ' t', 'pro Jahr')}</div>`;
     }
     const sys = [];
-    if (R.V) { sys.push(tile('Photovoltaik', num(R.kwp, 2) + ' kWp', p.pv.modules || `${num(R.yield)} kWh pro Jahr`, 'tgrn')); sys.push(tile('Stromspeicher', R.bat ? num(R.bat, 1) + ' kWh' : 'ohne', R.bat ? 'speichert Solarstrom für abends' : '', 'tgrn')); }
+    if (R.V) { sys.push(tile('Photovoltaik', num(R.kwp, 2) + ' kWp', p.pv.modules || `ca. ${kwh100(R.yield)} kWh pro Jahr`, 'tgrn')); sys.push(tile('Stromspeicher', R.bat ? num(R.bat, 1) + ' kWh' : 'ohne', R.bat ? 'speichert Solarstrom für abends' : '', 'tgrn')); }
     if (R.W) sys.push(tile('Wärmepumpe', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–', `JAZ ${num(R.jaz, 2)}`, 'tgrn'));
     if (R.rod) sys.push(tile('Heizstab', num(R.rodKw, 1) + ' kW', 'mit PV-Überschuss', 'tgrn'));
     b += `<div class="sec"><h2>Ihr neues Energiesystem</h2><div class="g${Math.max(2, sys.length)}">${sys.join('')}</div></div>`;
@@ -2877,12 +2879,13 @@ const DOC = {
     const price = p.type === 'pvwp' ? nz(p.offer.grossPV) : R.gross;
     let gen20 = 0; for (let t = 0; t < R.N; t++) gen20 += R.yield * Math.pow(1 - S.calc.pvDeg / 100, t);
     const own = gen20 ? price / gen20 : null;
-    const steps = [['Sonne einfangen', `Ihre ${num(R.kwp, 2)} kWp erzeugen rund ${num(R.yield)} kWh Strom im Jahr.`], ['Selbst nutzen', `Etwa ${num(R.self)} kWh nutzen Sie direkt oder über den Speicher.`], ['Speichern', R.bat ? `Der ${num(R.bat, 1)}-kWh-Speicher versorgt Sie abends und nachts.` : 'Ein Speicher lässt sich jederzeit nachrüsten.'], ['Einspeisen', `Rund ${num(R.feed)} kWh gehen ins Netz – vergütet mit ${num(S.calc.feedIn, 2)} ct/kWh.`]];
+    const steps = [['Sonne einfangen', `Ihre ${num(R.kwp, 2)} kWp erzeugen rund ${kwh100(R.yield)} kWh Strom im Jahr.`], ['Selbst nutzen', `Etwa ${kwh100(R.self)} kWh nutzen Sie direkt oder über den Speicher.`], ['Speichern', R.bat ? `Der ${num(R.bat, 1)}-kWh-Speicher versorgt Sie abends und nachts.` : 'Ein Speicher lässt sich jederzeit nachrüsten.'], ['Einspeisen', `Rund ${kwh100(R.feed)} kWh gehen ins Netz – vergütet mit ${num(S.calc.feedIn, 2)} ct/kWh.`]];
     let b = chap('So funktioniert Ihre Photovoltaikanlage', 'Ihr Dach wird zum Kraftwerk: Solarstrom wird zuerst im Haus genutzt, Überschüsse gespeichert oder eingespeist.');
     b += S.design.pvIllu === 'diagram' ? `<div class="tile" style="padding:3mm 4mm">${pvFlowSVG(R)}</div>` : `<div style="border-radius:var(--dr);overflow:hidden">${pvSceneSVG(R)}</div>`;
     b += `<div class="g4" style="margin-top:3.5mm">${steps.map(([t, x], i) => `<div><div style="display:flex;align-items:center;gap:2mm;margin-bottom:1mm">${numCircle(i + 1, 5.5, { fill: S.design.primary, color: '#fff', fs: 12 })}<b style="font-size:9pt">${t}</b></div><div class="small" style="line-height:1.4">${x}</div></div>`).join('')}</div>`;
     b += `<div class="sec"><h2>Ein typischer Tag im ${MONTH_NAMES[dayMonth(p) - 1]} – 6 Uhr bis 6 Uhr</h2>${rodPause(R, dayMonth(p)) ? `<div style="background:var(--t-yel);border-radius:var(--dr);padding:2.5mm 4mm;margin-bottom:2mm;font-size:8.4pt;display:flex;gap:3mm;align-items:flex-start">${icC('sun', 16, S.design.secondary, 2)}<div><b style="font-weight:600">Sommerpause der Wärmepumpe.</b> ${esc(rodPauseText(R))}</div></div>` : ''}<p class="small" style="margin-bottom:1.5mm">${R.bat ? `Tagsüber lädt der Überschuss Ihren ${num(R.bat, 1)}-kWh-Speicher, abends und nachts versorgt er Ihr Haus.` : 'Tagsüber nutzen Sie den Solarstrom direkt, Überschüsse gehen ins Netz.'} Leistung in kW. ${(() => { const D = simulateDay(R, dayMonth(p), p); DAY_CACHE = D; return dayInfo(D) + '.'; })()}</p>${dayProfileSVG(R, { D: DAY_CACHE, h: 185 })}<div class="small" style="margin-top:1mm">${dayLegend(R)}</div></div>`;
-    b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung')}${tile('Solarstrom im Jahr', num(R.yield) + ' kWh', `davon ${num(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
+    b += `<div class="g3" style="margin-top:4mm">${tile('Autarkie', pct(R.autarky * 100), 'Ihres Strombedarfs aus eigener Erzeugung')}${tile('Solarstrom im Jahr (geschätzt)', 'ca. ' + kwh100(R.yield) + ' kWh', `davon ca. ${kwh100(R.self)} kWh selbst genutzt`)}${tile('Was eine kWh kostet', `${ct(own)} <span style="font-size:9pt;color:var(--ink3)">statt ${ct(R.hhPrice)}</span>`, `eigener Solarstrom (Anlagenpreis ÷ Erzeugung in ${R.N} Jahren) gegenüber Netzstrom`)}</div>`;
+    b += `<p class="small" style="margin-top:2.5mm">Alle Angaben zum erzeugten Strom sind kalkulierte Schätzwerte (auf volle 100 kWh abgerundet). Der tatsächliche Ertrag hängt von Wetter, Verschattung und Ihrem Verbrauch ab.</p>`;
     return { title: 'So funktioniert Ihre Photovoltaikanlage', body: b };
   },
   invest(p, R) {
@@ -2901,7 +2904,7 @@ const DOC = {
     b += `<div class="sec"><div class="km"></div><h1 style="font-size:15pt">Energiebilanz</h1>`;
     if (R.W) b += `<h3 style="margin-top:2mm">Heizkosten im ersten Jahr</h3>${hBars([{ label: R.fuel === 'oil' ? 'Ölheizung' : 'Gasheizung', sub: 'bisher', v: R.costOld1, c: '#D9482B', txt: eur(R.costOld1) }, { label: 'Wärmepumpe', sub: 'künftig', v: R.costNew1, c: S.design.primary, txt: eur(R.costNew1) }], { rowH: 40 })}`;
     const t = [];
-    if (R.V) t.push(tile('Solarstrom', num(R.yield) + ' kWh', 'pro Jahr'), tile('Eigenverbrauch', pct(R.selfShare * 100), `${num(R.self)} kWh`), tile('Autarkie', pct(R.autarky * 100), 'unabhängig vom Netz'));
+    if (R.V) t.push(tile('Solarstrom (geschätzt)', 'ca. ' + kwh100(R.yield) + ' kWh', 'pro Jahr'), tile('Eigenverbrauch', pct(R.selfShare * 100), `ca. ${kwh100(R.self)} kWh`), tile('Autarkie', pct(R.autarky * 100), 'unabhängig vom Netz'));
     t.push(tile('CO₂-Einsparung', num(R.co2Save / 1000, 1) + ' t', 'pro Jahr', 'tgrn'));
     b += `<div class="g${t.length}" style="margin-top:3mm">${t.join('')}</div></div>`;
     return { title: 'Investition & Förderung', body: b };
@@ -2978,7 +2981,7 @@ const DOC = {
     let b = chap('Angebot annehmen', 'Überzeugt? Dann können Sie Ihren Auftrag direkt hier erteilen.');
     if (R.discount) b += `<div style="background:var(--t-yel);border-radius:var(--dr);padding:6mm 7mm;display:flex;justify-content:space-between;align-items:center;gap:5mm"><div><div style="font-size:9pt;font-weight:600;color:var(--s-dark)">Ihr Vorteil bei schneller Entscheidung</div><div style="font-size:11pt;font-weight:600;color:var(--ink);margin-top:1mm">${esc(S.discount.text.replace('{datum}', deDate(p.discount.until)))}</div></div><div style="font-size:24pt;font-weight:600;color:var(--p);white-space:nowrap">${eur(R.discount)}</div></div>`;
     b += `<div class="sec tile"><div style="display:grid;grid-template-columns:1fr 1fr;gap:2.5mm 6mm;font-size:9pt"><span class="muted">Angebot</span><b>${esc(p.offer.number || '–')}</b><span class="muted">Angebotsdatum</span><b>${p.offer.date ? deDate(p.offer.date) : '–'}</b><span class="muted">Bruttopreis</span><b>${eur(R.gross, 2)}</b>${R.discount ? `<span class="muted">Sonderrabatt</span><b>− ${eur(R.discount, 2)}</b><span class="muted">Preis nach Rabatt</span><b>${eur(R.gross - R.discount, 2)}</b>` : ''}</div></div>`;
-    const sg = p.sign && p.sign.cust ? p.sign : null, box = on => (on ? `<span class="chk" style="position:relative"><svg viewBox="0 0 16 16" style="position:absolute;left:0.2mm;top:0.2mm;width:3.2mm;height:3.2mm"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="#0F2A3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : '<span class="chk"></span>');
+    const sg = p.sign && p.sign.cust ? p.sign : null, box = on => (on ? `<span style="display:inline-block;width:4.4mm;height:4.4mm;border-radius:1mm;background:var(--p);vertical-align:-1mm;margin-right:2mm;position:relative"><img src="${svgDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32"><path d="M3.5 8.5 6.6 11.5 12.5 4.8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>')}" style="position:absolute;left:0.3mm;top:0.3mm;width:3.8mm;height:3.8mm"></span>` : '<span class="chk"></span>');
     b += `<div class="sec" style="font-size:9.6pt;line-height:1.55"><p>${box(sg && sg.order)}${esc(T)}</p><p>${box(sg && sg.cond)}Die Beauftragung erfolgt unter der aufschiebenden Bedingung der Förderzusage.</p></div>`;
     const line = (l, inner = '') => sigField(l, inner, 16);
     const sigImg = id => (sigSrc(id) ? `<img src="${sigSrc(id)}" style="max-height:15mm;max-width:70mm;width:auto;height:auto">` : '');
@@ -3006,7 +3009,7 @@ function assumptionItems(p, R) {
     if (F.stand) items.push(`Förderung BEG EM, Stand ${deDate(F.stand.from)}: ${pct(F.rate)}`);
   }
   items.push(`Preissteigerung Strom: ${num(P.elecInc, 1)} % pro Jahr`, `Preissteigerung Wartung: ${num(P.maintInc, 1)} % pro Jahr`);
-  if (R.V) items.push(R.yieldSrc === 'pvgis' ? `PV-Ertrag laut PVGIS (EU-Kommission): ${num(R.yield)} kWh/Jahr` : `PV-Ertrag ${num(c.pvYield)} kWh/kWp bei Süd 30–35°, Ihr Dach ${pct(R.roofFactor * 100)} davon`, `Degradation ${num(c.pvDeg, 1)} % pro Jahr`, ...(R.carKWh ? [`E-Auto: ${num(R.carKWh)} kWh Ladestrom zu Hause, davon rund ${num(R.carPV)} kWh Solarstrom`] : []), `Einspeisevergütung ${num(c.feedIn, 2)} ct/kWh`, `Eigenverbrauch ${pct(R.selfShare * 100)} (Modell inkl. Speicher)`, `Haushaltsstrom ${num(R.hhCons)} kWh zu ${ct(R.hhPrice)}/kWh`);
+  if (R.V) items.push(R.yieldSrc === 'pvgis' ? `PV-Ertrag laut PVGIS (EU-Kommission): ca. ${kwh100(R.yield)} kWh/Jahr` : `PV-Ertrag ${num(c.pvYield)} kWh/kWp bei Süd 30–35°, Ihr Dach ${pct(R.roofFactor * 100)} davon`, `Degradation ${num(c.pvDeg, 1)} % pro Jahr`, ...(R.carKWh ? [`E-Auto: ${num(R.carKWh)} kWh Ladestrom zu Hause, davon rund ${kwh100(R.carPV)} kWh Solarstrom`] : []), `Einspeisevergütung ${num(c.feedIn, 2)} ct/kWh`, `Eigenverbrauch ${pct(R.selfShare * 100)} (Modell inkl. Speicher)`, `Haushaltsstrom ${num(R.hhCons)} kWh zu ${ct(R.hhPrice)}/kWh`);
   if (R.sowieso) items.push(`Sowieso-Kosten neue ${R.fuel === 'oil' ? 'Öl' : 'Gas'}heizung: ${eur(R.sowieso)}`);
   items.push(`Kalkulationszins ${num(P.rate, 1)} %`, `CO₂-Faktoren: Öl ${num(c.co2Oil, 2)}, Gas ${num(c.co2Gas, 2)}, Strom ${num(c.co2El, 2)} kg/kWh`);
   return items;
@@ -3055,7 +3058,7 @@ function fixSvgColors(root) {
 }
 async function waitImages(root) { await Promise.all($$('img', root).map(img => img.complete && img.naturalWidth ? null : new Promise(r => { img.onload = img.onerror = r; setTimeout(r, 6000); }))); }
 async function preparePrintRoot(p, R) {
-  await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(c => (PRODUCTS.find(x => x.id === c.id) || {}).img)));
+  await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(c => (PRODUCTS.find(x => x.id === c.id) || {}).img), p.sign ? [p.sign.cust, p.sign.adv] : []));
   const root = $('#print-root'); root.innerHTML = buildDocHtml(p, R);
   fixSvgColors(root); fitPages(root);
   await document.fonts.ready; await waitImages(root);
@@ -3202,7 +3205,7 @@ function salesCover(p, R, n, N) {
       ${I.address ? `<div style="font-size:10pt;color:var(--ink3);margin-top:2mm">${esc(custAddr(p))}</div>` : ''}
       ${I.subtitle && head ? `<div style="margin-top:10mm;border-left:1.6mm solid var(--s);padding:1mm 0 1mm 6mm;font-size:15pt;font-weight:700;line-height:1.35;max-width:150mm">${sMark(head)}</div>` : ''}
       ${I.note ? `<div style="margin-top:6mm;font-size:10pt;color:var(--ink2);white-space:pre-line">${esc(I.note)}</div>` : ''}
-      ${I.figures ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:9mm">${[['Ersparnis pro Monat', eur(Math.max(0, R.monthOld1 - R.monthNew1))], R.W && R.funding > 0 ? ['Zuschuss vom Staat', eur(R.funding)] : ['Solarstrom pro Jahr', num(R.yield) + ' kWh'], ['Bezahlt nach', R.amortRise === null ? `über ${R.N} J.` : num(R.amortRise, 1) + ' Jahren']].map(([k, v]) => `<div class="scard" style="padding:4mm 5mm"><div class="small">${k}</div><div style="font-size:16pt;font-weight:700;margin-top:1mm">${v}</div></div>`).join('')}</div>` : ''}
+      ${I.figures ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:9mm">${[['Ersparnis pro Monat', eur(Math.max(0, R.monthOld1 - R.monthNew1))], R.W && R.funding > 0 ? ['Zuschuss vom Staat', eur(R.funding)] : ['Solarstrom pro Jahr', 'ca. ' + kwh100(R.yield) + ' kWh'], ['Bezahlt nach', R.amortRise === null ? `über ${R.N} J.` : num(R.amortRise, 1) + ' Jahren']].map(([k, v]) => `<div class="scard" style="padding:4mm 5mm"><div class="small">${k}</div><div style="font-size:16pt;font-weight:700;margin-top:1mm">${v}</div></div>`).join('')}</div>` : ''}
     </div>
     ${meta.length ? `<div style="position:absolute;left:16mm;right:16mm;bottom:12mm;border-top:0.25mm solid var(--line);padding-top:4mm;display:grid;grid-template-columns:${meta.map((m, i) => (i === 0 && m[0] === 'Dokument' ? '2.4fr' : '1fr')).join(' ')};gap:5mm">${meta.map(([k, v]) => `<div><div style="font-size:7pt;color:var(--ink3)">${k}</div><div style="font-size:8.4pt;font-weight:700;margin-top:0.6mm;line-height:1.3">${v}</div></div>`).join('')}</div>` : ''}
     ${I.contact && a.photo ? `<div style="position:absolute;right:16mm;top:140mm;width:20mm;height:20mm;border-radius:50%;background:#fff url('${a.photo}') center/cover no-repeat;border:0.8mm solid #fff;box-shadow:0 0 0 0.25mm var(--line)"></div>` : ''}</section>`;
@@ -3223,7 +3226,7 @@ Object.assign(DOC, {
     if (R.V) t.push(['sun', pct(R.autarky * 100), 'Strom selbst erzeugt', R.W ? 'Ihres Bedarfs inkl. Wärmepumpe' : 'Ihres Strombedarfs']);
     t.push(['clock', R.amortRise === null ? `> ${R.N} Jahre` : num(R.amortRise, 1) + ' Jahre', 'bis zur Amortisation', 'mit steigenden Energiepreisen']);
     if (t.length < 3) t.push(['leaf', num(R.co2Save / 1000, 1) + ' t', 'weniger CO₂ pro Jahr', 'gegenüber heute']);
-    if (t.length < 3) t.push(['bolt', num(R.yield) + ' kWh', 'Solarstrom pro Jahr', 'vom eigenen Dach']);
+    if (t.length < 3) t.push(['bolt', 'ca. ' + kwh100(R.yield) + ' kWh', 'Solarstrom pro Jahr', 'vom eigenen Dach']);
     b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:4mm">${t.slice(0, 3).map(([i, v, k, u]) => `<div class="scard">${sIcon(i)}<div style="font-size:17pt;font-weight:700;margin-top:3.5mm">${v}</div><div style="font-size:8.6pt;font-weight:700;margin-top:0.5mm">${k}</div><div class="small">${u}</div></div>`).join('')}</div>`;
     const ben = salesBenefits(p, R);
     b += `<h2 style="margin-top:8mm">Ihre Vorteile</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:1mm 8mm">${ben.map(sCheck).join('')}</div>`;
@@ -3235,7 +3238,7 @@ Object.assign(DOC, {
     let b = sChap('sSystem', p, R);
     const items = [];
     const pv = p.pv, short = s => String(s || '').replace(/\s*\(.*$/, '').trim();
-    if (R.V) { const m = String(pv.modules || '').match(/(\d+)\s*[×x]\s*(\d+)\s*W/i); items.push(['sun', 'Photovoltaikanlage', m ? `${m[1]} Solarmodule à ${m[2]} Watt` : (pv.modules || 'Ihre Solaranlage'), [pv.modMaker, `rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr`].filter(Boolean).join(' · '), num(R.kwp, 2) + ' kWp', pv.modWarranty ? [cleanWarranty(pv.modWarranty)] : []]); }
+    if (R.V) { const m = String(pv.modules || '').match(/(\d+)\s*[×x]\s*(\d+)\s*W/i); items.push(['sun', 'Photovoltaikanlage', m ? `${m[1]} Solarmodule à ${m[2]} Watt` : (pv.modules || 'Ihre Solaranlage'), [pv.modMaker, `rund ${kwh100(R.yield)} kWh Solarstrom im Jahr (geschätzt)`].filter(Boolean).join(' · '), num(R.kwp, 2) + ' kWp', pv.modWarranty ? [cleanWarranty(pv.modWarranty)] : []]); }
     if (R.V && (pv.invMaker || pv.invWarranty)) { const kw = /(\d{1,2}(?:[.,]\d{1,2})?)\s*kW\b(?!h)/i.exec(pv.invMaker || ''); items.push(['bolt', 'Wechselrichter', short(pv.invMaker) || 'Wechselrichter', 'Wandelt Solarstrom in Haushaltsstrom um und steuert den Speicher', kw ? num(parseFloat(kw[1].replace(',', '.')), 1) + ' kW' : '', pv.invWarranty ? [cleanWarranty(pv.invWarranty)] : []]); }
     if (R.V && R.bat) items.push(['battery', 'Stromspeicher', pv.batMaker || 'Batteriespeicher', 'Speichert Solarstrom für Abend und Nacht', num(R.bat, 1) + ' kWh', pv.batWarranty ? [cleanWarranty(pv.batWarranty)] : []]);
     if (R.W) items.push(['flame', 'Wärmepumpe', p.hp.model || 'Luft-Wasser-Wärmepumpe', [`Jahresarbeitszahl ${num(R.jaz, 2)}`, p.hp.dims && `Außeneinheit ${p.hp.dims.replace(/\s*x\s*/gi, ' × ')}`, p.hp.weight && `${num(p.hp.weight)} kg`].filter(Boolean).join(' · '), p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '', p.hp.warranty ? [p.hp.warranty] : []]);
@@ -3246,8 +3249,8 @@ Object.assign(DOC, {
       // viele Komponenten: zweispaltig, Wert rechts oben – passt auf eine Seite
       b += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2.5mm">${items.map(([i, k, t, u, v, w]) => `<div class="scard" style="padding:3mm 4mm"><div style="display:flex;align-items:center;gap:3mm"><span class="sic" style="width:8.5mm;height:8.5mm">${sImg(i, 4.4, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div></div><div style="font-size:14pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div><div style="font-size:9.6pt;font-weight:700;line-height:1.3;margin-top:1.5mm">${esc(t)}</div><div class="small" style="color:var(--ink2);line-height:1.35">${esc(u)}</div>${wLine(w)}</div>`).join('')}</div>`;
     } else b += items.map(([i, k, t, u, v, w]) => `<div class="scard" style="display:flex;align-items:center;gap:5mm;padding:${dense ? 2.6 : 4}mm 6mm;margin-bottom:${dense ? 2 : 2.5}mm"><span class="sic" style="width:11mm;height:11mm">${sImg(i, 5.2, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div><div style="font-size:${dense ? 10.8 : 11.5}pt;font-weight:700;line-height:1.3">${esc(t)}</div><div class="small" style="color:var(--ink2)">${esc(u)}</div>${wLine(w)}</div><div style="font-size:19pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div>`).join('');
-    const steps = p.type === 'pvwp' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr – auch bei bewölktem Himmel.`], R.bat ? ['Speichern', 'Was tagsüber übrig ist, lädt den Speicher – für den Abend und die Nacht.'] : ['Selbst nutzen', 'Ihr Haus und Ihre Wärmepumpe nutzen den Solarstrom direkt.'], ['Wärme aus der Luft', `Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser – leise und ohne Brennstofflager.']]
-      : p.type === 'pv' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${num(Math.round(R.yield / 100) * 100)} kWh Solarstrom im Jahr.`], ['Selbst nutzen', 'Ihr Haushalt verbraucht den Solarstrom zuerst direkt.'], R.bat ? ['Speichern', 'Überschüsse laden den Speicher – für Abend und Nacht.'] : ['Einspeisen', 'Was übrig ist, fließt gegen Vergütung ins Netz.'], ['Unabhängig', `Rund ${pct(R.autarky * 100)} Ihres Stroms kommen künftig vom eigenen Dach.`]]
+    const steps = p.type === 'pvwp' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${kwh100(R.yield)} kWh Solarstrom im Jahr – auch bei bewölktem Himmel.`], R.bat ? ['Speichern', 'Was tagsüber übrig ist, lädt den Speicher – für den Abend und die Nacht.'] : ['Selbst nutzen', 'Ihr Haus und Ihre Wärmepumpe nutzen den Solarstrom direkt.'], ['Wärme aus der Luft', `Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser – leise und ohne Brennstofflager.']]
+      : p.type === 'pv' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${kwh100(R.yield)} kWh Solarstrom im Jahr.`], ['Selbst nutzen', 'Ihr Haushalt verbraucht den Solarstrom zuerst direkt.'], R.bat ? ['Speichern', 'Überschüsse laden den Speicher – für Abend und Nacht.'] : ['Einspeisen', 'Was übrig ist, fließt gegen Vergütung ins Netz.'], ['Unabhängig', `Rund ${pct(R.autarky * 100)} Ihres Stroms kommen künftig vom eigenen Dach.`]]
       : [['Wärme aus der Luft', 'Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost.'], ['Verdichten', `Mit wenig Strom wird die Wärme auf Heiztemperatur gebracht. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser.'], ['Ohne Öl und Gas', 'Kein Brennstofflager, kein Schornsteinfeger, kein CO₂-Preis.']];
     if (DENSE && (items.length >= 4 || wn >= 3)) b += `<h2 style="margin-top:3.5mm">So einfach funktioniert es</h2><div class="sbox" style="padding:3mm 4mm;display:grid;grid-template-columns:repeat(4,1fr);gap:3mm">${steps.map(([t], i) => `<div style="display:flex;align-items:center;gap:2mm">${sNum(i + 1)}<b style="font-size:8.6pt;line-height:1.25">${t}</b></div>`).join('')}</div>`;
     else b += `<h2 style="margin-top:${DENSE ? 3.5 : 5}mm">So einfach funktioniert es</h2><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3mm">${steps.map(([t, x], i) => `<div class="sbox" style="padding:${DENSE ? 3 : 4}mm">${sNum(i + 1)}<div style="font-size:9.2pt;font-weight:700;margin-top:${DENSE ? 1.8 : 2.5}mm;line-height:1.3">${t}</div><div class="small" style="color:var(--ink2);font-size:${DENSE ? 7.1 : 7.6}pt;line-height:1.4;margin-top:1mm">${x}</div></div>`).join('')}</div>`;
@@ -3322,7 +3325,7 @@ Object.assign(DOC, {
     const T = S.discount.orderText.replace('{firma}', coName()).replace('{angebot}', p.offer.number || '–').replace('{angebotsdatum}', p.offer.date ? deDate(p.offer.date) : '–').replace('{preis}', eur(R.gross, 2)).replace('{rabatt}', R.discount ? ` abzüglich ${eur(R.discount, 2)} Sonderrabatt` : '');
     const meta = [['Angebot', p.offer.number || '–'], ['vom', p.offer.date ? deDate(p.offer.date) : '–'], ['Bruttopreis', eur(R.gross, 2)]].concat(R.discount ? [['Sonderrabatt', '– ' + eur(R.discount, 2)]] : []);
     b += `<div style="display:flex;gap:9mm;padding:6mm 5mm 4mm;border-bottom:0.25mm solid var(--line);margin-top:3mm">${meta.map(([k, v]) => `<div><div class="small">${k}</div><div style="font-size:11pt;font-weight:700">${esc(v)}</div></div>`).join('')}</div>`;
-    const sg = p.sign && p.sign.cust ? p.sign : null, box = on => `<span style="flex-shrink:0;display:inline-block;width:5mm;height:5mm;border:0.35mm solid var(--ink);border-radius:1.2mm;position:relative;margin-top:0.3mm">${on ? '<svg viewBox="0 0 16 16" style="position:absolute;left:0.3mm;top:0.3mm;width:3.6mm;height:3.6mm"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="#0F2A3D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</span>`;
+    const sg = p.sign && p.sign.cust ? p.sign : null, box = on => (on ? `<span style="display:inline-block;width:4.4mm;height:4.4mm;border-radius:1mm;background:var(--p);flex-shrink:0;margin-top:0.3mm;position:relative"><img src="${svgDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32"><path d="M3.5 8.5 6.6 11.5 12.5 4.8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>')}" style="position:absolute;left:0.3mm;top:0.3mm;width:3.8mm;height:3.8mm"></span>` : '<span style="flex-shrink:0;display:inline-block;width:5mm;height:5mm;border:0.35mm solid var(--ink);border-radius:1.2mm;margin-top:0.3mm"></span>');
     b += `<div style="padding:5mm 5mm 0;font-size:9.4pt;line-height:1.5"><div style="display:flex;gap:4mm;margin-bottom:3mm">${box(sg && sg.order)}<span>${esc(T)}</span></div><div style="display:flex;gap:4mm">${box(sg && sg.cond)}<span>Der Auftrag steht unter der aufschiebenden Bedingung der Förderzusage${R.W ? ' (BEG/KfW)' : ''}.</span></div></div>`;
     const a = advisorOf(p), line = (l, inner = '') => sigField(l, inner, 20);
     const sigImg = id => (sigSrc(id) ? `<img src="${sigSrc(id)}" style="max-height:18mm;max-width:80mm;width:auto;height:auto">` : '');
@@ -3345,11 +3348,11 @@ function salesBenefits(p, R) {
   const b = [], oil = R.fuel === 'oil';
   if (R.W) b.push(oil ? 'Nie wieder Heizöl kaufen – Sie heizen mit Strom und kostenloser Umweltwärme.' : 'Kein Gas mehr – Sie heizen mit Strom und kostenloser Umweltwärme.');
   if (R.W && R.funding > 0) b.push(`<b>${eur(R.funding)}</b> Zuschuss vom Staat – ${pct(R.fund.rate)} Förderung.`);
-  if (R.V) b.push(`Rund <b>${num(Math.round(R.yield / 100) * 100)} kWh</b> Solarstrom pro Jahr vom eigenen Dach.`);
+  if (R.V) b.push(`Rund <b>${kwh100(R.yield)} kWh</b> Solarstrom pro Jahr vom eigenen Dach.`);
   if (R.V && R.bat) b.push(`Speicher mit ${num(R.bat, 1)} kWh – Ihr Solarstrom auch abends und nachts.`);
   if (p.type === 'pvwp') b.push('Ihre Wärmepumpe heizt zum Teil mit eigenem Solarstrom.');
   if (R.rod) b.push('Im Sommer Warmwasser per Heizstab mit Solarstrom – die Wärmepumpe kann pausieren.');
-  if (R.carKWh) b.push(`Ihr E-Auto lädt rund <b>${num(R.carPV)} kWh</b> Solarstrom pro Jahr.`);
+  if (R.carKWh) b.push(`Ihr E-Auto lädt rund <b>${kwh100(R.carPV)} kWh</b> Solarstrom pro Jahr.`);
   b.push(R.W ? `Unabhängiger von steigenden ${oil ? 'Heizöl' : 'Gas'}- und CO₂-Preisen.` : 'Unabhängiger von steigenden Strompreisen.');
   b.push(`<b>${num(R.co2Save / 1000, 1)} t</b> weniger CO₂ pro Jahr.`);
   return b.slice(0, 6);
@@ -3830,7 +3833,7 @@ function roofsCard(p, R) {
       <div class="relative"><input class="inp !h-10 !pr-7" inputmode="numeric" value="${r.tilt}" data-roof="${i}" data-k="tilt" aria-label="Neigung"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink3">°</span></div>
       <div class="relative">${rs.length > 1 ? `<input class="inp !h-10 !pr-11" inputmode="decimal" value="${r.kwp > 0 ? inputFmt(r.kwp, 'n') : ''}" placeholder="${num(k[i], 1)}" data-roof="${i}" data-k="kwp" aria-label="kWp"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink3">kWp</span>` : `<div class="text-[12px] text-ink3 px-1">${pct(roofFactor(r.az, r.tilt) * 100)} Ertrag</div>`}</div>
       ${rs.length > 1 ? `<button class="btn-g !px-2" data-a="roof-del" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button>` : '<span></span>'}</div>`).join('')}</div>
-    <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2 flex flex-wrap items-center gap-3"><div class="flex-1 min-w-[200px]">${g ? `Ertrag laut <b>PVGIS</b> (EU-Kommission) für PLZ ${esc(p.customer.zip)}: <b>${num(g.E)} kWh/Jahr</b> · ${num(g.E / Math.max(0.01, R.kwp))} kWh/kWp · Stand ${deDate(g.date)}` : `Ertrag aus Ausrichtung und Neigung: <b>${pct(R.roofFactor * 100)}</b> von ${num(S.calc.pvYield)} kWh/kWp = <b>${num(R.yield)} kWh/Jahr</b>`}</div>
+    <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2 flex flex-wrap items-center gap-3"><div class="flex-1 min-w-[200px]">${g ? `Ertrag laut <b>PVGIS</b> (EU-Kommission) für PLZ ${esc(p.customer.zip)}: <b>${num(g.E)} kWh/Jahr</b> · ${num(g.E / Math.max(0.01, R.kwp))} kWh/kWp · Stand ${deDate(g.date)}` : `Ertrag aus Ausrichtung und Neigung: <b>${pct(R.roofFactor * 100)}</b> von ${num(S.calc.pvYield)} kWh/kWp = <b>ca. ${kwh100(R.yield)} kWh/Jahr</b>`}</div>
       <button class="btn-s btn-sm" data-a="pvgis" ${UI.busy.pvgis ? 'disabled' : ''}>${UI.busy.pvgis ? '<span class="spin inline-block">' + ic('refresh', 15) + '</span>' : ic('sun', 15)}${g ? 'Neu abrufen' : 'Genau mit PVGIS'}</button></div>
     <p class="hint">PVGIS nutzt nur die auf 1 km gerundete Lage der Postleitzahl – keine Namen oder Adressen. Ohne Internet rechnet die App mit der Ausrichtungs-Tabelle.</p></div>`;
 }
@@ -3843,7 +3846,7 @@ function carCard(p, R) {
   return `<div class="card p-5 sm:p-6">${cardHead('car', 'E-Auto und Wallbox', 'Laden mit eigenem Solarstrom erhöht den Eigenverbrauch deutlich.')}
     <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" data-tgcheck="p:car.on" ${c.on ? 'checked' : ''}><span class="text-[14px] font-medium">E-Auto vorhanden oder geplant</span></label>
     ${c.on ? `<div class="grid sm:grid-cols-2 gap-4 mt-4">${field('Fahrleistung pro Jahr', 'p:car.km', { t: 'n', unit: 'km' })}${field('Verbrauch', 'p:car.cons', { t: 'n', unit: 'kWh/100 km' })}${field('Davon zu Hause geladen', 'p:car.home', { t: 'n', unit: '%' })}${field('Laden tagsüber (Auto steht zu Hause)', 'p:car.day', { t: 'n', unit: '%', hint: 'z. B. Homeoffice, Rente, Zweitwagen' })}</div>
-      <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2">Ladestrom zu Hause: <b>${num(R.carKWh)} kWh/Jahr</b>${R.carPV ? ` · davon rund <b>${num(R.carPV)} kWh Solarstrom</b>` : ''}</div>` : ''}</div>`;
+      <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2">Ladestrom zu Hause: <b>${num(R.carKWh)} kWh/Jahr</b>${R.carPV ? ` · davon rund <b>${kwh100(R.carPV)} kWh Solarstrom</b>` : ''}</div>` : ''}</div>`;
 }
 
 /* =========================================================
@@ -3889,9 +3892,11 @@ function signCard(p) {
     <div class="grid sm:grid-cols-2 gap-4">${field('Ort', 'p:signDraft.place', { ph: p.customer.city || 'Ort' })}<div class="space-y-2 pt-6"><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-order" checked class="mt-0.5">Auftrag gemäß Angebot erteilen</label><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-cond" ${hasWP(p) ? 'checked' : ''} class="mt-0.5">unter der Bedingung der Förderzusage</label></div></div>
     ${['cust', 'adv'].map(k => `<div class="mt-4"><div class="flex items-center justify-between"><span class="lbl !mb-1">${k === 'cust' ? 'Unterschrift Kunde (' + esc(custName(p)) + ')' : 'Unterschrift Berater (optional)'}</span><button class="btn-g !h-8" data-a="pad-clear" data-k="${k}">Löschen</button></div>
       <canvas data-pad="${k}" class="w-full h-36 rounded-[calc(var(--r)-4px)] bg-white border border-line2" style="touch-action:none"></canvas></div>`).join('')}
-    <button class="btn-p mt-4" data-a="sign-save">${ic('check', 16)}Unterschrift übernehmen</button></div>`;
+    <div class="flex flex-wrap items-center gap-3 mt-4"><button class="btn-p" data-a="sign-save">${ic('check', 16)}Fertig</button><span class="text-[13px] text-p" id="sg-saved"></span></div><p class="hint">Die Unterschrift wird nach dem Unterschreiben automatisch gespeichert – beide Haken werden gesetzt.</p></div>`;
 }
-const PADS = {};
+const PADS = {}; let SIGN_T = null;
+/* Wird die App direkt nach dem Unterschreiben verlassen: sofort speichern */
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && SIGN_T) { clearTimeout(SIGN_T); SIGN_T = null; const p = curProject(); if (p) saveSignature(p, true); } });
 function initPads() {
   $$('canvas[data-pad]').forEach(cv => {
     const k = cv.dataset.pad, r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
@@ -3901,15 +3906,25 @@ function initPads() {
     const pos = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); st.down = true; st.last = pos(e); };
     cv.onpointermove = e => { if (!st.down) return; const q = pos(e); ctx.beginPath(); ctx.moveTo(st.last[0], st.last[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); st.last = q; st.drawn = true; };
-    cv.onpointerup = cv.onpointercancel = () => { st.down = false; };
+    cv.onpointerup = cv.onpointercancel = () => { if (!st.down) return; st.down = false; if (st.drawn) { ['sg-order', 'sg-cond'].forEach(id => { const c = $('#' + id); if (c) c.checked = true; }); clearTimeout(SIGN_T); SIGN_T = setTimeout(() => { const p = curProject(); if (p) saveSignature(p, true); }, 500); } };
   });
 }
-async function saveSignature(p) {
-  const c = PADS.cust; if (!c || !c.drawn) return toast('Bitte zuerst unterschreiben lassen.', 'err');
-  const toBlob = cv => new Promise(r => cv.toBlob(r, 'image/png'));
-  const sg = { cust: await putFile(await toBlob(c.cv), 'unterschrift-kunde.png'), place: (p.signDraft && p.signDraft.place) || p.customer.city || '', date: isoToday(), order: $('#sg-order').checked, cond: $('#sg-cond').checked };
+async function saveSignature(p, auto) {
+  const c = PADS.cust; if (!c || !c.drawn) { if (!auto) toast('Bitte zuerst unterschreiben lassen.', 'err'); return; }
+  if (auto && PADS.adv && PADS.adv.down) return;
+  // leeren Rand abschneiden, damit die Unterschrift das Feld im PDF gut ausfüllt
+  const trim = cv => { const g = cv.getContext('2d'), { width: w, height: h } = cv, d = g.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (d[(y * w + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return cv; const pad = 12, o = document.createElement('canvas'); o.width = Math.min(w, x1 - x0 + 2 * pad); o.height = Math.min(h, y1 - y0 + 2 * pad);
+    o.getContext('2d').drawImage(cv, Math.max(0, x0 - pad), Math.max(0, y0 - pad), o.width, o.height, 0, 0, o.width, o.height); return o; };
+  const toBlob = cv => new Promise(r => trim(cv).toBlob(r, 'image/png'));
+  const sg = { cust: await putFile(await toBlob(c.cv), 'unterschrift-kunde.png'), place: (p.signDraft && p.signDraft.place) || p.customer.city || '', date: isoToday(), order: true, cond: true };
   if (PADS.adv && PADS.adv.drawn) sg.adv = await putFile(await toBlob(PADS.adv.cv), 'unterschrift-berater.png');
-  p.sign = sg; p.status = 'unterschrieben'; p.statusDate = isoToday(); p.pages.sign = true; saveProject(p); toast('Unterschrift übernommen – Status „Unterschrieben“.'); render();
+  if (p.sign) { const old = [p.sign.cust, p.sign.adv].filter(Boolean); if (old.length) delFiles(old).catch(() => {}); }
+  p.sign = sg; p.status = 'unterschrieben'; p.statusDate = isoToday(); p.pages.sign = true; saveProject(p);
+  // automatisch: Felder bleiben offen (Berater kann noch unterschreiben), nur kurzer Hinweis
+  if (auto) { const h = $('#sg-saved'); if (h) h.textContent = 'Gespeichert – erscheint im PDF, Haken gesetzt.'; return; }
+  toast('Unterschrift übernommen – Status „Unterschrieben“.'); render();
 }
 
 /* =========================================================
@@ -3921,8 +3936,8 @@ const TUTORIAL = [
   ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“ und wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien und Ansprechpartner werden automatisch erkannt – bitte kurz prüfen.'],
   ['calc', '4 · Daten ergänzen', 'Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an.'],
-  ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ stellen Sie die Monatsrate der Ersparnis gegenüber.'],
-  ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät.'],
+  ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
+  ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät; die Unterschrift wird sofort gespeichert und die Haken gesetzt.'],
   ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite.'],
   ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
@@ -4100,7 +4115,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107212117';
+const APP_VERSION = '20261107214142';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4189,33 +4204,40 @@ function finOf(p, R) {
   const amount = isNum(f.amount) && f.amount > 0 ? f.amount : Math.max(0, R.net), rate = isNum(f.rate) ? f.rate : nz(S.finance.rate, 4.5), years = isNum(f.years) && f.years > 0 ? f.years : nz(S.finance.years, 15);
   const n = Math.round(years * 12), i = rate / 100 / 12, monthly = n ? (i ? amount * i / (1 - Math.pow(1 + i, -n)) : amount / n) : 0;
   const save = R.monthOld1 - R.monthNew1;
-  return { amount, rate, years, monthly, interest: monthly * n - amount, save, diff: save - monthly };
+  const now = R.monthOld1, energy = R.monthNew1, total = energy + monthly;
+  return { amount, rate, years, monthly, interest: monthly * n - amount, save, diff: save - monthly, now, energy, total };
 }
 const _compute14 = compute;
 compute = function (p, scen) { const R = _compute14(p, scen); R.fin = finOf(p, R); return R; };
-const finSentence = F => (F.diff >= 0 ? `Ab dem ersten Monat ${eur(F.diff)} im Plus – die Ersparnis ist höher als die Rate.` : `Sie zahlen anfangs ${eur(-F.diff)} pro Monat zu; mit steigenden Energiepreisen wächst Ihre Ersparnis Jahr für Jahr.`);
+const finSentence = F => (F.diff >= 0 ? `Mit Finanzierung zahlen Sie schon ab dem ersten Monat ${eur(F.diff)} weniger als heute (${eur(F.now)}). Nach ${num(F.years)} Jahren ist der Kredit abbezahlt – dann bleiben nur noch die Energiekosten.` : `Mit Finanzierung zahlen Sie anfangs ${eur(-F.diff)} mehr als heute (${eur(F.now)}). Mit steigenden Energiepreisen wird der Abstand jedes Jahr kleiner, nach ${num(F.years)} Jahren ist der Kredit abbezahlt.`);
+const eurS = v => (v < 0 ? '+ ' + eur(-v) + ' Gutschrift' : eur(v));
+/* Im Kundendokument: bei Mehrkosten keine Gegenüberstellung mit heute, neutral formuliert */
+const finDocSentence = F => (F.diff >= 0 ? finSentence(F) : `Nach ${num(F.years)} Jahren ist der Kredit abbezahlt – danach zahlen Sie nur noch die Energiekosten.`);
 function finCard(p, R) {
   if (S.finance.enabled === false) return '';
   const f = p.finance || {}, F = R.fin;
-  return `<div class="card p-5 sm:p-6">${cardHead('euro', 'Finanzierung', 'Monatliche Rate im Vergleich zur monatlichen Ersparnis – erscheint auch im Kundendokument')}
+  return `<div class="card p-5 sm:p-6">${cardHead('euro', 'Finanzierung', 'Neue Energiekosten + Kreditrate = Ihre monatlichen Kosten – erscheint auch im Kundendokument')}
     <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4">${toggleRow('Finanzierung anbieten', 'p:finance.on')}</div>
     ${f.on ? `<div class="grid sm:grid-cols-3 gap-3 mt-4">${field('Kreditbetrag', 'p:finance.amount', { t: 'n', unit: '€', ph: num(Math.round(R.net)) })}${field('Effektiver Jahreszins', 'p:finance.rate', { t: 'n', unit: '%', ph: num(S.finance.rate, 2) })}${field('Laufzeit', 'p:finance.years', { t: 'n', unit: 'Jahre', ph: String(S.finance.years) })}</div>
-      ${F ? `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4"><div class="kpi"><div class="kpi-k">Monatliche Rate</div><div class="kpi-v">${eur(F.monthly)}</div><div class="text-[12px] text-ink3">${num(F.years)} Jahre · ${num(F.rate, 2)} %</div></div><div class="kpi"><div class="kpi-k">Ersparnis pro Monat</div><div class="kpi-v">${eur(F.save)}</div><div class="text-[12px] text-ink3">im ersten Jahr</div></div><div class="kpi" style="background:${F.diff >= 0 ? 'rgb(var(--p-rgb)/.12)' : 'var(--tred, rgba(217,72,43,.12))'}"><div class="kpi-k">${F.diff >= 0 ? 'Monatlich im Plus' : 'Monatliche Zuzahlung'}</div><div class="kpi-v">${eur(Math.abs(F.diff))}</div><div class="text-[12px] text-ink3">ab dem ersten Monat</div></div></div><p class="hint">${esc(finSentence(F))} Zinsen gesamt rund ${eur(F.interest)}. Leer gelassene Felder nutzen die Vorgaben aus den Einstellungen.</p>` : ''}` : ''}</div>`;
+      ${F ? `<div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr_auto_1.2fr] gap-2 sm:gap-3 items-center mt-4"><div class="kpi"><div class="kpi-k">Neue Energiekosten</div><div class="kpi-v">${eurS(F.energy)}</div><div class="text-[12px] text-ink3">pro Monat</div></div><div class="text-center text-[22px] text-ink3">+</div><div class="kpi"><div class="kpi-k">Kreditrate</div><div class="kpi-v">${eur(F.monthly)}</div><div class="text-[12px] text-ink3">${num(F.years)} Jahre · ${num(F.rate, 2)} %</div></div><div class="text-center text-[22px] text-ink3">=</div><div class="kpi" style="background:rgb(var(--p-rgb)/.12)"><div class="kpi-k">Ihre Kosten mit Finanzierung</div><div class="kpi-v">${eur(F.total)}</div><div class="text-[12px] text-ink3">pro Monat</div></div></div>
+      <div class="mt-3 rounded-[calc(var(--r)-4px)] p-3.5 text-[14px] flex flex-wrap items-center gap-x-4 gap-y-1" style="background:${F.diff >= 0 ? 'rgb(var(--p-rgb)/.10)' : 'rgba(217,72,43,.12)'}"><span class="text-ink3">Heute: <b class="text-ink">${eur(F.now)}</b> pro Monat</span><span class="font-semibold" style="color:${F.diff >= 0 ? 'rgb(var(--p-rgb))' : 'var(--old)'}">${F.diff >= 0 ? eur(F.diff) + ' weniger pro Monat' : eur(-F.diff) + ' mehr pro Monat'}</span>${F.diff < 0 ? '<span class="text-[12px] text-ink3">nur für Sie – im PDF steht dann nur die Rechnung</span>' : ''}</div><p class="hint">${esc(finSentence(F))} Zinsen gesamt rund ${eur(F.interest)}. Leer gelassene Felder nutzen die Vorgaben aus den Einstellungen.</p>` : ''}` : ''}</div>`;
 }
 /* Baustein für die PDFs */
 function finDocBlock(R, sales) {
   const F = R.fin; if (!F) return '';
-  const cells = [['Monatliche Rate', eur(F.monthly), `${num(F.years)} Jahre · ${num(F.rate, 2)} % eff.`], ['Ihre Ersparnis', eur(F.save), 'pro Monat im ersten Jahr'], [F.diff >= 0 ? 'Monatlich im Plus' : 'Monatliche Zuzahlung', eur(Math.abs(F.diff)), 'ab dem ersten Monat']];
-  const pad = sales ? '4.5mm 6mm' : '3.2mm 4.5mm';
-  return `<div style="margin-top:${sales ? 5 : 3}mm;border-radius:var(--dr);background:var(--p-light);padding:${pad}"><div style="display:flex;justify-content:space-between;gap:4mm;align-items:baseline"><div style="font-weight:700;font-size:${sales ? 10.5 : 9.4}pt">Mit Finanzierung</div><div class="small">${esc(S.finance.label || '')}</div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:2mm">${cells.map(([k, v, u], i) => `<div><div class="small">${k}</div><div style="font-size:${sales ? 16 : 13}pt;font-weight:${sales ? 800 : 600};line-height:1.25;${i === 2 ? `color:${F.diff >= 0 ? 'var(--p)' : 'var(--old)'}` : ''}">${v}</div><div class="small" style="margin-top:0.5mm">${u}</div></div>`).join('')}</div>
-    <div style="font-size:${sales ? 8.8 : 8}pt;margin-top:2mm;color:var(--ink2)">${esc(finSentence(F))}</div></div>`;
+  const fs = sales ? 15 : 12.5, fw = sales ? 800 : 600, pad = sales ? '4.5mm 6mm' : '3.4mm 4.5mm';
+  const box = (k, v, u, hl) => `<div style="background:${hl ? 'var(--p)' : 'var(--bg)'};${hl ? 'color:#fff;' : ''}border-radius:calc(var(--dr) * .7);padding:2.6mm 3.2mm"><div style="font-size:7.4pt;${hl ? 'opacity:.9' : 'color:var(--ink3)'}">${k}</div><div style="font-size:${fs}pt;font-weight:${fw};line-height:1.25;margin-top:0.6mm">${v}</div><div style="font-size:7pt;margin-top:0.4mm;${hl ? 'opacity:.85' : 'color:var(--ink3)'}">${u}</div></div>`;
+  const op = t => `<div style="font-size:${sales ? 16 : 13}pt;font-weight:700;color:var(--ink3);text-align:center">${t}</div>`;
+  return `<div style="margin-top:${sales ? 5 : 3}mm;border-radius:var(--dr);background:var(--p-light);padding:${pad}"><div style="display:flex;justify-content:space-between;gap:4mm;align-items:baseline"><div style="font-weight:700;font-size:${sales ? 10.5 : 9.4}pt">Ihre monatlichen Kosten mit Finanzierung</div><div class="small">${esc(S.finance.label || '')}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 6mm 1fr 6mm 1.15fr;align-items:center;gap:1.5mm;margin-top:2.2mm">${box('Neue Energiekosten', eurS(F.energy), 'pro Monat')}${op('+')}${box('Kreditrate', eur(F.monthly), `${num(F.years)} Jahre · ${num(F.rate, 2)} % eff.`)}${op('=')}${box('Ihre Kosten mit Finanzierung', eur(F.total), 'pro Monat', true)}</div>
+    ${F.diff >= 0 ? `<div style="display:flex;flex-wrap:wrap;gap:1mm 5mm;align-items:baseline;margin-top:2.4mm;font-size:${sales ? 9 : 8.2}pt"><span style="color:var(--ink2)">Heute: <b style="color:var(--ink)">${eur(F.now)}</b> pro Monat</span><b style="color:var(--p)">${eur(F.diff)} weniger pro Monat</b></div>` : ''}
+    <div style="font-size:${sales ? 8 : 7.4}pt;margin-top:${F.diff >= 0 ? 1 : 2.4}mm;color:var(--ink3)">${esc(finDocSentence(F))}</div></div>`;
 }
 const _sGlance14 = DOC.sGlance, _sMonthly14 = DOC.sMonthly, _monthly14 = DOC.monthly;
 /* Finanzierung als zusätzliche Zeile im Kasten „Ihre Investition“ */
 function finDocRow(R) {
   const F = R.fin; if (!F) return '';
-  return `<div style="grid-column:1/-1;margin-top:3.5mm;padding-top:3mm;border-top:0.25mm solid var(--line);display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;align-items:baseline;font-size:9pt"><b style="font-size:9.6pt;color:var(--p)">Mit Finanzierung</b><span>Rate <b>${eur(F.monthly)}</b>/Monat</span><span>Ersparnis <b>${eur(F.save)}</b>/Monat</span><b style="color:${F.diff >= 0 ? 'var(--p)' : 'var(--old)'}">${F.diff >= 0 ? 'im Plus' : 'Zuzahlung'} ${eur(Math.abs(F.diff))}</b></div>`;
+  return `<div style="grid-column:1/-1;margin-top:3.5mm;padding-top:3mm;border-top:0.25mm solid var(--line);font-size:9pt;line-height:1.5"><b style="font-size:9.6pt;color:var(--p)">Mit Finanzierung:</b> Energiekosten ${eurS(F.energy)} + Rate ${eur(F.monthly)} = <b>${eur(F.total)} pro Monat</b>${F.diff >= 0 ? ` <span style="color:var(--ink3)">(heute ${eur(F.now)})</span> <b style="color:var(--p)">→ ${eur(F.diff)} weniger</b>` : ''}</div>`;
 }
 DOC.sGlance = function (p, R) { const r = _sGlance14(p, R); if (R.fin) r.body = r.body.replace('<h2 style="margin-top:8mm">Ihre Vorteile</h2>', '<h2 style="margin-top:6mm">Ihre Vorteile</h2>').replace(/<\/div>$/, finDocRow(R) + '</div>'); return r; };
 DOC.sMonthly = function (p, R) { const r = _sMonthly14(p, R); if (R.fin) r.body = r.body.replace('<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">', finDocBlock(R, true) + '<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">'); return r; };
@@ -4439,6 +4461,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.42', date: '2026-11-07', items: [
+    ['finance', 'Finanzierung verständlicher', 'Neu als Rechnung: neue Energiekosten + Kreditrate = Ihre monatlichen Kosten mit Finanzierung – direkt verglichen mit heute.'],
+    ['signauto', 'Unterschrift sofort gespeichert', 'Sobald unterschrieben ist, wird die Unterschrift automatisch übernommen und beide Haken werden gesetzt.'],
+    ['estimate', 'Solarstrom als Schätzwert', 'Erzeugter Strom steht jetzt überall als „ca.“ und ist auf volle 100 kWh abgerundet – damit niemand auf eine exakte Zahl festgelegt wird.']
+  ] },
   { version: '1.41', date: '2026-11-07', items: [
     ['version', 'Versionsnummern', 'Die App zeigt jetzt ihre Versionsnummer – unten auf jeder Seite, im Update-Hinweis und unter Einstellungen → Ansicht.'],
     ['archive', 'Versionsarchiv', 'Alle bisherigen Versionen mit ihren Änderungen auf einen Blick – unter Einstellungen → Ansicht → Versionsarchiv.'],
@@ -4455,6 +4482,10 @@ const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date:
 const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
 WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
 WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
+WN_BG.estimate = '#F5F7FA'; WN_BG.finance = '#F5F7FA'; WN_BG.signauto = '#F5F7FA';
+WN_IMG.finance = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[[6, 'Energie', '208 €', '#ffffff', '#0F2A3D'], [44, 'Rate', '306 €', '#ffffff', '#0F2A3D'], [82, 'Gesamt', '514 €', '#0E7C66', '#ffffff']].map(([x, k, v, bg, c]) => `<rect x="${x}" y="22" width="32" height="26" rx="4" fill="${bg}"/><text x="${x + 4}" y="31" font-size="4.6" fill="${c}" opacity=".8">${k}</text><text x="${x + 4}" y="42" font-size="8" font-weight="700" fill="${c}">${v}</text>`).join('')}<text x="40" y="39" font-size="8" font-weight="700" fill="#8A97A6">+</text><text x="78" y="39" font-size="8" font-weight="700" fill="#8A97A6">=</text><text x="6" y="62" font-size="5" fill="#0E7C66" font-weight="700">41 € weniger als heute (555 €)</text></svg>`;
+WN_IMG.signauto = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="14" y="12" width="92" height="34" rx="5" fill="#ffffff" stroke="#DCE6EE"/><path d="M24 36 C32 22 38 40 46 30 S60 22 64 34 C68 40 76 26 86 32" fill="none" stroke="#1B2A4A" stroke-width="1.8" stroke-linecap="round"/>${[52, 62].map(y => `<rect x="14" y="${y}" width="6" height="6" rx="1.2" fill="#0E7C66"/><path d="M15.4 ${y + 3} l1.6 1.6 l3 -3.2" stroke="#fff" stroke-width="1.1" fill="none"/><rect x="24" y="${y + 2}" width="${y === 52 ? 70 : 50}" height="2.2" rx="1.1" fill="#C9D3DD"/>`).join('')}</svg>`;
+WN_IMG.estimate = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="14" y="18" width="92" height="44" rx="7" fill="#ffffff"/><text x="22" y="32" font-size="5.6" fill="#64788A">Solarstrom im Jahr (geschätzt)</text><text x="22" y="50" font-size="12" font-weight="700" fill="#0F2A3D">ca. 10.500 kWh</text></svg>`;
 WN_BG.version = '#141B24'; WN_BG.tutorial = '#141B24'; WN_BG.archive = '#141B24';
 WN_IMG.archive = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[0, 1, 2, 3].map(i => `<text x="22" y="${22 + i * 13}" font-size="6.5" font-weight="700" fill="${i ? '#C9D3DD' : '#3FA98C'}">1.${41 - i}</text><rect x="40" y="${17 + i * 13}" width="${58 - i * 6}" height="3" rx="1.5" fill="#5A6878"/>`).join('')}</svg>`;
 function showWhatsNew(all) {
@@ -4538,7 +4569,7 @@ async function route() {
   if (a === 'projekt' && b && findProject(b)) {
     const p = findProject(b);
     UI.route = 'projekt'; if (UI.pid !== b) UI.resultTab = 'overview'; UI.pid = b; UI.step = clamp(+c || p.step || 1, 1, 4); p.step = UI.step;
-    await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(x => (PRODUCTS.find(y => y.id === x.id) || {}).img)));
+    await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(x => (PRODUCTS.find(y => y.id === x.id) || {}).img), p.sign ? [p.sign.cust, p.sign.adv] : []));
   } else if (a === 'produkte') { UI.route = 'produkte'; await loadFiles(PRODUCTS.map(x => x.img)); }
   else if (a === 'einstellungen') { UI.route = 'einstellungen'; UI.settingsTab = STABS.find(t => t[0] === b) ? b : 'ansicht'; }
   else UI.route = 'kunden';

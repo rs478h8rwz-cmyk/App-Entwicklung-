@@ -92,33 +92,40 @@ function finOf(p, R) {
   const amount = isNum(f.amount) && f.amount > 0 ? f.amount : Math.max(0, R.net), rate = isNum(f.rate) ? f.rate : nz(S.finance.rate, 4.5), years = isNum(f.years) && f.years > 0 ? f.years : nz(S.finance.years, 15);
   const n = Math.round(years * 12), i = rate / 100 / 12, monthly = n ? (i ? amount * i / (1 - Math.pow(1 + i, -n)) : amount / n) : 0;
   const save = R.monthOld1 - R.monthNew1;
-  return { amount, rate, years, monthly, interest: monthly * n - amount, save, diff: save - monthly };
+  const now = R.monthOld1, energy = R.monthNew1, total = energy + monthly;
+  return { amount, rate, years, monthly, interest: monthly * n - amount, save, diff: save - monthly, now, energy, total };
 }
 const _compute14 = compute;
 compute = function (p, scen) { const R = _compute14(p, scen); R.fin = finOf(p, R); return R; };
-const finSentence = F => (F.diff >= 0 ? `Ab dem ersten Monat ${eur(F.diff)} im Plus – die Ersparnis ist höher als die Rate.` : `Sie zahlen anfangs ${eur(-F.diff)} pro Monat zu; mit steigenden Energiepreisen wächst Ihre Ersparnis Jahr für Jahr.`);
+const finSentence = F => (F.diff >= 0 ? `Mit Finanzierung zahlen Sie schon ab dem ersten Monat ${eur(F.diff)} weniger als heute (${eur(F.now)}). Nach ${num(F.years)} Jahren ist der Kredit abbezahlt – dann bleiben nur noch die Energiekosten.` : `Mit Finanzierung zahlen Sie anfangs ${eur(-F.diff)} mehr als heute (${eur(F.now)}). Mit steigenden Energiepreisen wird der Abstand jedes Jahr kleiner, nach ${num(F.years)} Jahren ist der Kredit abbezahlt.`);
+const eurS = v => (v < 0 ? '+ ' + eur(-v) + ' Gutschrift' : eur(v));
+/* Im Kundendokument: bei Mehrkosten keine Gegenüberstellung mit heute, neutral formuliert */
+const finDocSentence = F => (F.diff >= 0 ? finSentence(F) : `Nach ${num(F.years)} Jahren ist der Kredit abbezahlt – danach zahlen Sie nur noch die Energiekosten.`);
 function finCard(p, R) {
   if (S.finance.enabled === false) return '';
   const f = p.finance || {}, F = R.fin;
-  return `<div class="card p-5 sm:p-6">${cardHead('euro', 'Finanzierung', 'Monatliche Rate im Vergleich zur monatlichen Ersparnis – erscheint auch im Kundendokument')}
+  return `<div class="card p-5 sm:p-6">${cardHead('euro', 'Finanzierung', 'Neue Energiekosten + Kreditrate = Ihre monatlichen Kosten – erscheint auch im Kundendokument')}
     <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4">${toggleRow('Finanzierung anbieten', 'p:finance.on')}</div>
     ${f.on ? `<div class="grid sm:grid-cols-3 gap-3 mt-4">${field('Kreditbetrag', 'p:finance.amount', { t: 'n', unit: '€', ph: num(Math.round(R.net)) })}${field('Effektiver Jahreszins', 'p:finance.rate', { t: 'n', unit: '%', ph: num(S.finance.rate, 2) })}${field('Laufzeit', 'p:finance.years', { t: 'n', unit: 'Jahre', ph: String(S.finance.years) })}</div>
-      ${F ? `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4"><div class="kpi"><div class="kpi-k">Monatliche Rate</div><div class="kpi-v">${eur(F.monthly)}</div><div class="text-[12px] text-ink3">${num(F.years)} Jahre · ${num(F.rate, 2)} %</div></div><div class="kpi"><div class="kpi-k">Ersparnis pro Monat</div><div class="kpi-v">${eur(F.save)}</div><div class="text-[12px] text-ink3">im ersten Jahr</div></div><div class="kpi" style="background:${F.diff >= 0 ? 'rgb(var(--p-rgb)/.12)' : 'var(--tred, rgba(217,72,43,.12))'}"><div class="kpi-k">${F.diff >= 0 ? 'Monatlich im Plus' : 'Monatliche Zuzahlung'}</div><div class="kpi-v">${eur(Math.abs(F.diff))}</div><div class="text-[12px] text-ink3">ab dem ersten Monat</div></div></div><p class="hint">${esc(finSentence(F))} Zinsen gesamt rund ${eur(F.interest)}. Leer gelassene Felder nutzen die Vorgaben aus den Einstellungen.</p>` : ''}` : ''}</div>`;
+      ${F ? `<div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr_auto_1.2fr] gap-2 sm:gap-3 items-center mt-4"><div class="kpi"><div class="kpi-k">Neue Energiekosten</div><div class="kpi-v">${eurS(F.energy)}</div><div class="text-[12px] text-ink3">pro Monat</div></div><div class="text-center text-[22px] text-ink3">+</div><div class="kpi"><div class="kpi-k">Kreditrate</div><div class="kpi-v">${eur(F.monthly)}</div><div class="text-[12px] text-ink3">${num(F.years)} Jahre · ${num(F.rate, 2)} %</div></div><div class="text-center text-[22px] text-ink3">=</div><div class="kpi" style="background:rgb(var(--p-rgb)/.12)"><div class="kpi-k">Ihre Kosten mit Finanzierung</div><div class="kpi-v">${eur(F.total)}</div><div class="text-[12px] text-ink3">pro Monat</div></div></div>
+      <div class="mt-3 rounded-[calc(var(--r)-4px)] p-3.5 text-[14px] flex flex-wrap items-center gap-x-4 gap-y-1" style="background:${F.diff >= 0 ? 'rgb(var(--p-rgb)/.10)' : 'rgba(217,72,43,.12)'}"><span class="text-ink3">Heute: <b class="text-ink">${eur(F.now)}</b> pro Monat</span><span class="font-semibold" style="color:${F.diff >= 0 ? 'rgb(var(--p-rgb))' : 'var(--old)'}">${F.diff >= 0 ? eur(F.diff) + ' weniger pro Monat' : eur(-F.diff) + ' mehr pro Monat'}</span>${F.diff < 0 ? '<span class="text-[12px] text-ink3">nur für Sie – im PDF steht dann nur die Rechnung</span>' : ''}</div><p class="hint">${esc(finSentence(F))} Zinsen gesamt rund ${eur(F.interest)}. Leer gelassene Felder nutzen die Vorgaben aus den Einstellungen.</p>` : ''}` : ''}</div>`;
 }
 /* Baustein für die PDFs */
 function finDocBlock(R, sales) {
   const F = R.fin; if (!F) return '';
-  const cells = [['Monatliche Rate', eur(F.monthly), `${num(F.years)} Jahre · ${num(F.rate, 2)} % eff.`], ['Ihre Ersparnis', eur(F.save), 'pro Monat im ersten Jahr'], [F.diff >= 0 ? 'Monatlich im Plus' : 'Monatliche Zuzahlung', eur(Math.abs(F.diff)), 'ab dem ersten Monat']];
-  const pad = sales ? '4.5mm 6mm' : '3.2mm 4.5mm';
-  return `<div style="margin-top:${sales ? 5 : 3}mm;border-radius:var(--dr);background:var(--p-light);padding:${pad}"><div style="display:flex;justify-content:space-between;gap:4mm;align-items:baseline"><div style="font-weight:700;font-size:${sales ? 10.5 : 9.4}pt">Mit Finanzierung</div><div class="small">${esc(S.finance.label || '')}</div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:2mm">${cells.map(([k, v, u], i) => `<div><div class="small">${k}</div><div style="font-size:${sales ? 16 : 13}pt;font-weight:${sales ? 800 : 600};line-height:1.25;${i === 2 ? `color:${F.diff >= 0 ? 'var(--p)' : 'var(--old)'}` : ''}">${v}</div><div class="small" style="margin-top:0.5mm">${u}</div></div>`).join('')}</div>
-    <div style="font-size:${sales ? 8.8 : 8}pt;margin-top:2mm;color:var(--ink2)">${esc(finSentence(F))}</div></div>`;
+  const fs = sales ? 15 : 12.5, fw = sales ? 800 : 600, pad = sales ? '4.5mm 6mm' : '3.4mm 4.5mm';
+  const box = (k, v, u, hl) => `<div style="background:${hl ? 'var(--p)' : 'var(--bg)'};${hl ? 'color:#fff;' : ''}border-radius:calc(var(--dr) * .7);padding:2.6mm 3.2mm"><div style="font-size:7.4pt;${hl ? 'opacity:.9' : 'color:var(--ink3)'}">${k}</div><div style="font-size:${fs}pt;font-weight:${fw};line-height:1.25;margin-top:0.6mm">${v}</div><div style="font-size:7pt;margin-top:0.4mm;${hl ? 'opacity:.85' : 'color:var(--ink3)'}">${u}</div></div>`;
+  const op = t => `<div style="font-size:${sales ? 16 : 13}pt;font-weight:700;color:var(--ink3);text-align:center">${t}</div>`;
+  return `<div style="margin-top:${sales ? 5 : 3}mm;border-radius:var(--dr);background:var(--p-light);padding:${pad}"><div style="display:flex;justify-content:space-between;gap:4mm;align-items:baseline"><div style="font-weight:700;font-size:${sales ? 10.5 : 9.4}pt">Ihre monatlichen Kosten mit Finanzierung</div><div class="small">${esc(S.finance.label || '')}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 6mm 1fr 6mm 1.15fr;align-items:center;gap:1.5mm;margin-top:2.2mm">${box('Neue Energiekosten', eurS(F.energy), 'pro Monat')}${op('+')}${box('Kreditrate', eur(F.monthly), `${num(F.years)} Jahre · ${num(F.rate, 2)} % eff.`)}${op('=')}${box('Ihre Kosten mit Finanzierung', eur(F.total), 'pro Monat', true)}</div>
+    ${F.diff >= 0 ? `<div style="display:flex;flex-wrap:wrap;gap:1mm 5mm;align-items:baseline;margin-top:2.4mm;font-size:${sales ? 9 : 8.2}pt"><span style="color:var(--ink2)">Heute: <b style="color:var(--ink)">${eur(F.now)}</b> pro Monat</span><b style="color:var(--p)">${eur(F.diff)} weniger pro Monat</b></div>` : ''}
+    <div style="font-size:${sales ? 8 : 7.4}pt;margin-top:${F.diff >= 0 ? 1 : 2.4}mm;color:var(--ink3)">${esc(finDocSentence(F))}</div></div>`;
 }
 const _sGlance14 = DOC.sGlance, _sMonthly14 = DOC.sMonthly, _monthly14 = DOC.monthly;
 /* Finanzierung als zusätzliche Zeile im Kasten „Ihre Investition“ */
 function finDocRow(R) {
   const F = R.fin; if (!F) return '';
-  return `<div style="grid-column:1/-1;margin-top:3.5mm;padding-top:3mm;border-top:0.25mm solid var(--line);display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;align-items:baseline;font-size:9pt"><b style="font-size:9.6pt;color:var(--p)">Mit Finanzierung</b><span>Rate <b>${eur(F.monthly)}</b>/Monat</span><span>Ersparnis <b>${eur(F.save)}</b>/Monat</span><b style="color:${F.diff >= 0 ? 'var(--p)' : 'var(--old)'}">${F.diff >= 0 ? 'im Plus' : 'Zuzahlung'} ${eur(Math.abs(F.diff))}</b></div>`;
+  return `<div style="grid-column:1/-1;margin-top:3.5mm;padding-top:3mm;border-top:0.25mm solid var(--line);font-size:9pt;line-height:1.5"><b style="font-size:9.6pt;color:var(--p)">Mit Finanzierung:</b> Energiekosten ${eurS(F.energy)} + Rate ${eur(F.monthly)} = <b>${eur(F.total)} pro Monat</b>${F.diff >= 0 ? ` <span style="color:var(--ink3)">(heute ${eur(F.now)})</span> <b style="color:var(--p)">→ ${eur(F.diff)} weniger</b>` : ''}</div>`;
 }
 DOC.sGlance = function (p, R) { const r = _sGlance14(p, R); if (R.fin) r.body = r.body.replace('<h2 style="margin-top:8mm">Ihre Vorteile</h2>', '<h2 style="margin-top:6mm">Ihre Vorteile</h2>').replace(/<\/div>$/, finDocRow(R) + '</div>'); return r; };
 DOC.sMonthly = function (p, R) { const r = _sMonthly14(p, R); if (R.fin) r.body = r.body.replace('<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">', finDocBlock(R, true) + '<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">'); return r; };

@@ -9,7 +9,7 @@ async function route() {
   if (a === 'projekt' && b && findProject(b)) {
     const p = findProject(b);
     UI.route = 'projekt'; if (UI.pid !== b) UI.resultTab = 'overview'; UI.pid = b; UI.step = clamp(+c || p.step || 1, 1, 4); p.step = UI.step;
-    await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(x => (PRODUCTS.find(y => y.id === x.id) || {}).img)));
+    await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(x => (PRODUCTS.find(y => y.id === x.id) || {}).img), p.sign ? [p.sign.cust, p.sign.adv] : []));
   } else if (a === 'produkte') { UI.route = 'produkte'; await loadFiles(PRODUCTS.map(x => x.img)); }
   else if (a === 'einstellungen') { UI.route = 'einstellungen'; UI.settingsTab = STABS.find(t => t[0] === b) ? b : 'ansicht'; }
   else UI.route = 'kunden';

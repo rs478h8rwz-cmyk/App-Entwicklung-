@@ -191,7 +191,7 @@ function roofsCard(p, R) {
       <div class="relative"><input class="inp !h-10 !pr-7" inputmode="numeric" value="${r.tilt}" data-roof="${i}" data-k="tilt" aria-label="Neigung"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink3">°</span></div>
       <div class="relative">${rs.length > 1 ? `<input class="inp !h-10 !pr-11" inputmode="decimal" value="${r.kwp > 0 ? inputFmt(r.kwp, 'n') : ''}" placeholder="${num(k[i], 1)}" data-roof="${i}" data-k="kwp" aria-label="kWp"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink3">kWp</span>` : `<div class="text-[12px] text-ink3 px-1">${pct(roofFactor(r.az, r.tilt) * 100)} Ertrag</div>`}</div>
       ${rs.length > 1 ? `<button class="btn-g !px-2" data-a="roof-del" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button>` : '<span></span>'}</div>`).join('')}</div>
-    <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2 flex flex-wrap items-center gap-3"><div class="flex-1 min-w-[200px]">${g ? `Ertrag laut <b>PVGIS</b> (EU-Kommission) für PLZ ${esc(p.customer.zip)}: <b>${num(g.E)} kWh/Jahr</b> · ${num(g.E / Math.max(0.01, R.kwp))} kWh/kWp · Stand ${deDate(g.date)}` : `Ertrag aus Ausrichtung und Neigung: <b>${pct(R.roofFactor * 100)}</b> von ${num(S.calc.pvYield)} kWh/kWp = <b>${num(R.yield)} kWh/Jahr</b>`}</div>
+    <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2 flex flex-wrap items-center gap-3"><div class="flex-1 min-w-[200px]">${g ? `Ertrag laut <b>PVGIS</b> (EU-Kommission) für PLZ ${esc(p.customer.zip)}: <b>${num(g.E)} kWh/Jahr</b> · ${num(g.E / Math.max(0.01, R.kwp))} kWh/kWp · Stand ${deDate(g.date)}` : `Ertrag aus Ausrichtung und Neigung: <b>${pct(R.roofFactor * 100)}</b> von ${num(S.calc.pvYield)} kWh/kWp = <b>ca. ${kwh100(R.yield)} kWh/Jahr</b>`}</div>
       <button class="btn-s btn-sm" data-a="pvgis" ${UI.busy.pvgis ? 'disabled' : ''}>${UI.busy.pvgis ? '<span class="spin inline-block">' + ic('refresh', 15) + '</span>' : ic('sun', 15)}${g ? 'Neu abrufen' : 'Genau mit PVGIS'}</button></div>
     <p class="hint">PVGIS nutzt nur die auf 1 km gerundete Lage der Postleitzahl – keine Namen oder Adressen. Ohne Internet rechnet die App mit der Ausrichtungs-Tabelle.</p></div>`;
 }
@@ -204,7 +204,7 @@ function carCard(p, R) {
   return `<div class="card p-5 sm:p-6">${cardHead('car', 'E-Auto und Wallbox', 'Laden mit eigenem Solarstrom erhöht den Eigenverbrauch deutlich.')}
     <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" data-tgcheck="p:car.on" ${c.on ? 'checked' : ''}><span class="text-[14px] font-medium">E-Auto vorhanden oder geplant</span></label>
     ${c.on ? `<div class="grid sm:grid-cols-2 gap-4 mt-4">${field('Fahrleistung pro Jahr', 'p:car.km', { t: 'n', unit: 'km' })}${field('Verbrauch', 'p:car.cons', { t: 'n', unit: 'kWh/100 km' })}${field('Davon zu Hause geladen', 'p:car.home', { t: 'n', unit: '%' })}${field('Laden tagsüber (Auto steht zu Hause)', 'p:car.day', { t: 'n', unit: '%', hint: 'z. B. Homeoffice, Rente, Zweitwagen' })}</div>
-      <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2">Ladestrom zu Hause: <b>${num(R.carKWh)} kWh/Jahr</b>${R.carPV ? ` · davon rund <b>${num(R.carPV)} kWh Solarstrom</b>` : ''}</div>` : ''}</div>`;
+      <div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2">Ladestrom zu Hause: <b>${num(R.carKWh)} kWh/Jahr</b>${R.carPV ? ` · davon rund <b>${kwh100(R.carPV)} kWh Solarstrom</b>` : ''}</div>` : ''}</div>`;
 }
 
 /* =========================================================
@@ -250,9 +250,11 @@ function signCard(p) {
     <div class="grid sm:grid-cols-2 gap-4">${field('Ort', 'p:signDraft.place', { ph: p.customer.city || 'Ort' })}<div class="space-y-2 pt-6"><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-order" checked class="mt-0.5">Auftrag gemäß Angebot erteilen</label><label class="flex items-start gap-2 text-[13px] text-ink2"><input type="checkbox" id="sg-cond" ${hasWP(p) ? 'checked' : ''} class="mt-0.5">unter der Bedingung der Förderzusage</label></div></div>
     ${['cust', 'adv'].map(k => `<div class="mt-4"><div class="flex items-center justify-between"><span class="lbl !mb-1">${k === 'cust' ? 'Unterschrift Kunde (' + esc(custName(p)) + ')' : 'Unterschrift Berater (optional)'}</span><button class="btn-g !h-8" data-a="pad-clear" data-k="${k}">Löschen</button></div>
       <canvas data-pad="${k}" class="w-full h-36 rounded-[calc(var(--r)-4px)] bg-white border border-line2" style="touch-action:none"></canvas></div>`).join('')}
-    <button class="btn-p mt-4" data-a="sign-save">${ic('check', 16)}Unterschrift übernehmen</button></div>`;
+    <div class="flex flex-wrap items-center gap-3 mt-4"><button class="btn-p" data-a="sign-save">${ic('check', 16)}Fertig</button><span class="text-[13px] text-p" id="sg-saved"></span></div><p class="hint">Die Unterschrift wird nach dem Unterschreiben automatisch gespeichert – beide Haken werden gesetzt.</p></div>`;
 }
-const PADS = {};
+const PADS = {}; let SIGN_T = null;
+/* Wird die App direkt nach dem Unterschreiben verlassen: sofort speichern */
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && SIGN_T) { clearTimeout(SIGN_T); SIGN_T = null; const p = curProject(); if (p) saveSignature(p, true); } });
 function initPads() {
   $$('canvas[data-pad]').forEach(cv => {
     const k = cv.dataset.pad, r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
@@ -262,15 +264,25 @@ function initPads() {
     const pos = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); st.down = true; st.last = pos(e); };
     cv.onpointermove = e => { if (!st.down) return; const q = pos(e); ctx.beginPath(); ctx.moveTo(st.last[0], st.last[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); st.last = q; st.drawn = true; };
-    cv.onpointerup = cv.onpointercancel = () => { st.down = false; };
+    cv.onpointerup = cv.onpointercancel = () => { if (!st.down) return; st.down = false; if (st.drawn) { ['sg-order', 'sg-cond'].forEach(id => { const c = $('#' + id); if (c) c.checked = true; }); clearTimeout(SIGN_T); SIGN_T = setTimeout(() => { const p = curProject(); if (p) saveSignature(p, true); }, 500); } };
   });
 }
-async function saveSignature(p) {
-  const c = PADS.cust; if (!c || !c.drawn) return toast('Bitte zuerst unterschreiben lassen.', 'err');
-  const toBlob = cv => new Promise(r => cv.toBlob(r, 'image/png'));
-  const sg = { cust: await putFile(await toBlob(c.cv), 'unterschrift-kunde.png'), place: (p.signDraft && p.signDraft.place) || p.customer.city || '', date: isoToday(), order: $('#sg-order').checked, cond: $('#sg-cond').checked };
+async function saveSignature(p, auto) {
+  const c = PADS.cust; if (!c || !c.drawn) { if (!auto) toast('Bitte zuerst unterschreiben lassen.', 'err'); return; }
+  if (auto && PADS.adv && PADS.adv.down) return;
+  // leeren Rand abschneiden, damit die Unterschrift das Feld im PDF gut ausfüllt
+  const trim = cv => { const g = cv.getContext('2d'), { width: w, height: h } = cv, d = g.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (d[(y * w + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return cv; const pad = 12, o = document.createElement('canvas'); o.width = Math.min(w, x1 - x0 + 2 * pad); o.height = Math.min(h, y1 - y0 + 2 * pad);
+    o.getContext('2d').drawImage(cv, Math.max(0, x0 - pad), Math.max(0, y0 - pad), o.width, o.height, 0, 0, o.width, o.height); return o; };
+  const toBlob = cv => new Promise(r => trim(cv).toBlob(r, 'image/png'));
+  const sg = { cust: await putFile(await toBlob(c.cv), 'unterschrift-kunde.png'), place: (p.signDraft && p.signDraft.place) || p.customer.city || '', date: isoToday(), order: true, cond: true };
   if (PADS.adv && PADS.adv.drawn) sg.adv = await putFile(await toBlob(PADS.adv.cv), 'unterschrift-berater.png');
-  p.sign = sg; p.status = 'unterschrieben'; p.statusDate = isoToday(); p.pages.sign = true; saveProject(p); toast('Unterschrift übernommen – Status „Unterschrieben“.'); render();
+  if (p.sign) { const old = [p.sign.cust, p.sign.adv].filter(Boolean); if (old.length) delFiles(old).catch(() => {}); }
+  p.sign = sg; p.status = 'unterschrieben'; p.statusDate = isoToday(); p.pages.sign = true; saveProject(p);
+  // automatisch: Felder bleiben offen (Berater kann noch unterschreiben), nur kurzer Hinweis
+  if (auto) { const h = $('#sg-saved'); if (h) h.textContent = 'Gespeichert – erscheint im PDF, Haken gesetzt.'; return; }
+  toast('Unterschrift übernommen – Status „Unterschrieben“.'); render();
 }
 
 /* =========================================================
@@ -282,8 +294,8 @@ const TUTORIAL = [
   ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“ und wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien und Ansprechpartner werden automatisch erkannt – bitte kurz prüfen.'],
   ['calc', '4 · Daten ergänzen', 'Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an.'],
-  ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ stellen Sie die Monatsrate der Ersparnis gegenüber.'],
-  ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät.'],
+  ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
+  ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät; die Unterschrift wird sofort gespeichert und die Haken gesetzt.'],
   ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite.'],
   ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
