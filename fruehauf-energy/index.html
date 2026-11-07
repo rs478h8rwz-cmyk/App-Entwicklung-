@@ -1493,12 +1493,12 @@ function houseSVG(o = {}) {
   const lit = lightMode === 'on' || (lightMode !== 'off' && dawn);
   const winF = lit ? '#FFC870' : dawn ? '#1C2532' : '#CFE6F8', winS2 = lit ? '#FFE2A8' : dawn ? '#3A4656' : '#ffffff';
   const glow = (x, y, w, h) => (lit ? `<rect x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="10" fill="#FFC870" opacity="${dawn ? 0.2 : 0.14}"/>` : '');
-  const batOn = !!o.bat, hpX = batOn ? 472 : 446;
+  const batOn = !!o.bat, hpX = 446;
   const hpUnit = o.hp === false ? '' : `<g transform="translate(${hpX} 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
 <circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/>
 <rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
 <rect x="6" y="46" width="8" height="4" fill="${K.hpS}"/><rect x="60" y="46" width="8" height="4" fill="${K.hpS}"/></g>
-<path d="M${batOn ? 462 : 432} 300 H${hpX}" stroke="${K.hpS}" stroke-width="3"/>`;
+<path d="M432 300 H${hpX}" stroke="${K.hpS}" stroke-width="3"/>`;
   // Carport mit E-Auto und Wallbox
   const car = !!o.car;
   const carport = !car ? '' : `<g>
@@ -1514,13 +1514,13 @@ ${[22, 84].map(cx => `<circle cx="${cx}" cy="35" r="8.5" fill="#1B232C"/><circle
 <rect x="141" y="270" width="16" height="24" rx="3.5" fill="${dawn ? '#2C3644' : '#ffffff'}" stroke="${K.hpS}" stroke-width="1.5"/><circle cx="149" cy="278" r="2.4" fill="#3FBF6E"/><rect x="144" y="286" width="10" height="3" rx="1.5" fill="${p}"/>
 <path d="M149 294 C 150 316, 140 322, 132 316" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/></g>`;
   // Stromspeicher als Tower zur Außenmontage (z. B. EcoFlow Ocean 2)
-  const tx = 432;
+  const tx = style === 'modern' ? 255 : 201;
   const tower = !batOn ? '' : `<g transform="translate(${tx} 262)"><ellipse cx="15" cy="71" rx="20" ry="3.5" fill="#000" opacity="${dawn ? 0.3 : 0.1}"/>
 <rect x="0" y="0" width="30" height="14" rx="4" fill="${dawn ? '#3B4756' : '#F7FAFC'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="5" y="5" width="12" height="3" rx="1.5" fill="${p}"/><circle cx="23" cy="7" r="1.8" fill="${lit || dawn ? '#5CE08F' : '#3FBF6E'}"/>
 ${[0, 1, 2].map(i => `<rect x="0" y="${15 + i * 17}" width="30" height="16" rx="3" fill="${dawn ? '#33404F' : '#FFFFFF'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="4" y="${21 + i * 17}" width="22" height="2" rx="1" fill="${K.hpS}"/>`).join('')}
 <rect x="2" y="66" width="26" height="4" rx="1.5" fill="${K.hpS}"/></g>
 `;
-  const trees = `<g fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}${batOn && o.hp !== false ? '' : '<circle cx="540" cy="336" r="13"/>'}</g>`;
+  const trees = `<g fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}<circle cx="540" cy="336" r="13"/></g>`;
   let houseBody;
   if (style === 'modern') {
     const roofC = dawn ? '#1A2029' : '#2B3440', wood = dawn ? '#6E4A2E' : '#C98B55', woodL = dawn ? '#5A3C25' : '#B37647', wing = dawn ? '#1E2630' : '#3D4752';
@@ -1532,7 +1532,7 @@ ${glow(162, 252, 32, 46)}<rect x="162" y="252" width="32" height="46" rx="2" fil
 <rect x="200" y="196" width="232" height="136" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
 <rect x="334" y="196" width="98" height="136" fill="${wood}"/>${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<line x1="${342 + i * 10.5}" y1="196" x2="${342 + i * 10.5}" y2="332" stroke="${woodL}" stroke-width="1.6"/>`).join('')}
 <rect x="192" y="188" width="248" height="10" rx="2" fill="${roofC}"/>${rowMods}
-${[[220, 212, 44, 36], [276, 212, 44, 36], [220, 262, 100, 40]].map(([x, y, w, h]) => `${glow(x, y, w, h)}<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${winF}" stroke="${roofC}" stroke-width="3"/>${w > 60 ? `<line x1="${x + w / 2}" y1="${y}" x2="${x + w / 2}" y2="${y + h}" stroke="${roofC}" stroke-width="2.5"/>` : ''}${lit ? '' : `<path d="M${x + 6} ${y + h - 4} L${x + 16} ${y + 4}" stroke="#ffffff" stroke-width="2.5" opacity="${dawn ? 0.06 : 0.4}"/>`}`).join('')}
+${[[220, 212, 44, 36], [276, 212, 44, 36], ...(batOn ? [] : [[220, 262, 100, 40]])].map(([x, y, w, h]) => `${glow(x, y, w, h)}<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${winF}" stroke="${roofC}" stroke-width="3"/>${w > 60 ? `<line x1="${x + w / 2}" y1="${y}" x2="${x + w / 2}" y2="${y + h}" stroke="${roofC}" stroke-width="2.5"/>` : ''}${lit ? '' : `<path d="M${x + 6} ${y + h - 4} L${x + 16} ${y + 4}" stroke="#ffffff" stroke-width="2.5" opacity="${dawn ? 0.06 : 0.4}"/>`}`).join('')}
 ${glow(350, 214, 66, 34)}<rect x="350" y="214" width="66" height="34" rx="2" fill="${winF}" stroke="${roofC}" stroke-width="3"/>
 <rect x="364" y="268" width="36" height="64" rx="2" fill="${p}"/><rect x="368" y="274" width="8" height="52" rx="2" fill="${lit ? '#FFC870' : '#ffffff'}" opacity="${lit ? 0.75 : 0.25}"/><circle cx="394" cy="300" r="2.5" fill="#ffffff" opacity=".9"/>
 ${lit ? '<circle cx="356" cy="282" r="14" fill="#FFC870" opacity=".18"/><rect x="353" y="276" width="6" height="8" rx="2" fill="#FFE2A8"/>' : ''}
@@ -1544,8 +1544,8 @@ ${carport}${tower}${hpUnit}${trees}`;
 <polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="${K.roof2}"/>
 ${o.pv === false ? '' : mods}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
 <rect x="${bot.l - 10}" y="${bot.y}" width="${bot.r - bot.l + 20}" height="6" rx="3" fill="${K.eave}"/>
-<g>${glow(190, 248, 52, 40)}${glow(358, 248, 52, 40)}
-<rect x="190" y="248" width="52" height="40" rx="4" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="216" y1="248" x2="216" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/>
+<g>${batOn ? '' : glow(190, 248, 52, 40)}${glow(358, 248, 52, 40)}
+${batOn ? '' : `<rect x="190" y="248" width="52" height="40" rx="4" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="216" y1="248" x2="216" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/>`}
 <rect x="358" y="248" width="52" height="40" rx="4" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="384" y1="248" x2="384" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/></g>
 <rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${lit ? '#FFC870' : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${lit ? '#FFC870' : '#fff'}" opacity="${lit ? 0.6 : 0.18}"/>
 ${carport}${tower}${hpUnit}${trees}`;
@@ -4099,7 +4099,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107210047';
+const APP_VERSION = '20261107210236';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
