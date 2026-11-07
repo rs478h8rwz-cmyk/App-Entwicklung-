@@ -93,20 +93,31 @@ function finOf(p, R) {
   const n = Math.round(years * 12), i = rate / 100 / 12, monthly = n ? (i ? amount * i / (1 - Math.pow(1 + i, -n)) : amount / n) : 0;
   const save = R.monthOld1 - R.monthNew1;
   const now = R.monthOld1, energy = R.monthNew1, total = energy + monthly;
-  return { amount, rate, years, monthly, interest: monthly * n - amount, save, diff: save - monthly, now, energy, total };
+  // Amortisation mit Finanzierung: Start mit dem nicht finanzierten Eigenanteil, jedes Jahr Ersparnis minus Kreditraten
+  let cum = -Math.max(0, nz(R.invest) - amount), prev = cum, neg = cum < 0, amort = null;
+  for (const r of R.rows) {
+    cum += r.saving - (r.t <= Math.ceil(years) ? 12 * monthly : 0);
+    if (cum < 0) neg = true;
+    else if (amort === null && prev < 0) amort = r.t - 1 + (-prev) / (cum - prev);
+    prev = cum;
+  }
+  if (!neg) amort = 0;
+  return { amount, rate, years, monthly, interest: monthly * n - amount, save, diff: save - monthly, now, energy, total, amort, surplus: cum, showAmort: f.showAmort !== false };
 }
 const _compute14 = compute;
 compute = function (p, scen) { const R = _compute14(p, scen); R.fin = finOf(p, R); return R; };
 const finSentence = F => (F.diff >= 0 ? `Mit Finanzierung zahlen Sie schon ab dem ersten Monat ${eur(F.diff)} weniger als heute (${eur(F.now)}). Nach ${num(F.years)} Jahren ist der Kredit abbezahlt – dann bleiben nur noch die Energiekosten.` : `Mit Finanzierung zahlen Sie anfangs ${eur(-F.diff)} mehr als heute (${eur(F.now)}). Mit steigenden Energiepreisen wird der Abstand jedes Jahr kleiner, nach ${num(F.years)} Jahren ist der Kredit abbezahlt.`);
 const eurS = v => (v < 0 ? '+ ' + eur(-v) + ' Gutschrift' : eur(v));
 /* Im Kundendokument: bei Mehrkosten keine Gegenüberstellung mit heute, neutral formuliert */
+const finAmortTxt = F => (F.amort === null ? `über ${S.calc.years} Jahre` : F.amort < 0.09 ? 'ab dem 1. Monat' : yrs(F.amort));
+const finAmortOn = R => !!(R.fin && R.fin.showAmort);
 const finDocSentence = F => (F.diff >= 0 ? finSentence(F) : `Nach ${num(F.years)} Jahren ist der Kredit abbezahlt – danach zahlen Sie nur noch die Energiekosten.`);
 function finCard(p, R) {
   if (S.finance.enabled === false) return '';
-  const f = p.finance || {}, F = R.fin;
+  const f = p.finance || {}, F = R.fin; if (f.on && f.showAmort === undefined) f.showAmort = true;
   return `<div class="card p-5 sm:p-6">${cardHead('euro', 'Finanzierung', 'Neue Energiekosten + Kreditrate = Ihre monatlichen Kosten – erscheint auch im Kundendokument')}
     <div class="rounded-[calc(var(--r)-4px)] bg-raised px-4">${toggleRow('Finanzierung anbieten', 'p:finance.on')}</div>
-    ${f.on ? `<div class="grid sm:grid-cols-3 gap-3 mt-4">${field('Kreditbetrag', 'p:finance.amount', { t: 'n', unit: '€', ph: num(Math.round(R.net)) })}${field('Effektiver Jahreszins', 'p:finance.rate', { t: 'n', unit: '%', ph: num(S.finance.rate, 2) })}${field('Laufzeit', 'p:finance.years', { t: 'n', unit: 'Jahre', ph: String(S.finance.years) })}</div>
+    ${f.on ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 mt-3">${toggleRow('Amortisation „mit Finanzierung“ anzeigen', 'p:finance.showAmort', F ? `Zusätzliches Feld bei der Amortisation: ${finAmortTxt(F)}` : '' )}</div><div class="grid sm:grid-cols-3 gap-3 mt-4">${field('Kreditbetrag', 'p:finance.amount', { t: 'n', unit: '€', ph: num(Math.round(R.net)) })}${field('Effektiver Jahreszins', 'p:finance.rate', { t: 'n', unit: '%', ph: num(S.finance.rate, 2) })}${field('Laufzeit', 'p:finance.years', { t: 'n', unit: 'Jahre', ph: String(S.finance.years) })}</div>
       ${F ? `<div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr_auto_1.2fr] gap-2 sm:gap-3 items-center mt-4"><div class="kpi"><div class="kpi-k">Neue Energiekosten</div><div class="kpi-v">${eurS(F.energy)}</div><div class="text-[12px] text-ink3">pro Monat</div></div><div class="text-center text-[22px] text-ink3">+</div><div class="kpi"><div class="kpi-k">Kreditrate</div><div class="kpi-v">${eur(F.monthly)}</div><div class="text-[12px] text-ink3">${num(F.years)} Jahre · ${num(F.rate, 2)} %</div></div><div class="text-center text-[22px] text-ink3">=</div><div class="kpi" style="background:rgb(var(--p-rgb)/.12)"><div class="kpi-k">Ihre Kosten mit Finanzierung</div><div class="kpi-v">${eur(F.total)}</div><div class="text-[12px] text-ink3">pro Monat</div></div></div>
       <div class="mt-3 rounded-[calc(var(--r)-4px)] p-3.5 text-[14px] flex flex-wrap items-center gap-x-4 gap-y-1" style="background:${F.diff >= 0 ? 'rgb(var(--p-rgb)/.10)' : 'rgba(217,72,43,.12)'}"><span class="text-ink3">Heute: <b class="text-ink">${eur(F.now)}</b> pro Monat</span><span class="font-semibold" style="color:${F.diff >= 0 ? 'rgb(var(--p-rgb))' : 'var(--old)'}">${F.diff >= 0 ? eur(F.diff) + ' weniger pro Monat' : eur(-F.diff) + ' mehr pro Monat'}</span>${F.diff < 0 ? '<span class="text-[12px] text-ink3">nur für Sie – im PDF steht dann nur die Rechnung</span>' : ''}</div><p class="hint">${esc(finSentence(F))} Zinsen gesamt rund ${eur(F.interest)}. Leer gelassene Felder nutzen die Vorgaben aus den Einstellungen.</p>` : ''}` : ''}</div>`;
 }
@@ -246,3 +257,20 @@ SET.dokument = () => _setDok14() + sCard('euro', 'Finanzierung, QR-Code & E-Mail
   <div class="font-medium text-[15px]">Finanzierung (Ratenrechner)</div><div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 mt-2">${toggleRow('Ratenrechner in der App anbieten', 's:finance.enabled', 'Aus = die Karte „Finanzierung“ verschwindet aus allen Projekten und aus den PDFs.')}</div><div class="grid sm:grid-cols-3 gap-3 mt-3">${field('Effektiver Jahreszins', 's:finance.rate', { t: 'n', unit: '%' })}${field('Laufzeit', 's:finance.years', { t: 'n', unit: 'Jahre' })}</div><div class="mt-3">${field('Hinweis im Dokument', 's:finance.label')}</div>
   <div class="font-medium text-[15px] mt-6">QR-Code im Dokument</div>${qrSettings()}
   <div class="font-medium text-[15px] mt-6">E-Mail an den Kunden</div><div class="mt-2 space-y-3">${field('Betreff', 's:sales.mailSubject')}${area('Text', 's:sales.mailText', 8, { hint: 'Platzhalter: {kunde}, {berater}, {firma}, {telefon}, {angebot}' })}</div>`);
+
+/* Drittes Feld „Amortisation mit Finanzierung“ – nur wenn Finanzierung aktiv und Feld eingeschaltet */
+const _finance28 = DOC.finance, _sLong28 = DOC.sLong;
+DOC.finance = function (p, R) {
+  const r = _finance28(p, R); if (!finAmortOn(R)) return r;
+  r.body = r.body.replace('<div class="g4">', '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3mm">')
+    .replace(`${tile('Ø Ersparnis', eur(R.avg), 'pro Jahr')}`, `${tile('Amortisation', finAmortTxt(R.fin), `mit Finanzierung (${num(R.fin.years)} J. · ${num(R.fin.rate, 2)} %)`, 'tgrn')}${tile('Ø Ersparnis', eur(R.avg), 'pro Jahr')}`);
+  return r;
+};
+DOC.sLong = function (p, R) {
+  const r = _sLong28(p, R); if (!finAmortOn(R)) return r;
+  const card = `<div class="scard" style="padding:5mm;background:var(--p-light)"><div style="font-size:8.4pt;font-weight:600;color:var(--ink2)">Amortisation</div><div style="font-size:19pt;font-weight:800;margin-top:1.5mm">${finAmortTxt(R.fin)}</div><div style="font-size:7.6pt;margin-top:1mm;color:var(--ink3)">mit Finanzierung (${num(R.fin.years)} Jahre)</div></div>`;
+  r.body = r.body.replace('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm">', '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3mm">');
+  const i = r.body.indexOf('<div class="scard" style="padding:5mm"><div style="font-size:8.4pt;font-weight:600;color:var(--ink2)">Überschuss');
+  if (i >= 0) r.body = r.body.slice(0, i) + card + r.body.slice(i);
+  return r;
+};
