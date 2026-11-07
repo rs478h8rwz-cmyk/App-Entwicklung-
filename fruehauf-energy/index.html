@@ -100,6 +100,13 @@ details[open] .chev{transform:rotate(180deg)}
 .page .ph.line{border-bottom:0.25mm solid var(--line)}
 .page .ph.band{background:var(--band);color:#EEF2F6}
 .page .ph.band .tt span{color:rgba(238,242,246,.7)}
+.page.dk .ph.sky{background:linear-gradient(180deg,var(--d-sky-dk) 0%,var(--bg) 100%)}
+.page.dk .ph.band{background:var(--d-band-dk)}
+.page .phg{position:absolute;inset:0;background:var(--d-hdr-lt)}
+.page.dk .phg{background:var(--d-hdr-dk)}
+.page .ph{position:relative}
+.page .ph.fade .tt b,.page .ph.fade .lg{color:var(--d-hdr-ink,var(--ink))}
+.page .ph.fade .tt span{color:var(--d-hdr-ink,var(--ink3));opacity:.8}
 .page .ph .lg{height:10mm;display:flex;align-items:center;gap:2.5mm;font-weight:500;font-size:10.5pt}
 .page .ph .lg img{max-height:8.5mm;max-width:50mm;width:auto;height:auto}
 .page .ph.band .lg img,.page.dk .ph .lg img{background:#fff;border-radius:2mm;padding:1mm 2mm;max-height:9mm}
@@ -355,6 +362,27 @@ function applyTheme() {
   set('--d-s-dark', mix(dd0.secondary, '#000000', 0.42)); set('--d-sky', mix(dd0.accent, '#ffffff', 0.9));
   set('--d-hl', mixed || dd ? (d.highlight === 'gradient' ? `linear-gradient(125deg,${mix(dd0.primary, night, 0.45)} 0%,${night} 100%)` : mix(dd0.primary, night, 0.7)) : (d.highlight === 'gradient' ? `linear-gradient(125deg,${dd0.primary} 0%,${dd0.accent} 100%)` : dd0.primary));
   set('--d-hl-num', mix(dd0.secondary, '#ffffff', 0.35)); set('--d-band', mixed || dd ? night : dd0.primary);
+  // dunkle Seiten: Himmel und Farbband mit sichtbarem Übergang
+  set('--d-sky-dk', mix(dd0.accent, night, 0.62)); set('--d-band-dk', (() => { const a = mix(dd0.primary, night, 0.5), st = []; for (let i = 0; i <= 10; i++) { const t = i / 10, e = t * t * (3 - 2 * t); st.push(`${mix(a, night, e)} ${t * 100}%`); } return `linear-gradient(180deg,${st.join(',')})`; })());
+  // Kopfzeile „Farbverlauf“: Farben, Stärke und Länge frei wählbar
+  // Verlauf wird durchgehend heller: von „Farbe oben“ bis zur Endfarbe (leer = Seitenhintergrund), danach bleibt die Endfarbe
+  const hf = d.hdrFrom || dd0.primary, hl = clamp(nz(d.hdrHeight, 60), 25, 297);
+  // weiche S-Kurve mit vielen Zwischenstufen – kein harter Übergang
+  const soft = (a, b, len) => { const st = []; for (let i = 0; i <= 14; i++) { const t = i / 14, e = t * t * t * (t * (t * 6 - 15) + 10); st.push(`${mix(a, b, e)} ${(t * len).toFixed(2)}%`); } return `linear-gradient(180deg,${st.join(',')},${b} 100%)`; };
+  // Lesbarkeit: Endfarbe passend zur Schrift (helle Seiten: dunkle Schrift, dunkle Seiten: helle Schrift)
+  const lumOf = h => { const [r, g, b] = hexToRgb(h); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+  const fit = (col, toward, ok) => { let c = col; for (let i = 0; i < 20 && !ok(lumOf(c)); i++) c = mix(c, toward, 0.15); return c; };
+  const ease = t => t * t * t * (t * (t * 6 - 15) + 10);
+  const variant = (end, ok, toward) => {
+    const e2 = fit(end, toward, ok); let len = hl;
+    // ab ca. 29 mm beginnt der Text – dort muss der Verlauf schon hell bzw. dunkel genug sein
+    while (len > 30 && !ok(lumOf(mix(hf, e2, ease(Math.min(1, 29 / len)))))) len -= 4;
+    return soft(hf, e2, len / 297 * 100);
+  };
+  set('--d-hdr-lt', variant(d.hdrTo || '#ffffff', l => l >= 0.62, '#ffffff'));
+  set('--d-hdr-dk', variant(d.hdrTo || night, l => l <= 0.3, night));
+  const lum = (() => { const [r, g, b] = hexToRgb(hf); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; })();
+  set('--d-hdr-ink', lum < 0.6 ? '#ffffff' : '#0F2A3D');
   const m = $('meta[name=theme-color]'); if (m) m.content = dark ? d.night : d.bg;
 }
 /* Diagrammfarben – abhängig davon, ob für App oder Dokument gezeichnet wird */
@@ -556,7 +584,7 @@ const DEFAULT_SETTINGS = {
     fontBody: 'Geist', fontHead: 'Instrument Serif', fontMono: 'Geist Mono', headWeight: 400, radius: 14, buttons: 'round', buttonStyle: 'light', highlight: 'solid',
     moduleColor: 'black', hpIllu: 'scene', pvIllu: 'scene', pdfColors: 'cover',
     coverInfo: { badge: true, title: true, subtitle: true, customer: true, address: true, offer: true, created: true, advisor: true, figures: true, contact: true, note: '' },
-    chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', coverStyle: 'illu',
+    chapter: 'sun', chapterSun: '', chapterLine: '', pdfHeader: 'band', hdrFrom: '', hdrTo: '', hdrHeight: 60, coverStyle: 'illu',
     mark: { style: 'sun', shape: 'rounded', bg: '', fg: '', line: '', text: '', file: '' },
     cover: { use: false, file: '', showCustomer: true, whiteBox: true, dark: true, pos: 62, layout: 'block', blocks: { head: { x: 0, y: 14, w: 100 }, cust: { x: 0, y: 72, w: 100 }, contact: { x: 0, y: 96, w: 70 } } },
     coverLogo: { source: 'company', file: '', x: 6, y: 6, size: 14, whiteBg: true }
@@ -2503,7 +2531,7 @@ function pageFooter(n, N) {
   const l3 = [c.taxNo && 'St.-Nr. ' + c.taxNo, c.vatId && 'USt-IdNr. ' + c.vatId, c.bank, c.iban && 'IBAN ' + c.iban, c.bic && 'BIC ' + c.bic].filter(Boolean).join(' · ');
   return `<div class="pf"><div>${esc(l1)}${l2 ? '<br>' + esc(l2) : ''}${l3 ? '<br>' + esc(l3) : ''}</div><div class="pn">Seite ${n} / ${N}</div></div>`;
 }
-const pageWrap = (p, title, body, n, N, key) => `<section class="${pageCls(key)}" data-key="${key}"><div class="ph ${S.design.pdfHeader}"><div class="lg">${docLogo()}</div><div class="tt"><b>${esc(title)}</b><span>${esc(custName(p))}</span></div></div><div class="pb">${body}</div>${pageFooter(n, N)}</section>`;
+const pageWrap = (p, title, body, n, N, key) => `<section class="${pageCls(key)}" data-key="${key}">${S.design.pdfHeader === 'fade' ? '<div class="phg"></div>' : ''}<div class="ph ${S.design.pdfHeader}"><div class="lg">${docLogo()}</div><div class="tt"><b>${esc(title)}</b><span>${esc(custName(p))}</span></div></div><div class="pb">${body}</div>${pageFooter(n, N)}</section>`;
 function chap(t, lead = '') {
   const o = S.doc.texts[CUR_KEY] || {};
   const title = (o.title || t).replace('{jahre}', S.calc.years), ld = o.lead !== undefined && o.lead !== '' ? o.lead : lead;
@@ -3318,7 +3346,9 @@ const SET = {
         <div class="mt-3">${area('Eigener Text (optional)', 's:design.coverInfo.note', 2, { hint: 'z. B. ein Slogan oder „Ihr Partner für Sonne und Wärme im Münsterland“' })}</div></div>
       <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Solarmodule in Illustrationen</span>${seg('s:design.moduleColor', [['black', 'Schwarz'], ['blue', 'Blau']])}</div><div><span class="lbl">„So funktioniert eine Wärmepumpe“</span>${seg('s:design.hpIllu', [['scene', 'Illustration'], ['diagram', 'Schema (alt)']])}</div><div><span class="lbl">„So funktioniert Ihre Photovoltaikanlage“</span>${seg('s:design.pvIllu', [['scene', 'Illustration'], ['diagram', 'Schema (alt)']])}</div></div>
       ${d.coverStyle === 'image' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 divide-y divide-line"><div class="py-3 flex flex-wrap items-center gap-3">${fileUrl(cv.file) ? `<img src="${fileUrl(cv.file)}" class="h-20 rounded-lg border border-line">` : '<span class="text-[13px] text-ink3">Noch kein Bild – bis dahin wird die Illustration verwendet.</span>'}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}${cv.file ? 'Ersetzen' : 'Bild oder PDF hochladen'}<input type="file" accept="image/*,application/pdf" class="hidden" data-imgup="cover"></label></div><div class="py-3"><span class="lbl">Farben im PDF</span>${seg('s:design.pdfColors', [['cover', 'Vom Deckblatt übernehmen'], ['own', 'Eigene Farbwelt']], { cls: 'flex-wrap' })}${S.design.pdfColors !== 'own' ? (S.design.coverPalette ? `<div class="flex items-center gap-2 mt-3">${['primary', 'secondary', 'accent'].map(k => `<span class="w-8 h-8 rounded-full border border-line2" style="background:${S.design.coverPalette[k]}" title="${S.design.coverPalette[k]}"></span>`).join('')}<span class="text-[12px] text-ink3 ml-1">aus Ihrem Deckblatt ermittelt</span><button class="btn-g ml-auto" data-a="cover-pal">${ic('refresh', 15)}Neu ermitteln</button></div>` : '<div class="hint">Noch keine Farben ermittelt – laden Sie ein Deckblatt hoch.</div>') : '<div class="hint">Das PDF verwendet Ihre Farbwelt oben.</div>'}</div>${toggleRow('Kundendaten einblenden', 's:design.cover.showCustomer')}<div class="py-3">${bgPicker('cover', 'Hintergrund hinter den Angaben')}</div>${['none', 'white'].includes(bgOf(cv, 'whiteBox', 95).kind) ? toggleRow('Dunkle Schrift', 's:design.cover.dark') : ''}<div class="py-3"><span class="lbl">Anordnung der Angaben</span>${seg('s:design.cover.layout', [['block', 'Zusammen in einem Kasten'], ['split', 'Einzeln verschieben']], { cls: 'flex-wrap' })}</div>${cv.layout === 'split' ? COVER_BLOCKS.map(([k, l]) => `<div class="py-3"><div class="font-medium text-[14px] mb-2">${l}</div><div class="grid sm:grid-cols-3 gap-4">${range('Von oben', `s:design.cover.blocks.${k}.y`, 0, 100, ' %')}${range('Von links', `s:design.cover.blocks.${k}.x`, 0, 100, ' %')}${range('Breite', `s:design.cover.blocks.${k}.w`, 30, 100, ' %')}</div></div>`).join('') + `<div class="py-3 flex flex-wrap gap-2"><button class="chip" data-a="cover-blocks-reset">Standard-Anordnung</button></div>` : `<div class="py-3">${range('Position Kundendaten (von oben)', 's:design.cover.pos', 5, 85, ' %')}</div>`}</div>` : ''}
-      <div class="grid sm:grid-cols-2 gap-5"><div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband']])}</div></div>
+      <div><span class="lbl">Kopfzeile der Seiten</span>${seg('s:design.pdfHeader', [['sky', 'Himmel'], ['line', 'Linie'], ['band', 'Farbband'], ['fade', 'Farbverlauf']], { cls: 'flex-wrap' })}
+      ${d.pdfHeader === 'fade' ? `<div class="rounded-[calc(var(--r)-4px)] bg-raised p-4 mt-3 space-y-4"><div class="grid grid-cols-2 gap-4">${[['Farbe oben', 's:design.hdrFrom', d.primary], ['Endfarbe', 's:design.hdrTo', docDark() ? '#0B1118' : '#ffffff']].map(([l, b, fb]) => `<div><span class="lbl">${l}</span><div class="flex items-center gap-2"><input type="color" class="w-11 h-11 rounded-[var(--rb)] border border-line2 p-0.5 bg-card cursor-pointer shrink-0" data-b="${b}" data-t="color" value="${bval(b) || fb}">${bval(b) ? `<button class="btn-g !px-2 text-[12px]" data-a="hdr-auto" data-k="${b.split('.').pop()}">Automatisch</button>` : '<span class="text-[12px] text-ink3">automatisch</span>'}</div></div>`).join('')}</div>
+        ${range('Länge des Verlaufs (297 mm = ganze Seite)', 's:design.hdrHeight', 25, 297, ' mm')}<div class="hint !mt-0">Der Verlauf läuft weich von oben bis zur Endfarbe; darunter bleibt die Endfarbe. Für gute Lesbarkeit passt die App Schriftfarbe, zu helle bzw. zu dunkle Endfarben und die Länge hinter dem Text automatisch an. „Automatisch“: oben Ihre Hauptfarbe (bei eigenem Deckblatt dessen Farbe), unten der normale Seitenhintergrund.</div></div>` : ''}</div>
       <div class="pt-2"><div class="font-medium text-[15px]">Logo auf dem Deckblatt</div><div class="mt-3">${seg('s:design.coverLogo.source', [['company', 'Firmenlogo'], ['custom', 'Eigenes Logo']])}</div>
       ${L.source === 'custom' ? `<div class="mt-3 flex items-center gap-3">${fileUrl(L.file) ? `<img src="${fileUrl(L.file)}" class="h-12 max-w-[160px] object-contain rounded-lg bg-white border border-line p-1">` : ''}<label class="btn-s btn-sm cursor-pointer">${ic('upload', 15)}Logo hochladen<input type="file" accept="image/*" class="hidden" data-imgup="coverlogo"></label></div>` : ''}
       <div class="grid sm:grid-cols-3 gap-4 mt-4">${range('Horizontal', 's:design.coverLogo.x', 0, 100, ' %')}${range('Vertikal', 's:design.coverLogo.y', 0, 100, ' %')}${range('Größe', 's:design.coverLogo.size', 6, 40, ' mm')}</div>
@@ -4070,6 +4100,7 @@ document.addEventListener('click', async e => {
     case 'logo-del': await delFiles([S.company.logoFile]); S.company.logoFile = ''; saveSettings(); render(); break;
     case 'color-quick': S.design[a.dataset.k] = a.dataset.v; applyTheme(); saveSettings(); render(); break;
     case 'legal-reset': if (!confirm('Impressum-Zusatz, Datenschutzerklärung und Widerrufsbelehrung auf die Standardtexte zurücksetzen?')) break; S.legal = clone(LEGAL_DEFAULT); saveSettings(); render(); break;
+    case 'hdr-auto': S.design[a.dataset.k] = ''; saveSettings(); applyTheme(); render(); break;
     case 'bg-alpha': S.design[a.dataset.k].bgAlpha = +a.dataset.v; saveSettings(); render(); break;
     case 'cover-blocks-reset': S.design.cover.blocks = clone(DEFAULT_SETTINGS.design.cover.blocks); saveSettings(); render(); break;
     case 'logo-pos': S.design.coverLogo.x = +a.dataset.x; S.design.coverLogo.y = +a.dataset.y; saveSettings(); render(); break;
