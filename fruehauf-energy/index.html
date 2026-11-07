@@ -3990,7 +3990,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261107132741';
+const APP_VERSION = '20261107133653';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4226,6 +4226,46 @@ SET.dokument = () => _setDok14() + sCard('euro', 'Finanzierung, QR-Code & E-Mail
   <div class="font-medium text-[15px]">Finanzierung (Ratenrechner)</div><div class="rounded-[calc(var(--r)-4px)] bg-raised px-4 mt-2">${toggleRow('Ratenrechner in der App anbieten', 's:finance.enabled', 'Aus = die Karte „Finanzierung“ verschwindet aus allen Projekten und aus den PDFs.')}</div><div class="grid sm:grid-cols-3 gap-3 mt-3">${field('Effektiver Jahreszins', 's:finance.rate', { t: 'n', unit: '%' })}${field('Laufzeit', 's:finance.years', { t: 'n', unit: 'Jahre' })}</div><div class="mt-3">${field('Hinweis im Dokument', 's:finance.label')}</div>
   <div class="font-medium text-[15px] mt-6">QR-Code im Dokument</div>${qrSettings()}
   <div class="font-medium text-[15px] mt-6">E-Mail an den Kunden</div><div class="mt-2 space-y-3">${field('Betreff', 's:sales.mailSubject')}${area('Text', 's:sales.mailText', 8, { hint: 'Platzhalter: {kunde}, {berater}, {firma}, {telefon}, {angebot}' })}</div>`);
+/* =========================================================
+   Fenster vor dem PDF: Sonderrabatt prüfen (nicht übersehbar),
+   Layout wählen, verkleinern, QR-Code
+   ========================================================= */
+function discPreview(p) {
+  if (!p.discount.on) return 'Kein Sonderrabatt im Dokument.';
+  return `„${S.discount.text.replace('{datum}', p.discount.until ? deDate(p.discount.until) : '…')}“ – ${eur(nz(p.discount.amount))}`;
+}
+function discBox(p) {
+  const on = !!p.discount.on, past = on && p.discount.until && p.discount.until < isoToday();
+  return `<div id="disc-box" class="rounded-[calc(var(--r)-2px)] p-4 mt-5" style="background:rgb(var(--s-rgb)/.14);box-shadow:inset 0 0 0 1.5px rgb(var(--s-rgb)/.55)">
+    <div class="flex items-center gap-3"><div class="icon-box !text-yel-ink shrink-0">${ic('tag', 18)}</div><div class="flex-1"><div class="font-semibold text-[16px]">Sonderrabatt</div><div class="text-[13px] text-ink2" id="disc-prev">${esc(discPreview(p))}</div></div>
+      <button type="button" class="tgl ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="Sonderrabatt anbieten" data-a="disc-on"></button></div>
+    ${on ? `<div class="grid grid-cols-2 gap-3 mt-4">${field('Rabatt', 'p:discount.amount', { t: 'n', unit: '€', ph: num(S.discount.amount) })}${field('Gültig bis', 'p:discount.until', { t: 'date' })}</div>${past ? '<div class="text-[13px] mt-2" style="color:var(--old)">Achtung: Das Datum liegt in der Vergangenheit.</div>' : ''}` : ''}
+  </div>`;
+}
+pdfChooser = function (p) {
+  const R = compute(p), ask = S.doc.pdfAsk || 'ask', list = ask === 'ask' ? ['full', 'sales'] : [ask];
+  const cnt = l => { const prev = UI.docLayout; UI.docLayout = l; try { return visiblePages(p, compute(p)).reduce((a, x) => a + x.count, 0); } finally { UI.docLayout = prev; } };
+  const info = { full: ['Komplette PDF', 'Alle Seiten mit Erklärungen, Diagrammen und Hintergründen.', 'file'], sales: ['Vertriebs-PDF', 'Kompakt und verkaufsstark: die wichtigsten Zahlen, Förderung, Ersparnis und Auftrag.', 'sparkle'] };
+  const opt = l => `<button class="w-full text-left rounded-[calc(var(--r)-2px)] border border-line2 hover:border-p p-4 flex items-start gap-3 ${list.length > 1 && layoutOf(p) === l ? 'ring-2 ring-p/40' : ''}" data-a="pdf-go" data-v="${l}"><span class="icon-box shrink-0">${ic(info[l][2], 18)}</span><span class="flex-1"><span class="block font-semibold text-[15px]">${info[l][0]} erstellen <span class="text-ink3 font-normal text-[13px]">· ${cnt(l)} Seiten</span></span><span class="block text-[13px] text-ink3 mt-0.5">${info[l][1]}</span></span></button>`;
+  const qr = `<label class="flex items-center gap-2.5 text-[14px] text-ink2 cursor-pointer mt-2"><input type="checkbox" data-a="qr-proj" ${qrOnFor(p) ? 'checked' : ''}>QR-Code im Dokument</label>`;
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Vor dem Erstellen kurz prüfen</h3><p class="text-ink3 text-[14px] mt-1">${esc(custName(p))}${p.offer.number ? ' · Angebot ' + esc(p.offer.number) : ''}</p>
+    ${discBox(p)}
+    <div class="lbl mt-5">${list.length > 1 ? 'Welche PDF?' : 'PDF'}</div><div class="space-y-3">${list.map(opt).join('')}</div>
+    ${smallToggle()}${qr}
+    ${list.length === 1 ? '<p class="hint mt-3">Das Layout ist unter Einstellungen → Dokument & Verkauf fest eingestellt.</p>' : ''}`);
+};
+/* Fenster erscheint jetzt immer vor dem PDF – auch bei fest eingestelltem Layout */
+const _makePdf15 = makePdf;
+makePdf = function (force, layout) {
+  const p = curProject(); if (!p) return;
+  if (!force && !layout) { if (!checkBeforePdf(p)) return; pdfChooser(p); return; }
+  return _makePdf15(force, layout);
+};
+/* Vorschau im Fenster live aktualisieren */
+document.addEventListener('input', e => {
+  if (!e.target.closest || !e.target.closest('#disc-box')) return;
+  const p = curProject(), el = $('#disc-prev'); if (p && el) setTimeout(() => { el.textContent = discPreview(p); }, 0);
+});
 
 /* =========================================================
    Router & Rendern
@@ -4410,6 +4450,7 @@ document.addEventListener('click', async e => {
     case 'logo-del': await delFiles([S.company.logoFile]); S.company.logoFile = ''; saveSettings(); render(); break;
     case 'color-quick': S.design[a.dataset.k] = a.dataset.v; applyTheme(); saveSettings(); render(); break;
     case 'a2hs-install': if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; render(); }); } break;
+    case 'disc-on': { const p = curProject(); if (p) { p.discount.on = !p.discount.on; if (p.discount.on && !p.discount.until) p.discount.until = addDays(isoToday(), S.discount.days); if (p.discount.on && !isNum(p.discount.amount)) p.discount.amount = S.discount.amount; saveProject(p); pdfChooser(p); renderSoon(); } break; }
     case 'qr-proj': { const p = curProject(); if (p) { p.docOpts.qr = !!a.checked; saveProject(p); render(); } break; }
     case 'a2hs-off': PERSONAL.a2hsOff = true; savePersonal(); render(); break;
     case 'review-done': S.calc.reviewedAt = isoToday(); saveSettings(); toast('Als geprüft markiert – nächste Erinnerung in 6 Monaten.'); render(); break;
