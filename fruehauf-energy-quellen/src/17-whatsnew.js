@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.60', date: '2026-11-08', items: [
+    ['quick', 'Schnellauslegung ausgebaut', 'Neu aufgebaut: Neubau/Bestand, Ein-/Mehrfamilienhaus, Standort-PLZ mit Normaußentemperatur, Dämmstandard mit Heizgrenztemperatur und Heizlast mit Regler.'],
+    ['quickuse', 'Heizlast berechnen', 'Heizlast unbekannt? Aus dem Verbrauch der letzten drei Jahre, aus Baujahr und Sanierungen (Fenster, Dach, Fassade, Kellerdecke) oder über W/m² ermitteln – dazu Warmwasser-Komfort, Zirkulation, Heizsystem und Sperrzeit.']
+  ] },
   { version: '1.59', date: '2026-11-08', items: [
     ['quick', 'Wärmepumpen-Schnellauslegung', 'Bei „Neue Berechnung“ fragt die App, ob zuerst eine Schnellauslegung gemacht werden soll: Wohnfläche, Gebäudestandard, Heizsystem und Personen ergeben Heizlast, empfohlene Geräteleistung und erwartete JAZ – live berechnet.'],
     ['quickuse', 'Direkt übernommen', 'Mit einem Tipp entsteht daraus eine Wärmepumpen- oder PV + WP-Berechnung mit eingetragener Leistung und JAZ. Im Bereich „Neue Wärmepumpe“ sehen Sie die Auslegung und können neu auslegen.']
