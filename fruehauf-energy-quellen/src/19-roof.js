@@ -156,6 +156,7 @@ function roofRender() {
     <span><span class="text-ink3">${esc(f.name)}:</span> <b>${f.mods.length} Module</b> · <b>${num(faceKwp(f), 2)} kWp</b></span>
     ${p.roof.faces.length > 1 ? `<span><span class="text-ink3">Gesamt:</span> <b class="text-p">${tot[0]} Module · ${num(tot[1], 2)} kWp</b></span>` : ''}
     ${RS.step === 'mod' && roofMods().length ? `<select class="inp appearance-none !h-10 !w-auto !py-0 text-[13px] max-w-[240px]" data-rf="prodId" title="PV-Modul">${roofMods().map(x => `<option value="${x.id}" ${x.id === roofProd(f).id ? 'selected' : ''}>${esc(x.name)} · ${num(x.power)} Wp</option>`).join('')}</select>` : ''}
+    ${RS.step === 'mod' ? `<span class="flex gap-1.5"><button class="btn-s !h-10 !px-3 text-[13px]" data-r="copy" ${RS.sel.size ? '' : 'disabled'}>${ic('copy', 15)}Kopieren</button><button class="btn-s !h-10 !px-3 text-[13px]" data-r="paste" ${RS.clip && RS.clip.length ? '' : 'disabled'}>${ic('plus', 15)}Einfügen</button></span>` : ''}
     <span id="roof-warn" class="text-[13px]"></span>
     ${RS.step === 'mod' ? `<button class="btn-p !h-10 !px-4 text-[13px] ml-auto" data-r="apply" ${tot[0] ? '' : 'disabled'}>${ic('check', 15)}In Berechnung übernehmen</button>`
       : `<button class="btn-p !h-10 !px-5 text-[14px] ml-auto" data-r="next">${{ photo: 'Weiter: Dachfläche', corners: 'Weiter: Referenz', ref: 'Weiter: Module belegen' }[RS.step]} ${ic('arrowR', 16)}</button>`}
@@ -197,6 +198,7 @@ function roofPanel(p, f, g) {
       <div class="grid grid-cols-2 gap-2">
         <button class="btn-s !h-10 text-[13px]" data-r="fill">${ic('grid', 15)}Fläche füllen</button><button class="btn-s !h-10 text-[13px]" data-r="all">Alle auswählen</button>
         <button class="btn-s !h-10 text-[13px]" data-r="rotate" ${RS.sel.size ? '' : 'disabled'}>${ic('refresh', 15)}Drehen</button><button class="btn-s !h-10 text-[13px]" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 15)}Löschen${RS.sel.size ? ` (${RS.sel.size})` : ''}</button>
+        <button class="btn-s !h-10 text-[13px]" data-r="copy" ${RS.sel.size ? '' : 'disabled'}>${ic('copy', 15)}Kopieren</button><button class="btn-s !h-10 text-[13px]" data-r="paste" ${RS.clip && RS.clip.length ? '' : 'disabled'}>${ic('plus', 15)}Einfügen${RS.clip && RS.clip.length ? ` (${RS.clip.length})` : ''}</button>
         <button class="btn-g !h-10 text-[13px]" data-r="undo" ${RS.hist.length ? '' : 'disabled'}>${ic('arrowL', 15)}Rückgängig</button><button class="btn-g !h-10 text-[13px]" data-r="none" ${RS.sel.size ? '' : 'disabled'}>Auswahl aufheben</button>
       </div>
       <p class="hint">Hinzufügen: auf die Fläche tippen. Auswählen: Module antippen oder einen Rahmen ziehen, dann gemeinsam verschieben. Am PC: Entf löscht, R dreht, Strg+A wählt alle.</p>
@@ -447,6 +449,8 @@ document.addEventListener('click', async e => {
   if (r === 'mode') { RS.mode = v; roofRefreshPanel(); return roofDraw(); }
   if (r === 'zoom') { const cv = $('#roof-cv'); if (v === 'fit') roofZoomReset(); else roofZoomAt(cv.clientWidth / 2, cv.clientHeight / 2, v === 'in' ? 1.35 : 1 / 1.35); return roofDraw(); }
   if (r === 'look') { roofZoomReset(); RS.look = v; PERSONAL.roofLook = v; savePersonal(); RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
+  if (r === 'copy' && RS.sel.size) { RS.clip = [...RS.sel].sort((a2, b2) => a2 - b2).map(i => ({ ...f.mods[i] })); toast(`${RS.clip.length} Modul${RS.clip.length > 1 ? 'e' : ''} kopiert.`); return roofRender(); }
+  if (r === 'paste' && RS.clip && RS.clip.length) { roofPaste(f, g); return roofRender(); }
   if (r === 'all') { RS.sel = new Set(f.mods.map((m, i) => i)); RS.mode = 'select'; roofRefreshPanel(); return roofDraw(); }
   if (r === 'none') { RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
   if (r === 'del' && RS.sel.size) { roofHist(); f.mods = f.mods.filter((m, i) => !RS.sel.has(i)); RS.sel = new Set(); roofSave(); return roofRender(); }
@@ -682,3 +686,21 @@ function roofTrim(img) {
 }
 const RTRIM = {};
 async function roofPlanImg(id) { if (!id) return null; if (RTRIM[id]) return RTRIM[id]; const im = await roofImg(id); if (!im) return null; return (RTRIM[id] = roofTrim(im)); }
+
+/* Kopierte Module neben (sonst unter) der Vorlage einfügen – frei von Überlappungen */
+function roofPaste(f, g) {
+  const cl = RS.clip, bs = cl.map(m => modBox(f, m)), G = { x0: Math.min(...bs.map(b => b.x0)), y0: Math.min(...bs.map(b => b.y0)), x1: Math.max(...bs.map(b => b.x1)), y1: Math.max(...bs.map(b => b.y1)) };
+  const W = G.x1 - G.x0 + ROOF_GAP, H = G.y1 - G.y0 + ROOF_GAP, all = f.mods.map(m => modBox(f, m));
+  const free = (dx, dy) => bs.every(b => !all.some(o => b.x0 + dx < o.x1 - 1e-4 && b.x1 + dx > o.x0 + 1e-4 && b.y0 + dy < o.y1 - 1e-4 && b.y1 + dy > o.y0 + 1e-4) && [[b.x0 + dx, b.y0 + dy], [b.x1 + dx, b.y1 + dy]].every(pt => !g || inPoly(g.poly, pt)));
+  const tries = []; for (let k = 1; k <= 8; k++) tries.push([W * k, 0], [0, H * k], [-W * k, 0], [0, -H * k]);
+  const found = tries.find(([dx, dy]) => free(dx, dy)), off = found || [0.4, 0.4];
+  roofHist(); const start = f.mods.length;
+  cl.forEach(m => f.mods.push({ ...m, x: m.x + off[0], y: m.y + off[1] }));
+  RS.sel = new Set(cl.map((m, j) => start + j)); RS.mode = 'select'; roofSave();
+  toast(found ? `${cl.length} Modul${cl.length > 1 ? 'e' : ''} eingefügt – zum Platzieren verschieben.` : 'Kein freier Platz daneben – eingefügt leicht versetzt über der Vorlage. Bitte an die gewünschte Stelle schieben.');
+}
+document.addEventListener('keydown', e => {
+  if (!RS || RS.step !== 'mod' || !(e.ctrlKey || e.metaKey) || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+  const k = e.key.toLowerCase(); if (k !== 'c' && k !== 'v') return;
+  const b = $(`#roof-ed [data-r="${k === 'c' ? 'copy' : 'paste'}"]`); if (b && !b.disabled) { e.preventDefault(); b.click(); }
+});
