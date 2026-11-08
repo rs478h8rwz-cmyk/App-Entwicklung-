@@ -44,7 +44,7 @@ function docPageDefs(p, R) {
   const spec = {
     cover: [true, true], summary: [true, true], situation: [true, true], year: [yearOk, true, yearOk ? '' : (R.W ? 'Braucht den Verbrauch der Heizung' : 'Braucht die Anlagenleistung')],
     howWP: [R.W, true], howPV: [R.V, true], invest: [true, true], monthly: [true, true], finance: [true, !fin, finNote],
-    prices: [true, !!S.prices.showPages], why: [R.W, !!S.prices.showPages], leisure: [true, !fin, finNote], variants: [(p.variants || []).length > 0, true], roadmap: [true, true], products: [true, true], reviews: [reviewsOn(), true], sign: [true, !!S.discount.signPage], attach: [att.length > 0, true]
+    prices: [true, !!S.prices.showPages], why: [R.W, !!S.prices.showPages], leisure: [true, !fin, finNote], variants: [(p.variants || []).length > 0, true], roadmap: [true, true], products: [true, true], wpdesign: [true, true], reviews: [reviewsOn(), true], sign: [true, !!S.discount.signPage], attach: [att.length > 0, true]
   };
   return docOrder().map(key => {
     const [applies, auto, note = ''] = spec[key];

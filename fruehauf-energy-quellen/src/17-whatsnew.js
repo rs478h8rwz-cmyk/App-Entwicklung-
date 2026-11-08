@@ -13,6 +13,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.64', date: '2026-11-08', items: [
+    ['quick', 'Heizsystem wie bei Wolf', 'Betriebsweise (monovalent, monoenergetisch, bivalent …), Solarthermie, EVU-Sperrzeit und Heizkreise (Heizkörper / Fußbodenheizung / beides) mit Vorlauftemperatur.'],
+    ['quickuse', 'Passende Wärmepumpe', 'Die App wählt aus Ihren Produkten die passende Wärmepumpe: Diagramm mit Bivalenz- und Inverterpunkt, Deckungsanteil, JAZ, Wärme- und Strombedarf, Umweltwärme – abgeglichen auf die Wolf-Auslegung.'],
+    ['prodpage', 'Technische Auslegung im PDF', 'Die Auslegung erscheint als eigene Seite im PDF. Nach dem Hochladen eines Angebots wird automatisch ausgelegt, wenn Verbrauch und PLZ bekannt sind.']
+  ] },
   { version: '1.63', date: '2026-11-08', items: [
     ['quick', 'Zirkulation wie bei Wolf', 'Mit Zirkulationspumpe sinkt die Heizlast jetzt genauso wie bei der Wolf-Auslegung (3.000 l Öl, Hasbergen: ohne 13,7 kW, mit 12,5 kW). Ja/Nein-Auswahl deutlich farbig markiert.']
   ] },
