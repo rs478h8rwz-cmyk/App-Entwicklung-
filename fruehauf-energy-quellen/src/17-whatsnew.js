@@ -13,9 +13,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.66', date: '2026-11-08', items: [
+    ['prodstage', 'Mit Produktbild', 'Die vorgeschlagene Wärmepumpe erscheint mit Bild aus Ihren Produkten – in der App und in der Einschätzung im PDF. Wärmepumpen aller Hersteller aus „Produkte“ stehen zur Auswahl.']
+  ] },
   { version: '1.65', date: '2026-11-08', items: [
     ['quickuse', 'Auslegung bei den Unterlagen', 'Wurde mit unserer Schnellauslegung ausgelegt, steht sie im Schritt „Angebot“ anstelle des Upload-Felds – klar als grobe Schätzung gekennzeichnet. Liegt schon eine eigene Auslegung (z. B. von Wolf) als Unterlage bei, bleibt diese maßgeblich.'],
-    ['prodstage', 'Mit Produktbild', 'Die vorgeschlagene Wärmepumpe erscheint mit Bild aus Ihren Produkten – in der App und in der Einschätzung im PDF. Wärmepumpen aller Hersteller aus „Produkte“ stehen zur Auswahl.'],
     ['quick', 'Heizlast berechnen gut sichtbar', 'Der Bereich „Heizlast berechnen“ ist jetzt farbig hervorgehoben und öffnet sich automatisch, solange noch keine Heizlast eingetragen ist.'],
     ['prodpage', 'Kurz und klar im PDF', 'Im PDF steht die Auslegung kurz als „Erste Einschätzung zur Wärmepumpe“ – mit deutlichem Hinweis: grobe Schätzung, keine Heizlastberechnung. Abschaltbar in der Seitenauswahl.']
   ] },
