@@ -15,6 +15,8 @@ const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house:
 const RELEASES = [
   { version: '2.05', date: '2026-11-09', items: [
     ['modplan', 'Zoomen im Modulplan', 'Foto und Dach lassen sich vergrößern: zwei Finger am iPad, Mausrad am PC oder die Knöpfe −/+/Einpassen. So treffen Sie Ecken und Pfannenkanten genau. Dazu ein Feinjustier-Kreis: Ecke antippen, dann im Kreis ziehen – der Punkt bewegt sich ganz langsam (am PC auch mit den Pfeiltasten).'],
+    ['modplace', 'Bedienung verbessert', '„Weiter“ und die Modulauswahl stehen immer sichtbar in der unteren Leiste. Module lassen sich – auch bei Mehrfachauswahl – durch Antippen wieder abwählen; der Magnet greift früher.'],
+    ['modsave', 'Belegung als Foto beim Kunden', 'Beim Speichern und Übernehmen entsteht ein Foto mit eingezeichneten Modulen. Es liegt beim Kunden im Schritt „Angebot“ und in der PV-Karte.'],
     ['layout', 'iPad-Startseite repariert', 'Das Start-Haus wird auf dem iPad nicht mehr übergroß dargestellt; die Kennzahlen stehen übersichtlich in zwei Zeilen. Lange Fenster (z. B. Schnellauslegung) werden oben nicht mehr abgeschnitten.']
   ] },
   { version: '2.04', date: '2026-11-08', items: [

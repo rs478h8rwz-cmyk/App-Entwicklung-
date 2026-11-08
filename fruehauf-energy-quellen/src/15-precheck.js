@@ -64,7 +64,7 @@ function undoDeletePopup(d) {
 }
 async function finalizeDelete() {
   const x = LAST_DEL; LAST_DEL = null; const el = $('#del-pop'); if (el) el.remove();
-  if (x) { clearTimeout(x.t); await delFiles(x.p.docs.flatMap(d => d.pages).concat(x.p.sign ? [x.p.sign.cust, x.p.sign.adv] : [], x.p.roof ? x.p.roof.faces.map(f => f.photo) : [])); }
+  if (x) { clearTimeout(x.t); await delFiles(x.p.docs.flatMap(d => d.pages).concat(x.p.sign ? [x.p.sign.cust, x.p.sign.adv] : [], x.p.roof ? x.p.roof.faces.map(f => f.photo).concat(Object.values(x.p.roof.snaps || {})) : [])); }
 }
 async function restoreDeleted() {
   const x = LAST_DEL; if (!x) return; clearTimeout(x.t); LAST_DEL = null; const el = $('#del-pop'); if (el) el.remove();
