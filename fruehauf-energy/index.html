@@ -4140,7 +4140,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108084321';
+const APP_VERSION = '20261108085258';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4533,6 +4533,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.48', date: '2026-11-08', items: [
+    ['prodsort', 'Produkte sortieren', 'Unter „Produkte“ sortieren nach Hersteller (Standard), Art oder Name – übersichtlich in Gruppen.']
+  ] },
   { version: '1.47', date: '2026-11-08', items: [
     ['prodstage', 'Produkte freigestellt', 'Produktbilder ohne Hintergrund stehen jetzt auf einer Bühne mit Lichtschein und Schatten – ohne weißen Kasten, im hellen und dunklen PDF.'],
     ['prodauto', 'Produkte automatisch übernommen', 'Wird ein Produkt aus Ihrer Datenbank im Angebot erkannt, übernimmt die App sofort alle Angaben: Name, Leistung bzw. Kapazität, Garantie, Bild, Maße. Eine Wärmepumpe wird nur zugeordnet, wenn ihre Leistung zum Angebot passt.']
@@ -4574,7 +4577,8 @@ const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date:
 const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
 WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
 WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
-WN_BG.estimate = '#F5F7FA'; WN_BG.prodstage = '#0B1118'; WN_BG.prodauto = '#141B24';
+WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24';
+WN_IMG.prodsort = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[['Hersteller', 1], ['Art', 0], ['Name', 0]].map(([t, on], i) => `<rect x="${8 + i * 36}" y="10" width="${t.length * 3 + 10}" height="10" rx="5" fill="#1C2530" stroke="${on ? '#3FA98C' : '#2E3A47'}"/><text x="${13 + i * 36}" y="16.8" font-size="4.6" fill="#ffffff">${t}</text>`).join('')}<text x="8" y="32" font-size="5.4" font-weight="700" fill="#ffffff">EcoFlow</text>${[0, 1, 2].map(i => `<rect x="${8 + i * 36}" y="36" width="32" height="18" rx="3" fill="#1C2530"/>`).join('')}<text x="8" y="64" font-size="5.4" font-weight="700" fill="#ffffff">Wolf</text><rect x="8" y="67" width="32" height="10" rx="3" fill="#1C2530"/></svg>`; WN_BG.prodstage = '#0B1118'; WN_BG.prodauto = '#141B24';
 WN_IMG.prodstage = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><defs><radialGradient id="wg" cx="50%" cy="58%" r="60%"><stop offset="0" stop-color="#3FA98C" stop-opacity=".35"/><stop offset="1" stop-color="#0B1118" stop-opacity="0"/></radialGradient><radialGradient id="ws"><stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><rect width="120" height="80" fill="#0B1118"/><rect width="120" height="80" fill="url(#wg)"/><ellipse cx="60" cy="66" rx="30" ry="3" fill="url(#ws)"/><path d="M48 20 L72 16 L72 62 L48 66 Z" fill="#9AA3AD"/><path d="M48 20 L72 16 L72 22 L48 26 Z" fill="#C9D0D6"/></svg>`;
 WN_IMG.prodauto = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="8" y="14" width="44" height="52" rx="5" fill="#1C2530"/><text x="13" y="26" font-size="4.6" fill="#8A97A6">Angebot</text><rect x="13" y="31" width="34" height="3" rx="1.5" fill="#C9D3DD"/><rect x="13" y="38" width="26" height="3" rx="1.5" fill="#5A6878"/><path d="M56 40 h10 m-4 -4 l4 4 l-4 4" stroke="#3FA98C" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="70" y="14" width="44" height="52" rx="5" fill="#173A33" stroke="#3FA98C"/><text x="75" y="26" font-size="4.6" fill="#3FA98C">Produkt</text>${['Name', 'Kapazität', 'Garantie', 'Bild'].map((t, i) => `<text x="75" y="${36 + i * 7}" font-size="4.4" fill="#ffffff">✓ ${t}</text>`).join('')}</svg>`; WN_BG.prodpage = '#F5F7FA'; WN_BG.prodedit = '#141B24'; WN_BG.prodmatch = '#141B24';
 WN_IMG.prodpage = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[[8, 'Speicher'], [62, 'Wechselrichter']].map(([x, k]) => `<rect x="${x}" y="10" width="50" height="60" rx="5" fill="#ffffff"/><rect x="${x + 14}" y="15" width="22" height="22" rx="3" fill="#6B7785"/><text x="${x + 4}" y="46" font-size="4.2" font-weight="700" fill="#0E7C66">${k}</text><rect x="${x + 4}" y="50" width="40" height="3" rx="1.5" fill="#0F2A3D"/><rect x="${x + 4}" y="56" width="30" height="2.4" rx="1.2" fill="#C9D3DD"/><rect x="${x + 4}" y="61" width="34" height="2.4" rx="1.2" fill="#9ED3C4"/>`).join('')}</svg>`;
@@ -4681,14 +4685,18 @@ function prodSpecs(pr) {
 
 /* ---------- Produktübersicht ---------- */
 viewProducts = function () {
-  const list = PRODUCTS.slice().sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
+  // Sortierung: Hersteller (Standard), Kategorie oder Name – merkt sich die Wahl auf diesem Gerät
+  const mode = PERSONAL.prodSort || 'maker', by = (a, b) => String(a || '').localeCompare(String(b || ''), 'de', { numeric: true, sensitivity: 'base' });
+  const catIx = pr => CAT_ORDER.indexOf(pr.cat), list = PRODUCTS.slice().sort((a, b) => mode === 'cat' ? catIx(a) - catIx(b) || by(a.maker, b.maker) || by(a.name, b.name) : mode === 'name' ? by(a.name, b.name) : by(a.maker || '~', b.maker || '~') || catIx(a) - catIx(b) || by(a.name, b.name));
+  const groups = mode === 'name' ? [['', list]] : [...new Set(list.map(pr => (mode === 'cat' ? (CATS[pr.cat] || CATS.misc)[0] : pr.maker || 'Ohne Hersteller')))].map(g => [g, list.filter(pr => (mode === 'cat' ? (CATS[pr.cat] || CATS.misc)[0] : pr.maker || 'Ohne Hersteller') === g)]);
+  const sortBar = `<div class="flex flex-wrap items-center gap-2 mt-5"><span class="text-[13px] text-ink3 mr-1">Sortieren nach</span>${[['maker', 'Hersteller'], ['cat', 'Art'], ['name', 'Name']].map(([k, l]) => `<button class="chip ${mode === k ? '!border-p !text-ink' : ''}" data-a="prod-sort" data-v="${k}">${l}</button>`).join('')}</div>`;
   const card = pr => `<div class="card p-4 flex flex-col min-w-0"><div class="aspect-[4/3] rounded-[calc(var(--r)-4px)] grid place-items-center overflow-hidden" style="background:radial-gradient(ellipse at 50% 60%, rgb(var(--p-rgb)/.14), transparent 70%)">${fileUrl(pr.img) || pr.imgUrl ? `<img src="${esc(fileUrl(pr.img) || pr.imgUrl)}" class="w-full h-full object-contain" alt="">` : `<span class="text-p opacity-60">${ic(prodIcon(pr.cat), 44)}</span>`}</div>
     <div class="flex flex-wrap gap-1.5 mt-3"><span class="badge bg-p/10 text-p">${esc((CATS[pr.cat] || CATS.misc)[0])}</span>${pr.cat === 'wp' && pr.beg ? '<span class="badge bg-tyel text-yel-ink">BEG-förderfähig</span>' : ''}</div>
     <div class="font-semibold text-[15px] mt-2 leading-snug">${esc(pr.name || 'Ohne Namen')}</div><div class="text-[13px] text-ink3">${esc(pr.maker || '')}</div>
     <div class="text-[13px] text-ink2 mt-2 space-y-0.5">${prodSpecs(pr).map(([k, v]) => `<div>${k}: <b>${esc(v)}</b></div>`).join('')}${pr.warranty ? `<div>Garantie: <b>${esc(pr.warranty)}</b></div>` : ''}${pr.note ? `<div class="text-ink3 mt-1">${esc(pr.note)}</div>` : ''}</div>
     <div class="flex flex-wrap gap-1 mt-auto pt-3 -mx-2"><button class="btn-g" data-a="prod-edit" data-id="${pr.id}">${ic('pen', 15)}Bearbeiten</button><button class="btn-g" data-a="prod-copy" data-id="${pr.id}">${ic('copy', 15)}Kopieren</button><button class="btn-g hover:!text-ember2" data-a="prod-del" data-id="${pr.id}">${ic('trash', 15)}Löschen</button></div></div>`;
   return `<div class="max-w-7xl mx-auto px-4 pt-8"><div class="flex flex-wrap items-end justify-between gap-3"><div><h1 class="h-font text-[32px]">Produkte</h1><p class="text-ink3 text-[14px]">Ihre Komponenten – werden in Angeboten erkannt und auf der Seite „Ihre Komponenten“ im Dokument gezeigt.</p></div><button class="btn-p" data-a="prod-new">${ic('plus', 17)}Neues Produkt</button></div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">${list.map(card).join('') || `<div class="card p-10 text-center sm:col-span-2 lg:col-span-3 xl:col-span-4 text-ink3">Noch keine Produkte angelegt.</div>`}</div></div>`;
+    ${PRODUCTS.length ? sortBar + groups.map(([g, items]) => `${g ? `<div class="flex items-baseline gap-2 mt-7"><h2 class="font-semibold text-[17px]">${esc(g)}</h2><span class="text-[13px] text-ink3">${items.length}</span></div>` : ''}<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${g ? 'mt-3' : 'mt-5'}">${items.map(card).join('')}</div>`).join('') : `<div class="card p-10 text-center text-ink3 mt-6">Noch keine Produkte angelegt.</div>`}</div>`;
 };
 
 /* ---------- Produkt bearbeiten: Felder je Kategorie ---------- */
@@ -5005,6 +5013,7 @@ document.addEventListener('click', async e => {
     case 'prod-new': { const pr = { id: uid('pr'), name: '', maker: '', cat: 'wp', power: null, jaz: null, weight: null, dims: '', beg: true, warranty: '', note: '', img: '', imgUrl: '' }; PRODUCTS.unshift(pr); saveProducts(); render(); productModal(pr.id); break; }
     case 'prod-edit': productModal(a.dataset.id); break;
     case 'prod-copy': copyProduct(a.dataset.id); break;
+    case 'prod-sort': PERSONAL.prodSort = a.dataset.v; savePersonal(); render(); break;
     case 'prod-del': { const pr = PRODUCTS.find(x => x.id === a.dataset.id); if (!(await confirmDlg('Produkt löschen?', `„${pr.name || 'Ohne Namen'}“ wird aus Ihrer Datenbank gelöscht.`))) break; if (pr.img) await delFiles([pr.img]); PRODUCTS = PRODUCTS.filter(x => x.id !== pr.id); saveProducts(); render(); break; }
     case 'prod-img-del': { const pr = PRODUCTS.find(x => x.id === a.dataset.id); await delFiles([pr.img]); pr.img = ''; saveProducts(); productModal(pr.id); break; }
     case 'logo-del': await delFiles([S.company.logoFile]); S.company.logoFile = ''; saveSettings(); render(); break;

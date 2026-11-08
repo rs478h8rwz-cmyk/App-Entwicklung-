@@ -19,14 +19,18 @@ function prodSpecs(pr) {
 
 /* ---------- Produktübersicht ---------- */
 viewProducts = function () {
-  const list = PRODUCTS.slice().sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
+  // Sortierung: Hersteller (Standard), Kategorie oder Name – merkt sich die Wahl auf diesem Gerät
+  const mode = PERSONAL.prodSort || 'maker', by = (a, b) => String(a || '').localeCompare(String(b || ''), 'de', { numeric: true, sensitivity: 'base' });
+  const catIx = pr => CAT_ORDER.indexOf(pr.cat), list = PRODUCTS.slice().sort((a, b) => mode === 'cat' ? catIx(a) - catIx(b) || by(a.maker, b.maker) || by(a.name, b.name) : mode === 'name' ? by(a.name, b.name) : by(a.maker || '~', b.maker || '~') || catIx(a) - catIx(b) || by(a.name, b.name));
+  const groups = mode === 'name' ? [['', list]] : [...new Set(list.map(pr => (mode === 'cat' ? (CATS[pr.cat] || CATS.misc)[0] : pr.maker || 'Ohne Hersteller')))].map(g => [g, list.filter(pr => (mode === 'cat' ? (CATS[pr.cat] || CATS.misc)[0] : pr.maker || 'Ohne Hersteller') === g)]);
+  const sortBar = `<div class="flex flex-wrap items-center gap-2 mt-5"><span class="text-[13px] text-ink3 mr-1">Sortieren nach</span>${[['maker', 'Hersteller'], ['cat', 'Art'], ['name', 'Name']].map(([k, l]) => `<button class="chip ${mode === k ? '!border-p !text-ink' : ''}" data-a="prod-sort" data-v="${k}">${l}</button>`).join('')}</div>`;
   const card = pr => `<div class="card p-4 flex flex-col min-w-0"><div class="aspect-[4/3] rounded-[calc(var(--r)-4px)] grid place-items-center overflow-hidden" style="background:radial-gradient(ellipse at 50% 60%, rgb(var(--p-rgb)/.14), transparent 70%)">${fileUrl(pr.img) || pr.imgUrl ? `<img src="${esc(fileUrl(pr.img) || pr.imgUrl)}" class="w-full h-full object-contain" alt="">` : `<span class="text-p opacity-60">${ic(prodIcon(pr.cat), 44)}</span>`}</div>
     <div class="flex flex-wrap gap-1.5 mt-3"><span class="badge bg-p/10 text-p">${esc((CATS[pr.cat] || CATS.misc)[0])}</span>${pr.cat === 'wp' && pr.beg ? '<span class="badge bg-tyel text-yel-ink">BEG-förderfähig</span>' : ''}</div>
     <div class="font-semibold text-[15px] mt-2 leading-snug">${esc(pr.name || 'Ohne Namen')}</div><div class="text-[13px] text-ink3">${esc(pr.maker || '')}</div>
     <div class="text-[13px] text-ink2 mt-2 space-y-0.5">${prodSpecs(pr).map(([k, v]) => `<div>${k}: <b>${esc(v)}</b></div>`).join('')}${pr.warranty ? `<div>Garantie: <b>${esc(pr.warranty)}</b></div>` : ''}${pr.note ? `<div class="text-ink3 mt-1">${esc(pr.note)}</div>` : ''}</div>
     <div class="flex flex-wrap gap-1 mt-auto pt-3 -mx-2"><button class="btn-g" data-a="prod-edit" data-id="${pr.id}">${ic('pen', 15)}Bearbeiten</button><button class="btn-g" data-a="prod-copy" data-id="${pr.id}">${ic('copy', 15)}Kopieren</button><button class="btn-g hover:!text-ember2" data-a="prod-del" data-id="${pr.id}">${ic('trash', 15)}Löschen</button></div></div>`;
   return `<div class="max-w-7xl mx-auto px-4 pt-8"><div class="flex flex-wrap items-end justify-between gap-3"><div><h1 class="h-font text-[32px]">Produkte</h1><p class="text-ink3 text-[14px]">Ihre Komponenten – werden in Angeboten erkannt und auf der Seite „Ihre Komponenten“ im Dokument gezeigt.</p></div><button class="btn-p" data-a="prod-new">${ic('plus', 17)}Neues Produkt</button></div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">${list.map(card).join('') || `<div class="card p-10 text-center sm:col-span-2 lg:col-span-3 xl:col-span-4 text-ink3">Noch keine Produkte angelegt.</div>`}</div></div>`;
+    ${PRODUCTS.length ? sortBar + groups.map(([g, items]) => `${g ? `<div class="flex items-baseline gap-2 mt-7"><h2 class="font-semibold text-[17px]">${esc(g)}</h2><span class="text-[13px] text-ink3">${items.length}</span></div>` : ''}<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${g ? 'mt-3' : 'mt-5'}">${items.map(card).join('')}</div>`).join('') : `<div class="card p-10 text-center text-ink3 mt-6">Noch keine Produkte angelegt.</div>`}</div>`;
 };
 
 /* ---------- Produkt bearbeiten: Felder je Kategorie ---------- */
