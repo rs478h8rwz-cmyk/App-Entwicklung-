@@ -75,7 +75,7 @@ function qResult() {
 
 /* ---------- Oberfläche ---------- */
 const qTile = (key, val, label, icon, on) => `<button type="button" class="rounded-[calc(var(--r)-4px)] border ${on ? 'border-p ring-2 ring-p/30 bg-p/5' : 'border-line bg-field'} p-3 flex flex-col items-center justify-center gap-1.5 text-[13px] font-medium text-center leading-tight ${on ? 'text-ink' : 'text-ink2'} transition" data-qs="${key}" data-v="${val}">${icon ? `<span class="${on ? 'text-p' : 'text-ink3'}">${icon}</span>` : ''}${label}</button>`;
-const qSeg = (key, opts) => `<div class="inline-flex rounded-full border border-line bg-field p-1 gap-1">${opts.map(([v, l]) => { const on = String(QS[key]) === String(v); return `<button type="button" class="h-9 px-4 rounded-full text-[14px] font-semibold transition ${on ? 'text-white shadow' : 'text-ink3'}" style="${on ? 'background:rgb(var(--p-rgb))' : ''}" data-qs="${key}" data-v="${v}" aria-pressed="${on}">${on ? '✓ ' : ''}${l}</button>`; }).join('')}</div>`;
+const qSeg = (key, opts) => `<div class="inline-flex rounded-full border border-line bg-field p-1 gap-1">${opts.map(([v, l]) => { const on = String(QS[key]) === String(v); return `<button type="button" class="h-9 px-4 rounded-full text-[14px] font-semibold whitespace-nowrap transition ${on ? 'text-white shadow' : 'text-ink3'}" style="${on ? 'background:rgb(var(--p-rgb))' : ''}" data-qs="${key}" data-v="${v}" aria-pressed="${on}">${on ? '✓ ' : ''}${l}</button>`; }).join('')}</div>`;
 const qIn = (key, unit, o = {}) => `<div class="relative"><input class="inp ${unit ? 'pr-14' : ''} ${o.cls || ''}" type="text" inputmode="${o.im || 'decimal'}" data-qi="${key}" value="${isNum(QS[key]) ? inputFmt(QS[key], 'n') : esc(QS[key] || '')}" placeholder="${o.ph || ''}">${unit ? `<span class="absolute ${o.unitCls || 'right-4 text-[13px]'} top-1/2 -translate-y-1/2 font-semibold text-ink4 pointer-events-none">${unit}</span>` : ''}</div>`;
 const qSel = (key, opts) => `<select class="inp appearance-none" data-qi="${key}" data-sel="1">${opts.map(([v, l]) => `<option value="${v}" ${String(QS[key]) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 const qLbl = (t, extra = '') => `<div class="lbl flex items-center justify-between gap-2"><span>${t}</span>${extra}</div>`;
@@ -127,9 +127,9 @@ function quickHTML() {
     <div class="hint" id="q-te-info">${qTeInfo()}</div>
     <div class="grid sm:grid-cols-2 gap-4 mt-4"><div><span class="lbl">Dämmstandard</span>${qSel('insul', QH.insul.map(x => [x[0], x[1]]))}<div class="hint">Heizgrenztemperatur: <b>${ins[2]} °C</b></div></div>
       <div>${qLbl('Heizlast', `<span class="text-ink3 text-[12px]">0–${maxLoad} kW</span>`)}${qIn('load', 'kW', { cls: '!text-[18px] font-semibold' })}<input type="range" min="0" max="${maxLoad}" step="0.1" value="${isNum(QS.load) ? QS.load : 0}" data-qi="load" data-range="1" class="w-full mt-3 accent-[rgb(var(--p-rgb))]"></div></div>
-    <div class="mt-4 rounded-[calc(var(--r)-4px)] border ${QS.calcOpen ? 'border-p/40 bg-raised' : 'border-line'}">
-      <button type="button" class="w-full flex items-center justify-between gap-3 p-4 text-left" data-qs="calcOpen" data-v="${QS.calcOpen ? 'false' : 'true'}"><span><span class="font-semibold text-[15px] text-p">Heizlast berechnen</span><span class="block text-[12px] text-ink3 mt-0.5">Heizlast unbekannt? Aus Verbrauch, Baujahr oder W/m² ermitteln.</span></span><span class="text-ink3 transition ${QS.calcOpen ? 'rotate-180' : ''}">${ic('chevD', 18)}</span></button>
-      ${QS.calcOpen ? `<div class="px-4 pb-4"><div class="flex flex-wrap gap-2 mb-4">${methods.map(([k, l]) => `<button type="button" class="chip ${QS.method === k ? '!border-p !text-ink' : ''}" data-qs="method" data-v="${k}">${l}</button>`).join('')}</div>${method}
+    <div class="mt-4 rounded-[calc(var(--r)-4px)] border-2 border-p overflow-hidden ${QS.calcOpen ? 'bg-raised' : ''}" style="box-shadow:0 8px 24px -12px rgb(var(--p-rgb)/.6)">
+      <button type="button" class="w-full flex items-center gap-3 p-4 text-left text-white" style="background:rgb(var(--p-rgb))" data-qs="calcOpen" data-v="${QS.calcOpen ? 'false' : 'true'}"><span class="w-11 h-11 rounded-xl grid place-items-center shrink-0" style="background:rgba(255,255,255,.18)">${ic('calc', 22)}</span><span class="flex-1"><span class="block font-semibold text-[17px]">Heizlast berechnen</span><span class="block text-[13px] opacity-90 mt-0.5">Heizlast unbekannt? Aus Verbrauch, Baujahr oder W/m² ermitteln.</span></span><span class="transition ${QS.calcOpen ? 'rotate-180' : ''}">${ic('chevD', 20)}</span></button>
+      ${QS.calcOpen ? `<div class="px-4 pb-4 pt-4"><div class="flex flex-wrap gap-2 mb-4">${methods.map(([k, l]) => `<button type="button" class="chip ${QS.method === k ? '!border-p !text-ink' : ''}" data-qs="method" data-v="${k}">${l}</button>`).join('')}</div>${method}
         <div class="mt-4 rounded-[calc(var(--r)-4px)] p-4 flex flex-wrap items-center justify-between gap-3" style="background:rgb(var(--p-rgb)/.10)"><div class="text-[15px]">Ermittelte Heizlast: <b id="q-mload" class="text-[18px]">${isNum(mLoad) ? num(mLoad, 2) + ' kW' : '–'}</b></div><button type="button" class="btn-p !h-10" data-a="quick-take">Übernehmen</button></div></div>` : ''}
     </div>`)}
   ${sec(2, 'Warmwasser', `
@@ -188,6 +188,7 @@ function quickDialog(pid) {
     if (p.quick && isNum(p.quick.area)) QS.area = p.quick.area;
   }
   if (!QS.zip && S.company.zip) { QS.zip = S.company.zip; QS.city = S.company.city || ''; }
+  if (!(isNum(QS.load) && QS.load > 0)) QS.calcOpen = true;                    // ohne Heizlast gleich das Berechnen öffnen
   modal(`<div id="quick-root">${quickHTML()}</div>`, { wide: true });
   quickZip();
 }
@@ -207,7 +208,7 @@ function quickCard(p) {
   const q = p.quick, st = q.state || {};
   const facts = q.v === 2 ? [st.build === 'neu' ? 'Neubau' : 'Bestand', st.art === 'mfh' ? 'Mehrfamilienhaus' : 'Einfamilienhaus', qInsul(st.insul)[1], `Normaußentemp. ${num(q.te, 1)} °C`, `${st.persons} Personen`, (QH.flow.find(f => f[0] === +st.flow) || [0, ''])[1]].join(' · ') : `${num(q.area)} m² · ${num(q.persons)} Personen`;
   return `<div class="mb-5 rounded-[calc(var(--r)-4px)] border border-p/30 p-4" style="background:rgb(var(--p-rgb)/.06)"><div class="flex flex-wrap items-center justify-between gap-2"><div class="text-[14px] font-semibold flex items-center gap-2"><span class="text-p">${ic('fan', 17)}</span>Schnellauslegung vom ${deDate(q.date)}</div><button class="btn-g !h-8 !px-2.5 text-[13px]" data-a="quick-redo" data-id="${p.id}">${ic('refresh', 14)}Neu auslegen</button></div>
-  <div class="text-[13px] text-ink2 mt-1.5">${esc(facts)}</div>${q.v === 2 ? `<div class="text-[12px] text-ink3 mt-1">${ic('file', 13)} Erscheint im PDF als Seite „Technische Auslegung“${q.auto ? ' · automatisch nach dem Angebots-Upload erstellt' : ''}.</div>` : ''}
+  <div class="text-[13px] text-ink2 mt-1.5">${esc(facts)}</div><div class="text-[12px] mt-1.5 font-medium" style="color:#C7792F">Grobe Schätzung – die tatsächliche Heizlast ergibt erst eine vollständige Heizlastberechnung (DIN EN 12831).</div>
   <div class="text-[14px] mt-1.5">Heizlast <b>${num(q.total ?? q.load, 2)} kW</b>${q.prod ? ` · Wärmepumpe <b class="text-p">${esc(q.prod)}</b>` : ` · empfohlen <b class="text-p">${num(q.total, 1)} kW</b>`}${isNum(q.bv) ? ` · Bivalenzpunkt ${num(q.bv, 1)} °C · Deckung ${num(q.deck, 1)} %` : ''} · JAZ ca. <b>${num(q.jaz, 2)}</b></div></div>`;
 }
 
@@ -386,6 +387,7 @@ function qResultHTML(r) {
 function qWith(state, fn) { const keep = QS; QS = { ...QD, reno: [], ...clone(state) }; try { return fn(); } finally { QS = keep; } }
 async function quickAuto(p, o = {}) {
   if (!hasWP(p)) return false;
+  if ((p.docs || []).some(d => d.role === 'tech')) return false;                // eigene Auslegung (z. B. Wolf) hat Vorrang
   const h = p.heating, st = p.quick && p.quick.v === 2 ? clone(p.quick.state) : { ...QD, reno: [] };
   if (!(p.quick && p.quick.v === 2)) {
     if (!(isNum(h.cons) && h.cons > 0)) return false;                           // ohne Verbrauch keine automatische Auslegung
@@ -420,10 +422,10 @@ async function quickAuto(p, o = {}) {
 }
 
 /* ---------- PDF-Seite „Technische Auslegung“ (beide Layouts) ---------- */
-DOC_TEXT.wpdesign = { label: 'Technische Auslegung', badge: 'Technische Auslegung', title: 'Technische *Auslegung* Ihrer Wärmepumpe', lead: 'So passt die Wärmepumpe zu Ihrem Haus – Heizlast, Bivalenzpunkt und erwartete Effizienz auf einen Blick.' };
+DOC_TEXT.wpdesign = { label: 'Erste Einschätzung Wärmepumpe', badge: 'Erste Einschätzung', title: 'Erste *Einschätzung* zur Wärmepumpe', lead: 'Eine grobe Schätzung als Orientierung – noch keine Heizlastberechnung.' };
 { const i = PAGE_KEYS.indexOf('products'); PAGE_KEYS.splice(i >= 0 ? i + 1 : PAGE_KEYS.indexOf('situation') + 1, 0, 'wpdesign'); }
 { const i = SALES_KEYS.indexOf('products'); SALES_KEYS.splice(i >= 0 ? i + 1 : SALES_KEYS.indexOf('sSystem') + 1, 0, 'wpdesign'); }
-const qDocOk = p => hasWP(p) && p.quick && p.quick.v === 2;
+const qDocOk = p => hasWP(p) && p.quick && p.quick.v === 2 && !(p.docs || []).some(d => d.role === 'tech');
 DOC.wpdesign = function (p, R) {
   const sales = CUR_LAYOUT === 'sales', q = p.quick;
   const r = qWith(q.state, () => qResult()), sim = r.sim; if (!sim) return { title: 'Technische Auslegung', body: '' };
@@ -434,34 +436,40 @@ DOC.wpdesign = function (p, R) {
   const tile = (l, v, sub, col) => `<div style="background:var(--tile);border-radius:var(--dr);padding:3mm 3.6mm"><div style="font-size:7.4pt;color:var(--ink3)">${l}</div><div style="font-size:12.5pt;font-weight:700;margin-top:0.6mm;${col ? 'color:' + col : ''}">${v}</div>${sub ? `<div style="font-size:7.2pt;color:var(--ink3);margin-top:0.6mm;line-height:1.35">${sub}</div>` : ''}</div>`;
   const kv = (k, v) => `<div style="display:flex;justify-content:space-between;gap:3mm;padding:1mm 0;border-bottom:0.2mm solid var(--line)"><span style="color:var(--ink3)">${k}</span><b style="text-align:right">${v}</b></div>`;
   let b = sales ? sChap('wpdesign', p, R) : chap(String(txt('wpdesign', 'title')).replace(/\*/g, ''), txt('wpdesign', 'lead'));
-  b += `<div style="background:var(--tile);border-radius:var(--dr);padding:3mm 4mm"><img src="${chart}" style="width:100%;height:auto;display:block">
-      <div style="display:flex;gap:5mm;font-size:7.4pt;color:var(--ink3);margin-top:1mm;padding-left:2mm"><span><b style="color:#E5484D">—</b> max. Leistung Wärmepumpe</span><span><b style="color:#6E9FD6">—</b> min. Leistung (Modulation)</span><span><b>—</b> Heizlast</span><span style="color:#E5484D">● Bivalenzpunkt</span><span style="color:#6E9FD6">● Inverterpunkt</span></div></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2.4mm;margin-top:3mm">
-      ${tile('Heizlast', `${num(r.total, 2)} kW`, `Gebäude ${num(r.load, 2)}<br>WW ${num(r.ww, 2)} · EVU ${num(r.evu, 2)}`)}
-      ${tile('Normaußentemp.', `${num(sim.te, 1)} °C`, st.zip ? `${esc(st.zip)} ${esc(st.city || '')}` : '')}
-      ${tile('Bivalenzpunkt', `${num(sim.bv, 1)} °C`, sim.isEl ? 'darunter hilft der Heizstab' : 'darunter hilft der Zusatzerzeuger', '#E5484D')}
-      ${tile('Inverterpunkt', isNum(sim.inv) ? `${num(sim.inv, 1)} °C` : '–', 'darüber taktet das Gerät', '#6E9FD6')}
-      ${tile('Deckungsanteil', `${num(sim.deck, 1)} %`, 'Anteil Wärmepumpe am Jahresbedarf')}
-      ${tile('Betriebsweise', mode, '')}
+  b += `<div style="border:0.5mm solid #E59A5C;border-radius:var(--dr);padding:4mm 5mm;background:rgba(229,154,92,.10)">
+      <div style="font-size:10.5pt;font-weight:700;color:#C7792F">Grobe Schätzung – keine Heizlastberechnung</div>
+      <div style="font-size:8.6pt;line-height:1.5;margin-top:1.2mm">Diese Werte sind eine überschlägige Einschätzung auf Basis Ihrer Angaben und typischer Kennwerte. Welche Heizlast Ihr Haus tatsächlich hat und welche Wärmepumpe genau passt, ermitteln wir vor der Bestellung mit einer vollständigen Heizlastberechnung nach DIN EN 12831.</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin-top:4mm">
+      ${tile('Heizlast (geschätzt)', `ca. ${num(r.total, 1)} kW`, '')}
+      ${tile('Passende Wärmepumpe', esc(sim.name), `${num(sim.power, 1)} kW Nennleistung`)}
+      ${tile('Bivalenzpunkt', `ca. ${num(sim.bv, 0)} °C`, sim.isEl ? 'darunter hilft der Heizstab' : 'darunter hilft der Zusatzerzeuger')}
+      ${tile('Jahresarbeitszahl', `ca. ${num(sim.jazGB, 1)}`, '')}
     </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:4mm">
-    <div style="background:var(--tile);border-radius:var(--dr);padding:3.4mm 4mm;font-size:8pt"><div style="font-size:9pt;font-weight:700;margin-bottom:1.4mm">Wärmepumpe</div>
-      <div style="font-size:11pt;font-weight:700;color:var(--p)">${esc(sim.name)}</div><div class="small" style="margin-bottom:1.4mm">${num(sim.power, 1)} kW Nennleistung</div>
-      ${kv('JAZ Heizung', num(sim.jazHB, 2))}${kv('JAZ Warmwasser', num(sim.jazWB, 2))}${kv('JAZ gesamt', num(sim.jazGB, 2))}</div>
-    <div style="background:var(--tile);border-radius:var(--dr);padding:3.4mm 4mm;font-size:8pt"><div style="font-size:9pt;font-weight:700;margin-bottom:1.4mm">Energie pro Jahr</div>
-      ${kv('Wärme Gebäude', `${num(sim.qB)} kWh`)}${kv('Wärme Warmwasser', `${num(sim.qW)} kWh`)}${kv('Strom Wärmepumpe', `${num(sim.eWP)} kWh`)}${kv(sim.isEl ? 'Strom Heizstab' : 'Wärme Zusatzerzeuger', `${num(sim.rod)} kWh`)}
-      <div style="margin-top:1.6mm;font-weight:700;color:var(--p)">${num(sim.total - sim.eWP - sim.rod)} kWh Umweltwärme</div></div>
-    <div style="background:var(--tile);border-radius:var(--dr);padding:3.4mm 4mm;font-size:8pt"><div style="font-size:9pt;font-weight:700;margin-bottom:1.4mm">Grundlagen</div>
-      ${kv('Gebäude', `${st.build === 'neu' ? 'Neubau' : 'Bestand'}, ${st.art === 'mfh' ? 'MFH' : 'EFH'}`)}${kv('Dämmstandard', `${qInsul(st.insul)[1]} (${qInsul(st.insul)[2]} °C)`)}
-      ${kv('Heizlast', meth)}${kv('Warmwasser', `${st.persons} Pers., ${st.comfort} l${st.circ ? ', Zirkulation' : ''}${st.solar ? ', Solarthermie' : ''}`)}
-      ${kv('Heizsystem', `${hs}, ${flow} °C`)}${kv('Sperrzeit', `${st.sperr || 0} Std./Tag`)}</div>
-  </div>
-  <div class="small" style="margin-top:3mm;line-height:1.45;color:var(--ink3)">Überschlägige Auslegung nach Kennwerten mit Klimadaten nach EN 14825 und typischer Leistungskurve; Normaußentemperatur aus Lage und Höhe geschätzt. Ersetzt keine raumweise Heizlastberechnung nach DIN EN 12831 und keine Herstellerauslegung. Stand ${deDate(q.date)}.</div>`;
-  return { title: 'Technische Auslegung', body: b };
+    <div class="small" style="margin-top:3mm;line-height:1.5;color:var(--ink3)">Grundlagen: ${st.build === 'neu' ? 'Neubau' : 'Bestand'}, ${qInsul(st.insul)[1]}, Heizlast ${meth}, ${st.persons} Personen, ${hs} ${flow} °C, Normaußentemperatur ca. ${num(sim.te, 1)} °C${st.zip ? ` (${esc(st.zip)} ${esc(st.city || '')})` : ''}. Stand ${deDate(q.date)}.</div>`;
+  return { title: 'Erste Einschätzung Wärmepumpe', body: b };
 };
 {
   const _dpd = docPageDefs;
   docPageDefs = function (p, R) {
-    return _dpd(p, R).map(d => (d.key === 'wpdesign' ? { ...d, applies: qDocOk(p), on: qDocOk(p) && (p.pages.wpdesign !== undefined ? !!p.pages.wpdesign : true), note: qDocOk(p) ? '' : 'Erscheint, sobald eine Wärmepumpen-Auslegung gemacht wurde' } : d));
+    return _dpd(p, R).map(d => (d.key === 'wpdesign' ? { ...d, applies: qDocOk(p), on: qDocOk(p) && p.pages.wpdesign !== false, note: qDocOk(p) ? 'Kurze Einschätzung, klar als grobe Schätzung gekennzeichnet' : (p.docs || []).some(d => d.role === 'tech') ? 'Entfällt – es liegt bereits eine technische Unterlage (z. B. Wolf-Auslegung) bei' : 'Erst nach einer Schnellauslegung verfügbar' } : d));
   };
+}
+
+/* Karte im Schritt „Angebot“ (statt Upload technischer Unterlagen) */
+function quickTechCard(p) {
+  const q = p.quick;
+  if (!q || q.v !== 2) return `<div class="rounded-[calc(var(--r)-4px)] border border-dashed border-line2 p-4 flex flex-wrap items-center gap-3">
+    <div class="w-11 h-11 rounded-xl bg-raised grid place-items-center text-p shrink-0">${ic('fan', 22)}</div>
+    <div class="flex-1 min-w-[200px]"><div class="font-semibold text-[15px]">Schnellauslegung</div><div class="text-[13px] text-ink3">Grobe Schätzung von Heizlast und passender Wärmepumpe. Wird nach dem Angebots-Upload automatisch erstellt, wenn der Verbrauch bekannt ist.</div></div>
+    <button class="btn-s !h-10" data-a="quick-redo" data-id="${p.id}">${ic('fan', 16)}Jetzt auslegen</button></div>`;
+  const st = q.state || {};
+  return `<div class="rounded-[calc(var(--r)-4px)] border border-p/30 p-4" style="background:rgb(var(--p-rgb)/.06)">
+    <div class="flex flex-wrap items-center justify-between gap-2"><div class="font-semibold text-[15px] flex items-center gap-2"><span class="text-p">${ic('fan', 18)}</span>Schnellauslegung vom ${deDate(q.date)}${q.auto ? ' <span class="badge bg-p/10 text-p !py-0 !text-[11px] font-medium">automatisch</span>' : ''}</div><button class="btn-g !h-9 !px-3 text-[13px]" data-a="quick-redo" data-id="${p.id}">${ic('refresh', 14)}Ansehen / ändern</button></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-[13px]">
+      <div><div class="text-ink3">Heizlast</div><b class="text-[16px]">ca. ${num(q.total, 1)} kW</b></div>
+      <div><div class="text-ink3">Wärmepumpe</div><b class="text-[16px]">${esc(q.prod || '–')}</b></div>
+      <div><div class="text-ink3">Bivalenzpunkt</div><b class="text-[16px]">${isNum(q.bv) ? 'ca. ' + num(q.bv, 0) + ' °C' : '–'}</b></div>
+      <div><div class="text-ink3">JAZ</div><b class="text-[16px]">ca. ${num(q.jaz, 1)}</b></div>
+    </div>
+    <div class="text-[12px] mt-3 font-medium" style="color:#C7792F">Grobe Schätzung – die tatsächliche Heizlast ergibt erst eine vollständige Heizlastberechnung (DIN EN 12831). Im PDF als kurze Seite „Erste Einschätzung Wärmepumpe“ mit diesem Hinweis.</div></div>`;
 }

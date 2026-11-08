@@ -13,6 +13,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.65', date: '2026-11-08', items: [
+    ['quickuse', 'Auslegung bei den Unterlagen', 'Wurde mit unserer Schnellauslegung ausgelegt, steht sie im Schritt „Angebot“ anstelle des Upload-Felds – klar als grobe Schätzung gekennzeichnet. Liegt schon eine eigene Auslegung (z. B. von Wolf) als Unterlage bei, bleibt diese maßgeblich.'],
+    ['quick', 'Heizlast berechnen gut sichtbar', 'Der Bereich „Heizlast berechnen“ ist jetzt farbig hervorgehoben und öffnet sich automatisch, solange noch keine Heizlast eingetragen ist.'],
+    ['prodpage', 'Kurz und klar im PDF', 'Im PDF steht die Auslegung kurz als „Erste Einschätzung zur Wärmepumpe“ – mit deutlichem Hinweis: grobe Schätzung, keine Heizlastberechnung. Abschaltbar in der Seitenauswahl.']
+  ] },
   { version: '1.64', date: '2026-11-08', items: [
     ['quick', 'Heizsystem wie bei Wolf', 'Betriebsweise (monovalent, monoenergetisch, bivalent …), Solarthermie, EVU-Sperrzeit und Heizkreise (Heizkörper / Fußbodenheizung / beides) mit Vorlauftemperatur.'],
     ['quickuse', 'Passende Wärmepumpe', 'Die App wählt aus Ihren Produkten die passende Wärmepumpe: Diagramm mit Bivalenz- und Inverterpunkt, Deckungsanteil, JAZ, Wärme- und Strombedarf, Umweltwärme – abgeglichen auf die Wolf-Auslegung.'],
