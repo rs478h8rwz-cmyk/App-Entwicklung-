@@ -7,6 +7,13 @@ const WX_LABEL = Object.fromEntries(WX_KINDS);
 const WX = { live: null, busy: false, err: '' };
 try { WX.live = JSON.parse(localStorage.getItem('wxLive') || 'null'); } catch (e) {}
 
+/* Ostersonntag (Gaußsche Osterformel, gregorianisch) */
+function easterSunday(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(y, month - 1, day);
+}
 const seasonNow = () => { const m = new Date().getMonth() + 1; return m <= 2 || m === 12 ? 'winter' : m <= 5 ? 'spring' : m <= 8 ? 'summer' : 'autumn'; };
 const wxLiveOn = () => PERSONAL.wxMode !== 'preset';
 function wxState() {
@@ -14,8 +21,10 @@ function wxState() {
   const kind = live ? (WX.live && WX.live.kind) || 'sun' : PERSONAL.wxKind || 'sun';
   const season = live || !PERSONAL.wxSeason || PERSONAL.wxSeason === 'auto' ? seasonNow() : PERSONAL.wxSeason;
   const d = new Date(), md = (d.getMonth() + 1) * 100 + d.getDate();
-  const xmas = PERSONAL.xmas === 'on' || (PERSONAL.xmas !== 'off' && (md >= 1201 || md <= 106));
-  return { kind, season, xmas, snow: kind === 'snow', dim: ['cloud', 'rain', 'snow', 'storm', 'fog'].includes(kind) };
+  const fest = (k, auto) => PERSONAL[k] === 'on' || (PERSONAL[k] !== 'off' && auto);
+  const es = easterSunday(d.getFullYear()), dd = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - es) / 864e5);
+  const xmas = fest('xmas', md >= 1201 || md <= 106), easter = fest('easter', dd >= -14 && dd <= 1), halloween = fest('halloween', md >= 1020 && md <= 1101);
+  return { kind, season, xmas, easter, halloween, snow: kind === 'snow', dim: ['cloud', 'rain', 'snow', 'storm', 'fog'].includes(kind) };
 }
 /* WMO-Wettercode → Wetterart */
 function wxFromCode(c, wind) {
@@ -135,9 +144,15 @@ SET.startseite = () => {
   const presetBox = `<div class="flex flex-wrap items-center gap-2"><span class="text-[13px] text-ink3 mr-1 w-full sm:w-auto">Wetter</span>${WX_KINDS.map(([k, l]) => chip('wx-kind', k, l, (PERSONAL.wxKind || 'sun') === k)).join('')}</div>
     <div class="flex flex-wrap items-center gap-2 mt-3"><span class="text-[13px] text-ink3 mr-1 w-full sm:w-auto">Jahreszeit</span>${WX_SEASONS.map(([k, l]) => chip('wx-season', k, l, (PERSONAL.wxSeason || 'auto') === k)).join('')}</div>`;
   const prev = `<div class="hero-anim rounded-[calc(var(--r)-4px)] overflow-hidden border border-line aspect-[16/9] max-w-xl">${houseSVG({ anim: true, car: true }).replace(/ data-sky="1"/, '')}</div>`;
-  const xm = PERSONAL.xmas || 'auto';
-  const xmasCard = sCard('gift', 'Weihnachtsschmuck', 'Lichterkette, Kranz an der Tür und geschmückter Tannenbaum – automatisch vom 1. Dezember bis 6. Januar.',
-    `<div class="flex flex-wrap items-center gap-2">${[['auto', 'Automatisch (1.12.–6.1.)'], ['on', 'Immer an (zum Testen)'], ['off', 'Aus']].map(([k, l]) => chip('wx-xmas', k, l, xm === k)).join('')}</div><p class="hint">Gerade ${wxState().xmas ? '<b>geschmückt</b>' : 'nicht geschmückt'}.</p>`);
+  const ws = wxState(), es = (() => { const y = new Date().getFullYear(), e = easterSunday(y); return Date.now() > +e + 2 * 864e5 ? easterSunday(y + 1) : e; })(), esTxt = d => `${d.getDate()}.${d.getMonth() + 1}.`;
+  const FESTS = [
+    ['xmas', 'Weihnachten', 'Lichterkette, Kranz an der Tür, Tannenbaum mit Stern', '1.12.–6.1.'],
+    ['easter', 'Ostern', 'Bunte Eier im Gras und am Baum, hoppelnder Osterhase', `${esTxt(new Date(es - 14 * 864e5))}–${esTxt(new Date(+es + 864e5))}`],
+    ['halloween', 'Halloween', 'Leuchtende Kürbisse an der Tür, Fledermäuse und ein kleines Gespenst', '20.10.–1.11.']
+  ];
+  const xmasCard = sCard('gift', 'Feiertags-Schmuck', 'Das Haus schmückt sich automatisch zur passenden Zeit. Zum Testen einzeln einschalten.',
+    FESTS.map(([k, t, d, range], i) => { const cur = PERSONAL[k] || 'auto'; return `<div class="${i ? 'mt-4 pt-4 border-t border-line' : ''}"><div class="flex flex-wrap items-baseline gap-x-2"><span class="text-[14px] font-semibold">${t}</span><span class="text-[12px] text-ink3">${d}</span>${ws[k] ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">gerade aktiv</span>' : ''}</div>
+      <div class="flex flex-wrap items-center gap-2 mt-2">${[['auto', `Automatisch (${range})`], ['on', 'Immer an'], ['off', 'Aus']].map(([v, l]) => `<button class="chip ${cur === v ? '!border-p !text-ink' : ''}" data-a="wx-fest" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</div></div>`; }).join(''));
   return `<div class="card p-5 sm:p-6">${cardHead('home', 'Vorschau', 'So sieht das Haus auf der Startseite gerade aus – nur in der App, nicht im PDF.')}${prev}</div>` + sCard('sun', 'Wetter und Jahreszeit', 'Echtes Wetter vor Ort oder selbst gewählt.',
     toggleRow('Echte Wetterdaten', '', live ? 'An: aktuelles Wetter vor Ort wird automatisch geladen.' : 'Aus: Sie wählen Wetter und Jahreszeit selbst.', { action: 'wx-live', on: live }) + `<div class="mt-2">${live ? liveBox : presetBox}</div>`) + xmasCard;
 };
@@ -148,7 +163,7 @@ document.addEventListener('click', e => {
   if (act === 'wx-live') { PERSONAL.wxMode = wxLiveOn() ? 'preset' : 'live'; savePersonal(); render(); if (wxLiveOn()) wxFetch(true); }
   else if (act === 'wx-kind') { PERSONAL.wxKind = v; savePersonal(); render(); }
   else if (act === 'wx-season') { PERSONAL.wxSeason = v; savePersonal(); render(); }
-  else if (act === 'wx-xmas') { PERSONAL.xmas = v; savePersonal(); render(); }
+  else if (act === 'wx-fest') { PERSONAL[a.dataset.k] = v; savePersonal(); render(); }
   else if (act === 'wx-refresh') { wxFetch(true); render(); }
   else if (act === 'wx-src') {
     if (v === 'zip') { PERSONAL.wxGeo = false; savePersonal(); wxFetch(true); render(); return; }
@@ -189,4 +204,43 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 }
 @keyframes xmBlink{from{opacity:1}to{opacity:.3}}
 @keyframes xmStar{from{transform:scale(1);opacity:1}to{transform:scale(1.25);opacity:.75}}
+</style>`);
+
+/* Ostern: bunte Eier im Gras und am Baum, hoppelnder Hase */
+function easterDeco(style, dawn) {
+  const ec = ['#FF7AA8', '#7FD3FF', '#FFD34D', '#8CE07A', '#C9A7F0', '#FF9F5A'];
+  const egg = (x, y, i, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})"><ellipse rx="4.2" ry="5.6" fill="${ec[i % ec.length]}"/><path d="M-4 0 q2 -2 4 0 t4 0" fill="none" stroke="#fff" stroke-width="1.1" opacity=".9"/><circle cx="0" cy="-3" r=".9" fill="#fff" opacity=".9"/></g>`;
+  const grass = [[236, 340], [256, 346], [342, 342], [430, 346], [462, 344], [496, 349], [210, 349]].map(([x, y], i) => egg(x, y, i, 1.45)).join('');
+  const onTree = [[532, 330], [546, 326], [538, 342], [550, 339]].map(([x, y], i) => egg(x, y, i + 2, 0.95)).join('');
+  const fur = dawn ? '#B9A48C' : '#E9DCC8', furD = dawn ? '#9C8870' : '#D2C1A8';
+  const bunny = `<g class="ea-bunny"><g transform="translate(572 338) scale(1.6)"><ellipse cx="0" cy="-2" rx="10" ry="8" fill="${fur}"/><circle cx="8" cy="-11" r="5.6" fill="${fur}"/>
+<ellipse cx="6" cy="-22" rx="2.2" ry="7" fill="${fur}" transform="rotate(-12 6 -22)"/><ellipse cx="11" cy="-22" rx="2.2" ry="7" fill="${fur}" transform="rotate(10 11 -22)"/>
+<ellipse cx="6" cy="-22" rx="1" ry="4.6" fill="#F4B8C8" transform="rotate(-12 6 -22)"/><ellipse cx="11" cy="-22" rx="1" ry="4.6" fill="#F4B8C8" transform="rotate(10 11 -22)"/>
+<circle cx="10.5" cy="-12" r="1" fill="#2B2B2B"/><circle cx="13.2" cy="-10" r=".9" fill="#F4A0B4"/><circle cx="-10" cy="-4" r="3.2" fill="#fff"/><ellipse cx="4" cy="5" rx="4" ry="2" fill="${furD}"/></g></g>`;
+  return `<g class="ea">${grass}${onTree}${bunny}</g>`;
+}
+/* Halloween: Kürbisse mit flackerndem Licht, Fledermäuse, kleines Gespenst */
+function halloweenDeco(style, dawn) {
+  const pump = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><ellipse cx="-5" cy="0" rx="6" ry="7.5" fill="#E07B1F"/><ellipse cx="5" cy="0" rx="6" ry="7.5" fill="#E07B1F"/><ellipse cx="0" cy="0" rx="6.5" ry="8" fill="#F08A24"/>
+<rect x="-1.2" y="-11" width="2.4" height="4" rx="1" fill="#4E6B2A"/><g class="hw-glow" fill="#FFE27A"><polygon points="-6,-3 -3,-3 -4.5,-0.5"/><polygon points="3,-3 6,-3 4.5,-0.5"/><path d="M-6 2 L-4 4 L-2 2.6 L0 4.4 L2 2.6 L4 4 L6 2 L4 5.6 L-4 5.6Z"/></g></g>`;
+  const door = style === 'modern' ? [364, 400] : [276, 324];
+  const pumps = pump(door[0] - 12, 326, 1.15) + pump(door[1] + 12, 327, 1) + pump(door[1] + 26, 330, 0.75) + pump(436, 333, 0.9);
+  const bat = `<path d="M0 0 C-4 -5 -9 -5 -13 -1 C-10 -1 -9 1 -8 3 C-6 1 -3 1 -2 3 L0 1 L2 3 C3 1 6 1 8 3 C9 1 10 -1 13 -1 C9 -5 4 -5 0 0Z" fill="${dawn ? '#05070C' : '#2B2233'}"/>`;
+  const bats = `<g class="hw-bats">${[[0, 60, 0], [-40, 95, -4], [-90, 40, -8]].map(([x, y, d]) => `<g style="animation-delay:${d}s"><g transform="translate(${x} ${y}) scale(1.8)"><g class="hw-flap">${bat}</g></g></g>`).join('')}</g>`;
+  const ghost = `<g class="hw-ghost"><g transform="translate(112 218) scale(1.5)"><path d="M-10 10 L-10 -4 C-10 -14 10 -14 10 -4 L10 10 L6 7 L3 10 L0 7 L-3 10 L-6 7Z" fill="#F4F6FA" opacity=".92"/><circle cx="-3.5" cy="-3" r="1.6" fill="#1B2230"/><circle cx="3.5" cy="-3" r="1.6" fill="#1B2230"/><ellipse cx="0" cy="2" rx="1.6" ry="2" fill="#1B2230"/></g></g>`;
+  return `<g class="hw">${bats}${ghost}${pumps}</g>`;
+}
+document.head.insertAdjacentHTML('beforeend', `<style>
+@media (prefers-reduced-motion: no-preference) {
+  .hero-anim .ea-bunny{animation:eaHop 2.2s ease-in-out infinite}
+  .hero-anim .hw-glow{animation:hwFlicker 1.3s ease-in-out infinite alternate}
+  .hero-anim .hw-bats>g{animation:hwBat 13s linear infinite}
+  .hero-anim .hw-flap{transform-box:fill-box;transform-origin:center;animation:hwFlap .28s ease-in-out infinite alternate}
+  .hero-anim .hw-ghost{animation:hwFloat 2.8s ease-in-out infinite alternate}
+}
+@keyframes eaHop{0%,40%,100%{transform:translate(0,0)}15%{transform:translate(-8px,-14px)}30%{transform:translate(-14px,0)}55%{transform:translate(-14px,0)}70%{transform:translate(-6px,-12px)}85%{transform:translate(0,0)}}
+@keyframes hwFlicker{0%{opacity:1}40%{opacity:.7}60%{opacity:.95}100%{opacity:.6}}
+@keyframes hwBat{from{transform:translate(-60px,0)}50%{transform:translate(330px,-25px)}to{transform:translate(720px,10px)}}
+@keyframes hwFlap{from{transform:scaleY(1)}to{transform:scaleY(.35)}}
+@keyframes hwFloat{from{transform:translateY(0)}to{transform:translateY(-10px)}}
 </style>`);

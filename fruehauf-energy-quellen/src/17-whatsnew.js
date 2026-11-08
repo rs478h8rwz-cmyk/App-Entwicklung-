@@ -13,6 +13,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.58', date: '2026-11-08', items: [
+    ['easter', 'Ostern', 'Rund um Ostern liegen bunte Eier im Gras und hängen am Baum, und ein Osterhase hoppelt über die Wiese.'],
+    ['halloween', 'Halloween', 'Vom 20. Oktober bis 1. November leuchten Kürbisse an der Tür, Fledermäuse flattern vorbei und ein kleines Gespenst schwebt.'],
+    ['hometab', 'Alles einstellbar', 'Unter Einstellungen → Startseite & Wetter → Feiertags-Schmuck: Weihnachten, Ostern und Halloween jeweils Automatisch, Immer an (zum Testen) oder Aus.']
+  ] },
   { version: '1.57', date: '2026-11-08', items: [
     ['xmas', 'Weihnachtsschmuck', 'Vom 1. Dezember bis 6. Januar ist das Haus festlich geschmückt: Lichterkette, Kranz an der Tür und Tannenbaum mit Stern. Zum Testen lässt er sich jederzeit einschalten.'],
     ['seasons', 'Jahreszeiten zum Sehen', 'Im Herbst fliegen Blätter, im Frühling Blüten und Blumen auf der Wiese, im Sommer Vögel, im Winter Raureif und Flocken. Gewitter mit Blitz.'],
@@ -97,6 +102,9 @@ const wnHouse = (opt, set) => {
   return `<div style="width:100%;height:100%" class="hero-anim">${h}</div>`;
 };
 WN_IMG.xmas = () => wnHouse({ dawn: true }, { wxKind: 'snow', wxSeason: 'winter', xmas: 'on' });
+WN_BG.easter = '#A9D4F5'; WN_BG.halloween = '#060B16';
+WN_IMG.easter = () => wnHouse({ dawn: false }, { wxKind: 'sun', wxSeason: 'spring', xmas: 'off', easter: 'on', halloween: 'off' });
+WN_IMG.halloween = () => wnHouse({ dawn: true }, { wxKind: 'cloud', wxSeason: 'autumn', xmas: 'off', easter: 'off', halloween: 'on' });
 WN_IMG.seasons = () => wnHouse({ dawn: false }, { wxKind: 'wind', wxSeason: 'autumn', xmas: 'off' });
 WN_IMG.hometab = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="8" y="10" width="38" height="60" rx="4" fill="#1C2530"/>${['Ansicht', 'Startseite', 'Profil', 'Daten'].map((t, i) => `<rect x="11" y="${14 + i * 13}" width="32" height="10" rx="3" fill="${i === 1 ? '#3FA98C' : '#141B24'}"/><text x="14" y="${20.6 + i * 13}" font-size="4.6" fill="#fff">${t}</text>`).join('')}<rect x="52" y="10" width="60" height="34" rx="4" fill="#2A3B55"/><polygon points="72,26 82,18 92,26" fill="#C8553D"/><rect x="74" y="26" width="16" height="12" fill="#EEF3F7"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${73 + i * 4}" cy="27" r="1" fill="${['#FF4D4D', '#FFD34D', '#4DD2FF', '#7CFF6B', '#FF4D4D'][i]}"/>`).join('')}<rect x="52" y="50" width="28" height="8" rx="4" fill="#1C2530" stroke="#3FA98C"/><text x="56" y="55.6" font-size="4.4" fill="#fff">Schnee</text><rect x="84" y="50" width="28" height="8" rx="4" fill="#1C2530"/><text x="88" y="55.6" font-size="4.4" fill="#fff">Advent</text></svg>`; WN_BG.wxset = '#A9D4F5';
 WN_IMG.wxsnow = () => `<div style="width:100%;height:100%" class="hero-anim">${(() => { const k = PERSONAL.wxKind, m = PERSONAL.wxMode; PERSONAL.wxKind = 'snow'; PERSONAL.wxMode = 'preset'; const h = houseSVG({ dawn: true, anim: true, car: true }).replace(' data-sky="1"', ''); PERSONAL.wxKind = k; PERSONAL.wxMode = m; return h; })()}</div>`;

@@ -86,6 +86,8 @@ ${carport}${tower}${hpUnit}${trees}`;
   }
   if (wx && wx.snow) { const sn = dawn ? '#C6D0DC' : '#F4F8FB'; houseBody += style === 'modern' ? `<rect x="190" y="182" width="252" height="7" rx="3.5" fill="${sn}"/><rect x="146" y="225" width="64" height="6" rx="3" fill="${sn}"/>` : `<polygon points="${top.l - 2},${top.y - 3} ${top.r + 2},${top.y - 3} ${top.r + 6},${top.y + 6} ${top.l - 6},${top.y + 6}" fill="${sn}"/><rect x="${bot.l - 12}" y="${bot.y - 1}" width="${bot.r - bot.l + 24}" height="5" rx="2.5" fill="${sn}"/>`; }
   if (wx && wx.xmas && typeof xmasDeco === 'function') houseBody += xmasDeco(style, top, bot, dawn);
+  if (wx && wx.easter && typeof easterDeco === 'function') houseBody += easterDeco(style, dawn);
+  if (wx && wx.halloween && typeof halloweenDeco === 'function') houseBody += halloweenDeco(style, dawn);
   if (o._bodyOnly) return houseBody;
   // Sonne: tagsüber hoch oben, in der Dämmerung knapp über dem Horizont
   const sx = dawn ? (wide ? 700 : 120) : 480 + dx, sy = dawn ? 268 : 78;
