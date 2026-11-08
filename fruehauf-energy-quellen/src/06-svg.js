@@ -12,6 +12,8 @@ function houseSVG(o = {}) {
     ? { sky1: '#060B16', sky2: '#13213D', sky3: '#3A3550', hor: '#E59A5C', hill1a: '#132A22', hill1b: '#0E2019', hill2a: '#0F241B', hill2b: '#0A1913', wall1: '#2C3644', wall2: '#222B37', wallS: '#3A4656', roof1: '#4A2219', roof2: '#5C2C21', eave: '#3A1A13', win: '#FFC870', winS: '#FFE2A8', mod1: modColors(true).m1, mod2: modColors(true).m2, modS: modColors(true).s, hp: '#3B4756', hpS: '#566577', fan: '#2C3644', tree: '#163A26', cloud: '#E9A27A' }
     : { sky1: '#A9D4F5', sky2: '#CFE7FA', sky3: '#E8F4FD', hor: '#F4FAFF', hill1a: '#A9DCA0', hill1b: '#86C98A', hill2a: '#8FD08F', hill2b: '#6BB979', wall1: '#FFFFFF', wall2: '#EEF3F7', wallS: '#DCE6EE', roof1: '#C8553D', roof2: '#D9694F', eave: '#A9432E', win: '#CFE6F8', winS: '#ffffff', mod1: modColors(false).m1, mod2: modColors(false).m2, modS: modColors(false).s, hp: '#F7FAFC', hpS: '#C9D6E1', fan: '#E3EBF2', tree: '#5FAE6E', cloud: '#ffffff' };
   let mods = '';
+  const wx = o.anim && typeof wxState === 'function' ? wxState() : null;
+  if (wx && WX_TREE[wx.season]) K.tree = WX_TREE[wx.season][dawn ? 1 : 0];
   for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) {
     const pad = 0.035, t0 = 0.1 + r * 0.27 + 0.012, t1 = t0 + 0.255;
     const y0 = lerp(top.y, bot.y, t0), y1 = lerp(top.y, bot.y, t1);
@@ -52,7 +54,7 @@ ${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill=
 ${[0, 1, 2].map(i => `<rect x="0" y="${15 + i * 17}" width="30" height="16" rx="3" fill="${dawn ? '#33404F' : '#FFFFFF'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="4" y="${21 + i * 17}" width="22" height="2" rx="1" fill="${K.hpS}"/>`).join('')}
 <rect x="2" y="66" width="26" height="4" rx="1.5" fill="${K.hpS}"/></g>
 `;
-  const trees = `<g fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}<circle cx="540" cy="336" r="13"/></g>`;
+  const trees = `<g class="ha-trees" fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}<circle cx="540" cy="336" r="13"/></g>`;
   let houseBody;
   if (style === 'modern') {
     const roofC = dawn ? '#1A2029' : '#2B3440', wood = dawn ? '#6E4A2E' : '#C98B55', woodL = dawn ? '#5A3C25' : '#B37647', wing = dawn ? '#1E2630' : '#3D4752';
@@ -82,6 +84,7 @@ ${batOn ? '' : `<rect x="190" y="248" width="52" height="40" rx="4" fill="${winF
 <rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${lit ? '#FFC870' : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${lit ? '#FFC870' : '#fff'}" opacity="${lit ? 0.6 : 0.18}"/>
 ${carport}${tower}${hpUnit}${trees}`;
   }
+  if (wx && wx.snow) { const sn = dawn ? '#C6D0DC' : '#F4F8FB'; houseBody += style === 'modern' ? `<rect x="190" y="182" width="252" height="7" rx="3.5" fill="${sn}"/><rect x="146" y="225" width="64" height="6" rx="3" fill="${sn}"/>` : `<polygon points="${top.l - 2},${top.y - 3} ${top.r + 2},${top.y - 3} ${top.r + 6},${top.y + 6} ${top.l - 6},${top.y + 6}" fill="${sn}"/><rect x="${bot.l - 12}" y="${bot.y - 1}" width="${bot.r - bot.l + 24}" height="5" rx="2.5" fill="${sn}"/>`; }
   if (o._bodyOnly) return houseBody;
   // Sonne: tagsüber hoch oben, in der Dämmerung knapp über dem Horizont
   const sx = dawn ? (wide ? 700 : 120) : 480 + dx, sy = dawn ? 268 : 78;
@@ -91,7 +94,7 @@ ${carport}${tower}${hpUnit}${trees}`;
   if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle class="ha-star" style="animation-delay:${(rnd() * 4).toFixed(2)}s" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
   const hills = `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="url(#${id('h1')})"/>${dawn ? `<path d="M0 300 C120 255 230 265 330 290 S520 262 600 278" fill="none" stroke="${s}" stroke-opacity=".35" stroke-width="1.2"/>` : ''}<path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="url(#${id('h2')})"/></g>`;
   const vb = o.cover ? `0 14 ${W} 371.4` : `0 0 ${W} 400`, sz = o.cover ? `width="${W === 600 ? 1300 : 2600}" height="805"` : 'width="100%" height="100%"';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice"${o.anim ? ` data-sky="1" data-dawn="${dawn ? 1 : 0}" data-sx="${sx}" data-sy="${sy}" data-mx="${wide ? (dawn ? 1010 : 760) : (dawn ? 470 : 150)}"` : ''}>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice"${o.anim && wx ? ` class="wx-${wx.kind}${wx.dim ? ' wx-dim' : ''}"` : ''}${o.anim ? ` data-sky="1" data-dawn="${dawn ? 1 : 0}" data-sx="${sx}" data-sy="${sy}" data-mx="${wide ? (dawn ? 1010 : 760) : (dawn ? 470 : 150)}"` : ''}>
 <defs>
 <linearGradient id="${id('sky')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.sky1}"/><stop offset=".45" stop-color="${K.sky2}"/><stop offset=".68" stop-color="${K.sky3}"/><stop offset=".78" stop-color="${K.hor}"/></linearGradient>
 <radialGradient id="${id('glow')}" cx="${(sx / W).toFixed(3)}" cy="${(sy / 400).toFixed(3)}" r="${dawn ? 0.55 : 0.5}" gradientTransform="translate(${(sx / W).toFixed(3)} ${(sy / 400).toFixed(3)}) scale(${(400 / W).toFixed(3)} 1) translate(${(-sx / W).toFixed(3)} ${(-sy / 400).toFixed(3)})"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
@@ -108,11 +111,11 @@ ${o.anim ? `<g class="ha-moon" opacity="0"><circle r="46" fill="#F4F1E6" opacity
 <g class="ha-sunpos">${o.anim ? `<circle cx="${sx}" cy="${sy}" r="${dawn ? 220 : 200}" fill="url(#${id('glowc')})"/>` : `<rect width="${W}" height="400" fill="url(#${id('glow')})"/>`}
 <g class="ha-sun"><g class="ha-rays">${rays}</g><circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}</g></g>
 <g class="ha-clouds" fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
-${hills}
+${hills}${wx && wx.snow ? `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="${dawn ? '#B9C4D2' : '#F2F6FA'}" opacity="${dawn ? 0.5 : 0.9}"/><path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="${dawn ? '#C9D3DE' : '#FFFFFF'}" opacity="${dawn ? 0.55 : 0.95}"/></g>` : ''}
 <g transform="translate(${dx} 0)"><g class="ha-house">
 ${houseBody}${o.anim && !o._bodyOnly ? `<g class="ha-lit" opacity="0">${houseSVG({ ...o, light: 'on', _bodyOnly: true })}</g>` : ''}</g></g>
-${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
-</svg>`;
+${wide ? `<g class="ha-trees" fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
+${wx && !o._bodyOnly ? wxLayer(W, dawn, wx) : ''}</svg>`;
 }
 const svgDataUri = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 

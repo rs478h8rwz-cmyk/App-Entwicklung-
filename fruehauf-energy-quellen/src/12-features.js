@@ -299,7 +299,7 @@ const TUTORIAL = [
   ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite. Oben in der Kundenübersicht sehen Sie Ihre Abschlüsse und die Abschlussquote. Erledigte Kunden archivieren Sie – im Filter „Archiv“ lassen sie sich jederzeit wiederherstellen. Sagt der Kunde später zu, tippen Sie auf der Kundenkarte auf „Auftrag gewonnen?“ – Sie landen direkt bei der Unterschrift.'],
   ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
-  ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
+  ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel, Wetter auf der Startseite) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
 ];
 function showTutorial(i = 0) {
   const [icon, title, text] = TUTORIAL[i], last = i === TUTORIAL.length - 1;

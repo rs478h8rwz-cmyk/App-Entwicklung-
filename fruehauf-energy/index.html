@@ -1492,6 +1492,8 @@ function houseSVG(o = {}) {
     ? { sky1: '#060B16', sky2: '#13213D', sky3: '#3A3550', hor: '#E59A5C', hill1a: '#132A22', hill1b: '#0E2019', hill2a: '#0F241B', hill2b: '#0A1913', wall1: '#2C3644', wall2: '#222B37', wallS: '#3A4656', roof1: '#4A2219', roof2: '#5C2C21', eave: '#3A1A13', win: '#FFC870', winS: '#FFE2A8', mod1: modColors(true).m1, mod2: modColors(true).m2, modS: modColors(true).s, hp: '#3B4756', hpS: '#566577', fan: '#2C3644', tree: '#163A26', cloud: '#E9A27A' }
     : { sky1: '#A9D4F5', sky2: '#CFE7FA', sky3: '#E8F4FD', hor: '#F4FAFF', hill1a: '#A9DCA0', hill1b: '#86C98A', hill2a: '#8FD08F', hill2b: '#6BB979', wall1: '#FFFFFF', wall2: '#EEF3F7', wallS: '#DCE6EE', roof1: '#C8553D', roof2: '#D9694F', eave: '#A9432E', win: '#CFE6F8', winS: '#ffffff', mod1: modColors(false).m1, mod2: modColors(false).m2, modS: modColors(false).s, hp: '#F7FAFC', hpS: '#C9D6E1', fan: '#E3EBF2', tree: '#5FAE6E', cloud: '#ffffff' };
   let mods = '';
+  const wx = o.anim && typeof wxState === 'function' ? wxState() : null;
+  if (wx && WX_TREE[wx.season]) K.tree = WX_TREE[wx.season][dawn ? 1 : 0];
   for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) {
     const pad = 0.035, t0 = 0.1 + r * 0.27 + 0.012, t1 = t0 + 0.255;
     const y0 = lerp(top.y, bot.y, t0), y1 = lerp(top.y, bot.y, t1);
@@ -1532,7 +1534,7 @@ ${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill=
 ${[0, 1, 2].map(i => `<rect x="0" y="${15 + i * 17}" width="30" height="16" rx="3" fill="${dawn ? '#33404F' : '#FFFFFF'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="4" y="${21 + i * 17}" width="22" height="2" rx="1" fill="${K.hpS}"/>`).join('')}
 <rect x="2" y="66" width="26" height="4" rx="1.5" fill="${K.hpS}"/></g>
 `;
-  const trees = `<g fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}<circle cx="540" cy="336" r="13"/></g>`;
+  const trees = `<g class="ha-trees" fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}<circle cx="540" cy="336" r="13"/></g>`;
   let houseBody;
   if (style === 'modern') {
     const roofC = dawn ? '#1A2029' : '#2B3440', wood = dawn ? '#6E4A2E' : '#C98B55', woodL = dawn ? '#5A3C25' : '#B37647', wing = dawn ? '#1E2630' : '#3D4752';
@@ -1562,6 +1564,7 @@ ${batOn ? '' : `<rect x="190" y="248" width="52" height="40" rx="4" fill="${winF
 <rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${lit ? '#FFC870' : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${lit ? '#FFC870' : '#fff'}" opacity="${lit ? 0.6 : 0.18}"/>
 ${carport}${tower}${hpUnit}${trees}`;
   }
+  if (wx && wx.snow) { const sn = dawn ? '#C6D0DC' : '#F4F8FB'; houseBody += style === 'modern' ? `<rect x="190" y="182" width="252" height="7" rx="3.5" fill="${sn}"/><rect x="146" y="225" width="64" height="6" rx="3" fill="${sn}"/>` : `<polygon points="${top.l - 2},${top.y - 3} ${top.r + 2},${top.y - 3} ${top.r + 6},${top.y + 6} ${top.l - 6},${top.y + 6}" fill="${sn}"/><rect x="${bot.l - 12}" y="${bot.y - 1}" width="${bot.r - bot.l + 24}" height="5" rx="2.5" fill="${sn}"/>`; }
   if (o._bodyOnly) return houseBody;
   // Sonne: tagsüber hoch oben, in der Dämmerung knapp über dem Horizont
   const sx = dawn ? (wide ? 700 : 120) : 480 + dx, sy = dawn ? 268 : 78;
@@ -1571,7 +1574,7 @@ ${carport}${tower}${hpUnit}${trees}`;
   if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle class="ha-star" style="animation-delay:${(rnd() * 4).toFixed(2)}s" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
   const hills = `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="url(#${id('h1')})"/>${dawn ? `<path d="M0 300 C120 255 230 265 330 290 S520 262 600 278" fill="none" stroke="${s}" stroke-opacity=".35" stroke-width="1.2"/>` : ''}<path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="url(#${id('h2')})"/></g>`;
   const vb = o.cover ? `0 14 ${W} 371.4` : `0 0 ${W} 400`, sz = o.cover ? `width="${W === 600 ? 1300 : 2600}" height="805"` : 'width="100%" height="100%"';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice"${o.anim ? ` data-sky="1" data-dawn="${dawn ? 1 : 0}" data-sx="${sx}" data-sy="${sy}" data-mx="${wide ? (dawn ? 1010 : 760) : (dawn ? 470 : 150)}"` : ''}>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice"${o.anim && wx ? ` class="wx-${wx.kind}${wx.dim ? ' wx-dim' : ''}"` : ''}${o.anim ? ` data-sky="1" data-dawn="${dawn ? 1 : 0}" data-sx="${sx}" data-sy="${sy}" data-mx="${wide ? (dawn ? 1010 : 760) : (dawn ? 470 : 150)}"` : ''}>
 <defs>
 <linearGradient id="${id('sky')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.sky1}"/><stop offset=".45" stop-color="${K.sky2}"/><stop offset=".68" stop-color="${K.sky3}"/><stop offset=".78" stop-color="${K.hor}"/></linearGradient>
 <radialGradient id="${id('glow')}" cx="${(sx / W).toFixed(3)}" cy="${(sy / 400).toFixed(3)}" r="${dawn ? 0.55 : 0.5}" gradientTransform="translate(${(sx / W).toFixed(3)} ${(sy / 400).toFixed(3)}) scale(${(400 / W).toFixed(3)} 1) translate(${(-sx / W).toFixed(3)} ${(-sy / 400).toFixed(3)})"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
@@ -1588,11 +1591,11 @@ ${o.anim ? `<g class="ha-moon" opacity="0"><circle r="46" fill="#F4F1E6" opacity
 <g class="ha-sunpos">${o.anim ? `<circle cx="${sx}" cy="${sy}" r="${dawn ? 220 : 200}" fill="url(#${id('glowc')})"/>` : `<rect width="${W}" height="400" fill="url(#${id('glow')})"/>`}
 <g class="ha-sun"><g class="ha-rays">${rays}</g><circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}</g></g>
 <g class="ha-clouds" fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
-${hills}
+${hills}${wx && wx.snow ? `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="${dawn ? '#B9C4D2' : '#F2F6FA'}" opacity="${dawn ? 0.5 : 0.9}"/><path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="${dawn ? '#C9D3DE' : '#FFFFFF'}" opacity="${dawn ? 0.55 : 0.95}"/></g>` : ''}
 <g transform="translate(${dx} 0)"><g class="ha-house">
 ${houseBody}${o.anim && !o._bodyOnly ? `<g class="ha-lit" opacity="0">${houseSVG({ ...o, light: 'on', _bodyOnly: true })}</g>` : ''}</g></g>
-${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
-</svg>`;
+${wide ? `<g class="ha-trees" fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
+${wx && !o._bodyOnly ? wxLayer(W, dawn, wx) : ''}</svg>`;
 }
 const svgDataUri = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 
@@ -3972,7 +3975,7 @@ const TUTORIAL = [
   ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite. Oben in der Kundenübersicht sehen Sie Ihre Abschlüsse und die Abschlussquote. Erledigte Kunden archivieren Sie – im Filter „Archiv“ lassen sie sich jederzeit wiederherstellen. Sagt der Kunde später zu, tippen Sie auf der Kundenkarte auf „Auftrag gewonnen?“ – Sie landen direkt bei der Unterschrift.'],
   ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
-  ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
+  ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel, Wetter auf der Startseite) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
 ];
 function showTutorial(i = 0) {
   const [icon, title, text] = TUTORIAL[i], last = i === TUTORIAL.length - 1;
@@ -4146,7 +4149,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108183006';
+const APP_VERSION = '20261108183647';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4563,6 +4566,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.56', date: '2026-11-08', items: [
+    ['wxsnow', 'Wetter auf der Startseite', 'Das Haus zeigt jetzt Sonne, Wolken, Regen, Schnee, Wind, Gewitter oder Nebel – mit Schnee auf Dach und Wiese.'],
+    ['wxset', 'Echt oder selbst gewählt', 'Unter Einstellungen → Ansicht: Regler „Echte Wetterdaten“ holt das aktuelle Wetter für die Firmen-PLZ oder den Handy-Standort. Aus: Wetter und Jahreszeit selbst wählen. Die Bäume wechseln mit der Jahreszeit.']
+  ] },
   { version: '1.55', date: '2026-11-08', items: [
     ['layout', 'Passt auf jedes Gerät', 'Neu abgestimmt für iPhone und Android (hoch und quer), Foldables, iPad und PC: Im Querformat stehen Text und Haus nebeneinander, die Kopfleiste nimmt keinen Platz weg und nichts verschwindet hinter der Kamera-Aussparung.']
   ] },
@@ -4629,7 +4636,9 @@ const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date:
 const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
 WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
 WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
-WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24'; WN_BG.kbd = '#F5F7FA'; WN_BG.update = '#141B24'; WN_BG.layout = '#141B24';
+WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24'; WN_BG.kbd = '#F5F7FA'; WN_BG.update = '#141B24'; WN_BG.layout = '#141B24'; WN_BG.wxsnow = '#060B16'; WN_BG.wxset = '#A9D4F5';
+WN_IMG.wxsnow = () => `<div style="width:100%;height:100%" class="hero-anim">${(() => { const k = PERSONAL.wxKind, m = PERSONAL.wxMode; PERSONAL.wxKind = 'snow'; PERSONAL.wxMode = 'preset'; const h = houseSVG({ dawn: true, anim: true, car: true }).replace(' data-sky="1"', ''); PERSONAL.wxKind = k; PERSONAL.wxMode = m; return h; })()}</div>`;
+WN_IMG.wxset = () => `<div style="width:100%;height:100%" class="hero-anim">${(() => { const k = PERSONAL.wxKind, m = PERSONAL.wxMode; PERSONAL.wxKind = 'rain'; PERSONAL.wxMode = 'preset'; const h = houseSVG({ dawn: false, anim: true, car: true }).replace(' data-sky="1"', ''); PERSONAL.wxKind = k; PERSONAL.wxMode = m; return h; })()}</div>`;
 WN_IMG.layout = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="6" y="14" width="24" height="44" rx="4" fill="#1C2530" stroke="#3FA98C"/><rect x="36" y="24" width="44" height="24" rx="4" fill="#1C2530" stroke="#3FA98C"/><rect x="86" y="10" width="28" height="38" rx="3" fill="#1C2530" stroke="#3FA98C"/><rect x="40" y="28" width="17" height="3" rx="1.5" fill="#fff"/><rect x="60" y="28" width="16" height="16" rx="2" fill="#E59A5C"/><rect x="10" y="20" width="16" height="3" rx="1.5" fill="#fff"/><rect x="10" y="36" width="16" height="14" rx="2" fill="#E59A5C"/><rect x="90" y="15" width="20" height="3" rx="1.5" fill="#fff"/><rect x="90" y="24" width="20" height="18" rx="2" fill="#E59A5C"/><text x="60" y="70" font-size="6" fill="#9AA8B6" text-anchor="middle">iPhone · quer · iPad · PC</text></svg>`; WN_BG.anim = '#060B16'; WN_BG.daynight = '#060B16'; WN_BG.carhome = '#A9D4F5'; WN_BG.countscroll = '#141B24';
 WN_IMG.daynight = () => `<div style="width:100%;height:100%" class="hero-anim">${houseSVG({ dawn: true, anim: true, car: true }).replace(' data-sky="1"', '').replace('class="ha-moon" opacity="0"', 'class="ha-moon" opacity="1" transform="translate(470 90)"').replace('class="ha-lit" opacity="0"', 'class="ha-lit" opacity="1"').replace('class="ha-sunpos"', 'class="ha-sunpos" transform="translate(0 120)"').replace('class="ha-night" width', 'class="ha-night" opacity=".5" width').replace('fill="#03060E" opacity="0"', 'fill="#03060E"')}</div>`;
 WN_IMG.carhome = () => `<div style="width:100%;height:100%" class="hero-anim">${houseSVG({ dawn: false, anim: true, car: true }).replace(' data-sky="1"', '')}</div>`;
@@ -5128,6 +5137,130 @@ applyComponents = function (p) {
   }
 };
 const norm2 = s => String(s || '').trim().toLowerCase();
+/* Wetter und Jahreszeit für das Start-Haus.
+   Regler „Echte Wetterdaten“: holt das aktuelle Wetter (Open-Meteo, ohne Konto) für den
+   Handy-Standort oder die Firmen-PLZ. Aus: Wetter und Jahreszeit selbst wählen. */
+const WX_KINDS = [['sun', 'Sonne'], ['cloud', 'Bewölkt'], ['rain', 'Regen'], ['snow', 'Schnee'], ['wind', 'Wind'], ['storm', 'Gewitter'], ['fog', 'Nebel']];
+const WX_SEASONS = [['auto', 'Automatisch'], ['spring', 'Frühling'], ['summer', 'Sommer'], ['autumn', 'Herbst'], ['winter', 'Winter']];
+const WX_LABEL = Object.fromEntries(WX_KINDS);
+const WX = { live: null, busy: false, err: '' };
+try { WX.live = JSON.parse(localStorage.getItem('wxLive') || 'null'); } catch (e) {}
+
+const seasonNow = () => { const m = new Date().getMonth() + 1; return m <= 2 || m === 12 ? 'winter' : m <= 5 ? 'spring' : m <= 8 ? 'summer' : 'autumn'; };
+const wxLiveOn = () => PERSONAL.wxMode !== 'preset';
+function wxState() {
+  const live = wxLiveOn();
+  const kind = live ? (WX.live && WX.live.kind) || 'sun' : PERSONAL.wxKind || 'sun';
+  const season = live || !PERSONAL.wxSeason || PERSONAL.wxSeason === 'auto' ? seasonNow() : PERSONAL.wxSeason;
+  return { kind, season, snow: kind === 'snow', dim: ['cloud', 'rain', 'snow', 'storm', 'fog'].includes(kind) };
+}
+/* WMO-Wettercode → Wetterart */
+function wxFromCode(c, wind) {
+  let k = c >= 95 ? 'storm' : (c >= 71 && c <= 77) || c === 85 || c === 86 ? 'snow' : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) ? 'rain' : c === 45 || c === 48 ? 'fog' : c >= 2 ? 'cloud' : 'sun';
+  if ((k === 'sun' || k === 'cloud') && wind >= 30) k = 'wind';
+  return k;
+}
+async function wxFetch(force) {
+  if (!wxLiveOn() || WX.busy || !navigator.onLine) return;
+  if (!force && WX.live && Date.now() - WX.live.at < 30 * 60 * 1000) return;
+  WX.busy = true; WX.err = '';
+  try {
+    let c = PERSONAL.wxGeo && PERSONAL.wxPos ? PERSONAL.wxPos : null, place = c ? 'Ihrem Standort' : '';
+    if (!c && S.company.zip) { c = await plzCoords(S.company.zip); place = S.company.city || S.company.zip; }
+    if (!c) { c = [52.28, 8.05]; place = 'Osnabrück'; }
+    const r = await fetch(`/wetter/v1/forecast?latitude=${c[0]}&longitude=${c[1]}&current=weather_code,temperature_2m,wind_speed_10m&timezone=auto`, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const cur = (await r.json()).current;
+    WX.live = { kind: wxFromCode(cur.weather_code, cur.wind_speed_10m), temp: cur.temperature_2m, wind: cur.wind_speed_10m, place, at: Date.now() };
+    try { localStorage.setItem('wxLive', JSON.stringify(WX.live)); } catch (e) {}
+  } catch (e) { WX.err = 'Wetterdaten gerade nicht erreichbar – es wird das zuletzt bekannte Wetter bzw. Sonne gezeigt.'; }
+  WX.busy = false;
+  if (UI.route === 'kunden' || UI.route === 'einstellungen') render();
+}
+setTimeout(() => wxFetch(), 1500);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wxFetch(); });
+
+/* Ebene über dem Haus: Regen, Schnee, Wind, Gewitter, Nebel, Wolkendecke */
+function wxLayer(W, dawn, wx) {
+  let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  let out = '';
+  if (wx.dim) {
+    const c = dawn ? '#2A3344' : wx.kind === 'storm' ? '#7D8794' : '#C9D2DC';
+    out += `<g class="wx-bank" fill="${c}" opacity="${dawn ? 0.7 : 0.92}">${Array.from({ length: Math.round(W / 70) }, (_, i) => `<ellipse cx="${(i * 70 + rnd() * 30).toFixed(0)}" cy="${(18 + rnd() * 30).toFixed(0)}" rx="${(46 + rnd() * 30).toFixed(0)}" ry="${(16 + rnd() * 10).toFixed(0)}"/>`).join('')}</g>`;
+  }
+  if (wx.kind === 'rain' || wx.kind === 'storm') {
+    const n = Math.round(W / 8);
+    out += `<g class="wx-rain" stroke="${dawn ? '#8FA6C2' : '#4F6F96'}" stroke-width="${dawn ? 1.3 : 1.6}" stroke-linecap="round" opacity="${dawn ? 0.75 : 0.8}">${Array.from({ length: n }, () => { const x = Math.round(rnd() * (W + 40)); return `<line x1="${x}" y1="-14" x2="${x - 4}" y2="0" style="animation-delay:-${(rnd() * 1).toFixed(2)}s;animation-duration:${(0.6 + rnd() * 0.35).toFixed(2)}s"/>`; }).join('')}</g>`;
+  }
+  if (wx.kind === 'storm') out += `<rect class="wx-flash" width="${W}" height="400" fill="#fff" opacity="0"/>`;
+  if (wx.kind === 'snow') {
+    const n = Math.round(W / 9);
+    out += `<g class="wx-snow" fill="#fff"${dawn ? '' : ' stroke="#9FB2C8" stroke-width="0.7"'}>${Array.from({ length: n }, () => `<circle cx="${(rnd() * W).toFixed(0)}" cy="-6" r="${(1.2 + rnd() * 2).toFixed(1)}" opacity="${(0.6 + rnd() * 0.4).toFixed(2)}" style="animation-delay:-${(rnd() * 8).toFixed(2)}s;animation-duration:${(6 + rnd() * 4).toFixed(2)}s"/>`).join('')}</g>`;
+  }
+  if (wx.kind === 'wind') {
+    out += `<g class="wx-gust" stroke="${dawn ? '#9FB0C6' : '#FFFFFF'}" stroke-width="2.6" stroke-linecap="round" fill="none" opacity=".9">${Array.from({ length: Math.round(W / 120) + 3 }, () => { const y = (40 + rnd() * 230).toFixed(0), x = (rnd() * W).toFixed(0); return `<path d="M${x} ${y} q30 -8 60 0 t60 0" style="animation-delay:-${(rnd() * 3).toFixed(2)}s"/>`; }).join('')}</g>`;
+  }
+  if (wx.kind === 'fog') {
+    out += `<rect width="${W}" height="400" fill="${dawn ? '#5B6678' : '#FFFFFF'}" opacity="${dawn ? 0.18 : 0.35}"/><g class="wx-fog" fill="${dawn ? '#8794A8' : '#FFFFFF'}" opacity="${dawn ? 0.35 : 0.6}">${[250, 290, 330].map((y, i) => `<ellipse cx="${(W * (0.2 + i * 0.3)).toFixed(0)}" cy="${y}" rx="${(W * 0.45).toFixed(0)}" ry="14" style="animation-delay:-${i * 4}s"/>`).join('')}</g>`;
+  }
+  return out;
+}
+
+/* Farben der Bäume je Jahreszeit [hell, dunkel] */
+const WX_TREE = { spring: ['#6CC07A', '#1C3A28'], summer: null, autumn: ['#D98C3A', '#5A3A1E'], winter: ['#8FA39A', '#24312B'] };
+
+document.head.insertAdjacentHTML('beforeend', `<style>
+@media (prefers-reduced-motion: no-preference) {
+  .hero-anim .wx-rain line{animation:wxRain .8s linear infinite}
+  .hero-anim .wx-snow circle{animation:wxSnow 8s linear infinite}
+  .hero-anim .wx-flash{animation:wxFlash 7s linear infinite}
+  .hero-anim .wx-gust path{stroke-dasharray:40 400;animation:wxGust 3s linear infinite}
+  .hero-anim .wx-fog ellipse{animation:wxFog 12s ease-in-out infinite alternate}
+  .hero-anim .wx-bank{animation:haDrift 30s ease-in-out infinite alternate}
+  .hero-anim svg.wx-wind .ha-clouds{animation-duration:5s}
+  .hero-anim svg.wx-wind .ha-trees,.hero-anim svg.wx-storm .ha-trees{transform-box:fill-box;transform-origin:50% 100%;animation:wxSway 1.6s ease-in-out infinite alternate}
+}
+.hero-anim svg.wx-dim .ha-sunpos{opacity:.35}
+.hero-anim svg.wx-dim .ha-rays{opacity:.3}
+@keyframes wxRain{from{transform:translate(0,0)}to{transform:translate(-24px,420px)}}
+@keyframes wxSnow{0%{transform:translate(0,0)}25%{transform:translate(10px,105px)}50%{transform:translate(-6px,210px)}75%{transform:translate(8px,315px)}100%{transform:translate(0,420px)}}
+@keyframes wxFlash{0%,88%,92%,96%,100%{opacity:0}89%{opacity:.55}93%{opacity:.35}}
+@keyframes wxGust{from{stroke-dashoffset:440}to{stroke-dashoffset:0}}
+@keyframes wxFog{from{transform:translateX(-40px)}to{transform:translateX(40px)}}
+@keyframes wxSway{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+</style>`);
+
+/* Einstellungen → Ansicht: Wetter auf der Startseite */
+const _setAnsichtWx = SET.ansicht;
+SET.ansicht = () => {
+  const live = wxLiveOn(), st = wxState(), L = WX.live;
+  const chip = (a, k, l, on) => `<button class="chip ${on ? '!border-p !text-ink' : ''}" data-a="${a}" data-v="${k}">${l}</button>`;
+  const liveBox = `<div class="rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] text-ink2">${WX.busy ? 'Wetter wird geladen …' : L ? `Aktuell bei ${esc(L.place)}: <b>${WX_LABEL[L.kind]}</b>, ${num(L.temp, 1)} °C, Wind ${num(L.wind)} km/h <span class="text-ink3">· Stand ${new Date(L.at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>` : 'Noch keine Wetterdaten geladen.'}${WX.err ? `<div class="text-[12px] text-ink3 mt-1">${WX.err}</div>` : ''}</div>
+    <div class="flex flex-wrap items-center gap-2 mt-3"><span class="text-[13px] text-ink3 mr-1">Ort</span>${chip('wx-src', 'zip', 'Firmen-PLZ' + (S.company.zip ? ' ' + esc(S.company.zip) : ''), !PERSONAL.wxGeo)}${chip('wx-src', 'geo', 'Handy-Standort', !!PERSONAL.wxGeo)}<button class="btn-g !h-9 !px-3 text-[13px]" data-a="wx-refresh">${ic('refresh', 15)}Aktualisieren</button></div>
+    <p class="hint">Die Jahreszeit (Bäume im Frühling, Sommer, Herbst, Winter) richtet sich automatisch nach dem Datum.</p>`;
+  const presetBox = `<div class="flex flex-wrap items-center gap-2"><span class="text-[13px] text-ink3 mr-1 w-full sm:w-auto">Wetter</span>${WX_KINDS.map(([k, l]) => chip('wx-kind', k, l, (PERSONAL.wxKind || 'sun') === k)).join('')}</div>
+    <div class="flex flex-wrap items-center gap-2 mt-3"><span class="text-[13px] text-ink3 mr-1 w-full sm:w-auto">Jahreszeit</span>${WX_SEASONS.map(([k, l]) => chip('wx-season', k, l, (PERSONAL.wxSeason || 'auto') === k)).join('')}</div>`;
+  const prev = `<div class="hero-anim mt-4 rounded-[calc(var(--r)-4px)] overflow-hidden border border-line aspect-[16/9] max-w-xl">${houseSVG({ anim: true, car: true }).replace(/ data-sky="1"/, '')}</div>`;
+  return _setAnsichtWx() + sCard('sun', 'Wetter auf der Startseite', 'Das Haus zeigt Wetter und Jahreszeit – nur in der App, nicht im PDF.',
+    toggleRow('Echte Wetterdaten', '', live ? 'An: aktuelles Wetter vor Ort wird automatisch geladen.' : 'Aus: Sie wählen Wetter und Jahreszeit selbst.', { action: 'wx-live', on: live }) + `<div class="mt-2">${live ? liveBox : presetBox}</div>${prev}`);
+};
+
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-a^="wx-"]'); if (!a) return;
+  const act = a.dataset.a, v = a.dataset.v;
+  if (act === 'wx-live') { PERSONAL.wxMode = wxLiveOn() ? 'preset' : 'live'; savePersonal(); render(); if (wxLiveOn()) wxFetch(true); }
+  else if (act === 'wx-kind') { PERSONAL.wxKind = v; savePersonal(); render(); }
+  else if (act === 'wx-season') { PERSONAL.wxSeason = v; savePersonal(); render(); }
+  else if (act === 'wx-refresh') { wxFetch(true); render(); }
+  else if (act === 'wx-src') {
+    if (v === 'zip') { PERSONAL.wxGeo = false; savePersonal(); wxFetch(true); render(); return; }
+    if (!navigator.geolocation) { toast('Standort ist auf diesem Gerät nicht verfügbar.'); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      PERSONAL.wxGeo = true; PERSONAL.wxPos = [Math.round(pos.coords.latitude * 100) / 100, Math.round(pos.coords.longitude * 100) / 100];
+      savePersonal(); wxFetch(true); render();
+    }, () => toast('Standort nicht freigegeben – es wird die Firmen-PLZ verwendet.'), { timeout: 10000, maximumAge: 3600000 });
+  }
+});
 
 /* =========================================================
    Router & Rendern
