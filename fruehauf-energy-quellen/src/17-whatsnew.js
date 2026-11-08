@@ -14,7 +14,7 @@ const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house:
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
   { version: '2.06', date: '2026-11-09', items: [
-    ['modplace', 'Magnet mit Raster', 'Der Magnet setzt Module jetzt exakt auf das Raster der Nachbarmodule (Modulmaß + 1,5 cm Fuge) – Reihen und Spalten stehen immer gerade. Für versetzte Module den Magnet ausschalten.'],
+    ['modplace', 'Magnet mit Raster', 'Der Magnet setzt Module jetzt exakt auf das Raster der Nachbarmodule (Modulmaß + 1,5 cm Fuge) – Reihen und Spalten stehen immer gerade. Am Dachrand und Randabstand rastet er nicht mehr ein. Für versetzte Module den Magnet ausschalten.'],
     ['modsave', 'Modulbilder automatisch zugeschnitten', 'Weiße oder durchsichtige Ränder am Bild für den Modulplan werden automatisch entfernt – das Modul füllt seine Fläche vollständig aus.']
   ] },
   { version: '2.05', date: '2026-11-09', items: [

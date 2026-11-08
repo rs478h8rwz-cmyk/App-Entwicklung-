@@ -402,8 +402,7 @@ function roofSnap(f, g, sel) {
     if (nearY) cx.push(o.x1 + ROOF_GAP - G.x0, o.x0 - ROOF_GAP - G.x1, o.x0 - G.x0, o.x1 - G.x1);
     if (nearX) cy.push(o.y1 + ROOF_GAP - G.y0, o.y0 - ROOF_GAP - G.y1, o.y0 - G.y0, o.y1 - G.y1);
   }
-  cy.push(yTop - G.y0, yBot - G.y1);
-  const rT = xRange(ins, G.y0 + 0.001), rB = xRange(ins, G.y1 - 0.001); if (rT && rB) cx.push(Math.max(rT[0], rB[0]) - G.x0, Math.min(rT[1], rB[1]) - G.x1);
+  /* bewusst kein Einrasten am Randabstand oder an der Dachkante – nur an Modulen */
   const list = arr => [0, ...arr.filter(d => Math.abs(d) < T)].sort((a, b) => Math.abs(a) - Math.abs(b));
   const hits = (dx, dy) => bs.some(b => others.some(o => b.x0 + dx < o.x1 - 1e-4 && b.x1 + dx > o.x0 + 1e-4 && b.y0 + dy < o.y1 - 1e-4 && b.y1 + dy > o.y0 + 1e-4));
   /* Kombination mit kleinster Verschiebung wählen, die keine Überlappung erzeugt; Einrasten bevorzugt */
