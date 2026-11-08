@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.04', date: '2026-11-08', items: [
+    ['modplace', 'Entzerrt oder wie auf dem Foto', 'Im Modulplan lässt sich die Ansicht umschalten: entzerrt (maßstäblich von vorn) oder perspektivisch auf dem Originalfoto – in beiden Ansichten Module setzen, auswählen und verschieben. Die gewählte Ansicht wird gemerkt.'],
+    ['modplan', 'Pfannenraster zur Kontrolle', 'Im Referenz-Schritt liegt ein Raster mit den gezählten Pfannen über dem Foto – passt es auf die Pfannenkanten, stimmen die Maße. Module erscheinen als schwarze Full-Black-Module exakt perspektivisch auf dem Foto. Module dürfen über eine kleine Referenzfläche hinaus gesetzt werden (z. B. bei Krüppelwalm) – maßgeblich ist die markierte Dachfläche.']
+  ] },
   { version: '2.03', date: '2026-11-08', items: [
     ['modplan', 'Modulplan für PV (iPad & PC)', 'Dach per Foto aufmessen: vier Ecken mit Lupe setzen, Pfannen als Referenz zählen – die App entzerrt das Dach und berechnet die Maße. Gängige Pfannentypen mit änderbaren Deckmaßen oder eigenes Maß.'],
     ['modplace', 'Module belegen', 'Module hochkant oder quer setzen, mit Magnet (1,5 cm Fuge), Randabständen, Mehrfachauswahl und „Fläche füllen“. Unten laufen Modulanzahl und kWp mit; mehrere Dachflächen werden zusammengezählt.'],

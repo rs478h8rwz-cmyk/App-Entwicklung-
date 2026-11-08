@@ -51,8 +51,9 @@ function faceGeom(f) {
   const W = Math.max(...poly.map(p => p[0])), Hh = Math.max(...poly.map(p => p[1]));
   if (!(W > 0.5 && Hh > 0.5 && W < 80 && Hh < 40)) return { bad: true, W, H: Hh };
   const toImg = (X, Y) => hApply(H, (X + ox) / rw, (Y + oy) / rh);
+  const fromImg = (x, y) => { const [u, v] = hApply(Hi, x, y); return [u * rw - ox, v * rh - oy]; };
   const m = [(+f.mSide || 0) / 100, (+f.mTop || 0) / 100, (+f.mSide || 0) / 100, (+f.mBot || 0) / 100];   // Kanten: li, First, re, Rinne
-  return { poly, W, H: Hh, toImg, inset: insetPoly(poly, m), eave: Math.hypot(poly[3][0] - poly[0][0], poly[3][1] - poly[0][1]), ridge: Math.hypot(poly[2][0] - poly[1][0], poly[2][1] - poly[1][1]), slope: Math.hypot(poly[1][0] - poly[0][0], poly[1][1] - poly[0][1]) };
+  return { poly, W, H: Hh, toImg, fromImg, inset: insetPoly(poly, m), eave: Math.hypot(poly[3][0] - poly[0][0], poly[3][1] - poly[0][1]), ridge: Math.hypot(poly[2][0] - poly[1][0], poly[2][1] - poly[1][1]), slope: Math.hypot(poly[1][0] - poly[0][0], poly[1][1] - poly[0][1]) };
 }
 function insetPoly(p, m) {
   const n = p.length, area = p.reduce((s, a, i) => { const b = p[(i + 1) % n]; return s + a[0] * b[1] - b[0] * a[1]; }, 0), sg = area > 0 ? 1 : -1;
@@ -121,7 +122,7 @@ async function roofOpen(pid) {
   if (!roofOk()) { toast('Der Modulplan braucht einen größeren Bildschirm – bitte am iPad, PC oder aufgeklappten Foldable öffnen.'); return; }
   p.roof = p.roof || { faces: [], saves: [] };
   if (!p.roof.faces.length) p.roof.faces.push(roofNewFace(1));
-  RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', mode: 'add', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
+  RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
   document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col"></div>');
   document.documentElement.style.overflow = 'hidden';
   roofRender();
@@ -176,6 +177,7 @@ function roofPanel(p, f, g) {
     : `<label class="block mt-3"><span class="lbl">Pfannentyp</span><select class="inp appearance-none" data-rf="tileId">${tiles.map(x => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
       <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl">Deckbreite</span><div class="relative"><input class="inp pr-12" inputmode="decimal" data-rt="w" value="${inputFmt(t.w, 'n')}"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">cm</span></div></label><label><span class="lbl">Decklänge</span><div class="relative"><input class="inp pr-12" inputmode="decimal" data-rt="l" value="${inputFmt(t.l, 'n')}"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">cm</span></div></label></div>
       <p class="hint">Typische Werte – bitte prüfen. Änderungen werden für diesen Pfannentyp gespeichert.</p>
+      <p class="hint" style="color:#C7792F">Kontrolle: Das gelbe Raster muss genau auf den Pfannenkanten liegen. Wenn nicht – Ecken oder Anzahl korrigieren. Tipp: Foto nicht mit 0,5×-Weitwinkel aufnehmen.</p>
       <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl">Pfannen waagerecht</span>${roofIn('nx', 'Stk')}</label><label><span class="lbl">Reihen senkrecht</span>${roofIn('ny', 'Stk')}</label></div>`}
       <div class="mt-3"><span class="lbl">Randabstände</span><div class="grid grid-cols-3 gap-2"><label><span class="text-[11px] text-ink3">First</span>${roofIn('mTop', 'cm')}</label><label><span class="text-[11px] text-ink3">Rinne</span>${roofIn('mBot', 'cm')}</label><label><span class="text-[11px] text-ink3">Seiten</span>${roofIn('mSide', 'cm')}</label></div></div>
       <div id="roof-dims" class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px]">${roofDims(g)}</div>
@@ -183,6 +185,7 @@ function roofPanel(p, f, g) {
   } else {
     const mods = roofMods(), pr = roofProd(f);
     body = `<div><span class="lbl">PV-Modul</span>${mods.length ? `<select class="inp appearance-none" data-rf="prodId">${mods.map(x => `<option value="${x.id}" ${x.id === pr.id ? 'selected' : ''}>${esc(x.name)} · ${num(x.power)} Wp</option>`).join('')}</select><div class="hint">${num(pr.len)} × ${num(pr.wid)} mm</div>` : `<div class="text-[13px] rounded-lg p-3" style="background:rgba(229,154,92,.14)">Noch kein PV-Modul mit Maßen unter „Produkte“. Bis dahin: Standardmodul 1722 × 1134 mm, 430 Wp. Legen Sie Ihre Module mit Länge und Breite an.</div>`}</div>
+      <div><span class="lbl">Ansicht</span><div class="seg w-full">${[['flat', 'Entzerrt'], ['photo', 'Wie auf dem Foto']].map(([k, l]) => `<button class="flex-1 ${(RS.look || 'flat') === k ? 'on' : ''}" data-r="look" data-v="${k}">${l}</button>`).join('')}</div></div>
       <div class="grid grid-cols-2 gap-2"><div><span class="lbl">Ausrichtung</span><div class="seg">${[['p', 'Hochkant'], ['l', 'Quer']].map(([k, l]) => `<button class="${f.orient === k ? 'on' : ''}" data-r="orient" data-v="${k}">${l}</button>`).join('')}</div></div>
         <div><span class="lbl">Magnet</span><div class="seg">${[[true, 'An'], [false, 'Aus']].map(([k, l]) => `<button class="${RS.magnet === k ? 'on' : ''}" data-r="magnet" data-v="${k}">${l}</button>`).join('')}</div></div></div>
       <div><span class="lbl">Werkzeug</span><div class="seg w-full">${[['add', 'Hinzufügen'], ['select', 'Auswählen']].map(([k, l]) => `<button class="flex-1 ${RS.mode === k ? 'on' : ''}" data-r="mode" data-v="${k}">${l}</button>`).join('')}</div>
@@ -205,9 +208,18 @@ function roofDims(g) {
 }
 
 /* ---------- Zeichnen ---------- */
+/* Umrechnung Ebene (Meter) ↔ Bildschirm – je nach Ansicht linear oder perspektivisch */
+function roofP2S(V, g, X, Y) { if (V.kind === 'plane') return [V.ox + X * V.s, V.oy + Y * V.s]; const [ix, iy] = g.toImg(X, Y); return [V.ox + ix * V.k, V.oy + iy * V.k]; }
+function roofS2P(V, g, sx, sy) { if (V.kind === 'plane') return [(sx - V.ox) / V.s, (sy - V.oy) / V.s]; return g.fromImg((sx - V.ox) / V.k, (sy - V.oy) / V.k); }
 function roofView(cv, f, g, img) {
   const cw = cv.clientWidth, ch = cv.clientHeight, pad = 24;
-  if (RS.step === 'mod' && g && !g.bad) { const s = Math.min((cw - 2 * pad) / g.W, (ch - 2 * pad) / g.H); return { kind: 'plane', s, ox: (cw - g.W * s) / 2, oy: (ch - g.H * s) / 2 }; }
+  if (RS.step === 'mod' && g && !g.bad && !(RS.look === 'photo' && img)) { const s = Math.min((cw - 2 * pad) / g.W, (ch - 2 * pad) / g.H); return { kind: 'plane', s, ox: (cw - g.W * s) / 2, oy: (ch - g.H * s) / 2 }; }
+  if (RS.step === 'mod' && g && !g.bad && img) {                 // auf das Dach zoomen (mit Rand)
+    const xs = f.corners.map(c => c[0] * f.iw), ys = f.corners.map(c => c[1] * f.ih), bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+    const x0 = Math.max(0, Math.min(...xs) - bw * 0.15), x1 = Math.min(f.iw, Math.max(...xs) + bw * 0.15), y0 = Math.max(0, Math.min(...ys) - bh * 0.25), y1 = Math.min(f.ih, Math.max(...ys) + bh * 0.2);
+    const k = Math.min((cw - 2 * pad) / (x1 - x0), (ch - 2 * pad) / (y1 - y0));
+    return { kind: 'photo', k, ox: (cw - (x1 - x0) * k) / 2 - x0 * k, oy: (ch - (y1 - y0) * k) / 2 - y0 * k };
+  }
   if (!img) return null;
   const k = Math.min((cw - 2 * pad) / f.iw, (ch - 2 * pad) / f.ih); return { kind: 'img', k, ox: (cw - f.iw * k) / 2, oy: (ch - f.ih * k) / 2 };
 }
@@ -226,30 +238,42 @@ async function roofDraw() {
     const quad = (q, col, dash, labels) => { x.save(); x.setLineDash(dash || []); x.lineWidth = 2.5; x.strokeStyle = col; x.fillStyle = col.replace('rgb', 'rgba').replace(')', ',.14)'); x.beginPath(); q.map(S).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.fill(); x.stroke(); x.restore();
       q.map(S).forEach((p, i) => { x.beginPath(); x.arc(p[0], p[1], 13, 0, 7); x.fillStyle = col; x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(); x.fillStyle = '#fff'; x.font = '600 12px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(labels[i], p[0], p[1] + 0.5); }); };
     if (RS.step === 'ref' || RS.step === 'corners') quad(f.corners, P, RS.step === 'ref' ? [6, 4] : null, ['1', '2', '3', '4']);
-    if (RS.step === 'ref' && f.ref) quad(f.ref, 'rgb(229,154,92)', [8, 5], ['↖', '↗', '↘', '↙']);
+    if (RS.step === 'ref' && f.ref) {
+      /* Kontrollraster: so viele Linien wie gezählte Pfannen/Reihen – müssen auf den echten Pfannenkanten liegen */
+      const nx = f.refMode === 'len' ? 0 : Math.min(80, Math.round(+f.nx || 0)), ny = f.refMode === 'len' ? 0 : Math.min(60, Math.round(+f.ny || 0));
+      if (nx > 1 || ny > 1) {
+        const Hq = sqToQuad(f.ref.map(([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k])); x.save(); x.strokeStyle = 'rgba(255,240,140,.85)'; x.lineWidth = 1; x.beginPath();
+        for (let i = 1; i < nx; i++) { x.moveTo(...hApply(Hq, i / nx, 0)); x.lineTo(...hApply(Hq, i / nx, 1)); }
+        for (let j = 1; j < ny; j++) { x.moveTo(...hApply(Hq, 0, j / ny)); x.lineTo(...hApply(Hq, 1, j / ny)); }
+        x.stroke(); x.restore();
+      }
+      quad(f.ref, 'rgb(229,154,92)', [8, 5], ['↖', '↗', '↘', '↙']);
+    }
     if (RS.drag && RS.drag.loupe) roofLoupe(x, img, S(RS.drag.loupe), f, V, cw);
     if (tip) tip.textContent = RS.step === 'corners' ? 'Punkte 1–4 auf die Ecken der Dachfläche ziehen.' : 'Oranges Rechteck auf Pfannenkanten legen – möglichst groß.';
     return;
   }
-  /* Belegen: entzerrte Fläche in Metern */
-  const s = V.s, M = (a, b) => [V.ox + a * s, V.oy + b * s];
-  if (img) { const w = roofWarp(f, g, img); x.drawImage(w, V.ox, V.oy, g.W * s, g.H * s); }
-  x.save(); x.beginPath(); x.rect(0, 0, cw, ch); g.poly.map(p => M(...p)).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.fillStyle = 'rgba(8,10,14,.72)'; x.fill('evenodd'); x.restore();
+  /* Belegen: entzerrt (Meter) oder perspektivisch auf dem Foto */
+  const M = (a, b) => roofP2S(V, g, a, b);
+  if (V.kind === 'plane') { if (img) { const w = roofWarp(f, g, img); x.drawImage(w, V.ox, V.oy, g.W * V.s, g.H * V.s); } }
+  else x.drawImage(img, V.ox, V.oy, f.iw * V.k, f.ih * V.k);
+  x.save(); x.beginPath(); x.rect(0, 0, cw, ch); g.poly.map(p => M(...p)).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.fillStyle = V.kind === 'plane' ? 'rgba(8,10,14,.72)' : 'rgba(8,10,14,.12)'; x.fill('evenodd'); x.restore();
   const path = (q, col, w, dash) => { x.save(); x.setLineDash(dash || []); x.strokeStyle = col; x.lineWidth = w; x.beginPath(); q.map(p => M(...p)).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.stroke(); x.restore(); };
-  path(g.poly, '#fff', 2); path(g.inset, 'rgba(255,214,120,.9)', 1.5, [6, 5]);
+  if (V.kind === 'plane') { path(g.poly, '#fff', 2); path(g.inset, 'rgba(255,214,120,.9)', 1.5, [6, 5]); } else { path(g.poly, 'rgba(255,255,255,.55)', 1); path(g.inset, 'rgba(255,214,120,.55)', 1, [5, 5]); }
   let warn = [0, 0]; const pr = roofProd(f), pimg = pr.planImg ? await roofImg(pr.planImg) : null;
+  const L = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
   f.mods.forEach((m, i) => {
-    const b = modBox(f, m), st = modState(f, g, m, i), [a0, b0] = M(b.x0, b.y0), w = (b.x1 - b.x0) * s, h = (b.y1 - b.y0) * s;
+    const b = modBox(f, m), st = modState(f, g, m, i), q = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].map(p => M(...p));
     if (st === 'over') warn[0]++; else if (st !== 'ok') warn[1]++;
-    if (pimg) {                                                     // eigenes Belegungsbild (hochkant hinterlegt, quer gedreht)
-      x.save(); if (m.o === 'l') { x.translate(a0 + w / 2, b0 + h / 2); x.rotate(Math.PI / 2); x.drawImage(pimg, -h / 2, -w / 2, h, w); } else x.drawImage(pimg, a0, b0, w, h); x.restore();
-      if (st !== 'ok') { x.fillStyle = st === 'over' ? 'rgba(229,72,77,.55)' : 'rgba(229,154,92,.5)'; x.fillRect(a0, b0, w, h); }
-    } else {
-      x.fillStyle = st === 'over' ? 'rgba(229,72,77,.85)' : st === 'ok' ? 'rgba(22,34,62,.92)' : 'rgba(229,154,92,.85)'; x.fillRect(a0, b0, w, h);
-      x.strokeStyle = 'rgba(160,190,230,.35)'; x.lineWidth = 1; const nc = m.o === 'l' ? 10 : 6, nr = m.o === 'l' ? 6 : 10;
-      x.beginPath(); for (let c = 1; c < nc; c++) { x.moveTo(a0 + w * c / nc, b0); x.lineTo(a0 + w * c / nc, b0 + h); } for (let r = 1; r < nr; r++) { x.moveTo(a0, b0 + h * r / nr); x.lineTo(a0 + w, b0 + h * r / nr); } x.stroke();
-    }
-    x.strokeStyle = RS.sel.has(i) ? P : 'rgba(255,255,255,.75)'; x.lineWidth = RS.sel.has(i) ? 3 : 1; x.strokeRect(a0, b0, w, h);
+    const poly = () => { x.beginPath(); q.forEach((p, j) => (j ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); };
+    /* Modul: Bild bzw. Zellen exakt perspektivisch (zwei Dreiecke), dunkler Rahmen, leichter Glanz */
+    const src = pimg || roofCellImg(), iw2 = src.width, ih2 = src.height;
+    const c = m.o === 'l' ? [q[1], q[2], q[3], q[0]] : q;            // Bildecken oben li, oben re, unten re, unten li
+    roofTri(x, src, [[0, 0], [iw2, 0], [iw2, ih2]], [c[0], c[1], c[2]]); roofTri(x, src, [[0, 0], [iw2, ih2], [0, ih2]], [c[0], c[2], c[3]]);
+    const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
+    x.fillStyle = gl; poly(); x.fill();
+    if (st !== 'ok') { x.fillStyle = st === 'over' ? 'rgba(229,72,77,.55)' : 'rgba(229,154,92,.5)'; poly(); x.fill(); }
+    x.strokeStyle = RS.sel.has(i) ? P : 'rgba(0,0,0,.85)'; x.lineWidth = RS.sel.has(i) ? 3 : 0.7; poly(); x.stroke();
   });
   if (RS.drag && RS.drag.lasso) { const [a, b, c, d] = RS.drag.lasso; x.save(); x.setLineDash([5, 4]); x.strokeStyle = P; x.fillStyle = `rgba(${pc},.12)`; x.lineWidth = 1.5; x.fillRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.strokeRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.restore(); }
   const wEl = $('#roof-warn'); if (wEl) wEl.innerHTML = [warn[0] ? `<span style="color:#E5484D">${warn[0]} überlappen</span>` : '', warn[1] ? `<span style="color:#E59A5C">${warn[1]} im Randbereich</span>` : ''].filter(Boolean).join(' · ');
@@ -280,11 +304,11 @@ function roofDown(e) {
     for (const [k, q] of lists) { const i = q.findIndex(p => { const [a, b] = S(p); return Math.hypot(a - sx, b - sy) < 26; }); if (i >= 0 && (RS.step === 'corners' || k === 'ref')) { RS.drag = { pt: [k, i], loupe: q[i] }; roofDraw(); return; } }
     return;
   }
-  const g = faceGeom(f), X = (sx - V.ox) / V.s, Y = (sy - V.oy) / V.s;
+  const g = faceGeom(f), [X, Y] = roofS2P(V, g, sx, sy);
   const hit = f.mods.map((m, i) => [m, i]).reverse().find(([m]) => { const b = modBox(f, m); return X >= b.x0 && X <= b.x1 && Y >= b.y0 && Y <= b.y1; });
   if (hit) {
     const i = hit[1]; if (RS.multi || e.shiftKey || e.ctrlKey || e.metaKey) { if (RS.sel.has(i) && RS.mode === 'select') RS.sel.delete(i); else RS.sel.add(i); } else if (!RS.sel.has(i)) RS.sel = new Set([i]);
-    RS.drag = { move: true, X, Y, start: [...RS.sel].map(j => [j, f.mods[j].x, f.mods[j].y]), moved: false }; roofRefreshPanel(); roofDraw(); return;
+    RS.drag = { move: true, X, Y, sx, sy, start: [...RS.sel].map(j => [j, f.mods[j].x, f.mods[j].y]), moved: false }; roofRefreshPanel(); roofDraw(); return;
   }
   if (RS.mode === 'add') {
     const [w, h] = modWH(f, f.orient), m = { x: X - w / 2, y: Y - h / 2, o: f.orient };
@@ -303,8 +327,8 @@ function roofMove(e) {
   }
   if (d.lasso) { d.lasso[2] = sx; d.lasso[3] = sy; roofDraw(); return; }
   if (d.move) {
-    const X = (sx - V.ox) / V.s, Y = (sy - V.oy) / V.s, dx = X - d.X, dy = Y - d.Y;
-    if (!d.moved && Math.hypot(dx, dy) * V.s < 4) return;
+    const [X, Y] = roofS2P(V, faceGeom(f), sx, sy), dx = X - d.X, dy = Y - d.Y;
+    if (!d.moved && Math.hypot(sx - d.sx, sy - d.sy) < 4) return;
     if (!d.moved) { roofHist(); d.moved = true; }
     d.start.forEach(([j, x0, y0]) => { f.mods[j].x = x0 + dx; f.mods[j].y = y0 + dy; });
     if (RS.magnet) roofSnap(f, faceGeom(f), RS.sel);
@@ -314,8 +338,8 @@ function roofMove(e) {
 function roofUp() {
   const f = roofF(), V = RS.view, d = RS.drag; RS.drag = null;
   if (d.lasso) {
-    const [a, b, c, e] = d.lasso, X0 = (Math.min(a, c) - V.ox) / V.s, X1 = (Math.max(a, c) - V.ox) / V.s, Y0 = (Math.min(b, e) - V.oy) / V.s, Y1 = (Math.max(b, e) - V.oy) / V.s;
-    if (Math.abs(c - a) > 6 || Math.abs(e - b) > 6) f.mods.forEach((m, i) => { const bx = modBox(f, m); if (bx.x0 < X1 && bx.x1 > X0 && bx.y0 < Y1 && bx.y1 > Y0) RS.sel.add(i); });
+    const [a, b, c, e] = d.lasso, g = faceGeom(f), x0 = Math.min(a, c), x1 = Math.max(a, c), y0 = Math.min(b, e), y1 = Math.max(b, e);
+    if (x1 - x0 > 6 || y1 - y0 > 6) f.mods.forEach((m, i) => { const bx = modBox(f, m), [px, py] = roofP2S(V, g, (bx.x0 + bx.x1) / 2, (bx.y0 + bx.y1) / 2); if (px >= x0 && px <= x1 && py >= y0 && py <= y1) RS.sel.add(i); });
     roofRefreshPanel(); roofDraw(); return;
   }
   roofSave(); if (d.pt && RS.step === 'ref') roofRender(); else roofDraw();
@@ -369,6 +393,7 @@ document.addEventListener('click', async e => {
   if (r === 'orient') { f.orient = v; roofSave(); return roofRefreshPanel(); }
   if (r === 'magnet') { RS.magnet = v === 'true'; return roofRefreshPanel(); }
   if (r === 'mode') { RS.mode = v; roofRefreshPanel(); return roofDraw(); }
+  if (r === 'look') { RS.look = v; PERSONAL.roofLook = v; savePersonal(); RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
   if (r === 'all') { RS.sel = new Set(f.mods.map((m, i) => i)); RS.mode = 'select'; roofRefreshPanel(); return roofDraw(); }
   if (r === 'none') { RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
   if (r === 'del' && RS.sel.size) { roofHist(); f.mods = f.mods.filter((m, i) => !RS.sel.has(i)); RS.sel = new Set(); roofSave(); return roofRender(); }
@@ -474,3 +499,26 @@ document.addEventListener('click', async e => {
   const pr = PRODUCTS.find(x => x.id === a.dataset.id); if (!pr || !pr.planImg) return;
   await delFiles([pr.planImg]); delete RIMG[pr.planImg]; pr.planImg = ''; saveProducts(); productModal(pr.id);
 });
+
+/* Dreieck aus einem Bild affin in ein Zieldreieck zeichnen (aktuelle Canvas-Skalierung bleibt erhalten) */
+function roofTri(x, img, s3, d3) {
+  const [[x0, y0], [x1, y1], [x2, y2]] = s3, [[u0, v0], [u1, v1], [u2, v2]] = d3, den = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1); if (Math.abs(den) < 1e-9) return;
+  const a = (u0 * (y1 - y2) + u1 * (y2 - y0) + u2 * (y0 - y1)) / den, b = (u0 * (x2 - x1) + u1 * (x0 - x2) + u2 * (x1 - x0)) / den, c = (u0 * (x1 * y2 - x2 * y1) + u1 * (x2 * y0 - x0 * y2) + u2 * (x0 * y1 - x1 * y0)) / den;
+  const d = (v0 * (y1 - y2) + v1 * (y2 - y0) + v2 * (y0 - y1)) / den, e = (v0 * (x2 - x1) + v1 * (x0 - x2) + v2 * (x1 - x0)) / den, f = (v0 * (x1 * y2 - x2 * y1) + v1 * (x2 * y0 - x0 * y2) + v2 * (x0 * y1 - x1 * y0)) / den;
+  const cx = (u0 + u1 + u2) / 3, cy = (v0 + v1 + v2) / 3, ex = (p, q) => [p + (p - cx) * 0.02, q + (q - cy) * 0.02];
+  x.save(); x.beginPath(); x.moveTo(...ex(u0, v0)); x.lineTo(...ex(u1, v1)); x.lineTo(...ex(u2, v2)); x.closePath(); x.clip();
+  x.transform(a, d, b, e, c, f); x.drawImage(img, 0, 0); x.restore();
+}
+/* Standard-Modulbild (hochkant): dunkle Zellen mit feinen Linien */
+let ROOF_CELL = null;
+function roofCellImg() {
+  if (ROOF_CELL) return ROOF_CELL;
+  /* Full-Black-Modul (hochkant): fast schwarz, sehr feine Zellstruktur, schwarzer Rahmen */
+  const c = document.createElement('canvas'); c.width = 228; c.height = 346; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 228, 346); gr.addColorStop(0, '#1a1d23'); gr.addColorStop(0.5, '#0e1014'); gr.addColorStop(1, '#14171c'); g.fillStyle = gr; g.fillRect(0, 0, 228, 346);
+  g.strokeStyle = 'rgba(255,255,255,.035)'; g.lineWidth = 1;
+  for (let i = 1; i < 6; i++) { g.beginPath(); g.moveTo(i * 228 / 6, 3); g.lineTo(i * 228 / 6, 343); g.stroke(); }
+  for (let j = 1; j < 10; j++) { g.beginPath(); g.moveTo(3, j * 346 / 10); g.lineTo(225, j * 346 / 10); g.stroke(); }
+  g.strokeStyle = '#08090b'; g.lineWidth = 4; g.strokeRect(2, 2, 224, 342);
+  return (ROOF_CELL = c);
+}
