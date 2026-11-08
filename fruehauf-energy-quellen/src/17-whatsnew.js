@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.67', date: '2026-11-08', items: [
+    ['prodstage', 'Bilder aller Wärmepumpen', 'In der Schnellauslegung und in der Einschätzung im PDF erscheint jetzt bei jeder gewählten Wärmepumpe ihr Bild – nicht nur bei Geräten, die schon in der Berechnung stehen.']
+  ] },
   { version: '1.66', date: '2026-11-08', items: [
     ['prodstage', 'Mit Produktbild', 'Die vorgeschlagene Wärmepumpe erscheint mit Bild aus Ihren Produkten – in der App und in der Einschätzung im PDF. Wärmepumpen aller Hersteller aus „Produkte“ stehen zur Auswahl.']
   ] },

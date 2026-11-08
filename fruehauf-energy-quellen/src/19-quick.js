@@ -191,6 +191,8 @@ function quickDialog(pid) {
   if (!(isNum(QS.load) && QS.load > 0)) QS.calcOpen = true;                    // ohne Heizlast gleich das Berechnen öffnen
   modal(`<div id="quick-root">${quickHTML()}</div>`, { wide: true });
   quickZip();
+  /* Bilder aller Wärmepumpen laden, damit jede Auswahl ihr Bild zeigt */
+  loadFiles(PRODUCTS.filter(x => x.cat === 'wp').map(x => x.img)).then(() => quickLive()).catch(() => {});
 }
 function quickApplyTo(p) {
   const r = qResult(), pr = r.sim && r.sim.prod;
@@ -480,4 +482,10 @@ function quickTechCard(p) {
       <div><div class="text-ink3">JAZ</div><b class="text-[16px]">ca. ${num(q.jaz, 1)}</b></div>
     </div>
     <div class="text-[12px] mt-3 font-medium" style="color:#C7792F">Grobe Schätzung – die tatsächliche Heizlast ergibt erst eine vollständige Heizlastberechnung (DIN EN 12831). Im PDF als kurze Seite „Erste Einschätzung Wärmepumpe“ mit diesem Hinweis.</div></div>`;
+}
+
+/* PDF: Bild der vorgeschlagenen Wärmepumpe auch dann laden, wenn sie (noch) nicht in den Komponenten steht */
+{
+  const _ppr = preparePrintRoot;
+  preparePrintRoot = async function () { try { await loadFiles(PRODUCTS.filter(x => x.cat === 'wp').map(x => x.img)); } catch (e) {} return _ppr.apply(this, arguments); };
 }
