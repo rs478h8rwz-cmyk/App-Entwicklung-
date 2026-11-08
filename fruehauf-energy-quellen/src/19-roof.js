@@ -273,7 +273,7 @@ async function roofDraw() {
   x.save(); x.beginPath(); x.rect(0, 0, cw, ch); g.poly.map(p => M(...p)).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.fillStyle = V.kind === 'plane' ? 'rgba(8,10,14,.72)' : 'rgba(8,10,14,.12)'; x.fill('evenodd'); x.restore();
   const path = (q, col, w, dash) => { x.save(); x.setLineDash(dash || []); x.strokeStyle = col; x.lineWidth = w; x.beginPath(); q.map(p => M(...p)).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.stroke(); x.restore(); };
   if (V.kind === 'plane') { path(g.poly, '#fff', 2); path(g.inset, 'rgba(255,214,120,.9)', 1.5, [6, 5]); } else { path(g.poly, 'rgba(255,255,255,.55)', 1); path(g.inset, 'rgba(255,214,120,.55)', 1, [5, 5]); }
-  let warn = [0, 0]; const pr = roofProd(f), pimg = pr.planImg ? await roofImg(pr.planImg) : null;
+  let warn = [0, 0]; const pr = roofProd(f), pimg = pr.planImg ? await roofPlanImg(pr.planImg) : null;
   const L = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
   f.mods.forEach((m, i) => {
     const b = modBox(f, m), st = modState(f, g, m, i), q = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].map(p => M(...p));
@@ -392,6 +392,7 @@ function roofUp() {
 /* Magnet: Gruppe an Nachbarmodulen (mit 1,5 cm Fuge) und am Randabstand ausrichten */
 function roofSnap(f, g, sel) {
   if (!sel.size || !g) return;
+  if (roofLattice(f, sel)) return;
   const bs = [...sel].map(i => modBox(f, f.mods[i])), G = { x0: Math.min(...bs.map(b => b.x0)), y0: Math.min(...bs.map(b => b.y0)), x1: Math.max(...bs.map(b => b.x1)), y1: Math.max(...bs.map(b => b.y1)) };
   const others = f.mods.filter((m, i) => !sel.has(i)).map(m => modBox(f, m)), T = 0.3;
   const ins = g.inset, yTop = Math.max(ins[1][1], ins[2][1]), yBot = Math.min(ins[0][1], ins[3][1]);
@@ -546,7 +547,7 @@ window.addEventListener('resize', () => { if (RS) roofDraw(); });
 document.addEventListener('change', async e => {
   const el = e.target; if (!el.dataset || !el.dataset.planimg || !el.files || !el.files[0]) return;
   const id = el.dataset.planimg, pr = PRODUCTS.find(x => x.id === id); if (!pr) return;
-  try { const blob = await imageKeepAlpha(el.files[0], 600); if (pr.planImg) { await delFiles([pr.planImg]); delete RIMG[pr.planImg]; } pr.planImg = await putFile(blob, 'modulplan.png'); saveProducts(); productModal(id); toast('Bild für den Modulplan gespeichert.'); }
+  try { const raw = await imageKeepAlpha(el.files[0], 900); const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(raw); }); const t = roofTrim(im); const blob = t === im ? raw : await new Promise(r => t.toBlob(r, 'image/png')); if (pr.planImg) { await delFiles([pr.planImg]); delete RIMG[pr.planImg]; delete RTRIM[pr.planImg]; } pr.planImg = await putFile(blob, 'modulplan.png'); saveProducts(); productModal(id); toast('Bild für den Modulplan gespeichert.'); }
   catch (err) { toast('Bild konnte nicht gelesen werden.', 'err'); }
 });
 document.addEventListener('click', async e => {
@@ -613,7 +614,7 @@ async function roofSnapshot(f) {
   const cx0 = Math.max(0, Math.min(...xs) - bw * 0.12), cx1 = Math.min(f.iw, Math.max(...xs) + bw * 0.12), cy0 = Math.max(0, Math.min(...ys) - bh * 0.3), cy1 = Math.min(f.ih, Math.max(...ys) + bh * 0.35);
   const k = Math.min(2, 1800 / Math.max(cx1 - cx0, cy1 - cy0)), c = document.createElement('canvas'); c.width = Math.round((cx1 - cx0) * k); c.height = Math.round((cy1 - cy0) * k);
   const x = c.getContext('2d'); x.drawImage(img, cx0, cy0, cx1 - cx0, cy1 - cy0, 0, 0, c.width, c.height);
-  const pr = roofProd(f), pimg = pr.planImg ? await roofImg(pr.planImg) : null, src = pimg || roofCellImg();
+  const pr = roofProd(f), pimg = pr.planImg ? await roofPlanImg(pr.planImg) : null, src = pimg || roofCellImg();
   for (const m of f.mods) {
     const b = modBox(f, m), q = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].map(([X, Y]) => { const [a, bb] = g.toImg(X, Y); return [(a - cx0) * k, (bb - cy0) * k]; });
     const cc = m.o === 'l' ? [q[1], q[2], q[3], q[0]] : q, iw2 = src.width, ih2 = src.height;
@@ -648,3 +649,37 @@ function roofSnapCard(p) {
       <div class="grid ${ids.length > 1 ? 'sm:grid-cols-2' : ''} gap-2">${ids.map(id => fileUrl(id) ? `<a href="${fileUrl(id)}" target="_blank" rel="noopener"><img src="${fileUrl(id)}" class="w-full rounded-lg border border-line" alt="Modulbelegung"></a>` : '<div class="h-40 rounded-lg bg-raised"></div>').join('')}</div>
       <div class="text-[12px] text-ink3 mt-2">Foto mit eingezeichneten Modulen – Schätzung aus dem Foto, vor Ort bitte nachmessen.</div></div></div>`;
 }
+
+/* Raster-Magnet: verschobene Gruppe auf das Raster (Modulmaß + 1,5 cm Fuge) des nächsten Nachbarmoduls setzen */
+function roofLattice(f, sel) {
+  const ids = [...sel], m0 = f.mods[ids[0]]; if (!m0) return false;
+  const others = f.mods.map((m, i) => [m, i]).filter(([m, i]) => !sel.has(i) && m.o === m0.o);
+  if (!others.length || ids.some(i => f.mods[i].o !== m0.o)) return false;
+  const [w, h] = modWH(f, m0.o), cw = w + ROOF_GAP, ch = h + ROOF_GAP;
+  const c0 = [m0.x + w / 2, m0.y + h / 2];
+  const [a] = others.map(([m]) => [m, Math.hypot(m.x + w / 2 - c0[0], m.y + h / 2 - c0[1])]).sort((p, q) => p[1] - q[1])[0];
+  if (Math.hypot(a.x - m0.x, a.y - m0.y) > Math.max(cw, ch) * 4) return false;      // nur in der Nähe anderer Module
+  const dx = Math.round((m0.x - a.x) / cw) * cw + a.x - m0.x, dy = Math.round((m0.y - a.y) / ch) * ch + a.y - m0.y;
+  const boxes = ids.map(i => modBox(f, f.mods[i])), rest = f.mods.filter((m, i) => !sel.has(i)).map(m => modBox(f, m));
+  const hits = (ox, oy) => boxes.some(b => rest.some(o => b.x0 + ox < o.x1 - 1e-4 && b.x1 + ox > o.x0 + 1e-4 && b.y0 + oy < o.y1 - 1e-4 && b.y1 + oy > o.y0 + 1e-4));
+  /* bevorzugt der nächste freie Rasterplatz */
+  const cand = [[dx, dy]]; for (const sx of [0, cw, -cw]) for (const sy of [0, ch, -ch]) if (sx || sy) cand.push([dx + sx, dy + sy]);
+  cand.sort((p, q) => Math.hypot(...p) - Math.hypot(...q));
+  const ok = cand.find(([ox, oy]) => !hits(ox, oy)); if (!ok) return false;
+  for (const i of ids) { f.mods[i].x += ok[0]; f.mods[i].y += ok[1]; }
+  return true;
+}
+/* Modulbild: weiße bzw. durchsichtige Ränder abschneiden */
+function roofTrim(img) {
+  const c = document.createElement('canvas'), W = c.width = img.naturalWidth || img.width, H = c.height = img.naturalHeight || img.height, x = c.getContext('2d');
+  x.drawImage(img, 0, 0); let d; try { d = x.getImageData(0, 0, W, H).data; } catch (e) { return img; }
+  const keep = i => d[i + 3] > 24 && !(d[i] > 232 && d[i + 1] > 232 && d[i + 2] > 232);
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y += 2) for (let xx = 0; xx < W; xx += 2) { if (keep((y * W + xx) * 4)) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+  if (x1 < 0 || (x1 - x0) < W * 0.1) return img;
+  if (x0 < 3 && y0 < 3 && x1 > W - 4 && y1 > H - 4) return img;
+  const o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1; o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+  return o;
+}
+const RTRIM = {};
+async function roofPlanImg(id) { if (!id) return null; if (RTRIM[id]) return RTRIM[id]; const im = await roofImg(id); if (!im) return null; return (RTRIM[id] = roofTrim(im)); }

@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.06', date: '2026-11-09', items: [
+    ['modplace', 'Magnet mit Raster', 'Der Magnet setzt Module jetzt exakt auf das Raster der Nachbarmodule (Modulmaß + 1,5 cm Fuge) – Reihen und Spalten stehen immer gerade. Für versetzte Module den Magnet ausschalten.'],
+    ['modsave', 'Modulbilder automatisch zugeschnitten', 'Weiße oder durchsichtige Ränder am Bild für den Modulplan werden automatisch entfernt – das Modul füllt seine Fläche vollständig aus.']
+  ] },
   { version: '2.05', date: '2026-11-09', items: [
     ['modplan', 'Zoomen im Modulplan', 'Foto und Dach lassen sich vergrößern: zwei Finger am iPad, Mausrad am PC oder die Knöpfe −/+/Einpassen. So treffen Sie Ecken und Pfannenkanten genau. Dazu ein Feinjustier-Kreis: Ecke antippen, dann im Kreis ziehen – der Punkt bewegt sich ganz langsam (am PC auch mit den Pfeiltasten).'],
     ['modplace', 'Bedienung verbessert', '„Weiter“ und die Modulauswahl stehen immer sichtbar in der unteren Leiste. Module lassen sich – auch bei Mehrfachauswahl – durch Antippen wieder abwählen; der Magnet greift früher.'],
