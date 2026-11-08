@@ -102,18 +102,39 @@ window.addEventListener('resize', () => heroSky());
   render = function () { _render2.apply(this, arguments); heroSky(); };
 }
 
-/* Zahlen bauen sich auf, sobald sie beim Scrollen ins Bild kommen (je Seite einmal) */
-const CU_DONE = new Set(); let cuRoute = '';
+/* Zahlen bauen sich auf, sobald sie beim Scrollen ins Bild kommen – jedes Mal neu:
+   aus dem Bild gescrollt → zurück auf 0, wieder sichtbar → zählt erneut hoch. */
+const CU_STATE = new Map(); let cuRoute = '';
 const CU_RE = /^[–−+-]?\s*\d[\d.,]*\s*(€|%|kWh|kWp|kW|t|J\.|Jahre|ct|Stk\.?|W|°C|dB\(A\))?(\s*\/\s*(Jahr|Monat|kWh))?$/;
-const cuIO = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(en => {
-  if (!en.isIntersecting) return; cuIO.unobserve(en.target); CU_DONE.add(en.target.dataset.cu); countUp(en.target);
-}), { threshold: 0.5 }) : null;
+const CU_NUM = /\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?/g;
+function cuNodes(el) { const a = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); while (w.nextNode()) if (/\d/.test(w.currentNode.nodeValue)) a.push(w.currentNode); return a; }
 function cuZero(el) {
-  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-  while (w.nextNode()) { const n = w.currentNode; if (/\d/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(/\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?/g, m => { const dec = (m.split(',')[1] || '').length; return dec ? '0,' + '0'.repeat(dec) : '0'; }); }
+  el._cuTok = (el._cuTok || 0) + 1;
+  el._cuOrig.forEach(([n, t]) => { n.nodeValue = t.replace(CU_NUM, m => { const dec = (m.split(',')[1] || '').length; return dec ? '0,' + '0'.repeat(dec) : '0'; }); });
 }
+function cuRun(el, ms = 750) {
+  const tok = el._cuTok = (el._cuTok || 0) + 1, t0 = performance.now();
+  const fmt = (v, dec) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v);
+  const step = now => {
+    if (el._cuTok !== tok) return;
+    const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    el._cuOrig.forEach(([n, t]) => { n.nodeValue = k >= 1 ? t : t.replace(CU_NUM, m => { const dec = (m.split(',')[1] || '').length; return fmt(+m.replace(/\./g, '').replace(',', '.') * e, dec); }); });
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+const cuIO = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(en => {
+  const el = en.target, key = el.dataset.cu;
+  if (en.isIntersecting && en.intersectionRatio >= 0.5) {
+    if (el._cuSkip) { el._cuSkip = false; CU_STATE.set(key, 'in'); return; }
+    if (CU_STATE.get(key) !== 'in') { CU_STATE.set(key, 'in'); cuRun(el); }
+  } else if (!en.isIntersecting) {
+    el._cuSkip = false;
+    if (CU_STATE.get(key) !== 'out') { CU_STATE.set(key, 'out'); cuZero(el); }
+  }
+}), { threshold: [0, 0.5] }) : null;
 function markNumbers() {
-  const route = location.hash; if (route !== cuRoute) { cuRoute = route; CU_DONE.clear(); }
+  const route = location.hash; if (route !== cuRoute) { cuRoute = route; CU_STATE.clear(); }
   if (!cuIO || !animOk()) return;
   cuIO.disconnect();
   let i = 0;
@@ -128,17 +149,12 @@ function markNumbers() {
   cands.forEach(el => {
     if (el.parentElement && el.parentElement.closest('[data-cu]')) return;
     const key = (i++) + '|' + el.textContent.trim(); el.dataset.cu = key;
-    if (CU_DONE.has(key)) return;
-    /* Kopie der Endwerte merken, auf 0 setzen und erst beim Sichtbarwerden hochzählen */
-    const nodes = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    while (w.nextNode()) nodes.push([w.currentNode, w.currentNode.nodeValue]);
-    el._cuOrig = nodes; cuZero(el); cuIO.observe(el);
+    el._cuOrig = cuNodes(el).map(n => [n, n.nodeValue]);
+    /* Schon sichtbare Zahl bei einer Eingabe nicht erneut zählen lassen */
+    if (CU_STATE.get(key) === 'in') el._cuSkip = true;
+    else { CU_STATE.set(key, 'out'); cuZero(el); }
+    cuIO.observe(el);
   });
-}
-/* countUp liest die Endwerte aus _cuOrig, falls vorhanden */
-{
-  const _cu = countUp;
-  countUp = function (el, ms) { if (el._cuOrig) { el._cuOrig.forEach(([n, t]) => { n.nodeValue = t; }); el._cuOrig = null; } return _cu(el, ms); };
 }
 {
   const _render3 = render;
