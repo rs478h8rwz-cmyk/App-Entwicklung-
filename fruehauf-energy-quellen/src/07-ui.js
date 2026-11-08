@@ -70,7 +70,7 @@ function shell(inner) {
   </div>
   <nav class="md:hidden flex items-center gap-1 px-3 pt-1 pb-3 overflow-x-auto no-scrollbar">${links('!h-9 !px-3 !text-[13px]')}</nav>
 </header>
-<main class="pb-32">${UI.route !== 'kunden' ? `<div class="max-w-7xl mx-auto px-4 pt-3 -ml-2"><button class="btn-g !h-9 !px-2 text-[14px]" data-a="back">${ic('arrowL', 16)}${UI.route === 'projekt' ? 'Alle Kunden' : 'Zurück zur Übersicht'}</button></div>` : ''}${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a> · <a href="#/einstellungen/ansicht" class="hover:text-ink">Version ${typeof WHATS_NEW !== 'undefined' ? WHATS_NEW.version : ''}</a></footer></main>`;
+<main class="pb-32">${UI.route !== 'kunden' ? `<div class="max-w-7xl mx-auto px-4 pt-3 -ml-2"><button class="btn-g !h-9 !px-2 text-[14px]" data-a="back">${ic('arrowL', 16)}${UI.route === 'projekt' ? 'Alle Kunden' : 'Zurück zur Übersicht'}</button></div>` : ''}${inner}<footer class="text-center text-[12px] text-ink3 pt-10"><a href="#/einstellungen/recht" class="hover:text-ink">Impressum</a> · <a href="#/einstellungen/recht" class="hover:text-ink">Datenschutz</a> · <a href="#/einstellungen/ansicht" class="hover:text-ink">Version ${typeof WHATS_NEW !== 'undefined' ? WHATS_NEW.version : ''}</a><div class="mt-1 text-[11px]">PLZ- und Ortsdaten: GeoNames (geonames.org), CC BY 4.0</div></footer></main>`;
 }
 /* Ansicht: Hell ↔ Dunkel */
 const curMode = () => (appDark() ? 'dark' : 'light');
@@ -330,7 +330,7 @@ function step2(p, R) {
     : field('Bruttopreis laut Angebot', 'p:offer.gross', { t: 'n', unit: '€', big: true, hint: 'Einzige Preisgrundlage der Berechnung (inkl. MwSt.).' });
   return `<div class="card p-5 sm:p-6">${cardHead('users', 'Kunde', 'Diese Angaben erscheinen auf dem Deckblatt.')}
     <div class="grid sm:grid-cols-[180px_1fr] gap-4">${sel('Anrede', 'p:customer.salutation', [['Familie', 'Familie'], ['Herr', 'Herr'], ['Frau', 'Frau'], ['Eheleute', 'Eheleute'], ['Firma', 'Firma'], ['', '–']])}${field('Name', 'p:customer.name', { ph: 'z. B. Mustermann' })}</div>
-    <div class="grid sm:grid-cols-[1fr_120px_1fr] gap-4 mt-4">${field('Straße und Hausnummer', 'p:customer.street')}${field('PLZ', 'p:customer.zip', { attrs: 'inputmode="numeric"' })}${field('Ort', 'p:customer.city')}</div>
+    <div class="grid sm:grid-cols-[1fr_120px_1fr] gap-4 mt-4">${field('Straße und Hausnummer', 'p:customer.street')}${field('PLZ', 'p:customer.zip', { attrs: 'inputmode="numeric"' })}${field('Ort', 'p:customer.city')}</div><div class="hint" data-plz-te='[data-b="p:customer.zip"]'></div>
     <div class="grid sm:grid-cols-2 gap-4 mt-4">${field('E-Mail', 'p:customer.email', { t: 'email' })}${field('Telefon', 'p:customer.phone', { t: 'tel' })}</div></div>
   <div class="card p-5 sm:p-6">${cardHead('euro', 'Preis und Angebot')}${price}
     <div class="grid sm:grid-cols-3 gap-4 mt-5">${field('Angebots-Nr.', 'p:offer.number')}${field('Angebotsdatum', 'p:offer.date', { t: 'date' })}${advisorPicker(p)}</div>

@@ -12,7 +12,7 @@ const QH = {
   flow: [[35, 'Fußbodenheizung', '35 °C'], [45, 'Gemischt / neue Heizkörper', '45 °C'], [55, 'Alte Heizkörper', '55 °C+']],
   sperr: [[0, 'Keine'], [2, '2 h'], [4, '4 h'], [6, '6 h']]
 };
-const QD = { build: 'bestand', art: 'efh', zip: '', te: null, teAuto: null, insul: 'alt', load: null, calcOpen: false, method: 'verbrauch',
+const QD = { build: 'bestand', art: 'efh', zip: '', city: '', teH: null, te: null, teAuto: null, insul: 'alt', load: null, calcOpen: false, method: 'verbrauch',
   fuel: 'oil_bw', c1: null, c2: null, c3: null, unit: 'l', wwSys: true, area: 160, year: '1983', reno: [], spec: 60,
   persons: 4, comfort: 30, circ: false, flow: 45, sperr: 0 };
 let QS = null, QPID = null;
@@ -92,11 +92,12 @@ function quickHTML() {
   ${sec(1, 'Gebäude', `
     <div class="grid sm:grid-cols-2 gap-4"><div><span class="lbl">Bauvorhaben</span><div class="grid grid-cols-2 gap-2">${qTile('build', 'neu', 'Neubau', QI.crane, neu)}${qTile('build', 'bestand', 'Bestand', QI.house, !neu)}</div></div>
       <div><span class="lbl">Art</span><div class="grid grid-cols-2 gap-2">${qTile('art', 'efh', 'Einfamilienhaus', QI.house, QS.art === 'efh')}${qTile('art', 'mfh', 'Mehrfamilienhaus', QI.multi, QS.art === 'mfh')}</div></div></div>
-    <div class="grid grid-cols-2 gap-4 mt-4">
-      <div><span class="lbl">Standort (PLZ)</span>${qIn('zip', '', { im: 'numeric', ph: 'PLZ' })}</div>
-      <div><span class="lbl">Normaußentemp.</span>${qIn('te', '°C', { ph: isNum(QS.teAuto) ? inputFmt(QS.teAuto, 'n') : '-12' })}</div>
+    <div class="grid grid-cols-[110px_1fr] sm:grid-cols-[120px_1fr_160px] gap-3 mt-4">
+      <div><span class="lbl">PLZ</span>${qIn('zip', '', { im: 'numeric', ph: 'PLZ' })}</div>
+      <div><span class="lbl">Ort</span><input class="inp" type="text" data-qi="city" value="${esc(QS.city || '')}" placeholder="Ort" autocomplete="off"></div>
+      <div class="col-span-2 sm:col-span-1"><span class="lbl">Normaußentemp.</span>${qIn('te', '°C', { ph: isNum(QS.teAuto) ? inputFmt(QS.teAuto, 'n') : '-12' })}</div>
     </div>
-    <div class="hint" id="q-te-info">${isNum(QS.teAuto) ? `Aus der Lage geschätzt: ca. <b>${num(QS.teAuto, 1)} °C</b>. Feld leer lassen = Schätzwert; genauer Wert nach DIN/TS 12831-1.` : 'PLZ eingeben – daraus wird die Normaußentemperatur geschätzt.'}</div>
+    <div class="hint" id="q-te-info">${qTeInfo()}</div>
     <div class="grid sm:grid-cols-2 gap-4 mt-4"><div><span class="lbl">Dämmstandard</span>${qSel('insul', QH.insul.map(x => [x[0], x[1]]))}<div class="hint">Heizgrenztemperatur: <b>${ins[2]} °C</b></div></div>
       <div>${qLbl('Heizlast', `<span class="text-ink3 text-[12px]">0–${maxLoad} kW</span>`)}${qIn('load', 'kW', { cls: '!text-[18px] font-semibold' })}<input type="range" min="0" max="${maxLoad}" step="0.1" value="${isNum(QS.load) ? QS.load : 0}" data-qi="load" data-range="1" class="w-full mt-3 accent-[rgb(var(--p-rgb))]"></div></div>
     <div class="mt-4 rounded-[calc(var(--r)-4px)] border ${QS.calcOpen ? 'border-p/40 bg-raised' : 'border-line'}">
@@ -129,10 +130,16 @@ function quickLive() {
   set('q-r-load', num(r.load, 1) + ' kW'); set('q-r-ww', num(r.ww, 1) + ' kW'); set('q-r-sp', '× ' + num(r.sperrF, 2)); set('q-r-total', num(r.total, 1) + ' kW'); set('q-r-jaz', num(r.jaz, 2));
   set('q-mload', isNum(m) ? num(m, 2) + ' kW' : '–'); set('q-pers', QS.persons);
 }
+function qTeInfo() {
+  if (isNum(QS.teAuto)) return `Normaußentemperatur ca. <b>${num(QS.teAuto, 1)} °C</b>${isNum(QS.teH) ? ` (geschätzt aus Lage und ${num(QS.teH)} m Höhe)` : ' (geschätzt)'}. Feld leer lassen = dieser Wert; genauer Wert nach DIN/TS 12831-1.`;
+  return /^\d{5}$/.test(String(QS.zip || '')) ? 'PLZ nicht gefunden – bitte Normaußentemperatur eintragen.' : 'PLZ oder Ort eingeben – Ort bzw. PLZ und Normaußentemperatur werden ergänzt.';
+}
 async function quickZip() {
   const z = String(QS.zip || '').trim(); if (!/^\d{5}$/.test(z)) return;
-  try { const c = await plzCoords(z); QS.teAuto = c ? teFromCoords(c) : null; } catch (e) { QS.teAuto = null; }
-  const info = $('#q-te-info'); if (info) info.innerHTML = isNum(QS.teAuto) ? `Aus der Lage geschätzt: ca. <b>${num(QS.teAuto, 1)} °C</b>. Feld leer lassen = Schätzwert; genauer Wert nach DIN/TS 12831-1.` : 'PLZ nicht gefunden – bitte Normaußentemperatur eintragen.';
+  const pi = typeof plzInfo === 'function' ? await plzInfo(z) : null;
+  if (pi) { QS.teAuto = pi.te; QS.teH = pi.h; }
+  else { QS.teH = null; try { const c = await plzCoords(z); QS.teAuto = c ? teFromCoords(c) : null; } catch (e) { QS.teAuto = null; } }
+  const info = $('#q-te-info'); if (info) info.innerHTML = qTeInfo();
   const te = $('#modal [data-qi="te"]'); if (te && isNum(QS.teAuto)) te.placeholder = inputFmt(QS.teAuto, 'n');
   quickLive();
 }
@@ -142,12 +149,12 @@ function quickDialog(pid) {
   const p = pid ? findProject(pid) : null; QPID = p ? p.id : null;
   QS = { ...QD, reno: [], ...(p && p.quick && p.quick.v === 2 ? clone(p.quick.state) : {}) };
   if (p && !(p.quick && p.quick.v === 2)) {
-    if (p.customer.zip) QS.zip = p.customer.zip;
+    if (p.customer.zip) { QS.zip = p.customer.zip; QS.city = p.customer.city || ''; }
     const h = p.heating;
     if (isNum(h.cons) && h.cons > 0) { QS.fuel = h.fuel === 'oil' ? 'oil_bw' : 'gas_bw'; QS.c1 = h.cons; QS.unit = h.fuel === 'oil' ? 'l' : 'kwh'; QS.method = 'verbrauch'; }
     if (p.quick && isNum(p.quick.area)) QS.area = p.quick.area;
   }
-  if (!QS.zip && S.company.zip) QS.zip = S.company.zip;
+  if (!QS.zip && S.company.zip) { QS.zip = S.company.zip; QS.city = S.company.city || ''; }
   modal(`<div id="quick-root">${quickHTML()}</div>`, { wide: true });
   quickZip();
 }
@@ -180,6 +187,7 @@ document.addEventListener('input', e => {
   const k = el.dataset.qi;
   if (el.dataset.sel) return;                                   // Auswahlfelder: über „change“
   if (k === 'zip') { QS.zip = el.value.replace(/\D/g, '').slice(0, 5); quickZip(); return; }
+  if (k === 'city') { QS.city = el.value; return; }
   const v = el.dataset.range ? parseFloat(el.value) : pnum(el.value);
   QS[k] = isFinite(v) ? v : null;
   if (k === 'persons') QS.persons = Math.max(1, Math.min(12, Math.round(QS.persons || 1)));
@@ -212,7 +220,7 @@ document.addEventListener('click', async e => {
   else if (act === 'quick-create' || act === 'quick-apply') {
     if (!isNum(QS.load) || QS.load <= 0) { toast('Bitte eine Heizlast eingeben oder über „Heizlast berechnen“ ermitteln.'); return; }
     if (act === 'quick-create') {
-      const np = newProject(a.dataset.type); if (QS.zip) np.customer.zip = QS.zip;
+      const np = newProject(a.dataset.type); if (QS.zip) np.customer.zip = QS.zip; if (QS.city) np.customer.city = QS.city;
       quickApplyTo(np); PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`);
       toast(`Schnellauslegung übernommen: ${num(np.hp.kw, 1)} kW, JAZ ${num(np.hp.jaz, 2)}.`);
     } else {

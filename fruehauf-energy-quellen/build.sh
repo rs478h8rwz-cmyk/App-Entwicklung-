@@ -13,7 +13,7 @@ s=open(APP+'/index.html').read().replace('__APPVER__',VER)
 open(APP+'/index.html','w').write(s)
 js=re.findall(r'<script>\n(.*?)</script>',s,re.S)[-1]
 open('$SP/app.js','w').write(js)
-core=['index.html','manifest.webmanifest','favicon.svg','icon-180.png','icon-192.png','icon-512.png','vendor/fonts.css','vendor/tailwind.js','vendor/pdf.min.js','vendor/pdf.worker.min.js','vendor/html2canvas.min.js','vendor/jspdf.umd.min.js','vendor/plz.json','vendor/qrcode.js']
+core=['index.html','manifest.webmanifest','favicon.svg','icon-180.png','icon-192.png','icon-512.png','vendor/fonts.css','vendor/tailwind.js','vendor/pdf.min.js','vendor/pdf.worker.min.js','vendor/html2canvas.min.js','vendor/jspdf.umd.min.js','vendor/plz.json','vendor/plz-orte.json','vendor/qrcode.js']
 core+=['vendor/fonts/'+f for f in sorted(os.listdir(APP+'/vendor/fonts'))]
 t=open('$SP/sw-template.js').read().replace('__VERSION__',VER).replace('__SEMVER__',(re.search(r"version: '([\d.]+)'",open('$SP/src/17-whatsnew.js').read()) or [0,'?'])[1]).replace('__CORE__',json.dumps(core))
 open(APP+'/sw.js','w').write(t)
