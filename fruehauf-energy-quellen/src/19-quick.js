@@ -435,15 +435,23 @@ DOC.wpdesign = function (p, R) {
   const chart = svgDataUri(qWith(st, () => qChart(sim, { W: 760, H: 300 })).replace(/<svg [^>]*>/, '<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300">'));
   const tile = (l, v, sub, col) => `<div style="background:var(--tile);border-radius:var(--dr);padding:3mm 3.6mm"><div style="font-size:7.4pt;color:var(--ink3)">${l}</div><div style="font-size:12.5pt;font-weight:700;margin-top:0.6mm;${col ? 'color:' + col : ''}">${v}</div>${sub ? `<div style="font-size:7.2pt;color:var(--ink3);margin-top:0.6mm;line-height:1.35">${sub}</div>` : ''}</div>`;
   const kv = (k, v) => `<div style="display:flex;justify-content:space-between;gap:3mm;padding:1mm 0;border-bottom:0.2mm solid var(--line)"><span style="color:var(--ink3)">${k}</span><b style="text-align:right">${v}</b></div>`;
+  const pr = sim.prod, pu = pr ? (fileUrl(pr.img) || pr.imgUrl) : '';
   let b = sales ? sChap('wpdesign', p, R) : chap(String(txt('wpdesign', 'title')).replace(/\*/g, ''), txt('wpdesign', 'lead'));
   b += `<div style="border:0.5mm solid #E59A5C;border-radius:var(--dr);padding:4mm 5mm;background:rgba(229,154,92,.10)">
       <div style="font-size:10.5pt;font-weight:700;color:#C7792F">Grobe Schätzung – keine Heizlastberechnung</div>
       <div style="font-size:8.6pt;line-height:1.5;margin-top:1.2mm">Diese Werte sind eine überschlägige Einschätzung auf Basis Ihrer Angaben und typischer Kennwerte. Welche Heizlast Ihr Haus tatsächlich hat und welche Wärmepumpe genau passt, ermitteln wir vor der Bestellung mit einer vollständigen Heizlastberechnung nach DIN EN 12831.</div></div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin-top:4mm">
-      ${tile('Heizlast (geschätzt)', `ca. ${num(r.total, 1)} kW`, '')}
-      ${tile('Passende Wärmepumpe', esc(sim.name), `${num(sim.power, 1)} kW Nennleistung`)}
-      ${tile('Bivalenzpunkt', `ca. ${num(sim.bv, 0)} °C`, sim.isEl ? 'darunter hilft der Heizstab' : 'darunter hilft der Zusatzerzeuger')}
-      ${tile('Jahresarbeitszahl', `ca. ${num(sim.jazGB, 1)}`, '')}
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:3mm;margin-top:4mm;align-items:stretch">
+      <div style="background:var(--tile);border-radius:var(--dr);overflow:hidden;display:flex;flex-direction:column">
+        <div style="height:46mm;position:relative;background-image:url('${stageBg()}');background-size:100% 100%;display:flex;align-items:flex-end;justify-content:center;padding:4mm 5mm 3mm">
+          <img src="${shadowBg()}" style="position:absolute;left:18%;width:64%;bottom:2mm;height:4mm;display:block">
+          ${pu ? `<img src="${esc(pu)}" style="position:relative;max-height:38mm;max-width:100%;width:auto;height:auto;display:block">` : `<div style="position:relative;margin-bottom:6mm">${sImg(prodIcon('wp'), 18, S.design.primary)}</div>`}</div>
+        <div style="padding:3mm 4mm"><div style="font-size:7.4pt;font-weight:600;color:var(--p)">Passende Wärmepumpe (Vorschlag)</div><div style="font-size:11pt;font-weight:700;margin-top:0.6mm">${esc(sim.name)}</div><div class="small">${num(sim.power, 1)} kW Nennleistung${pr && pr.maker ? ' · ' + esc(pr.maker) : ''}</div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3mm">
+        ${tile('Heizlast (geschätzt)', `ca. ${num(r.total, 1)} kW`, '')}
+        ${tile('Bivalenzpunkt', `ca. ${num(sim.bv, 0)} °C`, sim.isEl ? 'darunter hilft der Heizstab' : 'darunter hilft der Zusatzerzeuger')}
+        ${tile('Deckungsanteil', `ca. ${num(sim.deck, 0)} %`, 'Anteil der Wärmepumpe am Jahresbedarf')}
+        ${tile('Jahresarbeitszahl', `ca. ${num(sim.jazGB, 1)}`, mode)}
+      </div>
     </div>
     <div class="small" style="margin-top:3mm;line-height:1.5;color:var(--ink3)">Grundlagen: ${st.build === 'neu' ? 'Neubau' : 'Bestand'}, ${qInsul(st.insul)[1]}, Heizlast ${meth}, ${st.persons} Personen, ${hs} ${flow} °C, Normaußentemperatur ca. ${num(sim.te, 1)} °C${st.zip ? ` (${esc(st.zip)} ${esc(st.city || '')})` : ''}. Stand ${deDate(q.date)}.</div>`;
   return { title: 'Erste Einschätzung Wärmepumpe', body: b };
