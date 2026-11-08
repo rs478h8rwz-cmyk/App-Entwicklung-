@@ -63,7 +63,7 @@ function shell(inner) {
   const links = cls => nav.map(([k, l, i]) => `<a href="#/${k}" class="navl ${cls} ${active === k ? 'on' : ''}">${ic(i, 17)}${l}</a>`).join('');
   return `<header class="sticky top-0 z-40 border-b border-line" style="background:var(--header);padding-top:env(safe-area-inset-top);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)">
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
-    <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3">Wirtschaftlichkeitsrechner</div></div></a>
+    <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3 hidden lg:block">Wirtschaftlichkeitsrechner</div></div></a>
     <nav class="hidden md:flex items-center gap-1 ml-6">${links('')}</nav>
     ${themeButton('ml-auto')}
     <button class="btn-p !h-10 !px-4" data-a="new">${ic('plus', 17)}<span>Neue Berechnung</span></button>
@@ -77,7 +77,7 @@ const curMode = () => (appDark() ? 'dark' : 'light');
 const MODE_LABEL = { light: 'Hell', dark: 'Dunkel' };
 function themeButton(cls = '') {
   const m = curMode(), next = m === 'light' ? 'dark' : 'light';
-  return `<button class="btn-g ${cls} !h-10 !px-2.5 gap-1.5" data-a="theme-toggle" aria-label="Ansicht wechseln, jetzt ${MODE_LABEL[m]}" title="Ansicht: ${MODE_LABEL[m]} – weiter zu ${MODE_LABEL[next]}">${ic(m === 'light' ? 'sun' : 'moon', 18)}<span class="hidden sm:inline text-[13px]">${MODE_LABEL[m]}</span></button>`;
+  return `<button class="btn-g ${cls} !h-10 !px-2.5 gap-1.5" data-a="theme-toggle" aria-label="Ansicht wechseln, jetzt ${MODE_LABEL[m]}" title="Ansicht: ${MODE_LABEL[m]} – weiter zu ${MODE_LABEL[next]}">${ic(m === 'light' ? 'sun' : 'moon', 18)}<span class="hidden lg:inline text-[13px]">${MODE_LABEL[m]}</span></button>`;
 }
 function studioShell(inner) {
   const active = UI.route === 'projekt' ? 'kunden' : UI.route;
@@ -189,15 +189,15 @@ function viewKunden() {
   const card = customerCard;
 
   return `<section class="relative overflow-hidden border-b border-line hero-anim">
-    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true, car: true })}</div>
-    <div class="hidden sm:block absolute inset-0" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 sm:pt-0 pb-8 sm:pb-0 sm:min-h-[600px] flex items-center">
+    <div class="hidden lg:block absolute inset-0 hero-bg">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true, car: true })}</div>
+    <div class="hidden lg:block absolute inset-0 hero-bg" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 lg:pt-0 pb-8 lg:pb-0 lg:min-h-[600px] flex items-center hero-txt">
       <div class="max-w-[36rem]"><span class="mono text-[12px] text-ink2 inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
-      <h1 class="h-font text-[46px] sm:text-[76px] leading-[0.98] mt-5">Sonnige Zahlen für Ihre Kunden.</h1>
+      <h1 class="h-font text-[46px] sm:text-[60px] lg:text-[76px] leading-[0.98] mt-5">Sonnige Zahlen für Ihre Kunden.</h1>
       <p class="text-[17px] sm:text-[19px] text-ink2 mt-6 leading-relaxed">Angebot hochladen, Daten prüfen, fertig: In wenigen Minuten entsteht eine Wirtschaftlichkeitsberechnung, die Ihre Kunden verstehen.</p>
       <div class="flex flex-wrap gap-3 mt-9"><button class="btn-p !h-12 !px-6 !text-[15px]" data-a="new">${ic('plus', 18)}Neue Berechnung</button><a href="#/einstellungen/design" class="btn-s !h-12 !px-5 !text-[15px]">Design anpassen</a></div></div>
     </div>
-    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({ anim: true, car: true })}</div>
+    <div class="lg:hidden mx-4 sm:mx-8 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3] sm:aspect-[16/10] hero-card">${houseSVG({ anim: true, car: true })}</div>
   </section>
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}
