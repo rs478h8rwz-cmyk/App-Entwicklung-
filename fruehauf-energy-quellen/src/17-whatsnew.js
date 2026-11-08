@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.63', date: '2026-11-08', items: [
+    ['quick', 'Zirkulation wie bei Wolf', 'Mit Zirkulationspumpe sinkt die Heizlast jetzt genauso wie bei der Wolf-Auslegung (3.000 l Öl, Hasbergen: ohne 13,7 kW, mit 12,5 kW). Ja/Nein-Auswahl deutlich farbig markiert.']
+  ] },
   { version: '1.62', date: '2026-11-08', items: [
     ['quick', 'Heizlast wie bei Wolf', 'Die Berechnung aus dem Verbrauch ist auf die Wolf-Auslegung abgeglichen (gleiche Eingaben → gleiche Heizlast, z. B. 3.000 l Öl in Hasbergen: 13,7 kW). Die Zirkulationspumpe senkt die Heizlast wie dort.'],
     ['quickuse', 'Baujahr der Heizung', 'Neu: Baujahr der bisherigen Heizung (vor 1980, 1980–1995, seit 1995) – ältere Kessel haben einen geringeren Nutzungsgrad. Dazu Mittelwert des Verbrauchs und breitere Eingabefelder.']
