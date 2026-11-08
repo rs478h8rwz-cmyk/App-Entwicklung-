@@ -383,6 +383,13 @@ function parseOffer(read, role) {
     if (wm && /wolf/i.test(all.join(' '))) { const w = WOLF[wm[1].padStart(2, '0')]; R.sw ??= w.sw; R.swDay ??= w.day; R.swNight ??= w.night; R.spl ??= w.spl; R.splDist ??= 3; R.wolf = 'CHA-' + wm[1]; }
   }
   R.products = matchProducts(ordered);
+  // Absicherung: Wärmepumpe nur, wenn ihre Leistung zur erkannten Heizleistung passt (z. B. CHA 10 statt CHA 16)
+  if (R.hpKw) {
+    const wpHits = R.products.filter(m => { const pr = PRODUCTS.find(x => x.id === m.id); return pr && pr.cat === 'wp'; });
+    const fits = m => { const pr = PRODUCTS.find(x => x.id === m.id), kw = pr.power || +((String(pr.name).match(/(?<![\d.,])(\d{1,2})(?![\d.,]*\d)/) || [])[1]); return !kw || Math.abs(kw - R.hpKw) <= 0.6; };
+    if (wpHits.some(fits)) R.products = R.products.filter(m => !wpHits.includes(m) || fits(m));
+    else if (wpHits.length) R.products = R.products.filter(m => !wpHits.includes(m));
+  }
   return R;
 }
 function matchProducts(lines) {

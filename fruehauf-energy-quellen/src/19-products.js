@@ -20,7 +20,7 @@ function prodSpecs(pr) {
 /* ---------- Produktübersicht ---------- */
 viewProducts = function () {
   const list = PRODUCTS.slice().sort((a, b) => CAT_ORDER.indexOf(a.cat) - CAT_ORDER.indexOf(b.cat));
-  const card = pr => `<div class="card p-4 flex flex-col min-w-0"><div class="aspect-[4/3] rounded-[calc(var(--r)-4px)] bg-bg grid place-items-center overflow-hidden">${fileUrl(pr.img) || pr.imgUrl ? `<img src="${esc(fileUrl(pr.img) || pr.imgUrl)}" class="w-full h-full object-contain" alt="">` : `<span class="text-p opacity-60">${ic(prodIcon(pr.cat), 44)}</span>`}</div>
+  const card = pr => `<div class="card p-4 flex flex-col min-w-0"><div class="aspect-[4/3] rounded-[calc(var(--r)-4px)] grid place-items-center overflow-hidden" style="background:radial-gradient(ellipse at 50% 60%, rgb(var(--p-rgb)/.14), transparent 70%)">${fileUrl(pr.img) || pr.imgUrl ? `<img src="${esc(fileUrl(pr.img) || pr.imgUrl)}" class="w-full h-full object-contain" alt="">` : `<span class="text-p opacity-60">${ic(prodIcon(pr.cat), 44)}</span>`}</div>
     <div class="flex flex-wrap gap-1.5 mt-3"><span class="badge bg-p/10 text-p">${esc((CATS[pr.cat] || CATS.misc)[0])}</span>${pr.cat === 'wp' && pr.beg ? '<span class="badge bg-tyel text-yel-ink">BEG-förderfähig</span>' : ''}</div>
     <div class="font-semibold text-[15px] mt-2 leading-snug">${esc(pr.name || 'Ohne Namen')}</div><div class="text-[13px] text-ink3">${esc(pr.maker || '')}</div>
     <div class="text-[13px] text-ink2 mt-2 space-y-0.5">${prodSpecs(pr).map(([k, v]) => `<div>${k}: <b>${esc(v)}</b></div>`).join('')}${pr.warranty ? `<div>Garantie: <b>${esc(pr.warranty)}</b></div>` : ''}${pr.note ? `<div class="text-ink3 mt-1">${esc(pr.note)}</div>` : ''}</div>
@@ -99,7 +99,7 @@ const _applyComponents19 = applyComponents;
 applyComponents = function (p) {
   _applyComponents19(p);
   const rodC = p.components.map(c => PRODUCTS.find(x => x.id === c.id)).find(pr => pr && pr.cat === 'rod');
-  if (rodC && p.type === 'pvwp') { p.rod = p.rod || {}; p.rod.on = true; p.rod.name = p.rod.name || [rodC.maker, rodC.name].filter(Boolean).join(' ').replace(new RegExp('^' + (rodC.maker || '') + '\\s+' + (rodC.maker || '') , 'i'), rodC.maker || ''); if (rodC.power) p.rod.kw = rodC.power; }
+  if (rodC && p.type === 'pvwp') { p.rod = p.rod || {}; p.rod.on = true;  if (rodC.power) p.rod.kw = rodC.power; }
 };
 
 /* ---------- PDF-Seite „Ihre Komponenten“ (beide Layouts) ---------- */
@@ -107,14 +107,19 @@ DOC_TEXT.products = { label: 'Ihre Komponenten', badge: 'Ihre Komponenten', titl
 PAGE_KEYS.splice(PAGE_KEYS.indexOf('situation') + 1, 0, 'products');
 SALES_KEYS.splice(SALES_KEYS.indexOf('sSystem') + 1, 0, 'products');
 const docComps = p => p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr).sort((a, b) => CAT_ORDER.indexOf(a.pr.cat) - CAT_ORDER.indexOf(b.pr.cat)).slice(0, 6);
+const stageBg = () => { const dk = CUR_LAYOUT !== 'sales' && docDark(), pc = S.design.primary;
+  return svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" preserveAspectRatio="none"><defs><radialGradient id="g" cx="50%" cy="58%" r="62%"><stop offset="0" stop-color="${dk ? mix(pc, '#ffffff', 0.25) : '#ffffff'}" stop-opacity="${dk ? 0.22 : 0.95}"/><stop offset="0.55" stop-color="${dk ? pc : mix(pc, '#ffffff', 0.86)}" stop-opacity="${dk ? 0.10 : 0.55}"/><stop offset="1" stop-color="${dk ? '#000000' : mix(pc, '#ffffff', 0.93)}" stop-opacity="0"/></radialGradient><linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0.72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="${dk ? '#000000' : pc}" stop-opacity="${dk ? 0.18 : 0.06}"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/><rect width="400" height="300" fill="url(#f)"/></svg>`); };
+const shadowBg = () => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="24" viewBox="0 0 300 24" preserveAspectRatio="none"><defs><radialGradient id="s" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity="${CUR_LAYOUT !== 'sales' && docDark() ? 0.55 : 0.28}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><ellipse cx="150" cy="12" rx="150" ry="12" fill="url(#s)"/></svg>`);
 DOC.products = function (p, R) {
   const sales = CUR_LAYOUT === 'sales', list = docComps(p), many = list.length > 4;
   let b = sales ? sChap('products', p, R) : chap(String(txt('products', 'title')).replace(/\*/g, ''), txt('products', 'lead'));
-  const imgH = many ? 34 : list.length > 2 ? 44 : 60;
+  const imgH = many ? 40 : list.length > 2 ? 56 : 72;
   b += `<div style="display:grid;grid-template-columns:${list.length === 1 ? '1fr' : '1fr 1fr'};gap:4mm">${list.map(({ c, pr }) => {
     const u = fileUrl(pr.img) || pr.imgUrl, specs = prodSpecs(pr);
-    return `<div style="background:var(--tile);border-radius:var(--dr);overflow:hidden;display:flex;flex-direction:column;border:0.3mm solid var(--line)">
-      <div style="height:${imgH}mm;background:#ffffff;border-bottom:0.3mm solid var(--line);display:flex;align-items:center;justify-content:center;padding:3mm">${u ? `<img src="${esc(u)}" style="max-height:${imgH - 6}mm;max-width:100%;width:auto;height:auto;display:block">` : sImg(prodIcon(pr.cat), 16, S.design.primary)}</div>
+    return `<div style="background:var(--tile);border-radius:var(--dr);overflow:hidden;display:flex;flex-direction:column">
+      <div style="height:${imgH}mm;position:relative;background-image:url('${stageBg()}');background-size:100% 100%;display:flex;align-items:flex-end;justify-content:center;padding:4mm 5mm 3.2mm">
+        <img src="${shadowBg()}" style="position:absolute;left:18%;right:18%;width:64%;bottom:2mm;height:4mm;display:block">
+        ${u ? `<img src="${esc(u)}" style="position:relative;max-height:${imgH - 9}mm;max-width:100%;width:auto;height:auto;display:block">` : `<div style="position:relative;margin-bottom:3mm">${sImg(prodIcon(pr.cat), 16, S.design.primary)}</div>`}</div>
       <div style="padding:${many ? '3mm 4mm' : '4mm 5mm'}"><div style="font-size:7.4pt;font-weight:600;color:var(--p)">${esc(CATS[pr.cat][0])}${c.qty > 1 ? ` · ${num(c.qty)} Stück` : ''}</div>
         <div style="font-size:${many ? 10 : 11}pt;font-weight:700;line-height:1.25;margin-top:0.6mm">${esc(pr.name)}</div>${pr.maker ? `<div class="small">${esc(pr.maker)}</div>` : ''}
         ${specs.length ? `<div style="display:flex;flex-wrap:wrap;gap:1mm 4mm;margin-top:2mm;font-size:8pt">${specs.map(([k, v]) => `<span><span style="color:var(--ink3)">${k}</span> <b>${esc(v)}</b></span>`).join('')}</div>` : ''}
@@ -128,3 +133,27 @@ const _docPageDefs19 = docPageDefs;
 docPageDefs = function (p, R) {
   return _docPageDefs19(p, R).map(d => (d.key === 'products' ? { ...d, applies: docComps(p).length > 0, on: docComps(p).length > 0 && (p.pages.products !== undefined ? !!p.pages.products : (S.doc.defaults || {}).products !== false), note: docComps(p).length ? '' : 'Erscheint, sobald Produkte aus Ihrer Datenbank ausgewählt sind' } : d));
 };
+
+/* ---------- Erkannte Produkte automatisch übernehmen – alle Angaben aus der Produkt-Datenbank ---------- */
+const _applyRecognition19 = applyRecognition;
+applyRecognition = function (p, doc, r) {
+  _applyRecognition19(p, doc, r);
+  const found = (r.products || []).filter(m => m.on !== false);
+  if (!found.length) return;
+  for (const m of found) { const c = p.components.find(x => x.id === m.id); if (c) c.qty = m.qty; else p.components.push({ id: m.id, qty: m.qty }); }
+  applyComponents(p);
+};
+const _applyComponents19b = applyComponents;
+applyComponents = function (p) {
+  _applyComponents19b(p);
+  const full = pr => (pr.maker && !norm2(pr.name).startsWith(norm2(pr.maker)) ? pr.maker + ' ' : '') + pr.name;
+  for (const c of p.components) {
+    const pr = PRODUCTS.find(x => x.id === c.id); if (!pr) continue;
+    if (pr.cat === 'mod' && hasPV(p)) { p.pv.modMaker = full(pr); if (pr.warranty) p.pv.modWarranty = pr.warranty; }
+    if (pr.cat === 'inv' && hasPV(p)) { p.pv.invMaker = full(pr); if (pr.warranty) p.pv.invWarranty = pr.warranty; }
+    if (pr.cat === 'bat' && hasPV(p)) { p.pv.batMaker = full(pr); if (pr.warranty) p.pv.batWarranty = pr.warranty; }
+    if (pr.cat === 'wp' && hasWP(p)) { p.hp.model = full(pr); if (pr.power) p.hp.kw = pr.power; if (pr.jaz) p.hp.jaz = pr.jaz; if (pr.dims) p.hp.dims = pr.dims; if (pr.weight) p.hp.weight = pr.weight; if (pr.warranty) p.hp.warranty = pr.warranty; }
+    if (pr.cat === 'rod' && p.rod) { p.rod.name = full(pr); }
+  }
+};
+const norm2 = s => String(s || '').trim().toLowerCase();
