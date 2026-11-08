@@ -22,7 +22,8 @@ const DOC_TEXT = {
   attach: { label: 'Anlagen', title: '', lead: '' },
   assump: { label: 'Berechnungsannahmen', title: 'Berechnungsannahmen', lead: 'Grundlagen dieser Berechnung.' }
 };
-const docOrder = () => { const o = (S.doc.order || []).filter(k => PAGE_KEYS.includes(k)); return o.concat(PAGE_KEYS.filter(k => !o.includes(k))); };
+const mergeOrder = (saved, keys) => { const o = (saved || []).filter(k => keys.includes(k)); keys.forEach((k, i) => { if (o.includes(k)) return; const prev = keys.slice(0, i).reverse().find(x => o.includes(x)); o.splice(prev ? o.indexOf(prev) + 1 : 0, 0, k); }); return o; };
+const docOrder = () => mergeOrder(S.doc.order, PAGE_KEYS);
 let CUR_KEY = '';
 const txt = (key, field) => { const o = S.doc.texts[key] || {}; const v = o[field]; return v !== undefined && v !== '' ? v : DOC_TEXT[key][field]; };
 function attachmentPages(p) {
@@ -43,7 +44,7 @@ function docPageDefs(p, R) {
   const spec = {
     cover: [true, true], summary: [true, true], situation: [true, true], year: [yearOk, true, yearOk ? '' : (R.W ? 'Braucht den Verbrauch der Heizung' : 'Braucht die Anlagenleistung')],
     howWP: [R.W, true], howPV: [R.V, true], invest: [true, true], monthly: [true, true], finance: [true, !fin, finNote],
-    prices: [true, !!S.prices.showPages], why: [R.W, !!S.prices.showPages], leisure: [true, !fin, finNote], variants: [(p.variants || []).length > 0, true], roadmap: [true, true], reviews: [reviewsOn(), true], sign: [true, !!S.discount.signPage], attach: [att.length > 0, true]
+    prices: [true, !!S.prices.showPages], why: [R.W, !!S.prices.showPages], leisure: [true, !fin, finNote], variants: [(p.variants || []).length > 0, true], roadmap: [true, true], products: [true, true], reviews: [reviewsOn(), true], sign: [true, !!S.discount.signPage], attach: [att.length > 0, true]
   };
   return docOrder().map(key => {
     const [applies, auto, note = ''] = spec[key];
@@ -299,7 +300,7 @@ const DOC = {
       const mk = !!makersBlock(p, R), kv = [...(mk ? [] : [['Modell', p.hp.model || '–']]), ['Heizleistung', p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '–'], ['Jahresarbeitszahl', num(R.jaz, 2)], ['Maße Außeneinheit', p.hp.dims || '–'], ['Gewicht', p.hp.weight ? num(p.hp.weight) + ' kg' : '–'], ['Schallleistung', p.hp.sw ? num(p.hp.sw, 1) + ' dB(A)' : '–']];
       b += `<div class="sec tile" style="padding:4mm 5mm"><h3>Ihre Wärmepumpe</h3><div style="display:grid;grid-template-columns:${mk ? 'repeat(5,1fr)' : '1fr 1fr 1fr'};gap:2mm 5mm;margin-top:1.5mm">${kv.map(([k, v]) => `<div><div class="small">${k}</div><div style="font-weight:600;font-size:9pt">${esc(v)}</div></div>`).join('')}</div></div>`;
     }
-    const hasMk = !!makersBlock(p, R), comps = p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr && !(hasMk && /wechselrichter|speicher|modul|wärmepumpe/i.test(x.pr.name))).slice(0, 4);
+    const hasMk = !!makersBlock(p, R), prodPage = visiblePages(p, R).some(d => d.key === 'products'), comps = prodPage ? [] : p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr && !(hasMk && /wechselrichter|speicher|modul|wärmepumpe/i.test(x.pr.name))).slice(0, 4);
     if (comps.length) b += `<div class="sec"><h2>Ihre Komponenten</h2><div class="g${Math.min(4, Math.max(2, comps.length))}">${comps.map(({ c, pr }) => { const u = fileUrl(pr.img) || pr.imgUrl; return `<div class="tile" style="text-align:center;padding:3mm">${u ? `<img src="${esc(u)}" style="max-height:${R.W ? 16 : 24}mm;max-width:100%;width:auto;height:auto;margin:0 auto 1.5mm;display:block">` : ''}<div style="font-weight:600;font-size:8.4pt;line-height:1.25">${c.qty > 1 ? c.qty + ' × ' : ''}${esc(pr.name)}</div><div class="small">${esc(pr.maker || '')}</div></div>`; }).join('')}</div></div>`;
     if (R.W) b += soundBlock(p);
     return { title: 'Ausgangssituation', body: b };

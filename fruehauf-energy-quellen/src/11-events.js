@@ -181,8 +181,9 @@ document.addEventListener('click', async e => {
     case 'opt-assump': { const R = compute(p); if (R.scen === 'opt') { toast('Beim optimistischen Szenario werden die Annahmen immer gedruckt.', 'warn'); break; } p.docOpts.assumptions = !showAssumptions(p, R); saveProject(p); render(); break; }
     case 'pdf': makePdf(); break;
     case 'print': printDoc(); break;
-    case 'prod-new': { const pr = { id: uid('pr'), name: '', maker: '', cat: 'wp', power: null, jaz: null, weight: null, dims: '', price: null, beg: true, img: '', imgUrl: '' }; PRODUCTS.unshift(pr); saveProducts(); render(); productModal(pr.id); break; }
+    case 'prod-new': { const pr = { id: uid('pr'), name: '', maker: '', cat: 'wp', power: null, jaz: null, weight: null, dims: '', beg: true, warranty: '', note: '', img: '', imgUrl: '' }; PRODUCTS.unshift(pr); saveProducts(); render(); productModal(pr.id); break; }
     case 'prod-edit': productModal(a.dataset.id); break;
+    case 'prod-copy': copyProduct(a.dataset.id); break;
     case 'prod-del': { const pr = PRODUCTS.find(x => x.id === a.dataset.id); if (!(await confirmDlg('Produkt löschen?', `„${pr.name || 'Ohne Namen'}“ wird aus Ihrer Datenbank gelöscht.`))) break; if (pr.img) await delFiles([pr.img]); PRODUCTS = PRODUCTS.filter(x => x.id !== pr.id); saveProducts(); render(); break; }
     case 'prod-img-del': { const pr = PRODUCTS.find(x => x.id === a.dataset.id); await delFiles([pr.img]); pr.img = ''; saveProducts(); productModal(pr.id); break; }
     case 'logo-del': await delFiles([S.company.logoFile]); S.company.logoFile = ''; saveSettings(); render(); break;

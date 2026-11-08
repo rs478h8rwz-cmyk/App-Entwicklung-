@@ -17,7 +17,7 @@ Object.assign(DOC_TEXT, {
 });
 const SALES_FONTS = ['Inter', 'Plus Jakarta Sans', 'Manrope', 'Figtree', 'DM Sans', 'Geist', 'Instrument Sans', 'IBM Plex Sans'];
 const layoutOf = p => UI.docLayout || (p && p.docOpts && p.docOpts.layout) || 'full';
-const salesOrder = () => { const o = (S.doc.salesOrder || []).filter(k => SALES_KEYS.includes(k)); return o.concat(SALES_KEYS.filter(k => !o.includes(k))); };
+const salesOrder = () => mergeOrder(S.doc.salesOrder, SALES_KEYS);
 
 /* Seitenauswahl je Layout */
 const _fullPageDefs = docPageDefs, _fullVisible = visiblePages;
@@ -25,7 +25,7 @@ docPageDefs = function (p, R) { return layoutOf(p) === 'sales' ? salesPageDefs(p
 visiblePages = function (p, R) { return layoutOf(p) === 'sales' ? salesPageDefs(p, R).filter(d => d.on) : _fullVisible(p, R); };
 function salesPageDefs(p, R) {
   const o = p.pages || {}, att = attachmentPages(p), dflt = S.doc.defaults || {};
-  const spec = { reviews: reviewsOn(), cover: true, sGlance: true, sSystem: true, sInvest: true, sMonthly: true, sLong: true, sWhy: true, sSign: true, sBasis: true, attach: att.length > 0 };
+  const spec = { products: docComps(p).length > 0, reviews: reviewsOn(), cover: true, sGlance: true, sSystem: true, sInvest: true, sMonthly: true, sLong: true, sWhy: true, sSign: true, sBasis: true, attach: att.length > 0 };
   return salesOrder().map(key => {
     const applies = spec[key], def = key === 'sBasis' ? dflt.sBasis === true : dflt[key] !== false;
     if (key === 'sBasis' && R.scen === 'opt') return { key, label: DOC_TEXT[key].label, applies, on: true, note: 'Beim optimistischen Szenario immer enthalten', count: 1 };
