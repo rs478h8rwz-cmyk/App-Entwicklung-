@@ -219,7 +219,8 @@ const _newDialogQ = newDialog;
 newDialog = function () {
   modal(`<h3 class="text-[21px] font-semibold pr-8">Neue Berechnung</h3>
   <div class="mt-4 rounded-[calc(var(--r)-4px)] p-4 flex gap-4 items-start" style="background:var(--t-red);color:var(--red-ink)"><div class="shrink-0 mt-0.5">${ic('fan', 26)}</div><div><div class="font-semibold text-[16px]">Zuerst eine Schnellauslegung für die Wärmepumpe?</div><div class="text-[13px] mt-1 opacity-90">Gebäude, Heizlast (auch aus Verbrauch oder Baujahr), Warmwasser und Heizsystem – daraus ergeben sich passende Geräteleistung und erwartete JAZ. Die Werte werden in die Berechnung übernommen.</div></div></div>
-  <div class="flex flex-col sm:flex-row gap-3 mt-5"><button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-start">${ic('fan', 17)}Ja, Schnellauslegung</button><button class="btn-s w-full sm:w-auto sm:flex-1" data-a="quick-skip">Nein, direkt starten</button></div>`);
+  <div class="flex flex-col sm:flex-row gap-3 mt-5"><button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-start">${ic('fan', 17)}Ja, Schnellauslegung</button><button class="btn-s w-full sm:w-auto sm:flex-1" data-a="quick-skip">Nein, direkt starten</button></div>
+  ${typeof roofOk === 'function' && roofOk() ? `<div class="mt-4 rounded-[calc(var(--r)-4px)] border border-line p-4 flex flex-wrap items-center gap-3"><div class="text-p shrink-0">${ic('grid', 24)}</div><div class="flex-1 min-w-[180px]"><div class="font-semibold text-[15px]">Modulplan (PV)</div><div class="text-[13px] text-ink3">Dach per Foto aufmessen und Module belegen.</div></div><button class="btn-s" data-a="roof-start">${ic('grid', 16)}Modulplan</button></div>` : ''}`);
 };
 
 /* ---------- Ereignisse ---------- */

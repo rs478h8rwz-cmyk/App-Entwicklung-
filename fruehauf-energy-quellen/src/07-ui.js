@@ -373,7 +373,7 @@ function step3(p, R) {
         ${p.rod && p.rod.on ? `<div class="grid sm:grid-cols-3 gap-4 mt-4">${field('Bezeichnung', 'p:rod.name', { ph: S.calc.rodName })}${field('Leistung', 'p:rod.kw', { t: 'n', unit: 'kW', ph: num(S.calc.rodKw, 1) })}${sel('Sommerbetrieb', 'p:rod.months', [[3, 'Juni bis August'], [4, 'Mai bis August'], [5, 'Mai bis September'], [6, 'Mai bis Oktober']], { t: 'y' })}</div>` : ''}</div>` : ''}</div>`;
   }
   if (hasPV(p)) {
-    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}
+    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}${typeof roofCard === 'function' ? roofCard(p) : ''}
       <div class="grid sm:grid-cols-2 gap-4">${field('Anlagenleistung', 'p:pv.kwp', { t: 'n', unit: 'kWp', hint: p.pv.modules ? esc(p.pv.modules) : '' })}${field('Batteriespeicher', 'p:pv.bat', { t: 'n', unit: 'kWh', ph: '0' })}</div>
       ${det('pv-maker', 'Hersteller & Garantien', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Module (Hersteller / Typ)', 'p:pv.modMaker', { ph: 'z. B. Winaico WST-BKX54' })}${field('Garantie Module', 'p:pv.modWarranty', { ph: 'z. B. 30 Jahre Produkt- und Leistungsgarantie' })}${field('Speicher (Hersteller / Typ)', 'p:pv.batMaker', { ph: 'z. B. EcoFlow Ocean 2' })}${field('Garantie Speicher', 'p:pv.batWarranty', { ph: 'z. B. 15 Jahre Produktgarantie' })}${field('Wechselrichter (Hersteller / Typ)', 'p:pv.invMaker')}${field('Garantie Wechselrichter', 'p:pv.invWarranty')}</div><p class="hint">Wird aus dem Angebot übernommen und erscheint im Kundendokument.</p>`, [p.pv.modMaker, p.pv.batMaker].filter(Boolean).map(esc).join(' · '))}
       ${roofsCard(p, R)}
