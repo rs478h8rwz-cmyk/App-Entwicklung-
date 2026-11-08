@@ -189,7 +189,7 @@ function viewKunden() {
   const card = customerCard;
 
   return `<section class="relative overflow-hidden border-b border-line hero-anim">
-    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true })}</div>
+    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true, car: true })}</div>
     <div class="hidden sm:block absolute inset-0" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 sm:pt-0 pb-8 sm:pb-0 sm:min-h-[600px] flex items-center">
       <div class="max-w-[36rem]"><span class="mono text-[12px] text-ink2 inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
@@ -197,7 +197,7 @@ function viewKunden() {
       <p class="text-[17px] sm:text-[19px] text-ink2 mt-6 leading-relaxed">Angebot hochladen, Daten prüfen, fertig: In wenigen Minuten entsteht eine Wirtschaftlichkeitsberechnung, die Ihre Kunden verstehen.</p>
       <div class="flex flex-wrap gap-3 mt-9"><button class="btn-p !h-12 !px-6 !text-[15px]" data-a="new">${ic('plus', 18)}Neue Berechnung</button><a href="#/einstellungen/design" class="btn-s !h-12 !px-5 !text-[15px]">Design anpassen</a></div></div>
     </div>
-    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({ anim: true })}</div>
+    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({ anim: true, car: true })}</div>
   </section>
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}

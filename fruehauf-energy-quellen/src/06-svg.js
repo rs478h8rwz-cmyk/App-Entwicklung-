@@ -22,7 +22,7 @@ function houseSVG(o = {}) {
     mods += `<polygon points="${ptsS}" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/>` + (o.anim ? `<polygon class="ha-glint" style="animation-delay:${(c * 0.14 + r * 0.1).toFixed(2)}s" points="${ptsS}" fill="#ffffff"/>` : '');
   }
   // Haus: klassisch oder modern, Licht an/aus, PV/WP/E-Auto je nach Angebot
-  const style = o.style || S.design.houseStyle || 'classic', lightMode = o.light || S.design.houseLight || 'auto';
+  const style = o.style || S.design.houseStyle || 'classic', lightMode = o.anim && !o._bodyOnly ? 'off' : (o.light || S.design.houseLight || 'auto');
   const lit = lightMode === 'on' || (lightMode !== 'off' && dawn);
   const winF = lit ? '#FFC870' : dawn ? '#1C2532' : '#CFE6F8', winS2 = lit ? '#FFE2A8' : dawn ? '#3A4656' : '#ffffff';
   const glow = (x, y, w, h) => (lit ? `<rect class="ha-glow" x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="10" fill="#FFC870" opacity="${dawn ? 0.2 : 0.14}"/>` : '');
@@ -82,6 +82,7 @@ ${batOn ? '' : `<rect x="190" y="248" width="52" height="40" rx="4" fill="${winF
 <rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${lit ? '#FFC870' : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${lit ? '#FFC870' : '#fff'}" opacity="${lit ? 0.6 : 0.18}"/>
 ${carport}${tower}${hpUnit}${trees}`;
   }
+  if (o._bodyOnly) return houseBody;
   // Sonne: tagsüber hoch oben, in der Dämmerung knapp über dem Horizont
   const sx = dawn ? (wide ? 700 : 120) : 480 + dx, sy = dawn ? 268 : 78;
   let rays = '';
@@ -90,23 +91,25 @@ ${carport}${tower}${hpUnit}${trees}`;
   if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle class="ha-star" style="animation-delay:${(rnd() * 4).toFixed(2)}s" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
   const hills = `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="url(#${id('h1')})"/>${dawn ? `<path d="M0 300 C120 255 230 265 330 290 S520 262 600 278" fill="none" stroke="${s}" stroke-opacity=".35" stroke-width="1.2"/>` : ''}<path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="url(#${id('h2')})"/></g>`;
   const vb = o.cover ? `0 14 ${W} 371.4` : `0 0 ${W} 400`, sz = o.cover ? `width="${W === 600 ? 1300 : 2600}" height="805"` : 'width="100%" height="100%"';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice"${o.anim ? ` data-sky="1" data-dawn="${dawn ? 1 : 0}" data-sx="${sx}" data-sy="${sy}" data-mx="${wide ? (dawn ? 1010 : 760) : (dawn ? 470 : 150)}"` : ''}>
 <defs>
 <linearGradient id="${id('sky')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.sky1}"/><stop offset=".45" stop-color="${K.sky2}"/><stop offset=".68" stop-color="${K.sky3}"/><stop offset=".78" stop-color="${K.hor}"/></linearGradient>
 <radialGradient id="${id('glow')}" cx="${(sx / W).toFixed(3)}" cy="${(sy / 400).toFixed(3)}" r="${dawn ? 0.55 : 0.5}" gradientTransform="translate(${(sx / W).toFixed(3)} ${(sy / 400).toFixed(3)}) scale(${(400 / W).toFixed(3)} 1) translate(${(-sx / W).toFixed(3)} ${(-sy / 400).toFixed(3)})"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
-<linearGradient id="${id('shoot')}" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<linearGradient id="${id('shoot')}" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <linearGradient id="${id('mod')}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${K.mod1}"/><stop offset="1" stop-color="${K.mod2}"/></linearGradient>
 <linearGradient id="${id('h1')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill1a}"/><stop offset="1" stop-color="${K.hill1b}"/></linearGradient>
 <linearGradient id="${id('h2')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill2a}"/><stop offset="1" stop-color="${K.hill2b}"/></linearGradient>
 <linearGradient id="${id('wall')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.wall1}"/><stop offset="1" stop-color="${K.wall2}"/></linearGradient>
 </defs>
-${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}${o.anim && dawn ? [[0.25, 30, 0], [0.62, 18, 4.5], [0.85, 46, 9]].map(([fx, y, d]) => `<g class="ha-shoot" style="animation-delay:${d}s"><line x1="${(fx * W).toFixed(0)}" y1="${y}" x2="${(fx * W - 46).toFixed(0)}" y2="${y + 16}" stroke="url(#${id('shoot')})" stroke-width="1.8" stroke-linecap="round"/><circle cx="${(fx * W).toFixed(0)}" cy="${y}" r="1.6" fill="#fff"/></g>`).join('') : ''}
-<rect width="${W}" height="400" fill="url(#${id('glow')})"/>
-<g class="ha-sun"><g class="ha-rays">${rays}</g><circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}</g>
+${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}${o.anim && dawn ? [[0.12, 34, 0], [0.48, 22, 4.5], [0.7, 48, 9]].map(([fx, y, d]) => `<g class="ha-shoot" style="animation-delay:${d}s"><line x1="${(fx * W).toFixed(0)}" y1="${y}" x2="${(fx * W - 46).toFixed(0)}" y2="${y - 16}" stroke="url(#${id('shoot')})" stroke-width="1.8" stroke-linecap="round"/><circle cx="${(fx * W).toFixed(0)}" cy="${y}" r="1.6" fill="#fff"/></g>`).join('') : ''}
+${o.anim ? `<rect class="ha-night" width="${W}" height="400" fill="${dawn ? '#03060E' : '#1E2B4F'}" opacity="0"/>` : ''}
+${o.anim ? `<g class="ha-moon" opacity="0"><circle r="46" fill="#F4F1E6" opacity=".10"/><circle r="30" fill="#F4F1E6" opacity=".10"/><circle r="20" fill="#F1EEDF"/><circle cx="-6" cy="-4" r="4.2" fill="#DAD5C2"/><circle cx="7" cy="6" r="3" fill="#DAD5C2"/><circle cx="5" cy="-9" r="2" fill="#DAD5C2"/></g>` : ''}
+<g class="ha-sunpos"><rect width="${W}" height="400" fill="url(#${id('glow')})"/>
+<g class="ha-sun"><g class="ha-rays">${rays}</g><circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}</g></g>
 <g class="ha-clouds" fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
 ${hills}
 <g transform="translate(${dx} 0)"><g class="ha-house">
-${houseBody}</g></g>
+${houseBody}${o.anim && !o._bodyOnly ? `<g class="ha-lit" opacity="0">${houseSVG({ ...o, light: 'on', _bodyOnly: true })}</g>` : ''}</g></g>
 ${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
 </svg>`;
 }
