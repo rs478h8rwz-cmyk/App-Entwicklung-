@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.02', date: '2026-11-08', items: [
+    ['animui', 'Lebendiger Hintergrund', 'Der Hintergrund der ganzen App bewegt sich jetzt sanft: weiche Farbflächen in Ihren Firmenfarben wandern ganz langsam. Im PDF bleibt alles ruhig.']
+  ] },
   { version: '2.01', date: '2026-11-08', items: [
     ['quick', 'Wärmepumpen-Auslegung', 'Bei jeder neuen Berechnung: Schnellauslegung mit Heizlast (aus Verbrauch, Baujahr oder W/m²), Heizsystem und Betriebsweise – abgeglichen auf die Wolf-Auslegung.'],
     ['quickuse', 'Passende Wärmepumpe mit Bild', 'Die App wählt aus Ihren Produkten die passende Wärmepumpe – mit Diagramm, Bivalenz- und Inverterpunkt, Deckungsanteil und JAZ. Im PDF kurz als klar gekennzeichnete Ersteinschätzung.'],
