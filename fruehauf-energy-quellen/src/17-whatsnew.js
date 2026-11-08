@@ -14,8 +14,9 @@ const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house:
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
   { version: '1.58', date: '2026-11-08', items: [
-    ['easter', 'Ostern', 'Rund um Ostern liegen bunte Eier im Gras und hängen am Baum, und ein Osterhase hoppelt über die Wiese.'],
-    ['halloween', 'Halloween', 'Vom 20. Oktober bis 1. November leuchten Kürbisse an der Tür, Fledermäuse flattern vorbei und ein kleines Gespenst schwebt.'],
+    ['xmas', 'Weihnachtsmann und Rentier', 'Zur Weihnachtszeit zieht ab und zu der Weihnachtsmann mit dem Schlitten über den Himmel, und im Hintergrund taucht ein Rentier mit leuchtend roter Nase auf.'],
+    ['easter', 'Ostern', 'Rund um Ostern liegen bunte Eier im Gras und hängen am Baum, und ein Osterhase hoppelt über die Wiese hin und her.'],
+    ['halloween', 'Halloween', 'Vom 20. Oktober bis 1. November flackern Kürbisse an der Tür, Fledermäuse flattern in Wellen vorbei und ein kleines Gespenst kreist durchs Bild.'],
     ['hometab', 'Alles einstellbar', 'Unter Einstellungen → Startseite & Wetter → Feiertags-Schmuck: Weihnachten, Ostern und Halloween jeweils Automatisch, Immer an (zum Testen) oder Aus.']
   ] },
   { version: '1.57', date: '2026-11-08', items: [

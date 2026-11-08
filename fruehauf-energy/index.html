@@ -4152,7 +4152,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108194033';
+const APP_VERSION = '20261108194343';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4570,8 +4570,9 @@ const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house:
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
   { version: '1.58', date: '2026-11-08', items: [
-    ['easter', 'Ostern', 'Rund um Ostern liegen bunte Eier im Gras und hängen am Baum, und ein Osterhase hoppelt über die Wiese.'],
-    ['halloween', 'Halloween', 'Vom 20. Oktober bis 1. November leuchten Kürbisse an der Tür, Fledermäuse flattern vorbei und ein kleines Gespenst schwebt.'],
+    ['xmas', 'Weihnachtsmann und Rentier', 'Zur Weihnachtszeit zieht ab und zu der Weihnachtsmann mit dem Schlitten über den Himmel, und im Hintergrund taucht ein Rentier mit leuchtend roter Nase auf.'],
+    ['easter', 'Ostern', 'Rund um Ostern liegen bunte Eier im Gras und hängen am Baum, und ein Osterhase hoppelt über die Wiese hin und her.'],
+    ['halloween', 'Halloween', 'Vom 20. Oktober bis 1. November flackern Kürbisse an der Tür, Fledermäuse flattern in Wellen vorbei und ein kleines Gespenst kreist durchs Bild.'],
     ['hometab', 'Alles einstellbar', 'Unter Einstellungen → Startseite & Wetter → Feiertags-Schmuck: Weihnachten, Ostern und Halloween jeweils Automatisch, Immer an (zum Testen) oder Aus.']
   ] },
   { version: '1.57', date: '2026-11-08', items: [
@@ -5360,13 +5361,39 @@ function xmasDeco(style, top, bot, dawn) {
 ${[[-6, -40], [7, -30], [-11, -20], [4, -14], [14, -4], [-16, 0], [0, -2], [10, -46]].map(([x, y], i) => `<circle class="xm-bulb" style="animation-delay:-${(i * 0.4).toFixed(1)}s" cx="${x}" cy="${y}" r="2.4" fill="${cols[i % 4]}"/>`).join('')}
 <polygon class="xm-star" points="0,-72 2.6,-66 9,-66 4,-62 6,-56 0,-60 -6,-56 -4,-62 -9,-66 -2.6,-66" fill="#FFD34D"/></g>`;
   const lights = style === 'modern' ? chain(194, 438, 192, 5) : chain(bot.l - 8, bot.r + 8, bot.y + 6, 6);
-  return `<g class="xm">${lights}${wreath}${tree}</g>`;
+  /* Rentier mit roter Nase (Kopf rechts), wiederverwendbar */
+  const deer = (red, legs = 0) => `<g><ellipse cx="0" cy="0" rx="11" ry="5.2" fill="#8A5A34"/><path d="M8 -2 L12 -9 L15 -8 L13 -1Z" fill="#8A5A34"/><circle cx="15" cy="-10" r="3.6" fill="#8A5A34"/>
+<path d="M14 -13 l-2 -6 m1 3 l-3 -1 M17 -13 l2 -6 m-1 3 l3 -1" stroke="#5A3A1E" stroke-width="1.2" fill="none" stroke-linecap="round"/><circle cx="16.4" cy="-10.8" r=".8" fill="#1B1B1B"/>
+<circle cx="18.6" cy="-9" r="${red ? 2 : 1.2}" fill="${red ? '#FF2E2E' : '#3A2414'}"${red ? ' class="xm-nose"' : ''}/>
+<path d="M-7 3 l${-2 - legs} 8 M-3 3 l${1 + legs} 8 M5 3 l${-2 - legs} 8 M9 3 l${1 + legs} 8" stroke="#6B4426" stroke-width="1.6" stroke-linecap="round"/><circle cx="-11" cy="-2" r="1.6" fill="#F4EDE2"/></g>`;
+  const sleigh = `<g class="xm-sleigh"><g class="xm-bob">
+<g transform="translate(64 0)">${deer(true, 2)}</g><g transform="translate(36 2)">${deer(false, 2)}</g>
+<path d="M47 0 L30 4 M75 -2 L52 2 M24 6 L8 8" stroke="#C9A227" stroke-width=".9" fill="none"/>
+<path d="M-26 0 L6 0 Q10 0 10 4 L10 8 L-22 8 Q-28 8 -28 2Z" fill="#C8102E"/><path d="M-30 12 L12 12 Q16 12 16 8" stroke="#E3B341" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M-24 8 V12 M4 8 V12" stroke="#E3B341" stroke-width="1.4"/>
+<ellipse cx="-20" cy="-4" rx="7" ry="6" fill="#7A5230"/>
+<circle cx="-4" cy="-4" r="6.5" fill="#C8102E"/><circle cx="-2" cy="-12" r="4" fill="#F2C9A8"/><path d="M-6 -11 Q-2 -2 2 -11 Q0 -8 -2 -8 Q-4 -8 -6 -11Z" fill="#fff"/>
+<path d="M-6 -14 L-1 -22 L3 -14Z" fill="#C8102E"/><rect x="-7" y="-15" width="11" height="2.6" rx="1.3" fill="#fff"/><circle cx="-1" cy="-22.5" r="1.6" fill="#fff"/>
+</g></g>`;
+  /* Rentier im Hintergrund, das ab und zu auftaucht */
+  const bgDeer = `<g class="xm-deer"><g transform="translate(498 270) scale(.9)">${deer(true)}</g></g>`;
+  return `<g class="xm">${bgDeer}${lights}${wreath}${tree}<g transform="translate(0 100) scale(1.3)">${sleigh}</g></g>`;
 }
 document.head.insertAdjacentHTML('beforeend', `<style>
 @media (prefers-reduced-motion: no-preference) {
   .hero-anim .xm-bulb{animation:xmBlink 1.8s ease-in-out infinite alternate}
+  .hero-anim .xm-sleigh{animation:xmSleigh 24s linear infinite}
+  .hero-anim .xm-bob{animation:xmBob 1.4s ease-in-out infinite alternate}
+  .hero-anim .xm-nose{animation:xmNose 1s ease-in-out infinite alternate}
+  .hero-anim .xm-deer{animation:xmDeer 19s ease-in-out infinite}
   .hero-anim .xm-star{transform-box:fill-box;transform-origin:center;animation:xmStar 2.4s ease-in-out infinite alternate}
 }
+.hero-anim .xm-sleigh{transform:translate(-900px,0)}
+.hero-anim .xm-deer{opacity:0}
+@keyframes xmSleigh{0%{transform:translate(-900px,30px)}40%{transform:translate(760px,-28px)}100%{transform:translate(760px,-28px)}}
+@keyframes xmBob{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+@keyframes xmNose{from{opacity:1}to{opacity:.45}}
+@keyframes xmDeer{0%,55%{opacity:0}62%,88%{opacity:1}95%,100%{opacity:0}}
 @keyframes xmBlink{from{opacity:1}to{opacity:.3}}
 @keyframes xmStar{from{transform:scale(1);opacity:1}to{transform:scale(1.25);opacity:.75}}
 </style>`);
@@ -5391,23 +5418,23 @@ function halloweenDeco(style, dawn) {
   const door = style === 'modern' ? [364, 400] : [276, 324];
   const pumps = pump(door[0] - 12, 326, 1.15) + pump(door[1] + 12, 327, 1) + pump(door[1] + 26, 330, 0.75) + pump(436, 333, 0.9);
   const bat = `<path d="M0 0 C-4 -5 -9 -5 -13 -1 C-10 -1 -9 1 -8 3 C-6 1 -3 1 -2 3 L0 1 L2 3 C3 1 6 1 8 3 C9 1 10 -1 13 -1 C9 -5 4 -5 0 0Z" fill="${dawn ? '#05070C' : '#2B2233'}"/>`;
-  const bats = `<g class="hw-bats">${[[0, 60, 0], [-40, 95, -4], [-90, 40, -8]].map(([x, y, d]) => `<g style="animation-delay:${d}s"><g transform="translate(${x} ${y}) scale(1.8)"><g class="hw-flap">${bat}</g></g></g>`).join('')}</g>`;
+  const bats = `<g class="hw-bats">${[[0, 60, 0], [-40, 95, -3], [-90, 40, -6], [-20, 120, -8], [-70, 75, -10]].map(([x, y, d]) => `<g style="animation-delay:${d}s"><g transform="translate(${x} ${y}) scale(1.8)"><g class="hw-flap">${bat}</g></g></g>`).join('')}</g>`;
   const ghost = `<g class="hw-ghost"><g transform="translate(112 218) scale(1.5)"><path d="M-10 10 L-10 -4 C-10 -14 10 -14 10 -4 L10 10 L6 7 L3 10 L0 7 L-3 10 L-6 7Z" fill="#F4F6FA" opacity=".92"/><circle cx="-3.5" cy="-3" r="1.6" fill="#1B2230"/><circle cx="3.5" cy="-3" r="1.6" fill="#1B2230"/><ellipse cx="0" cy="2" rx="1.6" ry="2" fill="#1B2230"/></g></g>`;
   return `<g class="hw">${bats}${ghost}${pumps}</g>`;
 }
 document.head.insertAdjacentHTML('beforeend', `<style>
 @media (prefers-reduced-motion: no-preference) {
-  .hero-anim .ea-bunny{animation:eaHop 2.2s ease-in-out infinite}
+  .hero-anim .ea-bunny{transform-box:fill-box;transform-origin:center;animation:eaHop 11s linear infinite}
   .hero-anim .hw-glow{animation:hwFlicker 1.3s ease-in-out infinite alternate}
-  .hero-anim .hw-bats>g{animation:hwBat 13s linear infinite}
-  .hero-anim .hw-flap{transform-box:fill-box;transform-origin:center;animation:hwFlap .28s ease-in-out infinite alternate}
-  .hero-anim .hw-ghost{animation:hwFloat 2.8s ease-in-out infinite alternate}
+  .hero-anim .hw-bats>g{animation:hwBat 11s ease-in-out infinite}
+  .hero-anim .hw-flap{transform-box:fill-box;transform-origin:center;animation:hwFlap .2s ease-in-out infinite alternate}
+  .hero-anim .hw-ghost{transform-box:fill-box;transform-origin:center;animation:hwGhost 9s ease-in-out infinite}
 }
-@keyframes eaHop{0%,40%,100%{transform:translate(0,0)}15%{transform:translate(-8px,-14px)}30%{transform:translate(-14px,0)}55%{transform:translate(-14px,0)}70%{transform:translate(-6px,-12px)}85%{transform:translate(0,0)}}
+@keyframes eaHop{0.0%{transform:translate(0px,0px) scaleX(-1)}5.0%{transform:translate(-18px,-16px) scaleX(-1)}10.0%{transform:translate(-36px,0px) scaleX(-1)}15.0%{transform:translate(-54px,-16px) scaleX(-1)}20.0%{transform:translate(-72px,0px) scaleX(-1)}25.0%{transform:translate(-90px,-16px) scaleX(-1)}30.0%{transform:translate(-108px,0px) scaleX(-1)}35.0%{transform:translate(-126px,-16px) scaleX(-1)}40.0%{transform:translate(-144px,0px) scaleX(-1)}43%{transform:translate(-144px,0) scaleX(1)}45.0%{transform:translate(-144px,0px) scaleX(1)}50.0%{transform:translate(-126px,-16px) scaleX(1)}55.0%{transform:translate(-108px,0px) scaleX(1)}60.0%{transform:translate(-90px,-16px) scaleX(1)}65.0%{transform:translate(-72px,0px) scaleX(1)}70.0%{transform:translate(-54px,-16px) scaleX(1)}75.0%{transform:translate(-36px,0px) scaleX(1)}80.0%{transform:translate(-18px,-16px) scaleX(1)}85.0%{transform:translate(0px,0px) scaleX(1)}100%{transform:translate(0,0) scaleX(1)}}
 @keyframes hwFlicker{0%{opacity:1}40%{opacity:.7}60%{opacity:.95}100%{opacity:.6}}
-@keyframes hwBat{from{transform:translate(-60px,0)}50%{transform:translate(330px,-25px)}to{transform:translate(720px,10px)}}
-@keyframes hwFlap{from{transform:scaleY(1)}to{transform:scaleY(.35)}}
-@keyframes hwFloat{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+@keyframes hwBat{0%{transform:translate(-60px,0)}20%{transform:translate(90px,-34px)}40%{transform:translate(240px,14px)}60%{transform:translate(390px,-38px)}80%{transform:translate(540px,8px)}100%{transform:translate(720px,-22px)}}
+@keyframes hwFlap{from{transform:scaleY(1)}to{transform:scaleY(.2)}}
+@keyframes hwGhost{0%{transform:translate(0,0) rotate(0);opacity:.95}20%{transform:translate(36px,-26px) rotate(8deg);opacity:.6}40%{transform:translate(80px,-8px) rotate(-6deg);opacity:.95}60%{transform:translate(56px,18px) rotate(5deg);opacity:.45}80%{transform:translate(18px,8px) rotate(-8deg);opacity:.9}100%{transform:translate(0,0) rotate(0);opacity:.95}}
 </style>`);
 
 /* =========================================================
