@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.59', date: '2026-11-08', items: [
+    ['quick', 'Wärmepumpen-Schnellauslegung', 'Bei „Neue Berechnung“ fragt die App, ob zuerst eine Schnellauslegung gemacht werden soll: Wohnfläche, Gebäudestandard, Heizsystem und Personen ergeben Heizlast, empfohlene Geräteleistung und erwartete JAZ – live berechnet.'],
+    ['quickuse', 'Direkt übernommen', 'Mit einem Tipp entsteht daraus eine Wärmepumpen- oder PV + WP-Berechnung mit eingetragener Leistung und JAZ. Im Bereich „Neue Wärmepumpe“ sehen Sie die Auslegung und können neu auslegen.']
+  ] },
   { version: '1.58', date: '2026-11-08', items: [
     ['xmas', 'Weihnachtsmann und Rentier', 'Zur Weihnachtszeit zieht ab und zu der Weihnachtsmann mit dem Schlitten über den Himmel, und im Hintergrund taucht ein Rentier mit leuchtend roter Nase auf.'],
     ['easter', 'Ostern', 'Rund um Ostern liegen bunte Eier im Gras und hängen am Baum, und ein Osterhase hoppelt über die Wiese hin und her.'],
@@ -103,7 +107,9 @@ const wnHouse = (opt, set) => {
   return `<div style="width:100%;height:100%" class="hero-anim">${h}</div>`;
 };
 WN_IMG.xmas = () => wnHouse({ dawn: true }, { wxKind: 'snow', wxSeason: 'winter', xmas: 'on' });
-WN_BG.easter = '#A9D4F5'; WN_BG.halloween = '#060B16';
+WN_BG.easter = '#A9D4F5'; WN_BG.quick = '#141B24'; WN_BG.quickuse = '#141B24';
+WN_IMG.quick = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${['160 m²', 'Saniert', '45 °C', '4 Pers.'].map((t, i) => `<rect x="8" y="${8 + i * 16}" width="44" height="12" rx="3" fill="#1C2530" stroke="#2E3A47"/><text x="12" y="${16 + i * 16}" font-size="5.5" fill="#fff">${t}</text>`).join('')}<rect x="60" y="8" width="52" height="60" rx="5" fill="#1C2530"/><text x="64" y="20" font-size="4.6" fill="#9AA8B6">Heizlast</text><text x="108" y="20" font-size="5.2" font-weight="700" fill="#fff" text-anchor="end">9,6 kW</text><text x="64" y="32" font-size="4.6" fill="#9AA8B6">Warmwasser</text><text x="108" y="32" font-size="5.2" font-weight="700" fill="#fff" text-anchor="end">1,0 kW</text><line x1="64" y1="38" x2="108" y2="38" stroke="#2E3A47"/><text x="64" y="48" font-size="4.6" fill="#3FA98C">Empfohlen</text><text x="108" y="49" font-size="7" font-weight="700" fill="#3FA98C" text-anchor="end">10,1 kW</text><text x="64" y="61" font-size="4.6" fill="#9AA8B6">JAZ</text><text x="108" y="61" font-size="5.2" font-weight="700" fill="#fff" text-anchor="end">3,80</text></svg>`;
+WN_IMG.quickuse = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="10" y="12" width="100" height="22" rx="5" fill="#3FA98C"/><text x="60" y="26" font-size="7" font-weight="700" fill="#fff" text-anchor="middle">Als Wärmepumpe anlegen</text><rect x="10" y="42" width="100" height="26" rx="5" fill="#1C2530" stroke="#3FA98C" stroke-opacity=".5"/><text x="16" y="53" font-size="5" fill="#9AA8B6">Heizleistung</text><text x="104" y="54" font-size="6.5" font-weight="700" fill="#fff" text-anchor="end">10,1 kW</text><text x="16" y="63" font-size="5" fill="#9AA8B6">JAZ</text><text x="104" y="64" font-size="6.5" font-weight="700" fill="#fff" text-anchor="end">3,80</text></svg>`; WN_BG.halloween = '#060B16';
 WN_IMG.easter = () => wnHouse({ dawn: false }, { wxKind: 'sun', wxSeason: 'spring', xmas: 'off', easter: 'on', halloween: 'off' });
 WN_IMG.halloween = () => wnHouse({ dawn: true }, { wxKind: 'cloud', wxSeason: 'autumn', xmas: 'off', easter: 'off', halloween: 'on' });
 WN_IMG.seasons = () => wnHouse({ dawn: false }, { wxKind: 'wind', wxSeason: 'autumn', xmas: 'off' });
