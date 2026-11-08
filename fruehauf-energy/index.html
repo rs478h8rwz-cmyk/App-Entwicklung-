@@ -1498,19 +1498,20 @@ function houseSVG(o = {}) {
     const l0 = lerp(top.l, bot.l, t0) + 14, r0 = lerp(top.r, bot.r, t0) - 14, l1 = lerp(top.l, bot.l, t1) + 14, r1 = lerp(top.r, bot.r, t1) - 14;
     const a0 = c / 6 + pad / 6, a1 = (c + 1) / 6 - pad / 6;
     const pts = [[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]];
-    mods += `<polygon points="${pts.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/>`;
+    const ptsS = pts.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ');
+    mods += `<polygon points="${ptsS}" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/>` + (o.anim ? `<polygon class="ha-glint" style="animation-delay:${(c * 0.14 + r * 0.1).toFixed(2)}s" points="${ptsS}" fill="#ffffff"/>` : '');
   }
   // Haus: klassisch oder modern, Licht an/aus, PV/WP/E-Auto je nach Angebot
   const style = o.style || S.design.houseStyle || 'classic', lightMode = o.light || S.design.houseLight || 'auto';
   const lit = lightMode === 'on' || (lightMode !== 'off' && dawn);
   const winF = lit ? '#FFC870' : dawn ? '#1C2532' : '#CFE6F8', winS2 = lit ? '#FFE2A8' : dawn ? '#3A4656' : '#ffffff';
-  const glow = (x, y, w, h) => (lit ? `<rect x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="10" fill="#FFC870" opacity="${dawn ? 0.2 : 0.14}"/>` : '');
+  const glow = (x, y, w, h) => (lit ? `<rect class="ha-glow" x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="10" fill="#FFC870" opacity="${dawn ? 0.2 : 0.14}"/>` : '');
   const batOn = !!o.bat, hpX = 446;
   const hpUnit = o.hp === false ? '' : `<g transform="translate(${hpX} 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
-<circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/>
-<rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
+<circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><g class="ha-fan"><circle cx="25" cy="23" r="13" fill="none"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/></g>
+<rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect class="ha-led" x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
 <rect x="6" y="46" width="8" height="4" fill="${K.hpS}"/><rect x="60" y="46" width="8" height="4" fill="${K.hpS}"/></g>
-<path d="M432 300 H${hpX}" stroke="${K.hpS}" stroke-width="3"/>`;
+<path d="M432 300 H${hpX}" stroke="${K.hpS}" stroke-width="3"/>${o.anim ? `<path class="ha-flow" d="M${hpX} 300 H432" stroke="${s}" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 7"/>` : ''}`;
   // Carport mit E-Auto und Wallbox
   const car = !!o.car, wbx = style === 'modern' ? 170 : 172;
   const carport = !car ? '' : `<g>
@@ -1523,7 +1524,7 @@ ${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill=
 <circle cx="20" cy="36" r="8" fill="#26303B"/><circle cx="20" cy="36" r="3.5" fill="#9AA8B6"/><circle cx="72" cy="36" r="8" fill="#26303B"/><circle cx="72" cy="36" r="3.5" fill="#9AA8B6"/>
 <rect x="86" y="25" width="5" height="4" rx="1.5" fill="${lit ? '#FFE9A8' : '#FFF4D6'}"/></g>
 <rect x="${wbx}" y="270" width="16" height="24" rx="3.5" fill="${dawn ? '#2C3644' : '#ffffff'}" stroke="${K.hpS}" stroke-width="1.5"/><circle cx="${wbx + 8}" cy="278" r="2.4" fill="#3FBF6E"/><rect x="${wbx + 3}" y="286" width="10" height="3" rx="1.5" fill="${p}"/>
-<path d="M${wbx + 8} 294 C ${wbx + 8} 316, 146 322, 136 320" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/></g>`;
+<path d="M${wbx + 8} 294 C ${wbx + 8} 316, 146 322, 136 320" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/>${o.anim ? `<path class="ha-flow" d="M${wbx + 8} 294 C ${wbx + 8} 316, 146 322, 136 320" fill="none" stroke="#5CE08F" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 6"/>` : ''}</g>`;
   // Stromspeicher als Tower zur Außenmontage (z. B. EcoFlow Ocean 2)
   const tx = style === 'modern' ? 255 : 201;
   const tower = !batOn ? '' : `<g transform="translate(${tx} 262)"><ellipse cx="15" cy="71" rx="20" ry="3.5" fill="#000" opacity="${dawn ? 0.3 : 0.1}"/>
@@ -1566,25 +1567,26 @@ ${carport}${tower}${hpUnit}${trees}`;
   let rays = '';
   if (!dawn) for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; rays += `<line x1="${sx + Math.cos(a) * 52}" y1="${sy + Math.sin(a) * 52}" x2="${sx + Math.cos(a) * 68}" y2="${sy + Math.sin(a) * 68}" stroke="${s}" stroke-width="5" stroke-linecap="round" opacity=".85"/>`; }
   let stars = '';
-  if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
+  if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle class="ha-star" style="animation-delay:${(rnd() * 4).toFixed(2)}s" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
   const hills = `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="url(#${id('h1')})"/>${dawn ? `<path d="M0 300 C120 255 230 265 330 290 S520 262 600 278" fill="none" stroke="${s}" stroke-opacity=".35" stroke-width="1.2"/>` : ''}<path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="url(#${id('h2')})"/></g>`;
   const vb = o.cover ? `0 14 ${W} 371.4` : `0 0 ${W} 400`, sz = o.cover ? `width="${W === 600 ? 1300 : 2600}" height="805"` : 'width="100%" height="100%"';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice">
 <defs>
 <linearGradient id="${id('sky')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.sky1}"/><stop offset=".45" stop-color="${K.sky2}"/><stop offset=".68" stop-color="${K.sky3}"/><stop offset=".78" stop-color="${K.hor}"/></linearGradient>
 <radialGradient id="${id('glow')}" cx="${(sx / W).toFixed(3)}" cy="${(sy / 400).toFixed(3)}" r="${dawn ? 0.55 : 0.5}" gradientTransform="translate(${(sx / W).toFixed(3)} ${(sy / 400).toFixed(3)}) scale(${(400 / W).toFixed(3)} 1) translate(${(-sx / W).toFixed(3)} ${(-sy / 400).toFixed(3)})"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
+<linearGradient id="${id('shoot')}" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <linearGradient id="${id('mod')}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${K.mod1}"/><stop offset="1" stop-color="${K.mod2}"/></linearGradient>
 <linearGradient id="${id('h1')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill1a}"/><stop offset="1" stop-color="${K.hill1b}"/></linearGradient>
 <linearGradient id="${id('h2')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill2a}"/><stop offset="1" stop-color="${K.hill2b}"/></linearGradient>
 <linearGradient id="${id('wall')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.wall1}"/><stop offset="1" stop-color="${K.wall2}"/></linearGradient>
 </defs>
-${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}
+${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}${o.anim && dawn ? [[0.25, 30, 0], [0.62, 18, 4.5], [0.85, 46, 9]].map(([fx, y, d]) => `<g class="ha-shoot" style="animation-delay:${d}s"><line x1="${(fx * W).toFixed(0)}" y1="${y}" x2="${(fx * W - 46).toFixed(0)}" y2="${y + 16}" stroke="url(#${id('shoot')})" stroke-width="1.8" stroke-linecap="round"/><circle cx="${(fx * W).toFixed(0)}" cy="${y}" r="1.6" fill="#fff"/></g>`).join('') : ''}
 <rect width="${W}" height="400" fill="url(#${id('glow')})"/>
-${rays}<circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}
-<g fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
+<g class="ha-sun"><g class="ha-rays">${rays}</g><circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}</g>
+<g class="ha-clouds" fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
 ${hills}
-<g transform="translate(${dx} 0)">
-${houseBody}</g>
+<g transform="translate(${dx} 0)"><g class="ha-house">
+${houseBody}</g></g>
 ${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
 </svg>`;
 }
@@ -2237,8 +2239,8 @@ function viewKunden() {
   const avgAm = am.length ? am.reduce((a, b) => a + b, 0) / am.length : null;
   const card = customerCard;
 
-  return `<section class="relative overflow-hidden border-b border-line">
-    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax' })}</div>
+  return `<section class="relative overflow-hidden border-b border-line hero-anim">
+    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true })}</div>
     <div class="hidden sm:block absolute inset-0" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 sm:pt-0 pb-8 sm:pb-0 sm:min-h-[600px] flex items-center">
       <div class="max-w-[36rem]"><span class="mono text-[12px] text-ink2 inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
@@ -2246,13 +2248,13 @@ function viewKunden() {
       <p class="text-[17px] sm:text-[19px] text-ink2 mt-6 leading-relaxed">Angebot hochladen, Daten prüfen, fertig: In wenigen Minuten entsteht eine Wirtschaftlichkeitsberechnung, die Ihre Kunden verstehen.</p>
       <div class="flex flex-wrap gap-3 mt-9"><button class="btn-p !h-12 !px-6 !text-[15px]" data-a="new">${ic('plus', 18)}Neue Berechnung</button><a href="#/einstellungen/design" class="btn-s !h-12 !px-5 !text-[15px]">Design anpassen</a></div></div>
     </div>
-    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({})}</div>
+    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({ anim: true })}</div>
   </section>
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}
     <div class="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
-      <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]">${v}</div></div>`).join('')}</div>
+      <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]" data-countup>${v}</div></div>`).join('')}</div>
       ${salesStats()}
     </div>
     <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
@@ -2480,7 +2482,7 @@ function salesStats() {
   const signed = all.filter(p => st(p) === 'unterschrieben' || (p.sign && p.sign.cust)).length;
   const got = all.filter(p => st(p) !== 'offen' || (p.sign && p.sign.cust)).length;
   const rate = got ? signed / got * 100 : null;
-  const cell = (k, v, u, hl) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3" ${hl ? 'style="background:rgb(var(--p-rgb)/.10);border-color:rgb(var(--p-rgb)/.35)"' : ''}><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em] ${hl ? 'text-p' : ''}">${v}</div><div class="text-[11px] text-ink3 mt-0.5 leading-tight">${u}</div></div>`;
+  const cell = (k, v, u, hl) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3" ${hl ? 'style="background:rgb(var(--p-rgb)/.10);border-color:rgb(var(--p-rgb)/.35)"' : ''}><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em] ${hl ? 'text-p' : ''}" data-countup>${v}</div><div class="text-[11px] text-ink3 mt-0.5 leading-tight">${u}</div></div>`;
   return `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-2 sm:mt-3">${cell('Berechnung erhalten', num(got), 'Kunden mit PDF')}${cell('Abgeschlossen', num(signed), 'unterschrieben')}${cell('Abschlussquote', rate === null ? '–' : pct(rate), got ? `${num(signed)} von ${num(got)}` : 'noch keine Daten', true)}${cell('Archiviert', num(ARCHIVED.length), 'Kunden im Archiv')}</div>`;
 }
 
@@ -2518,7 +2520,7 @@ function step4(p, R) {
 function overview(p, R) {
   const c = C(), r1 = R.rows[0], last = R.rows[R.rows.length - 1], comps = comparisonsOf(R);
   const miss = R.missing.length ? `<div class="rounded-[calc(var(--r)-4px)] bg-tyel ring-1 ring-s/30 p-4 text-[14px] text-ink flex gap-3">${ic('alert', 18, 'shrink-0 mt-0.5')}<div><b>Noch offen:</b> ${R.missing.map(esc).join(', ')}.</div></div>` : '';
-  const kpi = (k, v, sub, cls = '') => `<div class="kpi ${cls}"><div class="kpi-k">${k}</div><div class="kpi-v">${v}</div>${sub ? `<div class="text-[12px] text-ink3 mt-1">${sub}</div>` : ''}</div>`;
+  const kpi = (k, v, sub, cls = '') => `<div class="kpi ${cls}"><div class="kpi-k">${k}</div><div class="kpi-v" data-countup>${v}</div>${sub ? `<div class="text-[12px] text-ink3 mt-1">${sub}</div>` : ''}</div>`;
   let h = miss + plausibilityCard(p, R) + `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
     ${kpi('Ihre schlussendlichen Kosten', eur(R.sowieso ? R.invest : R.net), R.sowieso ? 'Mehrkosten nach Sowieso-Kosten' : 'nach Förderung und Rabatt')}
     ${kpi('Ø Ersparnis pro Jahr', `<span class="text-p">${eur(R.avg)}</span>`, `1. Jahr: ${eur(R.saving1)}`)}
@@ -4140,7 +4142,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108090539';
+const APP_VERSION = '20261108180517';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4557,6 +4559,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.51', date: '2026-11-08', items: [
+    ['anim', 'Die App bewegt sich', 'Auf der Startseite geht die Sonne auf, Wolken ziehen, der Lüfter der Wärmepumpe dreht sich, die Solarmodule glänzen und im Dunkel-Modus fliegen Sternschnuppen.'],
+    ['animui', 'Sanfte Übergänge', 'Seiten und Kundenkarten blenden weich ein, Kennzahlen zählen hoch und Knöpfe geben beim Tippen nach. Wer am Gerät „Bewegung reduzieren“ eingestellt hat, bekommt alles ruhig.']
+  ] },
   { version: '1.50', date: '2026-11-08', items: [
     ['update', 'Aktualisieren klappt zuverlässig', '„Jetzt aktualisieren“ holt die neue Version jetzt direkt vom Server und startet die App frisch – auch auf dem iPhone. Ihre Daten bleiben erhalten.']
   ] },
@@ -4605,7 +4611,9 @@ const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date:
 const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
 WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
 WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
-WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24'; WN_BG.kbd = '#F5F7FA'; WN_BG.update = '#141B24';
+WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24'; WN_BG.kbd = '#F5F7FA'; WN_BG.update = '#141B24'; WN_BG.anim = '#060B16'; WN_BG.animui = '#141B24';
+WN_IMG.anim = () => `<div style="width:100%;height:100%" class="hero-anim">${houseSVG({ dawn: true, anim: true })}</div>`;
+WN_IMG.animui = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[0, 1, 2].map(i => `<rect x="12" y="${10 + i * 22}" width="96" height="16" rx="4" fill="#1C2530" opacity="${1 - i * 0.3}" transform="translate(0 ${i * 3})"/><rect x="18" y="${15 + i * 22 + i * 3}" width="${40 - i * 8}" height="3" rx="1.5" fill="#fff" opacity="${0.9 - i * 0.25}"/><text x="96" y="${21 + i * 22 + i * 3}" font-size="6" font-weight="700" fill="#3FA98C" text-anchor="end">${['12.480 €', '8.300 €', '2.100 €'][i]}</text>`).join('')}</svg>`;
 WN_IMG.update = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><circle cx="60" cy="32" r="14" fill="none" stroke="#3FA98C" stroke-width="3" stroke-dasharray="70 18"/><path d="M70 20 l4 -6 l3 8 z" fill="#3FA98C"/><rect x="14" y="56" width="92" height="16" rx="5" fill="#1C2530"/><text x="20" y="66" font-size="5.2" font-weight="700" fill="#fff">Version 1.50</text><rect x="64" y="59" width="38" height="10" rx="5" fill="#3FA98C"/><text x="68" y="65.6" font-size="4.4" font-weight="700" fill="#fff">Aktualisieren</text></svg>`;
 WN_IMG.kbd = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="10" y="14" width="100" height="16" rx="4" fill="#fff" stroke="#D5DCE3"/><text x="15" y="25" font-size="6" fill="#1B2733">ca. 3.000</text><text x="92" y="25" font-size="5" fill="#8A96A3">Liter</text><rect x="70" y="4" width="40" height="8" rx="4" fill="#3FA98C"/><text x="74" y="9.6" font-size="4.4" font-weight="700" fill="#fff">ABC Buchstaben</text><rect x="6" y="38" width="108" height="38" rx="4" fill="#D9DEE4"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${12+c*34}" y="${42+r*11}" width="30" height="9" rx="2" fill="#fff"/><text x="${25+c*34}" y="${48.6+r*11}" font-size="5.4" fill="#1B2733">${r*3+c+1}</text>`).join('')).join('')}</svg>`;
 WN_IMG.prodsort = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[['Hersteller', 1], ['Art', 0], ['Name', 0]].map(([t, on], i) => `<rect x="${8 + i * 36}" y="10" width="${t.length * 3 + 10}" height="10" rx="5" fill="#1C2530" stroke="${on ? '#3FA98C' : '#2E3A47'}"/><text x="${13 + i * 36}" y="16.8" font-size="4.6" fill="#ffffff">${t}</text>`).join('')}<text x="8" y="32" font-size="5.4" font-weight="700" fill="#ffffff">EcoFlow</text>${[0, 1, 2].map(i => `<rect x="${8 + i * 36}" y="36" width="32" height="18" rx="3" fill="#1C2530"/>`).join('')}<text x="8" y="64" font-size="5.4" font-weight="700" fill="#ffffff">Wolf</text><rect x="8" y="67" width="32" height="10" rx="3" fill="#1C2530"/></svg>`; WN_BG.prodstage = '#0B1118'; WN_BG.prodauto = '#141B24';
@@ -4693,6 +4701,76 @@ function showArchive() {
   modal(`<div><h3 class="h-font text-[26px] pr-8">Versionsarchiv</h3><p class="text-[13px] text-ink3 mt-1">Alle Versionen mit ihren Änderungen – die neueste zuerst.</p>
     <div class="mt-5 divide-y divide-line">${rows.map(([v, d, t], i) => `<div class="py-3 flex gap-4"><div class="w-16 shrink-0"><div class="font-semibold text-[15px] num">${v}</div><div class="text-[11px] text-ink3">${deDate(d)}</div></div><div class="text-[14px] text-ink2 leading-relaxed">${i === 0 ? '<span class="badge mr-1 text-[11px]">aktuell</span>' : ''}${esc(t)}</div></div>`).join('')}</div>
     <div class="flex justify-end mt-5"><button class="btn-p" data-a="modal-close">Schließen</button></div></div>`, { wide: true });
+}
+/* Animationen in der App (nicht im PDF): lebendiges Start-Haus, sanfte Seitenwechsel,
+   Karten blenden nacheinander ein, Kennzahlen zählen hoch. Wer „Bewegung reduzieren“
+   am Gerät eingestellt hat, bekommt alles ruhig. */
+document.head.insertAdjacentHTML('beforeend', `<style>
+@media (prefers-reduced-motion: no-preference) {
+  /* Start-Haus */
+  .hero-anim .ha-sun{animation:haRise 1.6s cubic-bezier(.2,.8,.2,1) both}
+  .hero-anim .ha-rays{transform-box:fill-box;transform-origin:center;animation:haSpin 60s linear infinite}
+  .hero-anim .ha-clouds{animation:haDrift 18s ease-in-out infinite alternate}
+  .hero-anim .ha-house{animation:haUp .9s .15s cubic-bezier(.2,.8,.2,1) both}
+  .hero-anim .ha-fan{transform-box:fill-box;transform-origin:center;animation:haSpin 1.4s linear infinite}
+  .hero-anim .ha-led{animation:haBlink 2.4s ease-in-out infinite}
+  .hero-anim .ha-glow{animation:haGlow 4s ease-in-out infinite alternate}
+  .hero-anim .ha-star{animation:haTwinkle 3.5s ease-in-out infinite}
+  .hero-anim .ha-glint{opacity:0;animation:haGlint 7s ease-in-out 1.2s infinite}
+  .hero-anim .ha-flow{animation:haFlow 1.2s linear infinite}
+  .hero-anim .ha-shoot{opacity:0;transform-box:fill-box;animation:haShoot 13s ease-out infinite}
+  /* Seitenwechsel und Karten */
+  .pg-in{animation:pgIn .35s cubic-bezier(.2,.8,.2,1) both}
+  .st-in>*{animation:pgIn .45s cubic-bezier(.2,.8,.2,1) both}
+  ${Array.from({ length: 12 }, (_, i) => `.st-in>*:nth-child(${i + 1}){animation-delay:${(i * 0.05).toFixed(2)}s}`).join('')}
+  /* Rückmeldung beim Tippen */
+  .btn,.btn-p,.btn-s,.btn-g,.chip,.seg button,[data-a=open]{transition:transform .12s ease,background-color .15s,color .15s,border-color .15s}
+  .btn:active,.btn-p:active,.btn-s:active,.btn-g:active,.chip:active,.seg button:active{transform:scale(.96)}
+  @media (hover:hover){#cust-list>.card{transition:transform .2s ease,box-shadow .2s ease}#cust-list>.card:hover{transform:translateY(-2px);box-shadow:0 14px 30px -18px rgba(0,0,0,.6)}}
+  .tgl,.tgl::after{transition:all .22s cubic-bezier(.2,.8,.2,1)}
+  #modal .card{animation:mdIn .28s cubic-bezier(.2,.8,.2,1) both}
+}
+@keyframes haRise{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+@keyframes haUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes haSpin{to{transform:rotate(360deg)}}
+@keyframes haDrift{from{transform:translateX(-18px)}to{transform:translateX(26px)}}
+@keyframes haBlink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes haGlow{from{opacity:.1}to{opacity:.3}}
+@keyframes haTwinkle{0%,100%{opacity:.8}50%{opacity:.15}}
+@keyframes haGlint{0%,70%,100%{opacity:0}78%{opacity:.32}86%{opacity:0}}
+@keyframes haFlow{to{stroke-dashoffset:-20}}
+@keyframes haShoot{0%{opacity:0;transform:translate(0,0)}2%{opacity:1}8%{opacity:0;transform:translate(-140px,50px)}100%{opacity:0;transform:translate(-140px,50px)}}
+@keyframes pgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes mdIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+</style>`);
+
+const animOk = () => !matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* Zahlen in einem Element von 0 hochzählen (deutsches Format, Einheiten bleiben stehen) */
+function countUp(el, ms = 750) {
+  const nodes = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  while (w.nextNode()) if (/\d/.test(w.currentNode.nodeValue)) nodes.push({ n: w.currentNode, t: w.currentNode.nodeValue });
+  if (!nodes.length) return;
+  const re = /\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?/g;
+  const fmt = (v, dec) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v);
+  const t0 = performance.now();
+  const step = now => {
+    const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    nodes.forEach(({ n, t }) => { n.nodeValue = k >= 1 ? t : t.replace(re, m => { const dec = (m.split(',')[1] || '').length; return fmt(+m.replace(/\./g, '').replace(',', '.') * e, dec); }); });
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+/* Nach einem Seitenwechsel: Inhalt einblenden, Kartenlisten gestaffelt, Kennzahlen hochzählen */
+{
+  const _render = render;
+  render = function (nav) {
+    _render.apply(this, arguments);
+    if (!nav || !animOk()) return;
+    const main = $('#app main') || $('#app');
+    if (main) { main.classList.remove('pg-in'); void main.offsetWidth; main.classList.add('pg-in'); }
+    $$('#cust-list, #app .grid').forEach(g => { if (g.children.length > 1 && g.children.length <= 40 && !g.closest('.page')) g.classList.add('st-in'); });
+    $$('#app [data-countup]').forEach(el => countUp(el));
+  };
 }
 /* Tastatur-Umschalter: Zahlenfelder starten mit Zahlentastatur, lassen sich aber
    jederzeit auf Buchstaben umstellen (und zurück). Nichts wird auf Zahlen begrenzt. */

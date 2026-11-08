@@ -33,7 +33,7 @@ function step4(p, R) {
 function overview(p, R) {
   const c = C(), r1 = R.rows[0], last = R.rows[R.rows.length - 1], comps = comparisonsOf(R);
   const miss = R.missing.length ? `<div class="rounded-[calc(var(--r)-4px)] bg-tyel ring-1 ring-s/30 p-4 text-[14px] text-ink flex gap-3">${ic('alert', 18, 'shrink-0 mt-0.5')}<div><b>Noch offen:</b> ${R.missing.map(esc).join(', ')}.</div></div>` : '';
-  const kpi = (k, v, sub, cls = '') => `<div class="kpi ${cls}"><div class="kpi-k">${k}</div><div class="kpi-v">${v}</div>${sub ? `<div class="text-[12px] text-ink3 mt-1">${sub}</div>` : ''}</div>`;
+  const kpi = (k, v, sub, cls = '') => `<div class="kpi ${cls}"><div class="kpi-k">${k}</div><div class="kpi-v" data-countup>${v}</div>${sub ? `<div class="text-[12px] text-ink3 mt-1">${sub}</div>` : ''}</div>`;
   let h = miss + plausibilityCard(p, R) + `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
     ${kpi('Ihre schlussendlichen Kosten', eur(R.sowieso ? R.invest : R.net), R.sowieso ? 'Mehrkosten nach Sowieso-Kosten' : 'nach Förderung und Rabatt')}
     ${kpi('Ø Ersparnis pro Jahr', `<span class="text-p">${eur(R.avg)}</span>`, `1. Jahr: ${eur(R.saving1)}`)}

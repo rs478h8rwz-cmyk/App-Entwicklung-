@@ -188,8 +188,8 @@ function viewKunden() {
   const avgAm = am.length ? am.reduce((a, b) => a + b, 0) / am.length : null;
   const card = customerCard;
 
-  return `<section class="relative overflow-hidden border-b border-line">
-    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax' })}</div>
+  return `<section class="relative overflow-hidden border-b border-line hero-anim">
+    <div class="hidden sm:block absolute inset-0">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true })}</div>
     <div class="hidden sm:block absolute inset-0" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 sm:pt-0 pb-8 sm:pb-0 sm:min-h-[600px] flex items-center">
       <div class="max-w-[36rem]"><span class="mono text-[12px] text-ink2 inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
@@ -197,13 +197,13 @@ function viewKunden() {
       <p class="text-[17px] sm:text-[19px] text-ink2 mt-6 leading-relaxed">Angebot hochladen, Daten prüfen, fertig: In wenigen Minuten entsteht eine Wirtschaftlichkeitsberechnung, die Ihre Kunden verstehen.</p>
       <div class="flex flex-wrap gap-3 mt-9"><button class="btn-p !h-12 !px-6 !text-[15px]" data-a="new">${ic('plus', 18)}Neue Berechnung</button><a href="#/einstellungen/design" class="btn-s !h-12 !px-5 !text-[15px]">Design anpassen</a></div></div>
     </div>
-    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({})}</div>
+    <div class="sm:hidden mx-4 mb-8 rounded-[var(--r)] overflow-hidden border border-line aspect-[4/3]">${houseSVG({ anim: true })}</div>
   </section>
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}
     <div class="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
-      <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]">${v}</div></div>`).join('')}</div>
+      <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]" data-countup>${v}</div></div>`).join('')}</div>
       ${salesStats()}
     </div>
     <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
@@ -431,6 +431,6 @@ function salesStats() {
   const signed = all.filter(p => st(p) === 'unterschrieben' || (p.sign && p.sign.cust)).length;
   const got = all.filter(p => st(p) !== 'offen' || (p.sign && p.sign.cust)).length;
   const rate = got ? signed / got * 100 : null;
-  const cell = (k, v, u, hl) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3" ${hl ? 'style="background:rgb(var(--p-rgb)/.10);border-color:rgb(var(--p-rgb)/.35)"' : ''}><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em] ${hl ? 'text-p' : ''}">${v}</div><div class="text-[11px] text-ink3 mt-0.5 leading-tight">${u}</div></div>`;
+  const cell = (k, v, u, hl) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3" ${hl ? 'style="background:rgb(var(--p-rgb)/.10);border-color:rgb(var(--p-rgb)/.35)"' : ''}><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em] ${hl ? 'text-p' : ''}" data-countup>${v}</div><div class="text-[11px] text-ink3 mt-0.5 leading-tight">${u}</div></div>`;
   return `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-2 sm:mt-3">${cell('Berechnung erhalten', num(got), 'Kunden mit PDF')}${cell('Abgeschlossen', num(signed), 'unterschrieben')}${cell('Abschlussquote', rate === null ? '–' : pct(rate), got ? `${num(signed)} von ${num(got)}` : 'noch keine Daten', true)}${cell('Archiviert', num(ARCHIVED.length), 'Kunden im Archiv')}</div>`;
 }

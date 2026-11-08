@@ -18,19 +18,20 @@ function houseSVG(o = {}) {
     const l0 = lerp(top.l, bot.l, t0) + 14, r0 = lerp(top.r, bot.r, t0) - 14, l1 = lerp(top.l, bot.l, t1) + 14, r1 = lerp(top.r, bot.r, t1) - 14;
     const a0 = c / 6 + pad / 6, a1 = (c + 1) / 6 - pad / 6;
     const pts = [[lerp(l0, r0, a0), y0], [lerp(l0, r0, a1), y0], [lerp(l1, r1, a1), y1], [lerp(l1, r1, a0), y1]];
-    mods += `<polygon points="${pts.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/>`;
+    const ptsS = pts.map(q => q.map(v => v.toFixed(1)).join(',')).join(' ');
+    mods += `<polygon points="${ptsS}" fill="url(#${id('mod')})" stroke="${K.modS}" stroke-width="0.8"/>` + (o.anim ? `<polygon class="ha-glint" style="animation-delay:${(c * 0.14 + r * 0.1).toFixed(2)}s" points="${ptsS}" fill="#ffffff"/>` : '');
   }
   // Haus: klassisch oder modern, Licht an/aus, PV/WP/E-Auto je nach Angebot
   const style = o.style || S.design.houseStyle || 'classic', lightMode = o.light || S.design.houseLight || 'auto';
   const lit = lightMode === 'on' || (lightMode !== 'off' && dawn);
   const winF = lit ? '#FFC870' : dawn ? '#1C2532' : '#CFE6F8', winS2 = lit ? '#FFE2A8' : dawn ? '#3A4656' : '#ffffff';
-  const glow = (x, y, w, h) => (lit ? `<rect x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="10" fill="#FFC870" opacity="${dawn ? 0.2 : 0.14}"/>` : '');
+  const glow = (x, y, w, h) => (lit ? `<rect class="ha-glow" x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="10" fill="#FFC870" opacity="${dawn ? 0.2 : 0.14}"/>` : '');
   const batOn = !!o.bat, hpX = 446;
   const hpUnit = o.hp === false ? '' : `<g transform="translate(${hpX} 284)"><rect x="0" y="0" width="74" height="46" rx="6" fill="${K.hp}" stroke="${K.hpS}" stroke-width="2"/>
-<circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/>
-<rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
+<circle cx="25" cy="23" r="15" fill="${K.fan}" stroke="${K.hpS}" stroke-width="2"/><g class="ha-fan"><circle cx="25" cy="23" r="13" fill="none"/><path d="M25 10v26M12 23h26M16 14l18 18M34 14 16 32" stroke="${K.hpS}" stroke-width="1.6"/></g>
+<rect x="49" y="9" width="17" height="4" rx="2" fill="${K.hpS}"/><rect x="49" y="17" width="17" height="4" rx="2" fill="${K.hpS}"/><rect class="ha-led" x="49" y="25" width="10" height="4" rx="2" fill="${p}"/>
 <rect x="6" y="46" width="8" height="4" fill="${K.hpS}"/><rect x="60" y="46" width="8" height="4" fill="${K.hpS}"/></g>
-<path d="M432 300 H${hpX}" stroke="${K.hpS}" stroke-width="3"/>`;
+<path d="M432 300 H${hpX}" stroke="${K.hpS}" stroke-width="3"/>${o.anim ? `<path class="ha-flow" d="M${hpX} 300 H432" stroke="${s}" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 7"/>` : ''}`;
   // Carport mit E-Auto und Wallbox
   const car = !!o.car, wbx = style === 'modern' ? 170 : 172;
   const carport = !car ? '' : `<g>
@@ -43,7 +44,7 @@ ${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill=
 <circle cx="20" cy="36" r="8" fill="#26303B"/><circle cx="20" cy="36" r="3.5" fill="#9AA8B6"/><circle cx="72" cy="36" r="8" fill="#26303B"/><circle cx="72" cy="36" r="3.5" fill="#9AA8B6"/>
 <rect x="86" y="25" width="5" height="4" rx="1.5" fill="${lit ? '#FFE9A8' : '#FFF4D6'}"/></g>
 <rect x="${wbx}" y="270" width="16" height="24" rx="3.5" fill="${dawn ? '#2C3644' : '#ffffff'}" stroke="${K.hpS}" stroke-width="1.5"/><circle cx="${wbx + 8}" cy="278" r="2.4" fill="#3FBF6E"/><rect x="${wbx + 3}" y="286" width="10" height="3" rx="1.5" fill="${p}"/>
-<path d="M${wbx + 8} 294 C ${wbx + 8} 316, 146 322, 136 320" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/></g>`;
+<path d="M${wbx + 8} 294 C ${wbx + 8} 316, 146 322, 136 320" fill="none" stroke="#1B232C" stroke-width="2.6" stroke-linecap="round"/>${o.anim ? `<path class="ha-flow" d="M${wbx + 8} 294 C ${wbx + 8} 316, 146 322, 136 320" fill="none" stroke="#5CE08F" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 6"/>` : ''}</g>`;
   // Stromspeicher als Tower zur Außenmontage (z. B. EcoFlow Ocean 2)
   const tx = style === 'modern' ? 255 : 201;
   const tower = !batOn ? '' : `<g transform="translate(${tx} 262)"><ellipse cx="15" cy="71" rx="20" ry="3.5" fill="#000" opacity="${dawn ? 0.3 : 0.1}"/>
@@ -86,25 +87,26 @@ ${carport}${tower}${hpUnit}${trees}`;
   let rays = '';
   if (!dawn) for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; rays += `<line x1="${sx + Math.cos(a) * 52}" y1="${sy + Math.sin(a) * 52}" x2="${sx + Math.cos(a) * 68}" y2="${sy + Math.sin(a) * 68}" stroke="${s}" stroke-width="5" stroke-linecap="round" opacity=".85"/>`; }
   let stars = '';
-  if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
+  if (dawn) { let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280; for (let i = 0; i < (wide ? 70 : 36); i++) { const x = rnd() * W, y = rnd() * 150; stars += `<circle class="ha-star" style="animation-delay:${(rnd() * 4).toFixed(2)}s" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(rnd() * 1.1 + 0.3).toFixed(2)}" fill="#fff" opacity="${(0.25 + rnd() * 0.6 * (1 - y / 170)).toFixed(2)}"/>`; } }
   const hills = `<g ${wide ? 'transform="scale(2 1)"' : ''}><path d="M0 300 C120 255 230 265 330 290 S520 262 600 278 V400 H0Z" fill="url(#${id('h1')})"/>${dawn ? `<path d="M0 300 C120 255 230 265 330 290 S520 262 600 278" fill="none" stroke="${s}" stroke-opacity=".35" stroke-width="1.2"/>` : ''}<path d="M0 340 C150 305 300 320 420 335 S560 318 600 324 V400 H0Z" fill="url(#${id('h2')})"/></g>`;
   const vb = o.cover ? `0 14 ${W} 371.4` : `0 0 ${W} 400`, sz = o.cover ? `width="${W === 600 ? 1300 : 2600}" height="805"` : 'width="100%" height="100%"';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" ${sz} preserveAspectRatio="${o.align || 'xMidYMid'} slice">
 <defs>
 <linearGradient id="${id('sky')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.sky1}"/><stop offset=".45" stop-color="${K.sky2}"/><stop offset=".68" stop-color="${K.sky3}"/><stop offset=".78" stop-color="${K.hor}"/></linearGradient>
 <radialGradient id="${id('glow')}" cx="${(sx / W).toFixed(3)}" cy="${(sy / 400).toFixed(3)}" r="${dawn ? 0.55 : 0.5}" gradientTransform="translate(${(sx / W).toFixed(3)} ${(sy / 400).toFixed(3)}) scale(${(400 / W).toFixed(3)} 1) translate(${(-sx / W).toFixed(3)} ${(-sy / 400).toFixed(3)})"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
+<linearGradient id="${id('shoot')}" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <linearGradient id="${id('mod')}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${K.mod1}"/><stop offset="1" stop-color="${K.mod2}"/></linearGradient>
 <linearGradient id="${id('h1')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill1a}"/><stop offset="1" stop-color="${K.hill1b}"/></linearGradient>
 <linearGradient id="${id('h2')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill2a}"/><stop offset="1" stop-color="${K.hill2b}"/></linearGradient>
 <linearGradient id="${id('wall')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.wall1}"/><stop offset="1" stop-color="${K.wall2}"/></linearGradient>
 </defs>
-${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}
+${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}${o.anim && dawn ? [[0.25, 30, 0], [0.62, 18, 4.5], [0.85, 46, 9]].map(([fx, y, d]) => `<g class="ha-shoot" style="animation-delay:${d}s"><line x1="${(fx * W).toFixed(0)}" y1="${y}" x2="${(fx * W - 46).toFixed(0)}" y2="${y + 16}" stroke="url(#${id('shoot')})" stroke-width="1.8" stroke-linecap="round"/><circle cx="${(fx * W).toFixed(0)}" cy="${y}" r="1.6" fill="#fff"/></g>`).join('') : ''}
 <rect width="${W}" height="400" fill="url(#${id('glow')})"/>
-${rays}<circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}
-<g fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
+<g class="ha-sun"><g class="ha-rays">${rays}</g><circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}</g>
+<g class="ha-clouds" fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
 ${hills}
-<g transform="translate(${dx} 0)">
-${houseBody}</g>
+<g transform="translate(${dx} 0)"><g class="ha-house">
+${houseBody}</g></g>
 ${wide ? `<g fill="${K.tree}" opacity=".9"><circle cx="90" cy="342" r="14"/><circle cx="76" cy="348" r="10"/><circle cx="1150" cy="356" r="12"/></g>` : ''}
 </svg>`;
 }
