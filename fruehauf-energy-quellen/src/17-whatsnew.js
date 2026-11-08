@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.62', date: '2026-11-08', items: [
+    ['quick', 'Heizlast wie bei Wolf', 'Die Berechnung aus dem Verbrauch ist auf die Wolf-Auslegung abgeglichen (gleiche Eingaben → gleiche Heizlast, z. B. 3.000 l Öl in Hasbergen: 13,7 kW). Die Zirkulationspumpe senkt die Heizlast wie dort.'],
+    ['quickuse', 'Baujahr der Heizung', 'Neu: Baujahr der bisherigen Heizung (vor 1980, 1980–1995, seit 1995) – ältere Kessel haben einen geringeren Nutzungsgrad. Dazu Mittelwert des Verbrauchs und breitere Eingabefelder.']
+  ] },
   { version: '1.61', date: '2026-11-08', items: [
     ['plz', 'PLZ und Ort ergänzen sich', 'PLZ eintippen – der Ort wird ergänzt (bei mehreren Ortsteilen zur Auswahl). Ort eintippen – passende PLZ werden vorgeschlagen. Beim Kunden, im Unternehmen und in der Schnellauslegung.'],
     ['plzte', 'Normaußentemperatur je PLZ', 'Zu jeder Postleitzahl zeigt die App die geschätzte Normaußentemperatur – aus Lage und Höhe des Ortes. Sie fließt direkt in die Schnellauslegung ein.']

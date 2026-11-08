@@ -4152,7 +4152,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108201924';
+const APP_VERSION = '20261108203006';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4569,6 +4569,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.62', date: '2026-11-08', items: [
+    ['quick', 'Heizlast wie bei Wolf', 'Die Berechnung aus dem Verbrauch ist auf die Wolf-Auslegung abgeglichen (gleiche Eingaben → gleiche Heizlast, z. B. 3.000 l Öl in Hasbergen: 13,7 kW). Die Zirkulationspumpe senkt die Heizlast wie dort.'],
+    ['quickuse', 'Baujahr der Heizung', 'Neu: Baujahr der bisherigen Heizung (vor 1980, 1980–1995, seit 1995) – ältere Kessel haben einen geringeren Nutzungsgrad. Dazu Mittelwert des Verbrauchs und breitere Eingabefelder.']
+  ] },
   { version: '1.61', date: '2026-11-08', items: [
     ['plz', 'PLZ und Ort ergänzen sich', 'PLZ eintippen – der Ort wird ergänzt (bei mehreren Ortsteilen zur Auswahl). Ort eintippen – passende PLZ werden vorgeschlagen. Beim Kunden, im Unternehmen und in der Schnellauslegung.'],
     ['plzte', 'Normaußentemperatur je PLZ', 'Zu jeder Postleitzahl zeigt die App die geschätzte Normaußentemperatur – aus Lage und Höhe des Ortes. Sie fließt direkt in die Schnellauslegung ein.']
@@ -5265,9 +5269,12 @@ const norm2 = s => String(s || '').trim().toLowerCase();
    → Warmwasser & System → empfohlene Geräteleistung und JAZ. „Neue Berechnung“ fragt vorher, ob ausgelegt werden soll. */
 const QH = {
   insul: [['nie', 'Niedrigenergiehaus', 10], ['neu', 'Neubau', 12], ['alt', 'Altbau', 15]],         // Heizgrenztemperatur °C
-  gtz: { 10: 2300, 12: 2700, 15: 3300 },                                                              // Gradtagzahl Kd (20 °C innen), Mittel DE
+  hgt: { 10: 1400, 12: 1700, 15: 2160 },                                                             // Heizgradtage ab Heizgrenze (abgeglichen auf Wolf-Auslegung)
   fuels: [['oil_bw', 'Öl-Brennwert-Heizung', 0.95, 'oil'], ['oil_nt', 'Öl-Niedertemperatur-Heizung', 0.87, 'oil'], ['gas_bw', 'Gas-Brennwert-Heizung', 0.96, 'gas'], ['gas_nt', 'Gas-Niedertemperatur-Heizung', 0.88, 'gas']],
   years: [['1918', 'vor 1919', 120], ['1948', '1919–1948', 130], ['1957', '1949–1957', 125], ['1968', '1958–1968', 115], ['1978', '1969–1978', 105], ['1983', '1979–1983', 85], ['1994', '1984–1994', 75], ['2001', '1995–2001', 60], ['2009', '2002–2009', 45], ['2015', '2010–2015', 38], ['2099', 'ab 2016', 30]], // W/m² bei −12 °C
+  /* Nutzungsgrad nach Kesselart und Alter der Heizung (vor 1980 / 1980–1995 / seit 1995) */
+  ages: [['old', 'vor 1980'], ['mid', '1980–1995'], ['new', 'seit 1995']],
+  eta: { oil_bw: { old: 0.80, mid: 0.88, new: 0.95 }, oil_nt: { old: 0.72, mid: 0.80, new: 0.87 }, gas_bw: { old: 0.82, mid: 0.90, new: 0.96 }, gas_nt: { old: 0.74, mid: 0.82, new: 0.88 } },
   reno: [['win', 'Fenster', 0.10], ['roof', 'Dach', 0.12], ['wall', 'Fassade', 0.20], ['cellar', 'Kellerdecke', 0.06]],
   spec: [[35, 'Neubau / KfW 55 / 40'], [60, 'Saniert / neuerer Bestand'], [90, 'Altbau ungedämmt'], [120, 'Altbau, hoher Bedarf']],
   comfort: [[20, 'Gering'], [30, 'Standard'], [40, 'Erhöht'], [50, 'Premium']],
@@ -5275,7 +5282,7 @@ const QH = {
   sperr: [[0, 'Keine'], [2, '2 h'], [4, '4 h'], [6, '6 h']]
 };
 const QD = { build: 'bestand', art: 'efh', zip: '', city: '', teH: null, te: null, teAuto: null, insul: 'alt', load: null, calcOpen: false, method: 'verbrauch',
-  fuel: 'oil_bw', c1: null, c2: null, c3: null, unit: 'l', wwSys: true, area: 160, year: '1983', reno: [], spec: 60,
+  fuel: 'oil_bw', heatAge: 'mid', c1: null, c2: null, c3: null, unit: 'l', wwSys: true, area: 160, year: '1983', reno: [], spec: 60,
   persons: 4, comfort: 30, circ: false, flow: 45, sperr: 0 };
 let QS = null, QPID = null;
 
@@ -5285,15 +5292,22 @@ const qInsul = k => QH.insul.find(x => x[0] === k) || QH.insul[2];
 const qTe = () => (isNum(QS.te) ? QS.te : isNum(QS.teAuto) ? QS.teAuto : -12);
 const qWwDay = () => QS.persons * QS.comfort * 1.163 * 50 / 1000;               // kWh Warmwasser pro Tag (10 → 60 °C)
 const qCirc = () => (QS.circ ? 1.3 : 1);
+const qEta = () => ((QH.eta[QS.fuel] || QH.eta.oil_bw)[QS.heatAge] || 0.88);
 const qGas = () => (QH.fuels.find(f => f[0] === QS.fuel) || [])[3] === 'gas';
+function qAvgText() {
+  const vals = [QS.c1, QS.c2, QS.c3].filter(v => isNum(v) && v > 0); if (!vals.length) return 'Leere Felder werden nicht mitgerechnet.';
+  const u = QS.unit === 'kwh' ? 'kWh' : qGas() ? 'm³' : 'Liter';
+  return `Mittelwert = <b>${num(vals.reduce((a, b) => a + b, 0) / vals.length, 0)} ${u}</b> pro Jahr`;
+}
 function qMethodLoad() {
   const te = qTe(), dT = 20 - te;
   if (QS.method === 'verbrauch') {
     const vals = [QS.c1, QS.c2, QS.c3].filter(v => isNum(v) && v > 0); if (!vals.length) return null;
     const avg = vals.reduce((a, b) => a + b, 0) / vals.length, f = QH.fuels.find(x => x[0] === QS.fuel) || QH.fuels[0];
     const kwh = QS.unit === 'kwh' ? avg : avg * 10;                              // 1 l Heizöl bzw. 1 m³ Erdgas ≈ 10 kWh
-    const heat = kwh * f[2] - (QS.wwSys ? qWwDay() * 365 * qCirc() : 0);
-    return Math.max(0, heat * dT / (24 * QH.gtz[qInsul(QS.insul)[2]]));
+    const ww = QS.wwSys ? qWwDay() * 365 * (QS.circ ? 1.73 : 1) : 0;          // Zirkulation ≈ +73 % Warmwasser-Verluste
+    const heat = kwh * qEta() - ww;
+    return Math.max(0, heat * dT / (24 * QH.hgt[qInsul(QS.insul)[2]]));
   }
   if (QS.method === 'baujahr') {
     const y = QH.years.find(x => x[0] === QS.year) || QH.years[5];
@@ -5303,7 +5317,8 @@ function qMethodLoad() {
   return (QS.area || 0) * (QS.spec || 0) / 1000;
 }
 function qResult() {
-  const load = isNum(QS.load) ? QS.load : 0;
+  const m = !(isNum(QS.load) && QS.load > 0) && QS.calcOpen ? qMethodLoad() : null;
+  const load = isNum(QS.load) && QS.load > 0 ? QS.load : isNum(m) ? m : 0;
   const ww = QS.persons * 0.25 * (QS.comfort / 30) * qCirc();                 // Standard 30 l ≈ 0,25 kW je Person
   const sperrF = 24 / (24 - QS.sperr);
   const total = (load + ww * 0.5) * sperrF;                                      // Warmwasser hat Vorrang – nur halb addiert
@@ -5315,7 +5330,7 @@ function qResult() {
 /* ---------- Oberfläche ---------- */
 const qTile = (key, val, label, icon, on) => `<button type="button" class="rounded-[calc(var(--r)-4px)] border ${on ? 'border-p ring-2 ring-p/30 bg-p/5' : 'border-line bg-field'} p-3 flex flex-col items-center justify-center gap-1.5 text-[13px] font-medium text-center leading-tight ${on ? 'text-ink' : 'text-ink2'} transition" data-qs="${key}" data-v="${val}">${icon ? `<span class="${on ? 'text-p' : 'text-ink3'}">${icon}</span>` : ''}${label}</button>`;
 const qSeg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button type="button" class="${String(QS[key]) === String(v) ? 'on' : ''}" data-qs="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
-const qIn = (key, unit, o = {}) => `<div class="relative"><input class="inp ${unit ? 'pr-14' : ''} ${o.cls || ''}" type="text" inputmode="${o.im || 'decimal'}" data-qi="${key}" value="${isNum(QS[key]) ? inputFmt(QS[key], 'n') : esc(QS[key] || '')}" placeholder="${o.ph || ''}">${unit ? `<span class="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-ink4 pointer-events-none">${unit}</span>` : ''}</div>`;
+const qIn = (key, unit, o = {}) => `<div class="relative"><input class="inp ${unit ? 'pr-14' : ''} ${o.cls || ''}" type="text" inputmode="${o.im || 'decimal'}" data-qi="${key}" value="${isNum(QS[key]) ? inputFmt(QS[key], 'n') : esc(QS[key] || '')}" placeholder="${o.ph || ''}">${unit ? `<span class="absolute ${o.unitCls || 'right-4 text-[13px]'} top-1/2 -translate-y-1/2 font-semibold text-ink4 pointer-events-none">${unit}</span>` : ''}</div>`;
 const qSel = (key, opts) => `<select class="inp appearance-none" data-qi="${key}" data-sel="1">${opts.map(([v, l]) => `<option value="${v}" ${String(QS[key]) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 const qLbl = (t, extra = '') => `<div class="lbl flex items-center justify-between gap-2"><span>${t}</span>${extra}</div>`;
 const QI = {
@@ -5335,9 +5350,10 @@ function quickHTML() {
   const sec = (n, t, body) => `<section class="mt-7 first:mt-0"><div class="flex items-center gap-2.5 mb-3"><span class="w-7 h-7 rounded-full grid place-items-center text-[13px] font-semibold bg-p/10 text-p">${n}</span><h4 class="text-[17px] font-semibold">${t}</h4></div>${body}</section>`;
   const method = QS.method === 'verbrauch' ? `
       <p class="hint !mt-0">Heizlast aus dem tatsächlichen Verbrauch der bisherigen Heizung – nicht geeignet, wenn größere Teile des Hauses ungenutzt sind.</p>
-      <div class="mt-3"><span class="lbl">Heizungsart</span>${qSel('fuel', QH.fuels.map(f => [f[0], f[1]]))}</div>
+      <div class="grid sm:grid-cols-[1fr_170px] gap-3 mt-3"><div><span class="lbl">Heizungsart</span>${qSel('fuel', QH.fuels.map(f => [f[0], f[1]]))}</div><div><span class="lbl">Baujahr der Heizung</span>${qSel('heatAge', QH.ages)}</div></div>
+      <div class="hint">Nutzungsgrad der bisherigen Heizung ca. <b>${Math.round(qEta() * 100)} %</b> – ältere Kessel nutzen weniger vom Brennstoff.</div>
       <div class="mt-3">${qLbl('Verbrauch der letzten drei Jahre', qSeg('unit', [['l', unitL], ['kwh', 'kWh']]))}
-        <div class="grid grid-cols-3 gap-2">${['c1', 'c2', 'c3'].map(k => qIn(k, QS.unit === 'kwh' ? 'kWh' : qGas() ? 'm³' : 'l', { im: 'numeric' })).join('')}</div><div class="hint">Leere Felder werden nicht mitgerechnet.</div></div>
+        <div class="grid grid-cols-3 gap-2">${['c1', 'c2', 'c3'].map((k, i) => qIn(k, '', { im: 'numeric', cls: '!px-3 text-center', ph: ['Jahr 1', 'Jahr 2', 'Jahr 3'][i] })).join('')}</div><div class="hint" id="q-avg">${qAvgText()}</div></div>
       <div class="mt-3 flex flex-wrap items-center justify-between gap-2"><span class="text-[14px]">Warmwasser über diese Heizung?</span>${qSeg('wwSys', [['false', 'Nein'], ['true', 'Ja']])}</div>
       <p class="hint">Personen, Warmwasser-Komfort und Zirkulation (Abschnitt 2) fließen hier mit ein.</p>`
     : QS.method === 'baujahr' ? `
@@ -5375,7 +5391,7 @@ function quickHTML() {
       <div><span class="lbl">Sperrzeit Netzbetreiber pro Tag</span>${qSeg('sperr', QH.sperr)}</div></div>`)}
   ${sec(3, 'Ergebnis', `
     <div class="rounded-[calc(var(--r)-4px)] bg-raised p-5 text-[14px]">
-      <div class="flex justify-between gap-3 py-1.5"><span class="text-ink3">Gebäude-Heizlast</span><b id="q-r-load">${num(r.load, 1)} kW</b></div>
+      <div class="flex justify-between gap-3 py-1.5"><span class="text-ink3">Gebäude-Heizlast <span id="q-r-from" class="text-[12px]">${qLoadFrom()}</span></span><b id="q-r-load">${num(r.load, 1)} kW</b></div>
       <div class="flex justify-between gap-3 py-1.5"><span class="text-ink3">Warmwasser-Zuschlag</span><b id="q-r-ww">${num(r.ww, 1)} kW</b></div>
       <div class="flex justify-between gap-3 py-1.5"><span class="text-ink3">Sperrzeit-Faktor</span><b id="q-r-sp">× ${num(r.sperrF, 2)}</b></div>
       <div class="flex justify-between gap-3 py-2 mt-1 border-t border-line"><span class="text-p font-semibold">Empfohlene Geräteleistung</span><b id="q-r-total" class="text-p text-[20px] whitespace-nowrap">${num(r.total, 1)} kW</b></div>
@@ -5386,11 +5402,14 @@ function quickHTML() {
     ? `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-apply">${ic('check', 17)}Werte übernehmen</button>`
     : `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="wp">${ic('fan', 17)}Als Wärmepumpe anlegen</button><button class="btn-s w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="pvwp">${ic('sun', 17)}Als PV + Wärmepumpe anlegen</button>`}</div>`;
 }
+function qLoadFrom() { return isNum(QS.load) && QS.load > 0 ? '' : QS.calcOpen && isNum(qMethodLoad()) ? '(aus „Heizlast berechnen“)' : ''; }
 function quickRender() { const r = $('#quick-root'); if (r) r.innerHTML = quickHTML(); }
 function quickLive() {
   const r = qResult(), m = qMethodLoad(), set = (id, t) => { const el = $('#' + id); if (el) el.textContent = t; };
   set('q-r-load', num(r.load, 1) + ' kW'); set('q-r-ww', num(r.ww, 1) + ' kW'); set('q-r-sp', '× ' + num(r.sperrF, 2)); set('q-r-total', num(r.total, 1) + ' kW'); set('q-r-jaz', num(r.jaz, 2));
   set('q-mload', isNum(m) ? num(m, 2) + ' kW' : '–'); set('q-pers', QS.persons);
+  const av = $('#q-avg'); if (av) av.innerHTML = qAvgText();
+  const hint = $('#q-r-from'); if (hint) hint.textContent = qLoadFrom();
 }
 function qTeInfo() {
   if (isNum(QS.teAuto)) return `Normaußentemperatur ca. <b>${num(QS.teAuto, 1)} °C</b>${isNum(QS.teH) ? ` (geschätzt aus Lage und ${num(QS.teH)} m Höhe)` : ' (geschätzt)'}. Feld leer lassen = dieser Wert; genauer Wert nach DIN/TS 12831-1.`;
@@ -5413,6 +5432,7 @@ function quickDialog(pid) {
   if (p && !(p.quick && p.quick.v === 2)) {
     if (p.customer.zip) { QS.zip = p.customer.zip; QS.city = p.customer.city || ''; }
     const h = p.heating;
+    if (isNum(h.year)) QS.heatAge = h.year < 1980 ? 'old' : h.year < 1995 ? 'mid' : 'new';
     if (isNum(h.cons) && h.cons > 0) { QS.fuel = h.fuel === 'oil' ? 'oil_bw' : 'gas_bw'; QS.c1 = h.cons; QS.unit = h.fuel === 'oil' ? 'l' : 'kwh'; QS.method = 'verbrauch'; }
     if (p.quick && isNum(p.quick.area)) QS.area = p.quick.area;
   }
@@ -5480,6 +5500,7 @@ document.addEventListener('click', async e => {
   else if (act === 'quick-redo') quickDialog(a.dataset.id);
   else if (act === 'quick-take') { const m = qMethodLoad(); if (!isNum(m) || m <= 0) { toast('Bitte zuerst die Angaben für das Verfahren ausfüllen.'); return; } QS.load = Math.round(m * 100) / 100; QS.calcOpen = false; quickRender(); }
   else if (act === 'quick-create' || act === 'quick-apply') {
+    if (!(isNum(QS.load) && QS.load > 0) && QS.calcOpen && isNum(qMethodLoad()) && qMethodLoad() > 0) QS.load = Math.round(qMethodLoad() * 100) / 100;
     if (!isNum(QS.load) || QS.load <= 0) { toast('Bitte eine Heizlast eingeben oder über „Heizlast berechnen“ ermitteln.'); return; }
     if (act === 'quick-create') {
       const np = newProject(a.dataset.type); if (QS.zip) np.customer.zip = QS.zip; if (QS.city) np.customer.city = QS.city;
