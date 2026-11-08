@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.53', date: '2026-11-08', items: [
+    ['daynight', 'Tag und Nacht besser sichtbar', 'Sonne und Mond wechseln jetzt, während das Haus ganz zu sehen ist – am Ende steht die Sonne oben bzw. der Mond am Himmel, ohne dass das Bild schon weggescrollt ist. Der Sonnenschein ist rund und ohne Kante.']
+  ] },
   { version: '1.52', date: '2026-11-08', items: [
     ['daynight', 'Tag und Nacht beim Scrollen', 'Im Dunkel-Modus geht beim Herunterscrollen die Sonne unter, der Mond auf und im Haus geht das Licht an – im hellen Modus genau umgekehrt.'],
     ['carhome', 'E-Auto auf der Startseite', 'Das Start-Haus hat jetzt Carport, E-Auto und Wallbox – mit fließendem Ladestrom. Die Sternschnuppen fliegen nun richtig herum.'],

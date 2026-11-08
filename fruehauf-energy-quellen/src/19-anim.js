@@ -73,8 +73,11 @@ function countUp(el, ms = 750) {
 function heroSky() {
   $$('.hero-anim svg[data-sky]').forEach(svg => {
     const r = svg.getBoundingClientRect(); if (!r.width) return;
-    const range = Math.max(250, r.top + scrollY + r.height - 140);
-    const t = Math.min(1, Math.max(0, scrollY / range)), e = t * t * (3 - 2 * t);
+    const docTop = r.top + scrollY, vh = innerHeight, head = 80;
+    const start = Math.max(0, docTop + r.height - vh);
+    let end = docTop - head - 10;
+    if (end - start < 220) end = start + Math.max(220, r.height * 0.45);
+    const t = Math.min(1, Math.max(0, (scrollY - start) / (end - start))), e = t * t * (3 - 2 * t);
     const step = (a, b) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
     const d = svg.dataset, dawn = d.dawn === '1', mx = +d.mx;
     const sun = svg.querySelector('.ha-sunpos'), moon = svg.querySelector('.ha-moon'), night = svg.querySelector('.ha-night'), lit = svg.querySelector('.ha-lit');

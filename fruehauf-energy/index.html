@@ -1575,6 +1575,7 @@ ${carport}${tower}${hpUnit}${trees}`;
 <defs>
 <linearGradient id="${id('sky')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.sky1}"/><stop offset=".45" stop-color="${K.sky2}"/><stop offset=".68" stop-color="${K.sky3}"/><stop offset=".78" stop-color="${K.hor}"/></linearGradient>
 <radialGradient id="${id('glow')}" cx="${(sx / W).toFixed(3)}" cy="${(sy / 400).toFixed(3)}" r="${dawn ? 0.55 : 0.5}" gradientTransform="translate(${(sx / W).toFixed(3)} ${(sy / 400).toFixed(3)}) scale(${(400 / W).toFixed(3)} 1) translate(${(-sx / W).toFixed(3)} ${(-sy / 400).toFixed(3)})"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
+<radialGradient id="${id('glowc')}"><stop offset="0" stop-color="${s}" stop-opacity="${dawn ? 0.75 : 0.55}"/><stop offset=".35" stop-color="${s}" stop-opacity="${dawn ? 0.22 : 0.12}"/><stop offset="1" stop-color="${s}" stop-opacity="0"/></radialGradient>
 <linearGradient id="${id('shoot')}" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <linearGradient id="${id('mod')}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${K.mod1}"/><stop offset="1" stop-color="${K.mod2}"/></linearGradient>
 <linearGradient id="${id('h1')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${K.hill1a}"/><stop offset="1" stop-color="${K.hill1b}"/></linearGradient>
@@ -1584,7 +1585,7 @@ ${carport}${tower}${hpUnit}${trees}`;
 ${sky ? `<rect width="${W}" height="400" fill="url(#${id('sky')})"/>` : ''}${stars}${o.anim && dawn ? [[0.12, 34, 0], [0.48, 22, 4.5], [0.7, 48, 9]].map(([fx, y, d]) => `<g class="ha-shoot" style="animation-delay:${d}s"><line x1="${(fx * W).toFixed(0)}" y1="${y}" x2="${(fx * W - 46).toFixed(0)}" y2="${y - 16}" stroke="url(#${id('shoot')})" stroke-width="1.8" stroke-linecap="round"/><circle cx="${(fx * W).toFixed(0)}" cy="${y}" r="1.6" fill="#fff"/></g>`).join('') : ''}
 ${o.anim ? `<rect class="ha-night" width="${W}" height="400" fill="${dawn ? '#03060E' : '#1E2B4F'}" opacity="0"/>` : ''}
 ${o.anim ? `<g class="ha-moon" opacity="0"><circle r="46" fill="#F4F1E6" opacity=".10"/><circle r="30" fill="#F4F1E6" opacity=".10"/><circle r="20" fill="#F1EEDF"/><circle cx="-6" cy="-4" r="4.2" fill="#DAD5C2"/><circle cx="7" cy="6" r="3" fill="#DAD5C2"/><circle cx="5" cy="-9" r="2" fill="#DAD5C2"/></g>` : ''}
-<g class="ha-sunpos"><rect width="${W}" height="400" fill="url(#${id('glow')})"/>
+<g class="ha-sunpos">${o.anim ? `<circle cx="${sx}" cy="${sy}" r="${dawn ? 220 : 200}" fill="url(#${id('glowc')})"/>` : `<rect width="${W}" height="400" fill="url(#${id('glow')})"/>`}
 <g class="ha-sun"><g class="ha-rays">${rays}</g><circle cx="${sx}" cy="${sy}" r="${dawn ? 34 : 40}" fill="${dawn ? mix(s, '#ffffff', 0.25) : s}"/>${dawn ? '' : `<circle cx="${sx}" cy="${sy}" r="30" fill="#FFD36B" opacity=".7"/>`}</g></g>
 <g class="ha-clouds" fill="${K.cloud}" opacity="${dawn ? 0.28 : 0.95}"><ellipse cx="${120 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 100 : 80}" rx="46" ry="${dawn ? 4 : 16}"/><ellipse cx="${150 + (dawn ? dx : dx * 0.3)}" cy="${dawn ? 93 : 70}" rx="30" ry="${dawn ? 3 : 18}"/>${wide ? `<ellipse cx="${dawn ? 1080 : 520}" cy="${dawn ? 62 : 60}" rx="60" ry="${dawn ? 3 : 14}"/>` : ''}<ellipse cx="${330 + dx}" cy="${dawn ? 122 : 58}" rx="34" ry="${dawn ? 3 : 11}"/></g>
 ${hills}
@@ -4145,7 +4146,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108181504';
+const APP_VERSION = '20261108182039';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4562,6 +4563,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.53', date: '2026-11-08', items: [
+    ['daynight', 'Tag und Nacht besser sichtbar', 'Sonne und Mond wechseln jetzt, während das Haus ganz zu sehen ist – am Ende steht die Sonne oben bzw. der Mond am Himmel, ohne dass das Bild schon weggescrollt ist. Der Sonnenschein ist rund und ohne Kante.']
+  ] },
   { version: '1.52', date: '2026-11-08', items: [
     ['daynight', 'Tag und Nacht beim Scrollen', 'Im Dunkel-Modus geht beim Herunterscrollen die Sonne unter, der Mond auf und im Haus geht das Licht an – im hellen Modus genau umgekehrt.'],
     ['carhome', 'E-Auto auf der Startseite', 'Das Start-Haus hat jetzt Carport, E-Auto und Wallbox – mit fließendem Ladestrom. Die Sternschnuppen fliegen nun richtig herum.'],
@@ -4788,8 +4792,11 @@ function countUp(el, ms = 750) {
 function heroSky() {
   $$('.hero-anim svg[data-sky]').forEach(svg => {
     const r = svg.getBoundingClientRect(); if (!r.width) return;
-    const range = Math.max(250, r.top + scrollY + r.height - 140);
-    const t = Math.min(1, Math.max(0, scrollY / range)), e = t * t * (3 - 2 * t);
+    const docTop = r.top + scrollY, vh = innerHeight, head = 80;
+    const start = Math.max(0, docTop + r.height - vh);
+    let end = docTop - head - 10;
+    if (end - start < 220) end = start + Math.max(220, r.height * 0.45);
+    const t = Math.min(1, Math.max(0, (scrollY - start) / (end - start))), e = t * t * (3 - 2 * t);
     const step = (a, b) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
     const d = svg.dataset, dawn = d.dawn === '1', mx = +d.mx;
     const sun = svg.querySelector('.ha-sunpos'), moon = svg.querySelector('.ha-moon'), night = svg.querySelector('.ha-night'), lit = svg.querySelector('.ha-lit');
