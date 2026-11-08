@@ -10,7 +10,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/pvgis/') || url.pathname.endsWith('/sw.js') || url.searchParams.has('check')) return;
   if (req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
     // App-Seite: zuerst aus dem Netz (Updates sofort), ohne Netz aus dem Speicher
-    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open('core-' + VERSION).then(c => c.put('index.html', copy)); return r; }).catch(() => caches.match('index.html')));
+    e.respondWith(fetch(url.href, { cache: 'no-store', credentials: 'same-origin' }).then(r => (r.redirected ? fetch(req) : r)).then(r => { const copy = r.clone(); caches.open('core-' + VERSION).then(c => c.put('index.html', copy)); return r; }).catch(() => caches.match('index.html')));
     return;
   }
   // Bibliotheken, Schriften, Bilder: aus dem Speicher, sonst laden und merken (z. B. Texterkennung beim ersten Einsatz)

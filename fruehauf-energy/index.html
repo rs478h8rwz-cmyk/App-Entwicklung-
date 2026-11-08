@@ -4140,7 +4140,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108090107';
+const APP_VERSION = '20261108090539';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4358,6 +4358,30 @@ async function shrinkDataUrl(data, maxW = 1300, q = 0.7) {
 }
 
 /* ---------- 11) Hinweis: neue App-Version verfügbar ---------- */
+/* Update sicher laden: neue App-Seite am Zwischenspeicher vorbei holen, neuen Offline-Speicher
+   aktivieren und mit frischer Adresse neu starten (iPhone lädt sonst gern die alte Seite). */
+async function appUpdate(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird geladen …'; }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  try {
+    const fresh = await fetch('index.html?fresh=' + Date.now(), { cache: 'no-store' });
+    if (fresh.ok && window.caches) {
+      const html = await fresh.clone().text();
+      const keys = await caches.keys();
+      for (const k of keys.filter(k => k.startsWith('core-'))) await (await caches.open(k)).put('index.html', new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+    }
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg) {
+      await reg.update().catch(() => {});
+      const sw = reg.installing || reg.waiting;
+      if (sw) await Promise.race([new Promise(r => { if (sw.state === 'activated') r(); sw.addEventListener('statechange', () => { if (sw.state === 'activated' || sw.state === 'redundant') r(); }); }), wait(6000)]);
+    }
+  } catch (e) { /* trotzdem neu starten */ }
+  location.replace(location.pathname + '?u=' + Date.now() + location.hash);
+}
+/* Frische Adresse nach dem Update wieder aufräumen */
+if (/[?&]u=\d+/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+
 let updShown = false;
 async function checkUpdate() {
   if (updShown || APP_VERSION.startsWith('__') || !navigator.onLine) return;
@@ -4365,7 +4389,7 @@ async function checkUpdate() {
     const t = await (await fetch('sw.js?check=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/VERSION = '(\d+)'/), sv = (t.match(/SEMVER = '([\d.]+)'/) || [])[1];
     if (m && m[1] !== APP_VERSION) {
       updShown = true;
-      document.body.insertAdjacentHTML('beforeend', `<div id="upd-bar" class="fixed left-1/2 -translate-x-1/2 z-[60] card px-4 py-3 flex items-center gap-3 shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);max-width:calc(100vw - 24px)"><span class="text-[14px]"><b class="font-semibold">${sv ? `Version ${sv} verfügbar.` : 'Neue Version verfügbar.'}</b> <span class="text-ink3">Ihre Daten bleiben erhalten.</span></span><button class="btn-p btn-sm" data-a="app-update">Jetzt aktualisieren</button></div>`);
+      document.body.insertAdjacentHTML('beforeend', `<div id="upd-bar" class="fixed left-1/2 -translate-x-1/2 z-[60] card px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);width:min(460px,calc(100vw - 24px))"><span class="text-[14px] flex-1 min-w-[180px]"><b class="font-semibold">${sv ? `Version ${sv} verfügbar.` : 'Neue Version verfügbar.'}</b> <span class="text-ink3">Ihre Daten bleiben erhalten.</span></span><button class="btn-p btn-sm whitespace-nowrap" data-a="app-update">Jetzt aktualisieren</button></div>`);
     }
   } catch (e) { /* offline – später erneut */ }
 }
@@ -4533,6 +4557,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '1.50', date: '2026-11-08', items: [
+    ['update', 'Aktualisieren klappt zuverlässig', '„Jetzt aktualisieren“ holt die neue Version jetzt direkt vom Server und startet die App frisch – auch auf dem iPhone. Ihre Daten bleiben erhalten.']
+  ] },
   { version: '1.49', date: '2026-11-08', items: [
     ['kbd', 'Zahlen oder Buchstaben', 'Zahlenfelder öffnen weiter die Zahlentastatur – über den Knopf „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben und zurück. Text wie „ca. 3.000 Liter“ wird als 3.000 gelesen.'],
     ['prodsort', 'Produkte sortieren', 'Unter „Produkte“ sortieren nach Hersteller (Standard), Art oder Name – übersichtlich in Gruppen.']
@@ -4578,7 +4605,8 @@ const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date:
 const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
 WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
 WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
-WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24'; WN_BG.kbd = '#F5F7FA';
+WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24'; WN_BG.kbd = '#F5F7FA'; WN_BG.update = '#141B24';
+WN_IMG.update = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><circle cx="60" cy="32" r="14" fill="none" stroke="#3FA98C" stroke-width="3" stroke-dasharray="70 18"/><path d="M70 20 l4 -6 l3 8 z" fill="#3FA98C"/><rect x="14" y="56" width="92" height="16" rx="5" fill="#1C2530"/><text x="20" y="66" font-size="5.2" font-weight="700" fill="#fff">Version 1.50</text><rect x="64" y="59" width="38" height="10" rx="5" fill="#3FA98C"/><text x="68" y="65.6" font-size="4.4" font-weight="700" fill="#fff">Aktualisieren</text></svg>`;
 WN_IMG.kbd = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="10" y="14" width="100" height="16" rx="4" fill="#fff" stroke="#D5DCE3"/><text x="15" y="25" font-size="6" fill="#1B2733">ca. 3.000</text><text x="92" y="25" font-size="5" fill="#8A96A3">Liter</text><rect x="70" y="4" width="40" height="8" rx="4" fill="#3FA98C"/><text x="74" y="9.6" font-size="4.4" font-weight="700" fill="#fff">ABC Buchstaben</text><rect x="6" y="38" width="108" height="38" rx="4" fill="#D9DEE4"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${12+c*34}" y="${42+r*11}" width="30" height="9" rx="2" fill="#fff"/><text x="${25+c*34}" y="${48.6+r*11}" font-size="5.4" fill="#1B2733">${r*3+c+1}</text>`).join('')).join('')}</svg>`;
 WN_IMG.prodsort = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[['Hersteller', 1], ['Art', 0], ['Name', 0]].map(([t, on], i) => `<rect x="${8 + i * 36}" y="10" width="${t.length * 3 + 10}" height="10" rx="5" fill="#1C2530" stroke="${on ? '#3FA98C' : '#2E3A47'}"/><text x="${13 + i * 36}" y="16.8" font-size="4.6" fill="#ffffff">${t}</text>`).join('')}<text x="8" y="32" font-size="5.4" font-weight="700" fill="#ffffff">EcoFlow</text>${[0, 1, 2].map(i => `<rect x="${8 + i * 36}" y="36" width="32" height="18" rx="3" fill="#1C2530"/>`).join('')}<text x="8" y="64" font-size="5.4" font-weight="700" fill="#ffffff">Wolf</text><rect x="8" y="67" width="32" height="10" rx="3" fill="#1C2530"/></svg>`; WN_BG.prodstage = '#0B1118'; WN_BG.prodauto = '#141B24';
 WN_IMG.prodstage = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><defs><radialGradient id="wg" cx="50%" cy="58%" r="60%"><stop offset="0" stop-color="#3FA98C" stop-opacity=".35"/><stop offset="1" stop-color="#0B1118" stop-opacity="0"/></radialGradient><radialGradient id="ws"><stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><rect width="120" height="80" fill="#0B1118"/><rect width="120" height="80" fill="url(#wg)"/><ellipse cx="60" cy="66" rx="30" ry="3" fill="url(#ws)"/><path d="M48 20 L72 16 L72 62 L48 66 Z" fill="#9AA3AD"/><path d="M48 20 L72 16 L72 22 L48 26 Z" fill="#C9D0D6"/></svg>`;
@@ -5090,7 +5118,7 @@ document.addEventListener('click', async e => {
     case 'a2hs-off': PERSONAL.a2hsOff = true; savePersonal(); render(); break;
     case 'review-done': S.calc.reviewedAt = isoToday(); saveSettings(); toast('Als geprüft markiert – nächste Erinnerung in 6 Monaten.'); render(); break;
     case 'pdf-small': PERSONAL.pdfSmall = !!a.checked; savePersonal(); $$('[data-a=pdf-small]').forEach(x => { x.checked = PERSONAL.pdfSmall; }); break;
-    case 'app-update': { const done = () => location.reload(); if (navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(r => (r ? r.update() : null)).then(done, done); else done(); break; }
+    case 'app-update': appUpdate(a); break;
     case 'legal-reset': if (!confirm('Impressum-Zusatz, Datenschutzerklärung und Widerrufsbelehrung auf die Standardtexte zurücksetzen?')) break; S.legal = clone(LEGAL_DEFAULT); saveSettings(); render(); break;
     case 'hdr-auto': S.design[a.dataset.k] = ''; saveSettings(); applyTheme(); render(); break;
     case 'rv-add': S.reviews.items = (S.reviews.items || []).concat([{ id: uid('rv'), on: true, name: '', place: '', stars: 5, text: '' }]); saveSettings(); render(); break;

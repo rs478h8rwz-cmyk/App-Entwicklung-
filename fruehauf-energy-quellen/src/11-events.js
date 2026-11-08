@@ -196,7 +196,7 @@ document.addEventListener('click', async e => {
     case 'a2hs-off': PERSONAL.a2hsOff = true; savePersonal(); render(); break;
     case 'review-done': S.calc.reviewedAt = isoToday(); saveSettings(); toast('Als geprüft markiert – nächste Erinnerung in 6 Monaten.'); render(); break;
     case 'pdf-small': PERSONAL.pdfSmall = !!a.checked; savePersonal(); $$('[data-a=pdf-small]').forEach(x => { x.checked = PERSONAL.pdfSmall; }); break;
-    case 'app-update': { const done = () => location.reload(); if (navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(r => (r ? r.update() : null)).then(done, done); else done(); break; }
+    case 'app-update': appUpdate(a); break;
     case 'legal-reset': if (!confirm('Impressum-Zusatz, Datenschutzerklärung und Widerrufsbelehrung auf die Standardtexte zurücksetzen?')) break; S.legal = clone(LEGAL_DEFAULT); saveSettings(); render(); break;
     case 'hdr-auto': S.design[a.dataset.k] = ''; saveSettings(); applyTheme(); render(); break;
     case 'rv-add': S.reviews.items = (S.reviews.items || []).concat([{ id: uid('rv'), on: true, name: '', place: '', stars: 5, text: '' }]); saveSettings(); render(); break;

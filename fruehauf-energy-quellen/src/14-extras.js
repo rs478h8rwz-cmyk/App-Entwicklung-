@@ -221,6 +221,30 @@ async function shrinkDataUrl(data, maxW = 1300, q = 0.7) {
 }
 
 /* ---------- 11) Hinweis: neue App-Version verfügbar ---------- */
+/* Update sicher laden: neue App-Seite am Zwischenspeicher vorbei holen, neuen Offline-Speicher
+   aktivieren und mit frischer Adresse neu starten (iPhone lädt sonst gern die alte Seite). */
+async function appUpdate(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird geladen …'; }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  try {
+    const fresh = await fetch('index.html?fresh=' + Date.now(), { cache: 'no-store' });
+    if (fresh.ok && window.caches) {
+      const html = await fresh.clone().text();
+      const keys = await caches.keys();
+      for (const k of keys.filter(k => k.startsWith('core-'))) await (await caches.open(k)).put('index.html', new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+    }
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg) {
+      await reg.update().catch(() => {});
+      const sw = reg.installing || reg.waiting;
+      if (sw) await Promise.race([new Promise(r => { if (sw.state === 'activated') r(); sw.addEventListener('statechange', () => { if (sw.state === 'activated' || sw.state === 'redundant') r(); }); }), wait(6000)]);
+    }
+  } catch (e) { /* trotzdem neu starten */ }
+  location.replace(location.pathname + '?u=' + Date.now() + location.hash);
+}
+/* Frische Adresse nach dem Update wieder aufräumen */
+if (/[?&]u=\d+/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+
 let updShown = false;
 async function checkUpdate() {
   if (updShown || APP_VERSION.startsWith('__') || !navigator.onLine) return;
@@ -228,7 +252,7 @@ async function checkUpdate() {
     const t = await (await fetch('sw.js?check=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/VERSION = '(\d+)'/), sv = (t.match(/SEMVER = '([\d.]+)'/) || [])[1];
     if (m && m[1] !== APP_VERSION) {
       updShown = true;
-      document.body.insertAdjacentHTML('beforeend', `<div id="upd-bar" class="fixed left-1/2 -translate-x-1/2 z-[60] card px-4 py-3 flex items-center gap-3 shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);max-width:calc(100vw - 24px)"><span class="text-[14px]"><b class="font-semibold">${sv ? `Version ${sv} verfügbar.` : 'Neue Version verfügbar.'}</b> <span class="text-ink3">Ihre Daten bleiben erhalten.</span></span><button class="btn-p btn-sm" data-a="app-update">Jetzt aktualisieren</button></div>`);
+      document.body.insertAdjacentHTML('beforeend', `<div id="upd-bar" class="fixed left-1/2 -translate-x-1/2 z-[60] card px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xl" style="bottom:calc(env(safe-area-inset-bottom) + 16px);width:min(460px,calc(100vw - 24px))"><span class="text-[14px] flex-1 min-w-[180px]"><b class="font-semibold">${sv ? `Version ${sv} verfügbar.` : 'Neue Version verfügbar.'}</b> <span class="text-ink3">Ihre Daten bleiben erhalten.</span></span><button class="btn-p btn-sm whitespace-nowrap" data-a="app-update">Jetzt aktualisieren</button></div>`);
     }
   } catch (e) { /* offline – später erneut */ }
 }
