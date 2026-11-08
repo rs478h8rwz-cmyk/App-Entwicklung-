@@ -365,7 +365,7 @@ function qResultHTML(r) {
   const img = sim.prod && typeof prodThumb === 'function' ? prodThumb(sim.prod, 84) : `<div class="w-[84px] h-[84px] rounded-xl bg-raised grid place-items-center text-ink3">${ic('fan', 34)}</div>`;
   const jt = (a, b, c) => `<tr><td class="py-1 text-ink3">${a}</td><td class="py-1 text-right">${num(b, 2)}</td><td class="py-1 text-right">${num(c, 2)}</td></tr>`;
   return `<div class="rounded-[calc(var(--r)-4px)] px-4 py-3 text-[14px] font-medium mb-3" style="background:${st.cls === 'ok' ? 'rgb(var(--p-rgb)/.14)' : 'rgba(229,154,92,.16)'}">${st.cls === 'ok' ? '✓ ' : '! '}${st.t}</div>
-  <div class="card !rounded-[calc(var(--r)-4px)] p-4"><div class="grid sm:grid-cols-[1fr_190px] gap-3 items-center">${qChart(sim)}
+  <div class="card !rounded-[calc(var(--r)-4px)] p-4"><div class="grid sm:grid-cols-[minmax(0,1fr)_190px] gap-3 items-center"><div class="min-w-0">${qChart(sim)}</div>
     <div class="grid grid-cols-2 sm:grid-cols-1 gap-2 text-[13px]">
       <div><div class="text-ink3">Normaußentemperatur</div><b class="text-[15px]">${num(sim.te, 1)} °C</b></div>
       <div><div class="text-ink3">Bivalenzpunkt</div><b class="text-[15px]" style="color:#E5484D">${num(sim.bv, 1)} °C</b></div>

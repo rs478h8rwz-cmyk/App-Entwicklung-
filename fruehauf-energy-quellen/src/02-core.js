@@ -298,8 +298,8 @@ function toast(msg, kind = 'ok', ms = 3200) {
 }
 function modal(html, opts = {}) {
   const root = $('#modal');
-  root.innerHTML = `<div class="modal-wrap fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" data-modal-bg>
-    <div class="card w-full ${opts.wide ? 'max-w-3xl' : 'max-w-lg'} p-6 sm:p-7 fade-in my-8 relative">
+  root.innerHTML = `<div class="modal-wrap fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto overscroll-contain" style="padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))" data-modal-bg>
+    <div class="card w-full ${opts.wide ? 'max-w-3xl' : 'max-w-lg'} p-6 sm:p-7 fade-in my-4 sm:my-auto relative">
       <button class="absolute right-4 top-4 w-9 h-9 rounded-full grid place-items-center text-ink3 hover:bg-bg" data-a="modal-close" aria-label="Schließen">${ic('x', 18)}</button>
       ${html}
     </div></div>`;

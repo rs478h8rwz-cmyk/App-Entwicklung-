@@ -542,8 +542,8 @@ function toast(msg, kind = 'ok', ms = 3200) {
 }
 function modal(html, opts = {}) {
   const root = $('#modal');
-  root.innerHTML = `<div class="modal-wrap fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" data-modal-bg>
-    <div class="card w-full ${opts.wide ? 'max-w-3xl' : 'max-w-lg'} p-6 sm:p-7 fade-in my-8 relative">
+  root.innerHTML = `<div class="modal-wrap fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto overscroll-contain" style="padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))" data-modal-bg>
+    <div class="card w-full ${opts.wide ? 'max-w-3xl' : 'max-w-lg'} p-6 sm:p-7 fade-in my-4 sm:my-auto relative">
       <button class="absolute right-4 top-4 w-9 h-9 rounded-full grid place-items-center text-ink3 hover:bg-bg" data-a="modal-close" aria-label="Schließen">${ic('x', 18)}</button>
       ${html}
     </div></div>`;
@@ -2250,7 +2250,7 @@ function viewKunden() {
   const card = customerCard;
 
   return `<section class="relative overflow-hidden border-b border-line hero-anim">
-    <div class="hidden lg:block absolute inset-0 hero-bg">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true, car: true })}</div>
+    <div class="hidden lg:block absolute inset-0 hero-bg" style="background:${appDark() ? '#060B16' : '#A9D4F5'}"><div class="absolute left-0 right-0 bottom-0" style="aspect-ratio:3/1">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true, car: true })}</div></div>
     <div class="hidden lg:block absolute inset-0 hero-bg" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 lg:pt-0 pb-8 lg:pb-0 lg:min-h-[600px] flex items-center hero-txt">
       <div class="max-w-[36rem]"><span class="mono text-[12px] text-ink2 inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
@@ -2262,7 +2262,7 @@ function viewKunden() {
   </section>
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}
-    <div class="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
+    <div class="flex flex-col 2xl:flex-row 2xl:items-end gap-4 justify-between">
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]" data-countup>${v}</div></div>`).join('')}</div>
       ${salesStats()}
@@ -4152,7 +4152,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261108231316';
+const APP_VERSION = '20261108232535';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4569,6 +4569,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.05', date: '2026-11-09', items: [
+    ['modplan', 'Zoomen im Modulplan', 'Foto und Dach lassen sich vergrößern: zwei Finger am iPad, Mausrad am PC oder die Knöpfe −/+/Einpassen. So treffen Sie Ecken und Pfannenkanten genau. Dazu ein Feinjustier-Kreis: Ecke antippen, dann im Kreis ziehen – der Punkt bewegt sich ganz langsam (am PC auch mit den Pfeiltasten).'],
+    ['layout', 'iPad-Startseite repariert', 'Das Start-Haus wird auf dem iPad nicht mehr übergroß dargestellt; die Kennzahlen stehen übersichtlich in zwei Zeilen. Lange Fenster (z. B. Schnellauslegung) werden oben nicht mehr abgeschnitten.']
+  ] },
   { version: '2.04', date: '2026-11-08', items: [
     ['modplace', 'Entzerrt oder wie auf dem Foto', 'Im Modulplan lässt sich die Ansicht umschalten: entzerrt (maßstäblich von vorn) oder perspektivisch auf dem Originalfoto – in beiden Ansichten Module setzen, auswählen und verschieben. Die gewählte Ansicht wird gemerkt.'],
     ['modplan', 'Pfannenraster zur Kontrolle', 'Im Referenz-Schritt liegt ein Raster mit den gezählten Pfannen über dem Foto – passt es auf die Pfannenkanten, stimmen die Maße. Module erscheinen als schwarze Full-Black-Module exakt perspektivisch auf dem Foto. Module dürfen über eine kleine Referenzfläche hinaus gesetzt werden (z. B. bei Krüppelwalm) – maßgeblich ist die markierte Dachfläche.']
@@ -5702,7 +5706,7 @@ function qResultHTML(r) {
   const img = sim.prod && typeof prodThumb === 'function' ? prodThumb(sim.prod, 84) : `<div class="w-[84px] h-[84px] rounded-xl bg-raised grid place-items-center text-ink3">${ic('fan', 34)}</div>`;
   const jt = (a, b, c) => `<tr><td class="py-1 text-ink3">${a}</td><td class="py-1 text-right">${num(b, 2)}</td><td class="py-1 text-right">${num(c, 2)}</td></tr>`;
   return `<div class="rounded-[calc(var(--r)-4px)] px-4 py-3 text-[14px] font-medium mb-3" style="background:${st.cls === 'ok' ? 'rgb(var(--p-rgb)/.14)' : 'rgba(229,154,92,.16)'}">${st.cls === 'ok' ? '✓ ' : '! '}${st.t}</div>
-  <div class="card !rounded-[calc(var(--r)-4px)] p-4"><div class="grid sm:grid-cols-[1fr_190px] gap-3 items-center">${qChart(sim)}
+  <div class="card !rounded-[calc(var(--r)-4px)] p-4"><div class="grid sm:grid-cols-[minmax(0,1fr)_190px] gap-3 items-center"><div class="min-w-0">${qChart(sim)}</div>
     <div class="grid grid-cols-2 sm:grid-cols-1 gap-2 text-[13px]">
       <div><div class="text-ink3">Normaußentemperatur</div><b class="text-[15px]">${num(sim.te, 1)} °C</b></div>
       <div><div class="text-ink3">Bivalenzpunkt</div><b class="text-[15px]" style="color:#E5484D">${num(sim.bv, 1)} °C</b></div>
@@ -5951,7 +5955,7 @@ async function roofOpen(pid) {
   if (!roofOk()) { toast('Der Modulplan braucht einen größeren Bildschirm – bitte am iPad, PC oder aufgeklappten Foldable öffnen.'); return; }
   p.roof = p.roof || { faces: [], saves: [] };
   if (!p.roof.faces.length) p.roof.faces.push(roofNewFace(1));
-  RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
+  RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', zm: { z: 1, x: 0, y: 0 }, ptrs: new Map(), pinch: null, mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
   document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col"></div>');
   document.documentElement.style.overflow = 'hidden';
   roofRender();
@@ -5976,7 +5980,9 @@ function roofRender() {
   </div>
   <div class="flex-1 min-h-0 flex flex-col md:flex-row">
     <div id="roof-stage" class="relative flex-1 min-h-[320px] bg-black/40 touch-none select-none overflow-hidden"><canvas id="roof-cv" class="absolute inset-0 w-full h-full block"></canvas>
-      <div id="roof-tip" class="absolute left-3 bottom-3 right-3 text-[12px] text-white/80 pointer-events-none"></div></div>
+      <div id="roof-tip" class="absolute left-3 bottom-3 right-36 text-[12px] text-white/80 pointer-events-none"></div>
+      <div id="roof-pad" class="absolute left-3 bottom-9 hidden flex-col items-center gap-1 select-none"><div class="relative w-[96px] h-[96px] rounded-full border-2 border-white/70 bg-black/45 backdrop-blur-sm touch-none" id="roof-pad-ring" title="Feinjustieren"><div id="roof-pad-knob" class="absolute w-9 h-9 rounded-full bg-white/90 shadow" style="left:30px;top:30px"></div><span class="absolute inset-0 grid place-items-center text-[10px] text-white/70 pointer-events-none" style="padding-top:62px">fein</span></div><div class="text-[11px] text-white/80" id="roof-pad-lbl"></div></div>
+      <div class="absolute right-3 bottom-3 flex gap-1.5"><button class="btn-s !h-9 !w-9 !px-0 text-[18px]" data-r="zoom" data-v="out" title="Verkleinern">−</button><button class="btn-s !h-9 !w-9 !px-0 text-[18px]" data-r="zoom" data-v="in" title="Vergrößern">+</button><button class="btn-s !h-9 !px-2.5 text-[12px]" data-r="zoom" data-v="fit">Einpassen</button></div></div>
     <div class="md:w-[340px] shrink-0 border-t md:border-t-0 md:border-l border-line overflow-y-auto max-h-[42vh] md:max-h-none p-4 space-y-4">${roofPanel(p, f, g)}</div>
   </div>
   <div class="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2.5 border-t border-line text-[14px]" style="padding-bottom:max(10px,env(safe-area-inset-bottom))">
@@ -6041,6 +6047,12 @@ function roofDims(g) {
 function roofP2S(V, g, X, Y) { if (V.kind === 'plane') return [V.ox + X * V.s, V.oy + Y * V.s]; const [ix, iy] = g.toImg(X, Y); return [V.ox + ix * V.k, V.oy + iy * V.k]; }
 function roofS2P(V, g, sx, sy) { if (V.kind === 'plane') return [(sx - V.ox) / V.s, (sy - V.oy) / V.s]; return g.fromImg((sx - V.ox) / V.k, (sy - V.oy) / V.k); }
 function roofView(cv, f, g, img) {
+  const V = roofView0(cv, f, g, img); if (!V) return V;
+  const z = (RS.zm && RS.zm.z) || 1, zx = (RS.zm && RS.zm.x) || 0, zy = (RS.zm && RS.zm.y) || 0, cw = cv.clientWidth, ch = cv.clientHeight;
+  if (V.kind === 'plane') V.s *= z; else V.k *= z;
+  V.ox = cw / 2 + (V.ox - cw / 2) * z + zx; V.oy = ch / 2 + (V.oy - ch / 2) * z + zy; return V;
+}
+function roofView0(cv, f, g, img) {
   const cw = cv.clientWidth, ch = cv.clientHeight, pad = 24;
   if (RS.step === 'mod' && g && !g.bad && !(RS.look === 'photo' && img)) { const s = Math.min((cw - 2 * pad) / g.W, (ch - 2 * pad) / g.H); return { kind: 'plane', s, ox: (cw - g.W * s) / 2, oy: (ch - g.H * s) / 2 }; }
   if (RS.step === 'mod' && g && !g.bad && img) {                 // auf das Dach zoomen (mit Rand)
@@ -6059,6 +6071,7 @@ async function roofDraw() {
   if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(ch * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); }
   const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, cw, ch);
   const V = RS.view = roofView(cv, f, g, img), tip = $('#roof-tip');
+  const pad = $('#roof-pad'); if (pad) { const on = !!(V && V.kind === 'img' && RS.act && f[RS.act[0]]); pad.classList.toggle('hidden', !on); pad.classList.toggle('flex', on); const lb = $('#roof-pad-lbl'); if (lb && on) lb.textContent = RS.act[0] === 'ref' ? 'Referenz-Ecke' : `Punkt ${RS.act[1] + 1}`; }
   if (!V) { if (tip) tip.textContent = 'Bitte zuerst ein Foto wählen.'; return; }
   const pc = getComputedStyle(document.documentElement).getPropertyValue('--p-rgb').trim().split(/\s+/).join(','), P = `rgb(${pc})`;
   if (V.kind === 'img') {
@@ -6078,8 +6091,10 @@ async function roofDraw() {
       }
       quad(f.ref, 'rgb(229,154,92)', [8, 5], ['↖', '↗', '↘', '↙']);
     }
+    if (RS.act) { const q = f[RS.act[0]]; if (q && q[RS.act[1]]) { const [a, b] = S(q[RS.act[1]]); x.beginPath(); x.arc(a, b, 19, 0, 7); x.strokeStyle = '#fff'; x.lineWidth = 2.5; x.setLineDash([4, 3]); x.stroke(); x.setLineDash([]); } }
     if (RS.drag && RS.drag.loupe) roofLoupe(x, img, S(RS.drag.loupe), f, V, cw);
-    if (tip) tip.textContent = RS.step === 'corners' ? 'Punkte 1–4 auf die Ecken der Dachfläche ziehen.' : 'Oranges Rechteck auf Pfannenkanten legen – möglichst groß.';
+    else if (RS.fine && RS.act) roofLoupe(x, img, S(f[RS.act[0]][RS.act[1]]), f, V, cw);
+    if (tip) tip.textContent = (RS.step === 'corners' ? 'Punkte 1–4 auf die Ecken ziehen.' : 'Oranges Rechteck auf Pfannenkanten legen – möglichst groß.') + ' Zoomen: zwei Finger bzw. Mausrad; Bild verschieben: daneben ziehen.';
     return;
   }
   /* Belegen: entzerrt (Meter) oder perspektivisch auf dem Foto */
@@ -6106,7 +6121,7 @@ async function roofDraw() {
   });
   if (RS.drag && RS.drag.lasso) { const [a, b, c, d] = RS.drag.lasso; x.save(); x.setLineDash([5, 4]); x.strokeStyle = P; x.fillStyle = `rgba(${pc},.12)`; x.lineWidth = 1.5; x.fillRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.strokeRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.restore(); }
   const wEl = $('#roof-warn'); if (wEl) wEl.innerHTML = [warn[0] ? `<span style="color:#E5484D">${warn[0]} überlappen</span>` : '', warn[1] ? `<span style="color:#E59A5C">${warn[1]} im Randbereich</span>` : ''].filter(Boolean).join(' · ');
-  if (tip) tip.textContent = RS.mode === 'add' ? 'Auf die Fläche tippen, um ein Modul zu setzen. Gelb gestrichelt: Randabstand.' : 'Module antippen oder Rahmen ziehen – dann verschieben.';
+  if (tip) tip.textContent = (RS.mode === 'add' ? 'Auf die Fläche tippen, um ein Modul zu setzen.' : 'Module antippen oder Rahmen ziehen – dann verschieben.') + ' Zoomen: zwei Finger bzw. Mausrad; verschieben: zwei Finger bzw. Leertaste + ziehen.';
 }
 function roofLoupe(x, img, [sx, sy], f, V, cw) {
   const R = 70, Z = 3, left = sx > cw / 2, cx = left ? R + 16 : cw - R - 16, cy = R + 16;
@@ -6118,20 +6133,47 @@ function roofLoupe(x, img, [sx, sy], f, V, cw) {
 }
 
 /* ---------- Bedienung auf der Fläche (Maus, Finger, Stift) ---------- */
+function roofZoomAt(sx, sy, f) {
+  const cv = $('#roof-cv'); if (!cv) return; const cw = cv.clientWidth, ch = cv.clientHeight, Z = RS.zm, z1 = Math.min(10, Math.max(1, Z.z * f));
+  Z.x = (sx - cw / 2) - (sx - cw / 2 - Z.x) * z1 / Z.z; Z.y = (sy - ch / 2) - (sy - ch / 2 - Z.y) * z1 / Z.z; Z.z = z1;
+  if (z1 === 1) { Z.x = 0; Z.y = 0; }
+}
+function roofZoomReset() { if (RS) RS.zm = { z: 1, x: 0, y: 0 }; }
 function roofBindStage() {
   const cv = $('#roof-cv'); if (!cv) return;
   if (RS.ro) RS.ro.disconnect(); RS.ro = new ResizeObserver(() => roofDraw()); RS.ro.observe(cv);
-  cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); roofDown(e); };
-  cv.onpointermove = e => { if (RS && RS.drag) roofMove(e); };
-  cv.onpointerup = cv.onpointercancel = e => { if (RS && RS.drag) roofUp(e); };
+  const pinchInfo = () => { const [a, b] = [...RS.ptrs.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; };
+  cv.onpointerdown = e => {
+    cv.setPointerCapture(e.pointerId); const [sx, sy] = evXY(e); RS.ptrs.set(e.pointerId, { x: sx, y: sy });
+    if (RS.ptrs.size === 2) {                                   // zweiter Finger: Zoomen statt Bearbeiten
+      const d = RS.drag; if (d && d.move && d.moved && RS.hist.length) { roofF().mods = JSON.parse(RS.hist.pop()); }
+      RS.drag = null; RS.pinch = pinchInfo(); roofDraw(); return;
+    }
+    if (RS.ptrs.size > 2) return;
+    if (e.button === 1 || e.altKey || RS.space) { RS.drag = { pan: true, lx: sx, ly: sy }; return; }
+    roofDown(e);
+  };
+  cv.onpointermove = e => {
+    if (!RS) return; const [sx, sy] = evXY(e); if (RS.ptrs.has(e.pointerId)) RS.ptrs.set(e.pointerId, { x: sx, y: sy });
+    if (RS.pinch && RS.ptrs.size >= 2) { const n = pinchInfo(), o = RS.pinch; roofZoomAt(n.mx, n.my, n.d / Math.max(1, o.d)); RS.zm.x += n.mx - o.mx; RS.zm.y += n.my - o.my; RS.pinch = n; roofDraw(); return; }
+    if (RS.drag && RS.drag.pan) { RS.zm.x += sx - RS.drag.lx; RS.zm.y += sy - RS.drag.ly; RS.drag.lx = sx; RS.drag.ly = sy; roofDraw(); return; }
+    if (RS.drag) roofMove(e);
+  };
+  cv.onpointerup = cv.onpointercancel = e => {
+    if (!RS) return; RS.ptrs.delete(e.pointerId);
+    if (RS.pinch) { if (RS.ptrs.size < 2) RS.pinch = null; RS.drag = null; return; }
+    if (RS.drag && RS.drag.pan) { RS.drag = null; return; }
+    if (RS.drag) roofUp(e);
+  };
+  cv.onwheel = e => { e.preventDefault(); const [sx, sy] = evXY(e); roofZoomAt(sx, sy, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0025))); roofDraw(); };
 }
 const evXY = e => { const r = $('#roof-cv').getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 function roofDown(e) {
   const f = roofF(), V = RS.view; if (!V) return; const [sx, sy] = evXY(e);
   if (V.kind === 'img') {
     const S = ([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k], lists = RS.step === 'ref' && f.ref ? [['ref', f.ref], ['corners', f.corners]] : [['corners', f.corners]];
-    for (const [k, q] of lists) { const i = q.findIndex(p => { const [a, b] = S(p); return Math.hypot(a - sx, b - sy) < 26; }); if (i >= 0 && (RS.step === 'corners' || k === 'ref')) { RS.drag = { pt: [k, i], loupe: q[i] }; roofDraw(); return; } }
-    return;
+    for (const [k, q] of lists) { const i = q.findIndex(p => { const [a, b] = S(p); return Math.hypot(a - sx, b - sy) < 26; }); if (i >= 0 && (RS.step === 'corners' || k === 'ref')) { RS.act = [k, i]; RS.drag = { pt: [k, i], loupe: q[i] }; roofDraw(); return; } }
+    RS.drag = { pan: true, lx: sx, ly: sy }; return;
   }
   const g = faceGeom(f), [X, Y] = roofS2P(V, g, sx, sy);
   const hit = f.mods.map((m, i) => [m, i]).reverse().find(([m]) => { const b = modBox(f, m); return X >= b.x0 && X <= b.x1 && Y >= b.y0 && Y <= b.y1; });
@@ -6214,15 +6256,16 @@ document.addEventListener('click', async e => {
   const a = e.target.closest('#roof-ed [data-r]'); if (!a || !RS) return;
   const p = roofP(), f = roofF(), g = faceGeom(f), r = a.dataset.r, v = a.dataset.v;
   if (r === 'close') return roofClose();
-  if (r === 'step') { RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
-  if (r === 'face') { RS.fi = +v; RS.sel = new Set(); RS.hist = []; RS.warp = null; const nf = roofF(); RS.step = !nf.photo ? 'photo' : faceGeom(nf) ? 'mod' : 'corners'; return roofRender(); }
+  if (r === 'step') { roofZoomReset(); RS.act = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
+  if (r === 'face') { roofZoomReset(); RS.fi = +v; RS.sel = new Set(); RS.hist = []; RS.warp = null; const nf = roofF(); RS.step = !nf.photo ? 'photo' : faceGeom(nf) ? 'mod' : 'corners'; return roofRender(); }
   if (r === 'face-add') { p.roof.faces.push(roofNewFace(p.roof.faces.length + 1)); RS.fi = p.roof.faces.length - 1; RS.step = 'photo'; RS.sel = new Set(); RS.hist = []; roofSave(); return roofRender(); }
   if (r === 'face-del') { if (!(await confirmDlg('Dachfläche löschen?', `„${f.name}“ mit ${f.mods.length} Modulen wird gelöscht.`))) return; p.roof.faces.splice(RS.fi, 1); RS.fi = 0; RS.sel = new Set(); roofSave(); return roofRender(); }
   if (r === 'refmode') { f.refMode = v; roofSave(); return roofRender(); }
   if (r === 'orient') { f.orient = v; roofSave(); return roofRefreshPanel(); }
   if (r === 'magnet') { RS.magnet = v === 'true'; return roofRefreshPanel(); }
   if (r === 'mode') { RS.mode = v; roofRefreshPanel(); return roofDraw(); }
-  if (r === 'look') { RS.look = v; PERSONAL.roofLook = v; savePersonal(); RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
+  if (r === 'zoom') { const cv = $('#roof-cv'); if (v === 'fit') roofZoomReset(); else roofZoomAt(cv.clientWidth / 2, cv.clientHeight / 2, v === 'in' ? 1.35 : 1 / 1.35); return roofDraw(); }
+  if (r === 'look') { roofZoomReset(); RS.look = v; PERSONAL.roofLook = v; savePersonal(); RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
   if (r === 'all') { RS.sel = new Set(f.mods.map((m, i) => i)); RS.mode = 'select'; roofRefreshPanel(); return roofDraw(); }
   if (r === 'none') { RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
   if (r === 'del' && RS.sel.size) { roofHist(); f.mods = f.mods.filter((m, i) => !RS.sel.has(i)); RS.sel = new Set(); roofSave(); return roofRender(); }
@@ -6252,6 +6295,8 @@ document.addEventListener('input', e => {
   const chip = $('#roof-ed .chip[data-r="step"][data-v="mod"]'); if (chip) chip.classList.toggle('opacity-40', !ok), chip.classList.toggle('pointer-events-none', !ok);
   roofDraw();
 });
+document.addEventListener('keydown', e => { if (RS && e.code === 'Space' && !/INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) { RS.space = true; e.preventDefault(); } });
+document.addEventListener('keyup', e => { if (RS && e.code === 'Space') RS.space = false; });
 document.addEventListener('keydown', e => {
   if (!RS || RS.step !== 'mod' || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
   const click = r => { const b = $(`#roof-ed [data-r="${r}"]`); if (b && !b.disabled) b.click(); };
@@ -6351,6 +6396,33 @@ function roofCellImg() {
   g.strokeStyle = '#08090b'; g.lineWidth = 4; g.strokeRect(2, 2, 224, 342);
   return (ROOF_CELL = c);
 }
+
+/* Feinjustier-Kreis: Punkt bewegt sich mit 1/8 der Fingerbewegung */
+function roofNudge(dxs, dys) {
+  if (!RS || !RS.act || !RS.view || RS.view.kind !== 'img') return;
+  const f = roofF(), V = RS.view, [k, i] = RS.act, q = f[k]; if (!q || !q[i]) return;
+  q[i] = [Math.min(1, Math.max(0, q[i][0] + dxs / (f.iw * V.k))), Math.min(1, Math.max(0, q[i][1] + dys / (f.ih * V.k)))];
+  if (RS.step === 'ref') { const el = $('#roof-dims'); if (el) el.innerHTML = roofDims(faceGeom(f)); }
+  roofDraw();
+}
+document.addEventListener('pointerdown', e => {
+  const ring = e.target.closest && e.target.closest('#roof-pad-ring'); if (!ring || !RS) return;
+  e.preventDefault(); ring.setPointerCapture(e.pointerId); RS.fine = { lx: e.clientX, ly: e.clientY, ox: 0, oy: 0 }; roofDraw();
+});
+document.addEventListener('pointermove', e => {
+  if (!RS || !RS.fine) return; const F = RS.fine, dx = e.clientX - F.lx, dy = e.clientY - F.ly; F.lx = e.clientX; F.ly = e.clientY;
+  F.ox = Math.max(-28, Math.min(28, F.ox + dx)); F.oy = Math.max(-28, Math.min(28, F.oy + dy));
+  const kn = $('#roof-pad-knob'); if (kn) { kn.style.left = (30 + F.ox) + 'px'; kn.style.top = (30 + F.oy) + 'px'; }
+  roofNudge(dx / 8, dy / 8);
+});
+const roofFineEnd = () => { if (!RS || !RS.fine) return; RS.fine = null; const kn = $('#roof-pad-knob'); if (kn) { kn.style.left = '30px'; kn.style.top = '30px'; } roofSave(); if (RS.step === 'ref') roofRender(); else roofDraw(); };
+document.addEventListener('pointerup', roofFineEnd); document.addEventListener('pointercancel', roofFineEnd);
+/* Pfeiltasten (PC): ausgewählte Ecke um einen Bildpunkt verschieben, mit Umschalt schneller */
+document.addEventListener('keydown', e => {
+  if (!RS || !RS.act || !RS.view || RS.view.kind !== 'img' || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+  const st = e.shiftKey ? 2 : 0.25, m = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] }[e.key]; if (!m) return;
+  e.preventDefault(); roofNudge(...m); clearTimeout(RS.nt); RS.nt = setTimeout(() => { if (RS) { roofSave(); if (RS.step === 'ref') roofRender(); } }, 400);
+});
 /* Wetter und Jahreszeit für das Start-Haus.
    Regler „Echte Wetterdaten“: holt das aktuelle Wetter (Open-Meteo, ohne Konto) für den
    Handy-Standort oder die Firmen-PLZ. Aus: Wetter und Jahreszeit selbst wählen. */

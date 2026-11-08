@@ -189,7 +189,7 @@ function viewKunden() {
   const card = customerCard;
 
   return `<section class="relative overflow-hidden border-b border-line hero-anim">
-    <div class="hidden lg:block absolute inset-0 hero-bg">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true, car: true })}</div>
+    <div class="hidden lg:block absolute inset-0 hero-bg" style="background:${appDark() ? '#060B16' : '#A9D4F5'}"><div class="absolute left-0 right-0 bottom-0" style="aspect-ratio:3/1">${houseSVG({ wide: true, align: 'xMaxYMax', anim: true, car: true })}</div></div>
     <div class="hidden lg:block absolute inset-0 hero-bg" style="background:linear-gradient(90deg,var(--hero-fade) 0%,var(--hero-fade2) 42%,transparent 68%)"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-8 pt-10 lg:pt-0 pb-8 lg:pb-0 lg:min-h-[600px] flex items-center hero-txt">
       <div class="max-w-[36rem]"><span class="mono text-[12px] text-ink2 inline-flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-s"></span>Photovoltaik und Wärmepumpe</span>
@@ -201,7 +201,7 @@ function viewKunden() {
   </section>
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}
-    <div class="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
+    <div class="flex flex-col 2xl:flex-row 2xl:items-end gap-4 justify-between">
       <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]" data-countup>${v}</div></div>`).join('')}</div>
       ${salesStats()}
