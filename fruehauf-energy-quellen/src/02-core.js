@@ -1,4 +1,33 @@
 <body class="min-h-screen antialiased">
+<style id="splash-css">
+#splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 58%,#16262a 0%,#0a0f14 60%,#06080b 100%);overflow:hidden;cursor:pointer}
+#splash.sp-light{background:radial-gradient(ellipse at 50% 58%,#ffffff 0%,#eef4f8 60%,#dfe8ef 100%)}
+#splash .sp-stage{position:relative;width:min(92vw,760px);aspect-ratio:3/2;transform-origin:50% 62%;opacity:0;transform:translateY(14px) scale(.97);transition:opacity .55s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+#splash.s-in .sp-stage{opacity:1;transform:none}
+#splash .sp-stage svg{width:100%;height:100%;display:block;border-radius:22px}
+#splash .spk-pv polygon,#splash .spk-pv rect{opacity:0;transform:translateY(-6px);transition:opacity .22s ease,transform .3s ease}
+#splash.s-pv .spk-pv polygon,#splash.s-pv .spk-pv rect{opacity:1;transform:none}
+#splash .spk-bat{opacity:0;transform:translateY(18px);transition:opacity .35s ease,transform .45s cubic-bezier(.2,1.4,.4,1)}
+#splash.s-bat .spk-bat{opacity:1;transform:none}
+#splash .spk-hp{opacity:0;transform-box:fill-box;transform-origin:50% 100%;transform:scale(.6);transition:opacity .3s ease,transform .45s cubic-bezier(.2,1.5,.4,1)}
+#splash.s-hp .spk-hp{opacity:1;transform:none}
+#splash .spk-car{opacity:0;transform:translateX(-140px);transition:opacity .3s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+#splash.s-car .spk-car{opacity:1;transform:none}
+#splash.s-bat .spk-bat,#splash.s-hp .spk-hp,#splash.s-car .spk-car{animation:spGlowIn 1.1s ease}
+#splash.s-pv .spk-pv{animation:spGlowIn 1.6s .2s ease}
+@keyframes spGlowIn{0%{filter:none}30%{filter:drop-shadow(0 0 6px #5CE0A8) drop-shadow(0 0 14px #5CE0A8) brightness(1.35)}100%{filter:none}}
+#splash.s-zoom .sp-stage{transition:transform .8s cubic-bezier(.7,0,.2,1),opacity .6s .2s ease;transform:scale(7);opacity:0}
+#splash .sp-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.7);opacity:0;display:flex;flex-direction:column;align-items:center;gap:14px;transition:opacity .45s ease,transform .6s cubic-bezier(.2,.8,.2,1);white-space:nowrap;pointer-events:none}
+#splash .sp-logo img.sp-img{max-width:min(70vw,360px);max-height:150px;background:#fff;border-radius:18px;padding:14px 22px;box-shadow:0 24px 60px -24px rgba(0,0,0,.6)}
+#splash .sp-name{font:600 24px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;color:#eef6f3}
+#splash.sp-light .sp-name{color:#132430}
+#splash.s-logo .sp-logo{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#splash.s-out .sp-logo{transition:transform .75s cubic-bezier(.7,0,.2,1),opacity .55s .15s ease;transform:translate(-50%,-50%) scale(5);opacity:0}
+#splash.s-out{background:transparent;transition:background .6s .2s ease}
+#splash .sp-skip{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;font:500 12px system-ui,sans-serif;color:rgba(160,180,190,.6)}
+@media (prefers-reduced-motion: reduce){#splash *{transition-duration:.15s!important;transition-delay:0s!important}}
+</style>
+<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><div class="sp-skip">Tippen zum Überspringen</div></div>
 <div id="app"></div>
 <div id="toasts" class="fixed top-3 left-1/2 -translate-x-1/2 z-[80] flex flex-col items-center gap-2 pointer-events-none w-[92vw] max-w-md"></div>
 <div id="modal"></div>
@@ -168,8 +197,8 @@ function C() {
 /* ---------- Zoom unterbinden ---------- */
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
-let lastTouch = 0;
-document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouch < 300 && !e.target.closest('input,textarea,select')) e.preventDefault(); lastTouch = n; }, { passive: false });
+/* Doppeltipp-Zoom per CSS abschalten – Tipps werden nie verworfen (früherer touchend-Filter schluckte schnelle Tipps) */
+document.head.insertAdjacentHTML('beforeend', '<style>html,body,button,a,input,select,label,[data-a],[data-r]{touch-action:manipulation}</style>');
 
 /* ---------- Icons ---------- */
 const IP = {

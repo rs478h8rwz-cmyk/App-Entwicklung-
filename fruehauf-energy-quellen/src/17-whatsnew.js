@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.07', date: '2026-11-09', items: [
+    ['anim', 'Startanimation', 'Beim Öffnen erscheint Ihr Haus – nacheinander kommen Photovoltaik, Speicher mit Wechselrichter, Wärmepumpe und E-Auto dazu. Dann zoomt es auf Ihr Logo und hinein in die App. Logo und An/Aus unter Einstellungen → Startseite & Wetter.'],
+    ['modplace', 'Zurück-Knopf und ruhigere Bedienung', 'Behoben: Auf iPad und iPhone gingen schnell aufeinanderfolgende Tipps verloren oder landeten scheinbar woanders – jetzt reagiert jeder Knopf sofort. Im Modulplan gibt es unten „Zurück“ zum vorherigen Schritt; die Randabstände lassen sich auch beim Belegen ändern. Neue Module bleiben dort, wo Sie tippen – der Magnet verschiebt nur noch wenig.']
+  ] },
   { version: '2.06', date: '2026-11-09', items: [
     ['modplace', 'Magnet mit Raster', 'Der Magnet setzt Module jetzt exakt auf das Raster der Nachbarmodule (Modulmaß + 1,5 cm Fuge) – Reihen und Spalten stehen immer gerade. Am Dachrand und Randabstand rastet er nicht mehr ein. Für versetzte Module den Magnet ausschalten.'],
     ['modplace', 'Kopieren und Einfügen', 'Ausgewählte Module kopieren und als Gruppe neben der Vorlage einfügen – dann verschieben und einrasten lassen. Am PC auch mit Strg+C / Strg+V.'],

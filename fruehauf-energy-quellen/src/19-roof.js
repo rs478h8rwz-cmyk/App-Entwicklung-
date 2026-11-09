@@ -123,12 +123,15 @@ async function roofOpen(pid) {
   p.roof = p.roof || { faces: [], saves: [] };
   if (!p.roof.faces.length) p.roof.faces.push(roofNewFace(1));
   RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', zm: { z: 1, x: 0, y: 0 }, ptrs: new Map(), pinch: null, mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
-  document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col"></div>');
+  document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col" style="height:100dvh"></div>');
+  /* Seite fixieren – verhindert auf dem iPad versetzte Tipp-Positionen nach der Tastatur */
+  RS.scrollY = window.scrollY; const bs = document.body.style; RS.bodyCss = bs.cssText;
+  bs.position = 'fixed'; bs.top = `-${RS.scrollY}px`; bs.left = '0'; bs.right = '0'; bs.width = '100%';
   document.documentElement.style.overflow = 'hidden';
   roofRender();
 }
 const roofNewFace = n => ({ id: uid('rf'), name: n === 1 ? 'Hauptdach' : `Dachfläche ${n}`, photo: '', iw: 0, ih: 0, corners: [[0.2, 0.8], [0.35, 0.35], [0.65, 0.35], [0.8, 0.8]], ref: null, refMode: 'tiles', tileId: 'frankfurter', nx: null, ny: null, lw: null, lh: null, mTop: 30, mBot: 30, mSide: 30, prodId: (roofMods()[0] || {}).id || '', orient: 'p', mods: [] });
-function roofClose() { const e = $('#roof-ed'); if (e) e.remove(); document.documentElement.style.overflow = ''; RS = null; render(); }
+function roofClose() { const e = $('#roof-ed'); if (e) e.remove(); document.documentElement.style.overflow = ''; const y = RS ? RS.scrollY || 0 : 0; document.body.style.cssText = RS ? RS.bodyCss || '' : ''; RS = null; render(); window.scrollTo(0, y); }
 const roofP = () => RS && findProject(RS.pid), roofF = () => roofP().roof.faces[RS.fi];
 function roofSave() { const p = roofP(); if (p) saveProject(p); }
 
@@ -150,18 +153,23 @@ function roofRender() {
       <div id="roof-tip" class="absolute left-3 bottom-3 right-36 text-[12px] text-white/80 pointer-events-none"></div>
       <div id="roof-pad" class="absolute left-3 bottom-9 hidden flex-col items-center gap-1 select-none"><div class="relative w-[96px] h-[96px] rounded-full border-2 border-white/70 bg-black/45 backdrop-blur-sm touch-none" id="roof-pad-ring" title="Feinjustieren"><div id="roof-pad-knob" class="absolute w-9 h-9 rounded-full bg-white/90 shadow" style="left:30px;top:30px"></div><span class="absolute inset-0 grid place-items-center text-[10px] text-white/70 pointer-events-none" style="padding-top:62px">fein</span></div><div class="text-[11px] text-white/80" id="roof-pad-lbl"></div></div>
       <div class="absolute right-3 bottom-3 flex gap-1.5"><button class="btn-s !h-9 !w-9 !px-0 text-[18px]" data-r="zoom" data-v="out" title="Verkleinern">−</button><button class="btn-s !h-9 !w-9 !px-0 text-[18px]" data-r="zoom" data-v="in" title="Vergrößern">+</button><button class="btn-s !h-9 !px-2.5 text-[12px]" data-r="zoom" data-v="fit">Einpassen</button></div></div>
-    <div class="md:w-[340px] shrink-0 border-t md:border-t-0 md:border-l border-line overflow-y-auto max-h-[42vh] md:max-h-none p-4 space-y-4">${roofPanel(p, f, g)}</div>
+    <div id="roof-panel" class="md:w-[340px] shrink-0 border-t md:border-t-0 md:border-l border-line overflow-y-auto max-h-[42vh] md:max-h-none p-4 space-y-4">${roofPanel(p, f, g)}</div>
   </div>
-  <div class="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2.5 border-t border-line text-[14px]" style="padding-bottom:max(10px,env(safe-area-inset-bottom))">
+  <div id="roof-foot">${roofFoot(p, f)}</div>
+  </div>`;
+  roofBindStage(); roofDraw();
+}
+function roofFoot(p, f) {
+  const tot = p.roof.faces.reduce((a, x) => [a[0] + x.mods.length, a[1] + faceKwp(x)], [0, 0]);
+  return `<div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 border-t border-line text-[14px]" style="padding-bottom:max(10px,env(safe-area-inset-bottom))">
+    ${RS.step !== 'photo' ? `<button class="btn-s !h-10 !px-3 text-[13px]" data-r="prev">${ic('arrowL', 15)}Zurück</button>` : ''}
     <span><span class="text-ink3">${esc(f.name)}:</span> <b>${f.mods.length} Module</b> · <b>${num(faceKwp(f), 2)} kWp</b></span>
     ${p.roof.faces.length > 1 ? `<span><span class="text-ink3">Gesamt:</span> <b class="text-p">${tot[0]} Module · ${num(tot[1], 2)} kWp</b></span>` : ''}
     ${RS.step === 'mod' && roofMods().length ? `<select class="inp appearance-none !h-10 !w-auto !py-0 text-[13px] max-w-[240px]" data-rf="prodId" title="PV-Modul">${roofMods().map(x => `<option value="${x.id}" ${x.id === roofProd(f).id ? 'selected' : ''}>${esc(x.name)} · ${num(x.power)} Wp</option>`).join('')}</select>` : ''}
     ${RS.step === 'mod' ? `<span class="flex gap-1.5"><button class="btn-s !h-10 !px-3 text-[13px]" data-r="copy" ${RS.sel.size ? '' : 'disabled'}>${ic('copy', 15)}Kopieren</button><button class="btn-s !h-10 !px-3 text-[13px]" data-r="paste" ${RS.clip && RS.clip.length ? '' : 'disabled'}>${ic('plus', 15)}Einfügen</button></span>` : ''}
     <span id="roof-warn" class="text-[13px]"></span>
     ${RS.step === 'mod' ? `<button class="btn-p !h-10 !px-4 text-[13px] ml-auto" data-r="apply" ${tot[0] ? '' : 'disabled'}>${ic('check', 15)}In Berechnung übernehmen</button>`
-      : `<button class="btn-p !h-10 !px-5 text-[14px] ml-auto" data-r="next">${{ photo: 'Weiter: Dachfläche', corners: 'Weiter: Referenz', ref: 'Weiter: Module belegen' }[RS.step]} ${ic('arrowR', 16)}</button>`}
-  </div>`;
-  roofBindStage(); roofDraw();
+      : `<button class="btn-p !h-10 !px-5 text-[14px] ml-auto" data-r="next">${{ photo: 'Weiter: Dachfläche', corners: 'Weiter: Referenz', ref: 'Weiter: Module belegen' }[RS.step]} ${ic('arrowR', 16)}</button>`}`;
 }
 function roofPanel(p, f, g) {
   const faces = `<div><span class="lbl">Dachflächen</span><div class="flex flex-wrap gap-1.5">${p.roof.faces.map((x, i) => `<button class="chip ${i === RS.fi ? '!border-p !text-ink !bg-p/10' : ''}" data-r="face" data-v="${i}">${esc(x.name)} · ${x.mods.length}</button>`).join('')}<button class="chip" data-r="face-add">${ic('plus', 14)}Fläche</button></div>
@@ -202,6 +210,7 @@ function roofPanel(p, f, g) {
         <button class="btn-g !h-10 text-[13px]" data-r="undo" ${RS.hist.length ? '' : 'disabled'}>${ic('arrowL', 15)}Rückgängig</button><button class="btn-g !h-10 text-[13px]" data-r="none" ${RS.sel.size ? '' : 'disabled'}>Auswahl aufheben</button>
       </div>
       <p class="hint">Hinzufügen: auf die Fläche tippen. Auswählen: Module antippen oder einen Rahmen ziehen, dann gemeinsam verschieben. Am PC: Entf löscht, R dreht, Strg+A wählt alle.</p>
+      <div><span class="lbl">Randabstände</span><div class="grid grid-cols-3 gap-2"><label><span class="text-[11px] text-ink3">First</span>${roofIn('mTop', 'cm')}</label><label><span class="text-[11px] text-ink3">Rinne</span>${roofIn('mBot', 'cm')}</label><label><span class="text-[11px] text-ink3">Seiten</span>${roofIn('mSide', 'cm')}</label></div></div>
       <div class="text-[12px] text-ink3 rounded-lg bg-raised p-3">${roofDims(g)}</div>`;
   }
   return faces + body + saves;
@@ -359,7 +368,7 @@ function roofDown(e) {
     const [w, h] = modWH(f, f.orient), m = { x: X - w / 2, y: Y - h / 2, o: f.orient };
     roofHist(); f.mods.push(m); RS.sel = new Set([f.mods.length - 1]);
     if (RS.magnet) roofSnap(f, g, RS.sel);
-    roofSave(); roofRender(); return;
+    roofSave(); roofSoft(); return;
   }
   if (!(RS.multi || e.shiftKey)) RS.sel = new Set();
   RS.drag = { lasso: [sx, sy, sx, sy] }; roofDraw();
@@ -414,7 +423,7 @@ function roofSnap(f, g, sel) {
   for (const i of sel) { f.mods[i].x += ok[0]; f.mods[i].y += ok[1]; }
 }
 function roofHist() { const f = roofF(); RS.hist.push(JSON.stringify(f.mods)); if (RS.hist.length > 60) RS.hist.shift(); }
-function roofRefreshPanel() { const p = roofP(), f = roofF(), el = $('#roof-ed .md\\:w-\\[340px\\]'); if (el) el.innerHTML = roofPanel(p, f, faceGeom(f)); }
+function roofRefreshPanel() { roofSoft(); }
 /* Fläche mit Modulen füllen (Reihen mittig, nur wo frei) */
 function roofFill(f, g) {
   const [w, h] = modWH(f, f.orient), ins = g.inset, yTop = Math.max(ins[1][1], ins[2][1]), yBot = Math.min(ins[0][1], ins[3][1]); let n = 0;
@@ -432,6 +441,7 @@ document.addEventListener('click', async e => {
   const a = e.target.closest('#roof-ed [data-r]'); if (!a || !RS) return;
   const p = roofP(), f = roofF(), g = faceGeom(f), r = a.dataset.r, v = a.dataset.v;
   if (r === 'close') return roofClose();
+  if (r === 'prev') { const order = ['photo', 'corners', 'ref', 'mod'], i = order.indexOf(RS.step); if (i > 0) { a.dataset.v = order[i - 1]; } else return; }
   if (r === 'next') {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const order = ['photo', 'corners', 'ref', 'mod'], nx = order[order.indexOf(RS.step) + 1];
@@ -439,7 +449,7 @@ document.addEventListener('click', async e => {
     if (RS.step === 'ref') { const gg = faceGeom(f); if (!gg) return toast(f.refMode === 'len' ? 'Bitte Breite und Höhe der Referenz eingeben.' : 'Bitte die Anzahl der Pfannen waagerecht und der Reihen senkrecht eingeben.'); if (gg.bad) return toast('Die Maße wirken unplausibel – bitte Referenz-Rechteck und Anzahl prüfen (gelbes Raster muss auf den Pfannen liegen).'); }
     a.dataset.v = nx;
   }
-  if (r === 'step' || r === 'next') { const v = a.dataset.v; roofZoomReset(); RS.act = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
+  if (r === 'step' || r === 'next' || r === 'prev') { const v = a.dataset.v; roofZoomReset(); RS.act = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
   if (r === 'face') { roofZoomReset(); RS.fi = +v; RS.sel = new Set(); RS.hist = []; RS.warp = null; const nf = roofF(); RS.step = !nf.photo ? 'photo' : faceGeom(nf) ? 'mod' : 'corners'; return roofRender(); }
   if (r === 'face-add') { p.roof.faces.push(roofNewFace(p.roof.faces.length + 1)); RS.fi = p.roof.faces.length - 1; RS.step = 'photo'; RS.sel = new Set(); RS.hist = []; roofSave(); return roofRender(); }
   if (r === 'face-del') { if (!(await confirmDlg('Dachfläche löschen?', `„${f.name}“ mit ${f.mods.length} Modulen wird gelöscht.`))) return; p.roof.faces.splice(RS.fi, 1); RS.fi = 0; RS.sel = new Set(); roofSave(); return roofRender(); }
@@ -449,14 +459,14 @@ document.addEventListener('click', async e => {
   if (r === 'mode') { RS.mode = v; roofRefreshPanel(); return roofDraw(); }
   if (r === 'zoom') { const cv = $('#roof-cv'); if (v === 'fit') roofZoomReset(); else roofZoomAt(cv.clientWidth / 2, cv.clientHeight / 2, v === 'in' ? 1.35 : 1 / 1.35); return roofDraw(); }
   if (r === 'look') { roofZoomReset(); RS.look = v; PERSONAL.roofLook = v; savePersonal(); RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
-  if (r === 'copy' && RS.sel.size) { RS.clip = [...RS.sel].sort((a2, b2) => a2 - b2).map(i => ({ ...f.mods[i] })); toast(`${RS.clip.length} Modul${RS.clip.length > 1 ? 'e' : ''} kopiert.`); return roofRender(); }
-  if (r === 'paste' && RS.clip && RS.clip.length) { roofPaste(f, g); return roofRender(); }
+  if (r === 'copy' && RS.sel.size) { RS.clip = [...RS.sel].sort((a2, b2) => a2 - b2).map(i => ({ ...f.mods[i] })); toast(`${RS.clip.length} Modul${RS.clip.length > 1 ? 'e' : ''} kopiert.`); return roofSoft(); }
+  if (r === 'paste' && RS.clip && RS.clip.length) { roofPaste(f, g); return roofSoft(); }
   if (r === 'all') { RS.sel = new Set(f.mods.map((m, i) => i)); RS.mode = 'select'; roofRefreshPanel(); return roofDraw(); }
   if (r === 'none') { RS.sel = new Set(); roofRefreshPanel(); return roofDraw(); }
-  if (r === 'del' && RS.sel.size) { roofHist(); f.mods = f.mods.filter((m, i) => !RS.sel.has(i)); RS.sel = new Set(); roofSave(); return roofRender(); }
+  if (r === 'del' && RS.sel.size) { roofHist(); f.mods = f.mods.filter((m, i) => !RS.sel.has(i)); RS.sel = new Set(); roofSave(); return roofSoft(); }
   if (r === 'rotate' && RS.sel.size) { roofHist(); for (const i of RS.sel) { const m = f.mods[i], [w, h] = modWH(f, m.o); m.o = m.o === 'l' ? 'p' : 'l'; const [w2, h2] = modWH(f, m.o); m.x += (w - w2) / 2; m.y += (h - h2) / 2; } roofSave(); return roofDraw(); }
-  if (r === 'undo' && RS.hist.length) { f.mods = JSON.parse(RS.hist.pop()); RS.sel = new Set(); roofSave(); return roofRender(); }
-  if (r === 'fill' && g && !g.bad) { roofHist(); const n = roofFill(f, g); toast(n ? `${n} Module ergänzt.` : 'Kein freier Platz mehr für weitere Module.'); roofSave(); return roofRender(); }
+  if (r === 'undo' && RS.hist.length) { f.mods = JSON.parse(RS.hist.pop()); RS.sel = new Set(); roofSave(); return roofSoft(); }
+  if (r === 'fill' && g && !g.bad) { roofHist(); const n = roofFill(f, g); toast(n ? `${n} Module ergänzt.` : 'Kein freier Platz mehr für weitere Module.'); roofSave(); return roofSoft(); }
   if (r === 'save') { p.roof.saves = p.roof.saves || []; const n = p.roof.saves.length + 1; p.roof.saves.unshift({ id: uid('rs'), name: `Stand ${n} · ${p.roof.faces.reduce((s, x) => s + x.mods.length, 0)} Module`, date: new Date().toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), faces: clone(p.roof.faces) }); roofSave(); roofSaveSnaps(p); toast('Stand gespeichert – Foto der Belegung beim Kunden hinterlegt.'); return roofRender(); }
   if (r === 'load') { const s = (p.roof.saves || []).find(x => x.id === v); if (!s) return; if (!(await confirmDlg(`„${s.name}“ laden?`, 'Der aktuelle Stand wird ersetzt – speichern Sie ihn vorher, wenn Sie ihn behalten möchten.', 'Laden', false))) return; p.roof.faces = clone(s.faces); RS.fi = 0; RS.sel = new Set(); RS.hist = []; RS.warp = null; RS.step = faceGeom(p.roof.faces[0]) ? 'mod' : 'corners'; roofSave(); return roofRender(); }
   if (r === 'save-del') { p.roof.saves = p.roof.saves.filter(x => x.id !== v); roofSave(); return roofRender(); }
@@ -668,7 +678,8 @@ function roofLattice(f, sel) {
   /* bevorzugt der nächste freie Rasterplatz */
   const cand = [[dx, dy]]; for (const sx of [0, cw, -cw]) for (const sy of [0, ch, -ch]) if (sx || sy) cand.push([dx + sx, dy + sy]);
   cand.sort((p, q) => Math.hypot(...p) - Math.hypot(...q));
-  const ok = cand.find(([ox, oy]) => !hits(ox, oy)); if (!ok) return false;
+  const lim = Math.max(cw, ch) * 0.6;
+  const ok = cand.find(([ox, oy]) => Math.hypot(ox, oy) <= lim && !hits(ox, oy)); if (!ok) return false;
   for (const i of ids) { f.mods[i].x += ok[0]; f.mods[i].y += ok[1]; }
   return true;
 }
@@ -704,3 +715,11 @@ document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); if (k !== 'c' && k !== 'v') return;
   const b = $(`#roof-ed [data-r="${k === 'c' ? 'copy' : 'paste'}"]`); if (b && !b.disabled) { e.preventDefault(); b.click(); }
 });
+
+/* Nur Seitenleiste und untere Leiste neu – Bühne bleibt stabil (wichtig für Touch) */
+function roofSoft() {
+  if (!RS) return; const p = roofP(), f = roofF(), pn = $('#roof-panel'), ft = $('#roof-foot');
+  if (pn) { const st = pn.scrollTop; pn.innerHTML = roofPanel(p, f, faceGeom(f)); pn.scrollTop = st; }
+  if (ft) ft.innerHTML = roofFoot(p, f);
+  roofDraw();
+}

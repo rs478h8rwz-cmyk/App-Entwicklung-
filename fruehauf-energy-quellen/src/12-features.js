@@ -33,8 +33,8 @@ const adminCfg = () => (S.admin && S.admin.hash ? S.admin : ADMIN_DEFAULT);
 async function checkAdmin(pw) { const a = adminCfg(); return (await pbkdf2(pw, a.salt, a.iter || 150000)) === a.hash; }
 async function setAdminPassword(pw) { const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join(''); S.admin = { salt, hash: await pbkdf2(pw, salt, 150000), iter: 150000 }; saveSettings(); }
 function adminLockCard(tab) {
-  return `<div class="card p-6 sm:p-8 max-w-lg"><div class="icon-box mb-4">${ic('gear', 18)}</div><h3 class="sec-t">Admin-Bereich</h3><p class="text-ink3 text-[14px] mt-1">Diese Einstellungen gelten für alle Berater und sind geschützt. Bitte das Admin-Passwort eingeben.</p>
-    <form data-admin-form class="mt-5 space-y-3"><input type="password" class="inp" id="admin-pw" placeholder="Admin-Passwort" autocomplete="current-password"><label class="flex items-center gap-2 text-[13px] text-ink2"><input type="checkbox" id="admin-keep">Auf diesem Gerät entsperrt lassen</label><button class="btn-p w-full" type="submit">Entsperren</button></form>
+  return `<div class="card p-6 sm:p-8 max-w-lg" data-admin-card><div class="icon-box mb-4">${ic('gear', 18)}</div><h3 class="sec-t">Admin-Bereich</h3><p class="text-ink3 text-[14px] mt-1">Diese Einstellungen gelten für alle Berater und sind geschützt. Bitte das Admin-Passwort eingeben.</p>
+    <form data-admin-form class="mt-5 space-y-3"><input type="password" class="inp !h-14 !text-[17px]" id="admin-pw" placeholder="Admin-Passwort" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><label class="flex items-center gap-2 text-[13px] text-ink2"><input type="checkbox" id="admin-keep">Auf diesem Gerät entsperrt lassen</label><button class="btn-p w-full" type="submit">Entsperren</button></form>
     <p class="hint">Vertriebler ohne Passwort können Ansicht, eigenes Profil, Produkte und Datensicherung ändern.</p></div>`;
 }
 async function tryUnlock() {
@@ -346,3 +346,9 @@ async function updateCoverPalette(silent) {
   if (!silent) toast(pal ? 'PDF-Farben aus dem Deckblatt übernommen.' : 'Im Deckblatt wurden keine kräftigen Farben gefunden – es bleibt bei Ihrer Farbwelt.', pal ? 'ok' : 'warn');
 }
 async function ensureCoverPalette() { const d = S.design; if (d.coverStyle === 'image' && d.cover.file && d.coverPalette === undefined) await updateCoverPalette(true); }
+
+/* Tipp irgendwo auf die Admin-Karte öffnet das Passwortfeld (Tastatur erscheint, da direkt durch Tipp ausgelöst) */
+document.addEventListener('click', e => {
+  const c = e.target.closest && e.target.closest('[data-admin-card]'); if (!c || e.target.closest('input,button,label')) return;
+  const i = $('#admin-pw'); if (i) i.focus();
+});

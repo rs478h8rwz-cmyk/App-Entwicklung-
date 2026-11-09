@@ -186,7 +186,7 @@ async function loadAll() {
   if (!st2) saveSettingsNow();
   if (!PROJECTS.length) PROJECTS = (await DB.all('projects')) || [];
   PROJECTS = PROJECTS.map(p => deepMerge(newProject(p.type || 'wp'), p)); ARCHIVED = []; splitArchive();
-  await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file, S.design.mark && S.design.mark.file, ...(S.company.advisors || []).map(a => a.photo)]);
+  await loadFiles([S.company.logoFile, S.design.splash && S.design.splash.file, S.design.cover.file, S.design.coverLogo.file, S.design.mark && S.design.mark.file, ...(S.company.advisors || []).map(a => a.photo)]);
 }
 async function migrateLegacy() {
   let raw; try { raw = localStorage.getItem('fruehauf-energy-wirtschaftlichkeit-v1'); } catch (e) { return; }

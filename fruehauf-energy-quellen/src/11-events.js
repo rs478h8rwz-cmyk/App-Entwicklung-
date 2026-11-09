@@ -265,12 +265,14 @@ document.addEventListener('click', async e => {
   await loadAll();
   await loadPersonal();
   applyTheme();
+  try { splashStart(); } catch (e) {}
   ensureCoverPalette();
   if (!location.hash) history.replaceState(null, '', '#/kunden');
   await route();
+  try { splashDone(); } catch (e) {}
   try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
-  if (!PERSONAL.tutorialDone) { PERSONAL.tutorialDone = true; PERSONAL.seenRelease = WHATS_NEW.id; savePersonal(); setTimeout(() => showTutorial(0), 600); }
-  else setTimeout(maybeWhatsNew, 900);
+  if (!PERSONAL.tutorialDone) { PERSONAL.tutorialDone = true; PERSONAL.seenRelease = WHATS_NEW.id; savePersonal(); (function tut() { if (!SPLASH.done) return setTimeout(tut, 300); setTimeout(() => showTutorial(0), 300); })(); }
+  else (function wn() { if (!SPLASH.done) return setTimeout(wn, 300); setTimeout(maybeWhatsNew, 500); })();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(e => console.warn('Offline-Betrieb nicht verfügbar', e));
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 })();

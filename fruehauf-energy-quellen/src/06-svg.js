@@ -52,7 +52,7 @@ ${style === 'modern' ? `<rect x="26" y="258" width="132" height="7" rx="2" fill=
   const tower = !batOn ? '' : `<g transform="translate(${tx} 262)"><ellipse cx="15" cy="71" rx="20" ry="3.5" fill="#000" opacity="${dawn ? 0.3 : 0.1}"/>
 <rect x="0" y="0" width="30" height="14" rx="4" fill="${dawn ? '#3B4756' : '#F7FAFC'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="5" y="5" width="12" height="3" rx="1.5" fill="${p}"/><circle cx="23" cy="7" r="1.8" fill="${lit || dawn ? '#5CE08F' : '#3FBF6E'}"/>
 ${[0, 1, 2].map(i => `<rect x="0" y="${15 + i * 17}" width="30" height="16" rx="3" fill="${dawn ? '#33404F' : '#FFFFFF'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="4" y="${21 + i * 17}" width="22" height="2" rx="1" fill="${K.hpS}"/>`).join('')}
-<rect x="2" y="66" width="26" height="4" rx="1.5" fill="${K.hpS}"/></g>
+<rect x="2" y="66" width="26" height="4" rx="1.5" fill="${K.hpS}"/>${o.inv ? `<g transform="translate(38 4)"><rect x="0" y="0" width="26" height="32" rx="3" fill="${dawn ? '#3B4756' : '#F7FAFC'}" stroke="${K.hpS}" stroke-width="1.6"/><rect x="5" y="6" width="16" height="7" rx="1.5" fill="${dawn ? '#1C2532' : '#DCE6EE'}"/><path d="M8 9.5 q2.5 -3 5 0 t5 0" fill="none" stroke="${p}" stroke-width="1.3"/><circle cx="13" cy="22" r="2" class="ha-led" fill="#5CE08F"/><path d="M13 32 V40" stroke="${K.hpS}" stroke-width="2"/></g>` : ''}</g>
 `;
   const trees = `<g class="ha-trees" fill="${K.tree}">${car ? '' : '<circle cx="120" cy="318" r="16"/><circle cx="104" cy="324" r="11"/>'}<circle cx="540" cy="336" r="13"/></g>`;
   let houseBody;
@@ -65,24 +65,24 @@ ${[0, 1, 2].map(i => `<rect x="0" y="${15 + i * 17}" width="30" height="16" rx="
 ${car ? '' : `${glow(162, 252, 32, 46)}<rect x="162" y="252" width="32" height="46" rx="2" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.2 : 2.5}"/>`}
 <rect x="200" y="196" width="232" height="136" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
 <rect x="334" y="196" width="98" height="136" fill="${wood}"/>${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<line x1="${342 + i * 10.5}" y1="196" x2="${342 + i * 10.5}" y2="332" stroke="${woodL}" stroke-width="1.6"/>`).join('')}
-<rect x="192" y="188" width="248" height="10" rx="2" fill="${roofC}"/>${rowMods}
+<rect x="192" y="188" width="248" height="10" rx="2" fill="${roofC}"/><g class="spk-pv">${rowMods}</g>
 ${[[220, 212, 44, 36], [276, 212, 44, 36], ...(batOn ? [] : [[220, 262, 100, 40]])].map(([x, y, w, h]) => `${glow(x, y, w, h)}<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${winF}" stroke="${roofC}" stroke-width="3"/>${w > 60 ? `<line x1="${x + w / 2}" y1="${y}" x2="${x + w / 2}" y2="${y + h}" stroke="${roofC}" stroke-width="2.5"/>` : ''}${lit ? '' : `<path d="M${x + 6} ${y + h - 4} L${x + 16} ${y + 4}" stroke="#ffffff" stroke-width="2.5" opacity="${dawn ? 0.06 : 0.4}"/>`}`).join('')}
 ${glow(350, 214, 66, 34)}<rect x="350" y="214" width="66" height="34" rx="2" fill="${winF}" stroke="${roofC}" stroke-width="3"/>
 <rect x="364" y="268" width="36" height="64" rx="2" fill="${p}"/><rect x="368" y="274" width="8" height="52" rx="2" fill="${lit ? '#FFC870' : '#ffffff'}" opacity="${lit ? 0.75 : 0.25}"/><circle cx="394" cy="300" r="2.5" fill="#ffffff" opacity=".9"/>
 ${lit ? '<circle cx="356" cy="282" r="14" fill="#FFC870" opacity=".18"/><rect x="353" y="276" width="6" height="8" rx="2" fill="#FFE2A8"/>' : ''}
-${carport}${tower}${hpUnit}${trees}`;
+<g class="spk-car">${carport}</g><g class="spk-bat">${tower}</g><g class="spk-hp">${hpUnit}</g>${trees}`;
   } else {
     houseBody = `<ellipse cx="300" cy="333" rx="190" ry="10" fill="#000" opacity="${dawn ? 0.3 : 0.08}"/>
 <rect x="168" y="222" width="264" height="110" rx="4" fill="url(#${id('wall')})" stroke="${K.wallS}"/>
 <polygon points="${top.l},${top.y} ${top.r},${top.y} ${bot.r + 8},${bot.y + 2} ${bot.l - 8},${bot.y + 2}" fill="${K.roof1}"/>
 <polygon points="${top.l + 3},${top.y + 3} ${top.r - 3},${top.y + 3} ${bot.r},${bot.y - 2} ${bot.l},${bot.y - 2}" fill="${K.roof2}"/>
-${o.pv === false ? '' : mods}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
+${o.pv === false ? '' : `<g class="spk-pv">${mods}</g>`}${dawn ? `<line x1="${top.l + 20}" y1="${top.y + 4}" x2="${top.r - 30}" y2="${top.y + 4}" stroke="${s}" stroke-opacity=".5" stroke-width="1.5"/>` : ''}
 <rect x="${bot.l - 10}" y="${bot.y}" width="${bot.r - bot.l + 20}" height="6" rx="3" fill="${K.eave}"/>
 <g>${batOn ? '' : glow(190, 248, 52, 40)}${glow(358, 248, 52, 40)}
 ${batOn ? '' : `<rect x="190" y="248" width="52" height="40" rx="4" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="216" y1="248" x2="216" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/>`}
 <rect x="358" y="248" width="52" height="40" rx="4" fill="${winF}" stroke="${winS2}" stroke-width="${dawn ? 1.5 : 4}"/><line x1="384" y1="248" x2="384" y2="288" stroke="${dawn ? K.wall2 : '#fff'}" stroke-width="3"/></g>
 <rect x="276" y="258" width="48" height="74" rx="5" fill="${p}"/><circle cx="314" cy="296" r="3" fill="${lit ? '#FFC870' : '#fff'}" opacity=".9"/><rect x="284" y="266" width="32" height="18" rx="3" fill="${lit ? '#FFC870' : '#fff'}" opacity="${lit ? 0.6 : 0.18}"/>
-${carport}${tower}${hpUnit}${trees}`;
+<g class="spk-car">${carport}</g><g class="spk-bat">${tower}</g><g class="spk-hp">${hpUnit}</g>${trees}`;
   }
   if (wx && wx.snow) { const sn = dawn ? '#C6D0DC' : '#F4F8FB'; houseBody += style === 'modern' ? `<rect x="190" y="182" width="252" height="7" rx="3.5" fill="${sn}"/><rect x="146" y="225" width="64" height="6" rx="3" fill="${sn}"/>` : `<polygon points="${top.l - 2},${top.y - 3} ${top.r + 2},${top.y - 3} ${top.r + 6},${top.y + 6} ${top.l - 6},${top.y + 6}" fill="${sn}"/><rect x="${bot.l - 12}" y="${bot.y - 1}" width="${bot.r - bot.l + 24}" height="5" rx="2.5" fill="${sn}"/>`; }
   if (wx && wx.xmas && typeof xmasDeco === 'function') houseBody += xmasDeco(style, top, bot, dawn);
