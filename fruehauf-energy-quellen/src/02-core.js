@@ -201,7 +201,7 @@ function C() {
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
 /* Doppeltipp-Zoom per CSS abschalten – Tipps werden nie verworfen (früherer touchend-Filter schluckte schnelle Tipps) */
-document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}input,textarea,select,[contenteditable]{touch-action:auto!important;-webkit-user-select:text;user-select:text}</style>');
 
 /* ---------- Icons ---------- */
 const IP = {

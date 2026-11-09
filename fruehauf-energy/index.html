@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Frühauf Energy – Wirtschaftlichkeitsrechner</title>
 <meta name="description" content="Wirtschaftlichkeitsberechnungen für Photovoltaik und Wärmepumpen">
 <meta name="robots" content="noindex, nofollow">
@@ -445,7 +445,7 @@ function C() {
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
 /* Doppeltipp-Zoom per CSS abschalten – Tipps werden nie verworfen (früherer touchend-Filter schluckte schnelle Tipps) */
-document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}input,textarea,select,[contenteditable]{touch-action:auto!important;-webkit-user-select:text;user-select:text}</style>');
 
 /* ---------- Icons ---------- */
 const IP = {
@@ -4191,7 +4191,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261109003050';
+const APP_VERSION = '20261109004105';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4608,6 +4608,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.10', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur auf dem iPad', 'Im Modulplan ist die Seite dahinter nicht mehr fixiert. Eingabefelder sind für das iPad jetzt ausdrücklich als Textfelder markiert – gegen einen bekannten Apple-Fehler, bei dem in Home-Bildschirm-Apps keine Tastatur erscheint.']
+  ] },
   { version: '2.09', date: '2026-11-09', items: [
     ['kbd', 'Tastatur-Hilfe für das iPad', 'Auf dem iPad sind der Knopf „ABC Buchstaben“ und der bewegte Hintergrund ausgeschaltet. Unter Einstellungen → Ansicht → Tastatur-Hilfe: Testfeld und Schalter zum Eingrenzen.']
   ] },
@@ -5078,7 +5081,7 @@ function heroWatch() { if (!heroIO) return; heroIO.disconnect(); $$('#app .hero-
 document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('app-hidden', document.hidden));
 
 /* Modulplan offen: nach dem Schließen der Tastatur Ansicht oben halten (Seite ist dort fixiert) */
-document.addEventListener('focusout', e => { if (!$('#roof-ed') || !e.target.closest || !e.target.closest('#roof-ed')) return; setTimeout(() => { const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; window.scrollTo(0, 0); }, 120); });
+
 
 /* Einstellungen → Ansicht: Tastatur-Hilfe (zum Eingrenzen auf dem iPad) */
 {
@@ -5101,6 +5104,9 @@ document.addEventListener('click', e => {
   else if (k === 'splash') { S.design.splash = { ...(S.design.splash || {}), on: (S.design.splash || {}).on === false }; saveSettings(); }
   render();
 });
+
+/* Sicherheitsnetz: kein fixierter body außerhalb des Modulplans */
+window.addEventListener('hashchange', () => { if (!document.getElementById('roof-ed') && document.body.style.position === 'fixed') { document.body.style.position = ''; document.body.style.top = ''; } });
 /* Tastatur-Umschalter: Zahlenfelder starten mit Zahlentastatur, lassen sich aber
    jederzeit auf Buchstaben umstellen (und zurück). Nichts wird auf Zahlen begrenzt. */
 const KBD_TEXT = new Set();
@@ -6043,13 +6049,12 @@ async function roofOpen(pid) {
   RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', zm: { z: 1, x: 0, y: 0 }, ptrs: new Map(), pinch: null, mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
   document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col" style="height:100dvh"></div>');
   /* Seite fixieren – verhindert auf dem iPad versetzte Tipp-Positionen nach der Tastatur */
-  RS.scrollY = window.scrollY; const bs = document.body.style; RS.bodyCss = bs.cssText;
-  bs.position = 'fixed'; bs.top = `-${RS.scrollY}px`; bs.left = '0'; bs.right = '0'; bs.width = '100%';
-  document.documentElement.style.overflow = 'hidden';
+  /* Hintergrund nur am Scrollen hindern – KEIN position:fixed am body (verhindert auf dem iPad die Tastatur) */
+  RS.scrollY = window.scrollY; document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden';
   roofRender();
 }
 const roofNewFace = n => ({ id: uid('rf'), name: n === 1 ? 'Hauptdach' : `Dachfläche ${n}`, photo: '', iw: 0, ih: 0, corners: [[0.2, 0.8], [0.35, 0.35], [0.65, 0.35], [0.8, 0.8]], ref: null, refMode: 'tiles', tileId: 'frankfurter', nx: null, ny: null, lw: null, lh: null, mTop: 30, mBot: 30, mSide: 30, prodId: (roofMods()[0] || {}).id || '', orient: 'p', mods: [] });
-function roofClose() { const e = $('#roof-ed'); if (e) e.remove(); document.documentElement.style.overflow = ''; const y = RS ? RS.scrollY || 0 : 0; document.body.style.cssText = RS ? RS.bodyCss || '' : ''; RS = null; render(); window.scrollTo(0, y); }
+function roofClose() { const e = $('#roof-ed'); if (e) e.remove(); document.documentElement.style.overflow = ''; const y = RS ? RS.scrollY || 0 : 0; document.body.style.overflow = ''; RS = null; render(); window.scrollTo(0, y); }
 const roofP = () => RS && findProject(RS.pid), roofF = () => roofP().roof.faces[RS.fi];
 function roofSave() { const p = roofP(); if (p) saveProject(p); }
 

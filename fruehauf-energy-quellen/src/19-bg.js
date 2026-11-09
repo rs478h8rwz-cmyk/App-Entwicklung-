@@ -34,7 +34,7 @@ function heroWatch() { if (!heroIO) return; heroIO.disconnect(); $$('#app .hero-
 document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('app-hidden', document.hidden));
 
 /* Modulplan offen: nach dem Schließen der Tastatur Ansicht oben halten (Seite ist dort fixiert) */
-document.addEventListener('focusout', e => { if (!$('#roof-ed') || !e.target.closest || !e.target.closest('#roof-ed')) return; setTimeout(() => { const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; window.scrollTo(0, 0); }, 120); });
+
 
 /* Einstellungen → Ansicht: Tastatur-Hilfe (zum Eingrenzen auf dem iPad) */
 {
@@ -57,3 +57,6 @@ document.addEventListener('click', e => {
   else if (k === 'splash') { S.design.splash = { ...(S.design.splash || {}), on: (S.design.splash || {}).on === false }; saveSettings(); }
   render();
 });
+
+/* Sicherheitsnetz: kein fixierter body außerhalb des Modulplans */
+window.addEventListener('hashchange', () => { if (!document.getElementById('roof-ed') && document.body.style.position === 'fixed') { document.body.style.position = ''; document.body.style.top = ''; } });

@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.10', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur auf dem iPad', 'Im Modulplan ist die Seite dahinter nicht mehr fixiert. Eingabefelder sind für das iPad jetzt ausdrücklich als Textfelder markiert – gegen einen bekannten Apple-Fehler, bei dem in Home-Bildschirm-Apps keine Tastatur erscheint.']
+  ] },
   { version: '2.09', date: '2026-11-09', items: [
     ['kbd', 'Tastatur-Hilfe für das iPad', 'Auf dem iPad sind der Knopf „ABC Buchstaben“ und der bewegte Hintergrund ausgeschaltet. Unter Einstellungen → Ansicht → Tastatur-Hilfe: Testfeld und Schalter zum Eingrenzen.']
   ] },
