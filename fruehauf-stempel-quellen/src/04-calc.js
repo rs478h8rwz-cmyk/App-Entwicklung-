@@ -84,14 +84,24 @@ function weekStat(mon) {
   const R = calcRange(weekOf(mon)), target = R.soll || weekTarget(), ist = R.netto + R.credit;
   return { ist, target, rest: Math.max(0, target - ist), over: Math.max(0, ist - target), pct: target ? Math.min(100, ist / target * 100) : 0, R };
 }
-/* Überstundenkonto: Startwert + Überstunden aller Wochen ab Startdatum (Minusstunden zählen nicht) */
-function balance() {
-  const b = S.balance || {}, keys = Object.keys(DAYS).sort(); let m = Math.max(0, +b.min || 0);
-  if (!keys.length) return m;
-  const from = mondayOf(b.from && b.from > keys[0] ? b.from : keys[0]), last = mondayOf(isoToday());
-  for (let mon = from; mon <= last; mon = addDays(mon, 7)) m += weekStat(mon).over;
-  return m;
+/* Überstundenkonto Woche für Woche:
+   + Stunden über dem Wochen-Soll kommen aufs Konto.
+   − Fehlende Stunden (nur abgeschlossene Wochen) werden zuerst von den Überstunden abgezogen;
+     reicht das nicht, wird der Rest als Minusstunden ausgewiesen (das Konto fällt nie unter 0). */
+function account(upTo = mondayOf(isoToday())) {
+  const b = S.balance || {}, keys = Object.keys(DAYS).filter(k => hasData(DAYS[k])).sort(), thisMon = mondayOf(isoToday());
+  const st = { over: Math.max(0, +b.min || 0), minus: 0, weeks: {} };
+  const startMon = b.from ? mondayOf(b.from) : keys.length ? mondayOf(keys[0]) : thisMon;
+  for (let mon = startMon; mon <= upTo; mon = addDays(mon, 7)) {
+    const w = weekStat(mon), diff = w.ist - w.target, done = addDays(mon, 6) < isoToday() || (mon === thisMon && false);
+    const r = { over: 0, used: 0, minus: 0 };
+    if (diff > 0) { r.over = diff; st.over += diff; }
+    else if (diff < 0 && done) { const need = -diff; r.used = Math.min(st.over, need); st.over -= r.used; r.minus = need - r.used; st.minus += r.minus; }
+    st.weeks[mon] = r;
+  }
+  return st;
 }
+const balance = () => account().over;
 /* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
 const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (isWorkday(i)) l.push(i); return l; };
 function vacation(year = tNow().getFullYear()) {
@@ -101,6 +111,7 @@ function vacation(year = tNow().getFullYear()) {
     const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; if (b) betrieb++;
     if (iso <= today) taken++; else planned++;
   }
+  if (+S.vacation.year === +year) taken += +S.vacation.takenBefore || 0;
   const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, betrieb, used, total, left: total - used };
 }
 async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }

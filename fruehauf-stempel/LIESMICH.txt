@@ -1,4 +1,4 @@
-Frühauf – Stempeluhr (Version 1.4)
+Frühauf – Stempeluhr (Version 1.5)
 ==================================
 
 Eigenständige Web-App zur Zeiterfassung. Läuft auf iPhone, Android, iPad und PC, auch offline.
@@ -11,7 +11,8 @@ Stempeln: Baustelle wählen → Kommen → Pause / Pause beenden → Baustelle w
 Pausenregel: Es werden immer mindestens 30 Min. abgezogen – auch wenn keine Pause gestempelt wurde;
 längere Pausen werden voll abgezogen. Es gibt nur Überstunden – Minusstunden werden nicht verrechnet.
 Sollzeiten: Mo–Do 7:30–16:30 (30 Min. Pause = 8:30 Std.), Fr 7:30–13:45 (15 Min. Pause = 6:00 Std.)
-= 40:00 Std. pro Woche. Überstunden = alles über 40 Std. pro Woche; Minusstunden zählen nicht.
+= 40:00 Std. pro Woche. Überstunden = alles über 40 Std. pro Woche. Fehlen Stunden (abgeschlossene Woche),
+werden sie zuerst von den Überstunden abgezogen; reicht das nicht, wird der Rest als Minusstunden ausgewiesen.
 
 Stundenzettel: „An Jule“ erstellt das PDF der Woche, speichert es sofort und öffnet „Teilen“ –
 dort WhatsApp und Jule wählen. Monats-PDF unter „Woche“.
@@ -49,3 +50,7 @@ Krank: Knopf „Heute krank“ – optional direkt Jule per WhatsApp Bescheid ge
 Erinnerung: freitags auf der Startseite (bis der Stundenzettel gesendet ist), zusätzlich als
 wiederkehrender Kalendertermin (Einstellungen → Ich & Empfänger). Freitags-Einblendungen beim Kommen/Gehen.
 Feiertage: nach Firmensitz Hasbergen (Niedersachsen) – steht in firma.json.
+
+Bestand einpflegen (nur Admin-Passwort – Manuel, Artjom, Jule): Startseite/Woche/Urlaub → „Bestand einpflegen“.
+Überstunden-Bestand (Stand zum Montag), Urlaubsanspruch, Rest Vorjahr, schon genommene Urlaubstage.
+Jede Änderung steht im Änderungsprotokoll (Einstellungen → Konten).

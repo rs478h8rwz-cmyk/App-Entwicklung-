@@ -53,7 +53,7 @@ const IP = {
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -115,7 +115,8 @@ const DEFAULTS = {
   minPause: 30,            // wird immer abgezogen – längere Pausen werden voll abgezogen
   pauseOnlyOver6: false,   // optional: Mindestpause erst ab 6 Std. Arbeit
   sites: [],               // zuletzt genutzte Baustellen (Vorschläge)
-  vacation: { perYear: 30, carry: 0 },
+  vacation: { perYear: 30, carry: 0, takenBefore: 0, year: 0 },   // takenBefore: vor App-Nutzung genommene Tage im Jahr „year“
+  kontoLog: [],
   balance: { from: '', min: 0 },   // Überstundenkonto: Startdatum und Startwert (Minuten)
   gps: true,               // Standort beim Stempeln (Pflicht)
   gpsConsent: '',          // Hinweis zur Standortnutzung bestätigt am
@@ -308,14 +309,24 @@ function weekStat(mon) {
   const R = calcRange(weekOf(mon)), target = R.soll || weekTarget(), ist = R.netto + R.credit;
   return { ist, target, rest: Math.max(0, target - ist), over: Math.max(0, ist - target), pct: target ? Math.min(100, ist / target * 100) : 0, R };
 }
-/* Überstundenkonto: Startwert + Überstunden aller Wochen ab Startdatum (Minusstunden zählen nicht) */
-function balance() {
-  const b = S.balance || {}, keys = Object.keys(DAYS).sort(); let m = Math.max(0, +b.min || 0);
-  if (!keys.length) return m;
-  const from = mondayOf(b.from && b.from > keys[0] ? b.from : keys[0]), last = mondayOf(isoToday());
-  for (let mon = from; mon <= last; mon = addDays(mon, 7)) m += weekStat(mon).over;
-  return m;
+/* Überstundenkonto Woche für Woche:
+   + Stunden über dem Wochen-Soll kommen aufs Konto.
+   − Fehlende Stunden (nur abgeschlossene Wochen) werden zuerst von den Überstunden abgezogen;
+     reicht das nicht, wird der Rest als Minusstunden ausgewiesen (das Konto fällt nie unter 0). */
+function account(upTo = mondayOf(isoToday())) {
+  const b = S.balance || {}, keys = Object.keys(DAYS).filter(k => hasData(DAYS[k])).sort(), thisMon = mondayOf(isoToday());
+  const st = { over: Math.max(0, +b.min || 0), minus: 0, weeks: {} };
+  const startMon = b.from ? mondayOf(b.from) : keys.length ? mondayOf(keys[0]) : thisMon;
+  for (let mon = startMon; mon <= upTo; mon = addDays(mon, 7)) {
+    const w = weekStat(mon), diff = w.ist - w.target, done = addDays(mon, 6) < isoToday() || (mon === thisMon && false);
+    const r = { over: 0, used: 0, minus: 0 };
+    if (diff > 0) { r.over = diff; st.over += diff; }
+    else if (diff < 0 && done) { const need = -diff; r.used = Math.min(st.over, need); st.over -= r.used; r.minus = need - r.used; st.minus += r.minus; }
+    st.weeks[mon] = r;
+  }
+  return st;
 }
+const balance = () => account().over;
 /* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
 const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (isWorkday(i)) l.push(i); return l; };
 function vacation(year = tNow().getFullYear()) {
@@ -325,6 +336,7 @@ function vacation(year = tNow().getFullYear()) {
     const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; if (b) betrieb++;
     if (iso <= today) taken++; else planned++;
   }
+  if (+S.vacation.year === +year) taken += +S.vacation.takenBefore || 0;
   const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, betrieb, used, total, left: total - used };
 }
 async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }
@@ -364,12 +376,13 @@ const geoTile = g => g.lat ? `<a class="block rounded-[var(--rb)] overflow-hidde
 
 /* ---------- Wochenstunden (Ziel 40:00) ---------- */
 function weekCard(mon, big) {
-  const w = weekStat(mon), done = w.ist >= w.target;
+  const w = weekStat(mon), done = w.ist >= w.target, past = addDays(mon, 6) < isoToday(), acc = past && !done ? account(mon).weeks[mon] || {} : null;
   return `<div class="card p-5 ${big ? 'sm:p-6' : ''}" style="${done ? 'background:var(--p-light)' : ''}">
     <div class="flex flex-wrap items-end justify-between gap-2"><div><div class="text-[13px] text-ink3">Wochenstunden KW ${isoWeek(mon).w}</div><div class="text-[30px] sm:text-[36px] font-semibold leading-tight mt-1 mono whitespace-nowrap" id="wk-ist">${hm(w.ist)} <span class="text-[15px] text-ink3 font-normal font-sans">von ${hm(w.target)} Std.</span></div></div>
-      <div class="text-right">${done ? `<div class="text-[12px] text-ink3">Überstunden</div><div class="text-[26px] font-semibold text-p mono" id="wk-over">+${hm(w.over)}</div>` : `<div class="text-[12px] text-ink3">Noch zu arbeiten</div><div class="text-[26px] font-semibold mono" id="wk-rest">${hm(w.rest)}</div>`}</div></div>
+      <div class="text-right">${done ? `<div class="text-[12px] text-ink3">Überstunden</div><div class="text-[26px] font-semibold text-p mono" id="wk-over">+${hm(w.over)}</div>` : past ? `<div class="text-[12px] text-ink3">Fehlend</div><div class="text-[26px] font-semibold mono text-ember">−${hm(w.rest)}</div>` : `<div class="text-[12px] text-ink3">Noch zu arbeiten</div><div class="text-[26px] font-semibold mono" id="wk-rest">${hm(w.rest)}</div>`}</div></div>
     <div class="prog !h-3 mt-4"><i id="wk-bar" style="width:${w.pct}%"></i></div>
-    <div class="flex justify-between text-[12px] text-ink3 mt-2"><span>${Math.round(w.pct)} % geschafft</span><span>Urlaub, Krank und Feiertage zählen voll mit</span></div></div>`;
+    <div class="flex justify-between text-[12px] text-ink3 mt-2"><span>${Math.round(w.pct)} % geschafft</span><span>Urlaub, Krank und Feiertage zählen voll mit</span></div>
+    ${acc ? `<div class="mt-3 text-[13px] rounded-[var(--rb)] px-3 py-2" style="background:var(--t-red)">${acc.used ? `${hm(acc.used)} Std. von den Überstunden abgezogen. ` : ''}${acc.minus ? `<b class="text-red-ink">${hm(acc.minus)} Minusstunden</b> (keine Überstunden mehr zum Verrechnen).` : ''}</div>` : ''}</div>`;
 }
 
 /* ---------- Erinnerung: Stundenzettel freitags übermitteln ---------- */
@@ -406,7 +419,7 @@ function viewHome() {
   const miss = Object.values(DAYS).filter(x => x.iso < iso && x.iso >= addDays(iso, -21) && calcDay(x).missingEnd).sort((a, b) => a.iso.localeCompare(b.iso));
   const missCard = miss.length ? `<div class="card p-4 mt-4 border-ember/50 flex flex-wrap items-center gap-3" style="background:var(--t-red)"><span class="text-ember">${ic('alert', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">Ausstempeln fehlt: ${miss.map(x => `<b>${wdOf(x.iso).slice(0, 2)}, ${deDate(x.iso)}</b>`).join(', ')} – bitte vom Admin korrigieren lassen.</div><a class="btn-s !h-9" href="#/woche/${mondayOf(miss[0].iso)}">Ansehen</a></div>` : '';
   const segs = (d.segs || []).map(s => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[14px]"><span class="w-2 h-2 rounded-full ${s.bis ? 'bg-ink3' : 'bg-p'}"></span><span class="flex-1 min-w-0 truncate">${esc(s.site || 'Ohne Baustelle')}</span><span class="mono text-ink2">${esc(s.von)}–${esc(s.bis || 'jetzt')}</span></div>`).join('');
-  const W = calcRange(weekOf(mondayOf(iso))), bal = balance(), vac = vacation();
+  const W = calcRange(weekOf(mondayOf(iso))), ACC = account(), bal = ACC.over, vac = vacation();
   const week = W.days.filter(x => x.c.soll > 0 || hasData(x.d)).map(x => `<a href="#/woche/${mondayOf(iso)}" class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px] ${x.d.iso === iso ? 'font-semibold' : ''}"><span class="w-24">${wdOf(x.d.iso).slice(0, 2)}, ${deDate(x.d.iso).slice(0, 6)}</span><span class="flex-1 text-ink3 truncate">${x.d.type !== 'work' ? typeName(x.d.type) : x.c.start ? `${x.c.start}–${x.c.end || '…'}` : '–'}</span><span class="mono w-14 text-right">${hm(x.c.netto + x.c.credit)}</span><span class="mono w-12 text-right text-ink3 text-[12px] whitespace-nowrap">/ ${hm(x.c.soll)}</span></a>`).join('');
   return `<section class="pt-6 sm:pt-10">
     ${reminderCard()}
@@ -423,12 +436,12 @@ function viewHome() {
         <div class="grid grid-cols-2 gap-2">${kpi('Arbeitszeit heute', hm(c.netto + c.credit), 'live-netto')}${kpi('Soll heute', hm(c.soll))}${kpi('Pause (abgezogen)', `${hm(c.abzug)}`, 'live-pause')}${kpi('Pause gestempelt', hm(c.pause))}</div>
         <p class="text-[12px] text-ink3 -mt-2">Heute werden mindestens ${dayPause(iso)} Min. Pause abgezogen – auch ohne gestempelte Pause; längere Pausen voll.</p>
         ${segs ? `<div class="card p-4"><div class="text-[13px] text-ink3 mb-1">Heute</div>${segs}${(d.geo || []).length ? `<div class="grid grid-cols-2 gap-2 mt-3">${d.geo.slice(-2).map(geoTile).join('')}</div>` : ''}</div>` : ''}
-        <div class="grid grid-cols-2 gap-2"><div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[26px] font-semibold mt-1 text-p">${overTxt(bal)}</div></div><a href="#/urlaub" class="kpi block"><div class="text-[12px] text-ink3">Resturlaub ${tNow().getFullYear()}</div><div class="text-[26px] font-semibold mt-1">${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span></div></a></div>
+        <div class="grid grid-cols-2 gap-2"><div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[26px] font-semibold mt-1 text-p">${overTxt(bal)}</div>${ACC.minus ? `<div class="text-[12px] text-red-ink mt-1">Minusstunden: ${hm(ACC.minus)}</div>` : ''}</div><a href="#/urlaub" class="kpi block"><div class="text-[12px] text-ink3">Resturlaub ${tNow().getFullYear()}</div><div class="text-[26px] font-semibold mt-1">${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span></div></a></div>
       </div>
     </div>
     <div class="mt-4">${weekCard(mondayOf(iso), true)}</div>
     <div class="card p-5 mt-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><h2 class="sec-t">Diese Woche</h2></div>${week || '<div class="text-ink3 text-[14px]">Noch keine Einträge.</div>'}
-      <div class="flex flex-wrap gap-2 mt-4"><a class="btn-s" href="#/woche">${ic('cal', 16)}Woche ansehen</a><button class="btn-p" data-a="send-week" data-mon="${mondayOf(iso)}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button></div></div>
+      <div class="flex flex-wrap gap-2 mt-4"><a class="btn-s" href="#/woche">${ic('cal', 16)}Woche ansehen</a><button class="btn-g" data-a="konto-edit">${ic('edit', 15)}Bestand einpflegen (Admin)</button><button class="btn-p" data-a="send-week" data-mon="${mondayOf(iso)}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button></div></div>
   </section>`;
 }
 
@@ -470,7 +483,7 @@ function viewWeek() {
     <div class="flex flex-wrap items-center gap-3"><h1 class="h-font text-[38px] sm:text-[48px] leading-none mr-auto">KW ${wk.w}</h1>
       <div class="flex items-center gap-1"><a class="btn-s !px-3" href="#/woche/${addDays(mon, -7)}" aria-label="Vorige Woche">${ic('chevL', 18)}</a><a class="btn-s" href="#/woche/${mondayOf(today)}">Heute</a><a class="btn-s !px-3" href="#/woche/${addDays(mon, 7)}" aria-label="Nächste Woche">${ic('chevR', 18)}</a></div></div>
     <p class="text-ink3 text-[14px] mt-2">${deDate(mon)} – ${deDate(addDays(mon, 6))} · ${esc(S.person.name || 'Name fehlt')}</p>
-    <div class="grid lg:grid-cols-[1fr_260px] gap-3 mt-5">${weekCard(mon)}${kpi('Überstunden gesamt', overTxt(balance()), '', 'text-p')}</div>
+    <div class="grid lg:grid-cols-[1fr_260px] gap-3 mt-5">${weekCard(mon)}<div class="kpi"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[22px] font-semibold mt-1 text-p">${overTxt(balance())}</div>${account().minus ? `<div class="text-[12px] text-red-ink mt-1">Minusstunden gesamt: ${hm(account().minus)}</div>` : ''}<button class="btn-g !h-8 !px-0 mt-2" data-a="konto-edit">${ic('edit', 14)}Bestand einpflegen</button></div></div>
     <div class="flex flex-wrap items-center gap-2 mt-5"><button class="btn-p" data-a="send-week" data-mon="${mon}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button><button class="btn-s" data-a="send-month" data-iso="${mon}">${ic('file', 16)}Monat ${MONTHS[+mon.slice(5, 7) - 1]}</button><span class="flex-1"></span>${lock}</div>
     <div class="space-y-3 mt-5">${cards}</div>
     ${Object.keys(W.sites).length ? `<div class="card p-5 mt-4"><h2 class="sec-t mb-3">Baustellen dieser Woche</h2>${Object.entries(W.sites).sort((a, b) => b[1] - a[1]).map(([k, m]) => `<div class="flex justify-between py-2 border-b border-line last:border-0 text-[14px]"><span>${esc(k)}</span><b class="mono">${hm(m)}</b></div>`).join('')}</div>` : ''}
@@ -508,6 +521,7 @@ function viewUrlaub() {
   return `<section class="pt-6 sm:pt-10"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Urlaub</h1>
     ${buList().filter(b => b.bis >= today).length ? `<div class="card p-4 mt-5 flex flex-wrap items-center gap-3" style="background:rgb(229,154,92,.12)"><span style="color:#C7792F">${ic('cal', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">${buList().filter(b => b.bis >= today).map(b => `<div><b>${esc(b.name || 'Betriebsurlaub')}</b>: ${deDate(b.von)} – ${deDate(b.bis)} · ${workDaysIn(b.von, b.bis).length} Arbeitstage${b.abzug === false ? ' (zählt nicht vom Urlaub)' : ''}</div>`).join('')}</div></div>` : ''}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi(`Anspruch ${y}`, `${v.total} Tage`)}${kpi('Genommen', `${v.taken} Tage`)}${kpi('Geplant', `${v.planned} Tage${v.betrieb ? ` <span class="text-[12px] text-ink3 font-normal">davon ${v.betrieb} Betriebsurl.</span>` : ''}`)}<div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Resturlaub</div><div class="text-[26px] font-semibold mt-1 text-p">${v.left} Tage</div></div></div>
+    <button class="btn-g mt-2" data-a="konto-edit">${ic('edit', 15)}Urlaub / Überstunden einpflegen (Admin)</button>
     <div class="grid lg:grid-cols-2 gap-4 mt-4">
       <div class="card p-5 sm:p-6"><h2 class="sec-t mb-1">Urlaub eintragen oder einreichen</h2><p class="text-ink3 text-[14px] mb-5">Wochenenden und Feiertage werden nicht mitgezählt.</p>
         <div class="grid grid-cols-2 gap-3"><label class="block"><span class="lbl">Von</span><input type="date" class="inp" data-vac="von" value="${esc(von)}"></label><label class="block"><span class="lbl">Bis</span><input type="date" class="inp" data-vac="bis" value="${esc(bis)}"></label></div>
@@ -546,7 +560,9 @@ function setBody() {
       ${ro ? '' : `<div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.3fr] gap-2 mt-3"><input type="date" class="inp" id="bu-von"><input type="date" class="inp" id="bu-bis"><input class="inp col-span-2 sm:col-span-1" id="bu-name" placeholder="Name, z. B. Brückentage" value="Betriebsurlaub"></div>
       <label class="flex items-center gap-2 text-[14px] text-ink2 mt-2"><input type="checkbox" id="bu-abzug" checked>vom Urlaubsanspruch abziehen</label><button class="btn-s mt-2" data-a="bu-add">${ic('plus', 16)}Betriebsurlaub hinzufügen</button>`}
       <p class="hint">Firmenvorgaben kommen automatisch mit jedem App-Update auf alle Handys. Zusätzliche Zeiträume hier gelten nur auf diesem Gerät.</p>
-      <h3 class="font-semibold mt-7 mb-3">Überstundenkonto</h3><div class="grid grid-cols-2 gap-4">${sIn('balance.from', 'Zählt ab', '', 'date', ro)}<label class="block"><span class="lbl">Startwert Überstunden (Std:Min, z. B. 12:30)</span><input class="inp" data-bal value="${esc(hm(S.balance.min || 0))}" ${ro ? 'disabled' : ''}></label></div><p class="hint">Aktuell: <b>${overTxt(balance())}</b> · Minusstunden werden nicht verrechnet (nicht bezahlt).</p>`; }
+      <h3 class="font-semibold mt-7 mb-3">Überstundenkonto</h3><div class="grid grid-cols-2 gap-4">${sIn('balance.from', 'Zählt ab', '', 'date', ro)}<label class="block"><span class="lbl">Startwert Überstunden (Std:Min, z. B. 12:30)</span><input class="inp" data-bal value="${esc(hm(S.balance.min || 0))}" ${ro ? 'disabled' : ''}></label></div><p class="hint">Aktuell: <b>${overTxt(balance())}</b>${account().minus ? ` · Minusstunden: ${hm(account().minus)}` : ''}. Fehlende Stunden werden zuerst von den Überstunden abgezogen, der Rest als Minusstunden ausgewiesen.</p>
+      <button class="btn-p mt-4" data-a="konto-edit">${ic('edit', 16)}Bestand einpflegen</button>
+      ${(S.kontoLog || []).length ? `<h3 class="font-semibold mt-7 mb-2">Änderungsprotokoll</h3><div class="space-y-1">${S.kontoLog.slice().reverse().slice(0, 15).map(l => `<div class="text-[12px] text-ink3"><b class="text-ink2">${new Date(l.at).toLocaleString('de-DE')}</b> · ${esc(l.what)}</div>`).join('')}</div>` : ''}`; }
     case 'firma': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('company.name', 'Firmenname')}${sIn('company.phone', 'Telefon')}${sIn('company.street', 'Straße')}${sIn('company.city', 'PLZ und Ort')}</div>
       <div class="mt-6"><span class="lbl">Logo (App und PDF)</span><div class="flex flex-wrap items-center gap-3">${S.company.logo ? `<span class="rounded-[var(--rb)] bg-white p-3 border border-line"><img src="${esc(S.company.logo)}" class="h-14" alt=""></span>` : '<span class="text-ink3 text-[14px]">Kein Logo</span>'}
         <label class="btn-s cursor-pointer">${ic('upload', 16)}Logo wählen<input type="file" accept="image/*" class="hidden" data-logo></label>${S.company.logo !== 'logo.png' ? '<button class="btn-g" data-a="logo-reset">Standard-Logo</button>' : ''}</div></div>`;
@@ -744,6 +760,8 @@ document.addEventListener('click', async e => {
     case 'sick-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Krank', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'sick-tell': tellSick(); break;
     case 'ics': icsReminder(); break;
+    case 'konto-edit': if (await needEdit()) kontoDialog(); break;
+    case 'konto-save': kontoSave(); break;
     case 'cal': UI.calM = a.dataset.v; rerender(); break;
     case 'bu-add': { if (!(await needEdit())) return; const von = $('#bu-von').value, bis = $('#bu-bis').value; if (!von || !bis || bis < von) return toast('Bitte Von und Bis angeben.', 'warn'); S.bu = (S.bu || []).concat({ name: $('#bu-name').value.trim() || 'Betriebsurlaub', von, bis, abzug: $('#bu-abzug').checked }); saveSettings(); toast('Betriebsurlaub eingetragen.'); rerender(); break; }
     case 'bu-del': { if (!(await needEdit())) return; S.bu.splice(+a.dataset.i, 1); saveSettings(); rerender(); break; }
@@ -801,6 +819,35 @@ document.addEventListener('change', async e => {
   if (el.matches('[data-logo]') && el.files && el.files[0]) { const im = await shrinkImage(el.files[0], 700, 0.92, 'image/png'); S.company.logo = im.data; saveSettings(); render(); toast('Logo gespeichert.'); return; }
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
+
+/* ---------- Bestand einpflegen (nur mit Admin-Passwort) ---------- */
+function kontoDialog() {
+  const y = tNow().getFullYear(), v = S.vacation, b = S.balance;
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Bestand einpflegen</h3><p class="text-ink3 text-[14px] mt-1">Für ${esc(S.person.name || 'diesen Mitarbeiter')}. Alle Änderungen werden protokolliert.</p>
+    <div class="space-y-4 mt-5">
+      <div class="rounded-[var(--r)] border border-line2 p-4"><div class="font-semibold text-[15px] mb-3">Überstunden</div><div class="grid grid-cols-2 gap-3">
+        <label class="block"><span class="lbl">Bestand (Std:Min)</span><input class="inp" id="k-over" inputmode="text" value="${esc(hm(b.min || 0))}" placeholder="z. B. 12:30"></label>
+        <label class="block"><span class="lbl">Stand zum Montag</span><input class="inp" type="date" id="k-from" value="${esc(b.from || mondayOf(isoToday()))}"></label></div>
+        <p class="hint">Ab diesem Montag rechnet die App weiter (vorherige Wochen zählen nicht mehr).</p></div>
+      <div class="rounded-[var(--r)] border border-line2 p-4"><div class="font-semibold text-[15px] mb-3">Urlaub ${y}</div><div class="grid grid-cols-3 gap-3">
+        <label class="block"><span class="lbl">Anspruch / Jahr</span><input class="inp" id="k-per" inputmode="numeric" value="${esc(v.perYear)}"></label>
+        <label class="block"><span class="lbl">Rest Vorjahr</span><input class="inp" id="k-carry" inputmode="numeric" value="${esc(v.carry)}"></label>
+        <label class="block"><span class="lbl">schon genommen</span><input class="inp" id="k-taken" inputmode="numeric" value="${esc(+v.year === y ? v.takenBefore : 0)}"></label></div>
+        <p class="hint">„Schon genommen“ = Urlaubstage ${y}, die nicht in der App eingetragen sind.</p></div>
+    </div><button class="btn-p w-full mt-5" data-a="konto-save">${ic('check', 16)}Speichern</button>`, { wide: false });
+}
+function kontoSave() {
+  const m = /^\s*(\d+)(?::(\d{1,2}))?\s*$/.exec($('#k-over').value); if (!m) return toast('Überstunden bitte als Std:Min eingeben, z. B. 12:30', 'warn');
+  const over = +m[1] * 60 + (+m[2] || 0), from = $('#k-from').value || mondayOf(isoToday()), per = +$('#k-per').value || 0, carry = +$('#k-carry').value || 0, taken = +$('#k-taken').value || 0, y = tNow().getFullYear();
+  const ch = [];
+  if (over !== +S.balance.min || from !== S.balance.from) ch.push(`Überstunden-Bestand ${hm(S.balance.min || 0)} → ${hm(over)} (ab ${deDate(mondayOf(from))})`);
+  if (per !== +S.vacation.perYear) ch.push(`Urlaubsanspruch ${S.vacation.perYear} → ${per}`);
+  if (carry !== +S.vacation.carry) ch.push(`Resturlaub Vorjahr ${S.vacation.carry} → ${carry}`);
+  if (taken !== (+S.vacation.year === y ? +S.vacation.takenBefore : 0)) ch.push(`schon genommen ${y}: ${taken} Tage`);
+  S.balance = { from: mondayOf(from), min: over }; S.vacation = { ...S.vacation, perYear: per, carry, takenBefore: taken, year: y };
+  if (ch.length) S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: ch.join(' · ') + (DEVICE.admin ? ' (Admin-Gerät)' : ' (Passwort)') });
+  saveSettings(); closeModal(); toast(ch.length ? 'Bestand gespeichert.' : 'Keine Änderung.'); rerender();
+}
 
 /* ---------- Krank melden ---------- */
 function tellSick() {
@@ -979,9 +1026,9 @@ async function buildPdf(isos, label) {
   }
   /* Summen */
   y += 3; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 24, 2, 2, 'F');
-  const vac = vacation(+isos[0].slice(0, 4)), bal = balance(), mons = [...new Set(isos.map(mondayOf))], wover = mons.reduce((a, m) => a + weekStat(m).over, 0);
-  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden (über ' + hm(weekTarget()) + ' / Woche)', wover ? '+' + hm(wover) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], ['Urlaub / Krank', `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
-  tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(v.startsWith('+') ? GREEN : INK)); doc.text(T(v), cx, cy + 4.6); });
+  const vac = vacation(+isos[0].slice(0, 4)), mons = [...new Set(isos.map(mondayOf))], ACC = account(mons[mons.length - 1]), bal = ACC.over, wover = mons.reduce((a, m) => a + weekStat(m).over, 0), wused = mons.reduce((a, m) => a + ((ACC.weeks[m] || {}).used || 0), 0), wminus = mons.reduce((a, m) => a + ((ACC.weeks[m] || {}).minus || 0), 0);
+  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden (über ' + hm(weekTarget()) + ' / Woche)', wover ? '+' + hm(wover) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], [wminus ? 'Minusstunden' : wused ? 'Von Überstunden abgezogen' : 'Urlaub / Krank', wminus ? '-' + hm(wminus) : wused ? '-' + hm(wused) : `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
+  tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(v.startsWith('+') ? GREEN : v.startsWith('-') && k === 'Minusstunden' ? RED : INK)); doc.text(T(v), cx, cy + 4.6); });
   y += 30;
   /* Baustellen-Summen */
   const sites = Object.entries(R.sites).sort((a, b) => b[1] - a[1]);
@@ -995,7 +1042,7 @@ async function buildPdf(isos, label) {
   /* Hinweis und Unterschriften */
   if (y > H - 45) { doc.addPage(); header(); }
   doc.setFontSize(7.8); doc.setTextColor(...GRAY);
-  doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag wird die Mindestpause abgezogen (Mo-Do ${S.hours[1].pause} Min., Fr ${S.hours[5].pause} Min.)${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; Überstunden = Wochenstunden über ${hm(weekTarget())}; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Minusstunden werden nicht verrechnet. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet; Stempelzeiten kommen vom Server, ohne Internet gestempelte Zeiten sind als "offline" markiert. Standorte je Stempel mit Kartenausschnitt auf der Seite "Standorte".`), CW), M, y + 2);
+  doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag wird die Mindestpause abgezogen (Mo-Do ${S.hours[1].pause} Min., Fr ${S.hours[5].pause} Min.)${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; Überstunden = Wochenstunden über ${hm(weekTarget())}; fehlende Stunden werden von den Überstunden abgezogen, der Rest als Minusstunden ausgewiesen; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet; Stempelzeiten kommen vom Server, ohne Internet gestempelte Zeiten sind als "offline" markiert. Standorte je Stempel mit Kartenausschnitt auf der Seite "Standorte".`), CW), M, y + 2);
   y = Math.max(y + 16, H - 38);
   const bw = (CW - 12) / 2;
   [['Mitarbeiter', S.person.name], ['Geprüft', S.recipient.name]].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });

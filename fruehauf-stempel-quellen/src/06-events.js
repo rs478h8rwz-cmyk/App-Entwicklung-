@@ -152,6 +152,8 @@ document.addEventListener('click', async e => {
     case 'sick-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Krank', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'sick-tell': tellSick(); break;
     case 'ics': icsReminder(); break;
+    case 'konto-edit': if (await needEdit()) kontoDialog(); break;
+    case 'konto-save': kontoSave(); break;
     case 'cal': UI.calM = a.dataset.v; rerender(); break;
     case 'bu-add': { if (!(await needEdit())) return; const von = $('#bu-von').value, bis = $('#bu-bis').value; if (!von || !bis || bis < von) return toast('Bitte Von und Bis angeben.', 'warn'); S.bu = (S.bu || []).concat({ name: $('#bu-name').value.trim() || 'Betriebsurlaub', von, bis, abzug: $('#bu-abzug').checked }); saveSettings(); toast('Betriebsurlaub eingetragen.'); rerender(); break; }
     case 'bu-del': { if (!(await needEdit())) return; S.bu.splice(+a.dataset.i, 1); saveSettings(); rerender(); break; }
@@ -209,6 +211,35 @@ document.addEventListener('change', async e => {
   if (el.matches('[data-logo]') && el.files && el.files[0]) { const im = await shrinkImage(el.files[0], 700, 0.92, 'image/png'); S.company.logo = im.data; saveSettings(); render(); toast('Logo gespeichert.'); return; }
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
+
+/* ---------- Bestand einpflegen (nur mit Admin-Passwort) ---------- */
+function kontoDialog() {
+  const y = tNow().getFullYear(), v = S.vacation, b = S.balance;
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Bestand einpflegen</h3><p class="text-ink3 text-[14px] mt-1">Für ${esc(S.person.name || 'diesen Mitarbeiter')}. Alle Änderungen werden protokolliert.</p>
+    <div class="space-y-4 mt-5">
+      <div class="rounded-[var(--r)] border border-line2 p-4"><div class="font-semibold text-[15px] mb-3">Überstunden</div><div class="grid grid-cols-2 gap-3">
+        <label class="block"><span class="lbl">Bestand (Std:Min)</span><input class="inp" id="k-over" inputmode="text" value="${esc(hm(b.min || 0))}" placeholder="z. B. 12:30"></label>
+        <label class="block"><span class="lbl">Stand zum Montag</span><input class="inp" type="date" id="k-from" value="${esc(b.from || mondayOf(isoToday()))}"></label></div>
+        <p class="hint">Ab diesem Montag rechnet die App weiter (vorherige Wochen zählen nicht mehr).</p></div>
+      <div class="rounded-[var(--r)] border border-line2 p-4"><div class="font-semibold text-[15px] mb-3">Urlaub ${y}</div><div class="grid grid-cols-3 gap-3">
+        <label class="block"><span class="lbl">Anspruch / Jahr</span><input class="inp" id="k-per" inputmode="numeric" value="${esc(v.perYear)}"></label>
+        <label class="block"><span class="lbl">Rest Vorjahr</span><input class="inp" id="k-carry" inputmode="numeric" value="${esc(v.carry)}"></label>
+        <label class="block"><span class="lbl">schon genommen</span><input class="inp" id="k-taken" inputmode="numeric" value="${esc(+v.year === y ? v.takenBefore : 0)}"></label></div>
+        <p class="hint">„Schon genommen“ = Urlaubstage ${y}, die nicht in der App eingetragen sind.</p></div>
+    </div><button class="btn-p w-full mt-5" data-a="konto-save">${ic('check', 16)}Speichern</button>`, { wide: false });
+}
+function kontoSave() {
+  const m = /^\s*(\d+)(?::(\d{1,2}))?\s*$/.exec($('#k-over').value); if (!m) return toast('Überstunden bitte als Std:Min eingeben, z. B. 12:30', 'warn');
+  const over = +m[1] * 60 + (+m[2] || 0), from = $('#k-from').value || mondayOf(isoToday()), per = +$('#k-per').value || 0, carry = +$('#k-carry').value || 0, taken = +$('#k-taken').value || 0, y = tNow().getFullYear();
+  const ch = [];
+  if (over !== +S.balance.min || from !== S.balance.from) ch.push(`Überstunden-Bestand ${hm(S.balance.min || 0)} → ${hm(over)} (ab ${deDate(mondayOf(from))})`);
+  if (per !== +S.vacation.perYear) ch.push(`Urlaubsanspruch ${S.vacation.perYear} → ${per}`);
+  if (carry !== +S.vacation.carry) ch.push(`Resturlaub Vorjahr ${S.vacation.carry} → ${carry}`);
+  if (taken !== (+S.vacation.year === y ? +S.vacation.takenBefore : 0)) ch.push(`schon genommen ${y}: ${taken} Tage`);
+  S.balance = { from: mondayOf(from), min: over }; S.vacation = { ...S.vacation, perYear: per, carry, takenBefore: taken, year: y };
+  if (ch.length) S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: ch.join(' · ') + (DEVICE.admin ? ' (Admin-Gerät)' : ' (Passwort)') });
+  saveSettings(); closeModal(); toast(ch.length ? 'Bestand gespeichert.' : 'Keine Änderung.'); rerender();
+}
 
 /* ---------- Krank melden ---------- */
 function tellSick() {
