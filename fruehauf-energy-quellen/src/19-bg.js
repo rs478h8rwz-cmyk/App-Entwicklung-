@@ -38,8 +38,12 @@ document.addEventListener('visibilitychange', () => document.documentElement.cla
 document.addEventListener('focusout', () => setTimeout(() => {
   const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
   if (window.visualViewport && (visualViewport.offsetTop || visualViewport.pageTop !== window.scrollY)) window.scrollTo(window.scrollX, window.scrollY);
-  if ($('#roof-ed')) window.scrollTo(0, 0);
+  if ($('#roof-ed')) { const y = RS ? RS.scrollY || 0 : 0; window.scrollTo(0, y + 1); window.scrollTo(0, y); }
 }, 80));
+if (window.visualViewport) visualViewport.addEventListener('resize', () => {
+  const a = document.activeElement; if (!$('#roof-ed') || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return;
+  if (visualViewport.offsetTop) { const y = RS ? RS.scrollY || 0 : 0; window.scrollTo(0, y); }
+});
 
 
 /* Einstellungen → Ansicht: Tastatur-Hilfe (zum Eingrenzen auf dem iPad) */

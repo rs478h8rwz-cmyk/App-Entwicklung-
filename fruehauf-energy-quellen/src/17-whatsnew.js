@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.13', date: '2026-11-09', items: [
+    ['kbd', 'Knöpfe im Modulplan nach der Tastatur', 'Behoben: Nach einer Eingabe im Modulplan trafen Tipps auf dem iPad den falschen Knopf (z. B. „Auswählen“ statt „Wie auf dem Foto“).']
+  ] },
   { version: '2.12', date: '2026-11-09', items: [
     ['kbd', 'Alles wieder an', 'Die Tastatur-Probleme lagen am iPad (ein Neustart hilft). Deshalb sind ABC-Knopf, bewegter Hintergrund und Startanimation auch auf dem iPad wieder an, ebenso die feste Ansicht im Modulplan. Test-Schalter wurden zurückgesetzt.']
   ] },
