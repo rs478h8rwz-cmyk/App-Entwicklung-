@@ -150,7 +150,7 @@ function quickHTML() {
   ${sec(4, 'Ergebnis & Wärmepumpe', `<div id="q-result">${qResultHTML(r)}</div>`)}
   </div>
   <div class="flex flex-col sm:flex-row gap-3 mt-6">${QPID
-    ? `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-apply">${ic('check', 17)}Werte übernehmen</button>`
+    ? `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-apply">${ic('check', 17)}${(findProject(QPID) || {}).type === 'pv' ? 'Als PV + Wärmepumpe übernehmen' : 'Werte übernehmen'}</button>`
     : `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="wp">${ic('fan', 17)}Als Wärmepumpe anlegen</button><button class="btn-s w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="pvwp">${ic('sun', 17)}Als PV + Wärmepumpe anlegen</button>`}</div>`;
 }
 function qLoadFrom() { return isNum(QS.load) && QS.load > 0 ? '' : QS.calcOpen && isNum(qMethodLoad()) ? '(aus „Heizlast berechnen“)' : ''; }
@@ -208,7 +208,7 @@ function quickApplyTo(p) {
 function quickCard(p) {
   if (!p.quick) return `<div class="mb-4 flex flex-wrap items-center gap-2 text-[13px] text-ink3">Leistung noch unklar?<button class="btn-g !h-8 !px-2.5 text-[13px] text-p" data-a="quick-redo" data-id="${p.id}">${ic('fan', 15)}Schnellauslegung</button></div>`;
   const q = p.quick, st = q.state || {};
-  const facts = q.v === 2 ? [st.build === 'neu' ? 'Neubau' : 'Bestand', st.art === 'mfh' ? 'Mehrfamilienhaus' : 'Einfamilienhaus', qInsul(st.insul)[1], `Normaußentemp. ${num(q.te, 1)} °C`, `${st.persons} Personen`, (QH.flow.find(f => f[0] === +st.flow) || [0, ''])[1]].join(' · ') : `${num(q.area)} m² · ${num(q.persons)} Personen`;
+  const facts = q.v === 2 ? [st.build === 'neu' ? 'Neubau' : 'Bestand', st.art === 'mfh' ? 'Mehrfamilienhaus' : 'Einfamilienhaus', qInsul(st.insul)[1], `Normaußentemp. ${num(q.te, 1)} °C`, `${st.persons} Personen`, (st.hsys === 'fbh' ? 'Fußbodenheizung' : st.hsys === 'both' ? 'Heizkörper + Fußbodenheizung' : 'Heizkörper')].join(' · ') : `${num(q.area)} m² · ${num(q.persons)} Personen`;
   return `<div class="mb-5 rounded-[calc(var(--r)-4px)] border border-p/30 p-4" style="background:rgb(var(--p-rgb)/.06)"><div class="flex flex-wrap items-center justify-between gap-2"><div class="text-[14px] font-semibold flex items-center gap-2"><span class="text-p">${ic('fan', 17)}</span>Schnellauslegung vom ${deDate(q.date)}</div><button class="btn-g !h-8 !px-2.5 text-[13px]" data-a="quick-redo" data-id="${p.id}">${ic('refresh', 14)}Neu auslegen</button></div>
   <div class="text-[13px] text-ink2 mt-1.5">${esc(facts)}</div><div class="text-[12px] mt-1.5 font-medium" style="color:#C7792F">Grobe Schätzung – die tatsächliche Heizlast ergibt erst eine vollständige Heizlastberechnung (DIN EN 12831).</div>
   <div class="text-[14px] mt-1.5">Heizlast <b>${num(q.total ?? q.load, 2)} kW</b>${q.prod ? ` · Wärmepumpe <b class="text-p">${esc(q.prod)}</b>` : ` · empfohlen <b class="text-p">${num(q.total, 1)} kW</b>`}${isNum(q.bv) ? ` · Bivalenzpunkt ${num(q.bv, 1)} °C · Deckung ${num(q.deck, 1)} %` : ''} · JAZ ca. <b>${num(q.jaz, 2)}</b></div></div>`;
@@ -269,8 +269,8 @@ document.addEventListener('click', async e => {
       quickApplyTo(np); PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`);
       toast(`Schnellauslegung übernommen: ${num(np.hp.kw, 1)} kW, JAZ ${num(np.hp.jaz, 2)}.`);
     } else {
-      const p = findProject(QPID); if (!p) return; quickApplyTo(p); saveProject(p); closeModal(); render();
-      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}.`);
+      const p = findProject(QPID); if (!p) return; const was = p.type; if (p.type === 'pv') p.type = 'pvwp'; quickApplyTo(p); saveProject(p); closeModal(); render();
+      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}.` + (was === 'pv' ? ' Kunde ist jetzt PV + Wärmepumpe.' : ''));
     }
   }
 });
@@ -489,4 +489,21 @@ function quickTechCard(p) {
 {
   const _ppr = preparePrintRoot;
   preparePrintRoot = async function () { try { await loadFiles(PRODUCTS.filter(x => x.cat === 'wp').map(x => x.img)); } catch (e) {} return _ppr.apply(this, arguments); };
+}
+
+/* Reine PV-Kunden (z. B. nach dem Modulplan): Schnellauslegung trotzdem anbieten – Übernahme macht daraus PV + Wärmepumpe */
+function quickPvOffer(p, small) {
+  if (hasWP(p)) return '';
+  return `<div class="${small ? 'mb-4' : 'mt-6'} rounded-[calc(var(--r)-4px)] border border-p/30 p-4 flex flex-wrap items-center gap-3" style="background:rgb(var(--p-rgb)/.06)"><div class="text-p shrink-0">${ic('fan', 22)}</div><div class="flex-1 min-w-[200px]"><div class="font-semibold text-[15px]">Auch eine Wärmepumpe?</div><div class="text-[13px] text-ink3">Schnellauslegung jederzeit möglich – beim Übernehmen wird der Kunde zu „PV + Wärmepumpe“, Modulplan und PV-Daten bleiben erhalten.</div></div><button class="btn-s !h-10" data-a="quick-redo" data-id="${p.id}">${ic('fan', 16)}Schnellauslegung</button></div>`;
+}
+
+/* Kundenübersicht: noch offene Schritte direkt anwählbar (verschwinden, sobald erledigt) */
+function custTodo(p) {
+  if (p.archived) return '';
+  const quickDone = (p.quick && p.quick.v === 2) || p.docs.some(d => d.role === 'tech');
+  const roofDone = p.roof && p.roof.faces && p.roof.faces.some(f => f.mods && f.mods.length);
+  const b = [];
+  if (!quickDone) b.push(`<button class="btn-s !h-9 !px-3 text-[13px] flex-1" data-a="quick-redo" data-id="${p.id}">${ic('fan', 15)}Schnellauslegung</button>`);
+  if (!roofDone && typeof roofOk === 'function' && roofOk()) b.push(`<button class="btn-s !h-9 !px-3 text-[13px] flex-1" data-a="roof-open" data-id="${p.id}">${ic('grid', 15)}Modulbelegung</button>`);
+  return b.length ? `<div class="flex flex-wrap gap-2 mt-3">${b.join('')}</div>` : '';
 }

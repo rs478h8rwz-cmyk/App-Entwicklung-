@@ -506,6 +506,7 @@ async function roofApply(p) {
   const by = {}; let n = 0, kwp = 0;
   for (const f of p.roof.faces) { const pr = roofProd(f); n += f.mods.length; kwp += faceKwp(f); if (pr.id) by[pr.id] = (by[pr.id] || 0) + f.mods.length; }
   if (!n) return;
+  if (p.type === 'wp') p.type = 'pvwp';
   p.pv.kwp = Math.round(kwp * 1000) / 1000;
   const pr0 = roofProd(p.roof.faces.find(f => f.mods.length) || p.roof.faces[0]);
   p.pv.modules = `${n} × ${num(pr0.power)} W`;

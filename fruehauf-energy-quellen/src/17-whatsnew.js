@@ -13,6 +13,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.15', date: '2026-11-09', items: [
+    ['quick', 'Schnellauslegung bei jedem Kunden', 'Auch bei reinen PV-Kunden (z. B. nach dem Modulplan) gibt es jetzt „Auch eine Wärmepumpe? – Schnellauslegung“. Beim Übernehmen wird der Kunde zu PV + Wärmepumpe; Modulplan und PV-Daten bleiben erhalten.'],
+    ['modplace', 'Direkt aus der Kundenübersicht', 'Jede Kundenkarte zeigt „Schnellauslegung“ und „Modulbelegung“, solange sie noch nicht gemacht sind. Eine Modulbelegung bei einem reinen Wärmepumpen-Kunden macht ihn zu PV + Wärmepumpe.'],
+    ['quick', 'Auslegungs-Übersicht repariert', 'Behoben: Die Zusammenfassung „Schnellauslegung vom …“ im Wärmepumpen-Bereich konnte einen Fehler auslösen.']
+  ] },
   { version: '2.14', date: '2026-11-09', items: [
     ['modplace', 'Zwei-Finger-Zoom im Modulplan', 'Behoben: Nach dem Zoomen im Dachbild mit zwei Fingern trafen Tipps im Menü rechts den falschen Knopf. Der Zoom bleibt jetzt im Bild, die Seite selbst bleibt immer bei 100 %.']
   ] },

@@ -2274,6 +2274,7 @@ function customerCard(p) {
       <div class="min-w-0 flex-1"><div class="font-semibold text-[16px] truncate">${esc(c.name ? (c.salutation && c.salutation !== 'Firma' ? '' : '') + c.name : 'Neuer Kunde')}</div><div class="text-[13px] text-ink3 truncate">${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Noch keine Anschrift')}</div>
       <div class="flex flex-wrap gap-1.5 mt-2">${typeBadge(p.type)}${statusBadge(p.status)}${p.archived ? '<span class="badge bg-bg text-ink3 border border-line">Archiv</span>' : ''}${nd ? `<span class="badge bg-bg text-ink3 border border-line">${ic('file', 12)} ${nd} ${nd === 1 ? 'Dokument' : 'Dokumente'}</span>` : ''}${p.offer.number ? `<span class="badge bg-bg text-ink3 border border-line">Nr. ${esc(p.offer.number)}</span>` : ''}</div></div></div>
       <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-line text-[12px]"><div><div class="text-ink3 mono text-[11px]">Investition</div><div class="font-semibold text-[14px] text-ink mt-0.5">${R.gross ? eur(R.gross) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Ersparnis/Jahr</div><div class="font-semibold text-[14px] text-p mt-0.5">${R.gross || R.saving1 ? eur(R.avg) : '–'}</div></div><div><div class="text-ink3 mono text-[11px]">Stand</div><div class="font-bold text-[13px] text-ink2 mt-0.5">${new Date(p.updated).toLocaleDateString('de-DE')}</div></div></div>
+      ${typeof custTodo === 'function' ? custTodo(p) : ''}
       <div class="flex flex-wrap gap-1 mt-3 -mb-1 -mx-2"><button class="btn-g" data-a="dup" data-id="${p.id}">${ic('copy', 15)}Duplizieren</button>${p.archived ? `<button class="btn-g !text-p" data-a="unarchive" data-id="${p.id}">${ic('refresh', 15)}Wiederherstellen</button><button class="btn-g hover:!text-ember2" data-a="del" data-id="${p.id}">${ic('trash', 15)}Löschen</button>` : `<button class="btn-g" data-a="archive" data-id="${p.id}">${ic('db', 15)}Archivieren</button><span class="ml-auto btn-g !text-p">Öffnen ${ic('arrowR', 15)}</span>`}</div>
       ${!p.archived && p.status !== 'unterschrieben' && !(p.sign && p.sign.cust) ? `<button class="btn-s w-full mt-3" data-a="won" data-id="${p.id}">${ic('pen', 16)}Auftrag gewonnen? Jetzt unterschreiben</button>` : ''}</div>`;
   }
@@ -2416,6 +2417,7 @@ function step1(p) {
   return `<div class="card p-5 sm:p-6">${cardHead('upload', 'Angebot und Unterlagen', 'Wir lesen Kunde, Preise und Anlagendaten automatisch aus. Ihre Dateien bleiben auf diesem Gerät.')}
     ${zones}${offerDocs.length ? `<div class="space-y-3 mt-4">${offerDocs.map(d => docCard(p, d)).join('')}</div>` : ''}
     ${typeof roofSnapCard === 'function' ? roofSnapCard(p) : ''}
+    ${typeof quickPvOffer === 'function' ? quickPvOffer(p) : ''}
     ${hasWP(p) ? `<div class="mt-6">${p.quick && p.quick.v === 2 && !techDocs.length ? `<div class="font-semibold text-[15px] mb-1">Wärmepumpen-Auslegung</div>${quickTechCard(p)}` : `<div class="font-semibold text-[15px] mb-1">Technische Unterlagen</div><p class="text-[13px] text-ink3 mb-3">Optional, mehrere Dateien möglich – z. B. Heizlastberechnung, Wolf-Auslegung, JAZ-Berechnung oder Datenblatt. Bei langen Unterlagen wählen wir die relevanten Seiten vor.</p>${dropZone('tech', 'Technische Unterlagen hinzufügen', 'Heizlastberechnung, Wolf-Auslegung, Datenblatt', true)}${techDocs.length ? '' : `<div class="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-ink3">Keine Auslegung vorhanden?<button class="btn-g !h-9 !px-3 text-[13px] text-p" data-a="quick-redo" data-id="${p.id}">${ic('fan', 15)}Schnellauslegung machen</button></div>`}`}${techDocs.length ? `<div class="space-y-3 mt-4">${techDocs.map(d => docCard(p, d)).join('')}</div>` : ''}</div>` : ''}
     <div class="mt-5 text-right"><button class="text-p font-bold text-[14px] hover:underline" data-a="step" data-n="2">Ohne Angebot fortfahren →</button></div></div>
     ${recognizedCard(p)}${productsRecCard(p)}`;
@@ -2473,7 +2475,7 @@ function step3(p, R) {
         ${p.rod && p.rod.on ? `<div class="grid sm:grid-cols-3 gap-4 mt-4">${field('Bezeichnung', 'p:rod.name', { ph: S.calc.rodName })}${field('Leistung', 'p:rod.kw', { t: 'n', unit: 'kW', ph: num(S.calc.rodKw, 1) })}${sel('Sommerbetrieb', 'p:rod.months', [[3, 'Juni bis August'], [4, 'Mai bis August'], [5, 'Mai bis September'], [6, 'Mai bis Oktober']], { t: 'y' })}</div>` : ''}</div>` : ''}</div>`;
   }
   if (hasPV(p)) {
-    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}${typeof roofCard === 'function' ? roofCard(p) : ''}
+    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}${typeof roofCard === 'function' ? roofCard(p) : ''}${typeof quickPvOffer === 'function' ? quickPvOffer(p, true) : ''}
       <div class="grid sm:grid-cols-2 gap-4">${field('Anlagenleistung', 'p:pv.kwp', { t: 'n', unit: 'kWp', hint: p.pv.modules ? esc(p.pv.modules) : '' })}${field('Batteriespeicher', 'p:pv.bat', { t: 'n', unit: 'kWh', ph: '0' })}</div>
       ${det('pv-maker', 'Hersteller & Garantien', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Module (Hersteller / Typ)', 'p:pv.modMaker', { ph: 'z. B. Winaico WST-BKX54' })}${field('Garantie Module', 'p:pv.modWarranty', { ph: 'z. B. 30 Jahre Produkt- und Leistungsgarantie' })}${field('Speicher (Hersteller / Typ)', 'p:pv.batMaker', { ph: 'z. B. EcoFlow Ocean 2' })}${field('Garantie Speicher', 'p:pv.batWarranty', { ph: 'z. B. 15 Jahre Produktgarantie' })}${field('Wechselrichter (Hersteller / Typ)', 'p:pv.invMaker')}${field('Garantie Wechselrichter', 'p:pv.invWarranty')}</div><p class="hint">Wird aus dem Angebot übernommen und erscheint im Kundendokument.</p>`, [p.pv.modMaker, p.pv.batMaker].filter(Boolean).map(esc).join(' · '))}
       ${roofsCard(p, R)}
@@ -4009,7 +4011,7 @@ async function saveSignature(p, auto) {
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
   ['download', '1 · Als App installieren', 'Legen Sie die App auf den Home-Bildschirm – iPhone: Teilen → „Zum Home-Bildschirm“, Android: Menü ⋮ → „App installieren“. So startet sie schneller, läuft offline und Ihre Daten sind geschützt.'],
-  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe.'],
+  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
@@ -4197,7 +4199,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261109054805';
+const APP_VERSION = '20261109070229';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4614,6 +4616,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.15', date: '2026-11-09', items: [
+    ['quick', 'Schnellauslegung bei jedem Kunden', 'Auch bei reinen PV-Kunden (z. B. nach dem Modulplan) gibt es jetzt „Auch eine Wärmepumpe? – Schnellauslegung“. Beim Übernehmen wird der Kunde zu PV + Wärmepumpe; Modulplan und PV-Daten bleiben erhalten.'],
+    ['modplace', 'Direkt aus der Kundenübersicht', 'Jede Kundenkarte zeigt „Schnellauslegung“ und „Modulbelegung“, solange sie noch nicht gemacht sind. Eine Modulbelegung bei einem reinen Wärmepumpen-Kunden macht ihn zu PV + Wärmepumpe.'],
+    ['quick', 'Auslegungs-Übersicht repariert', 'Behoben: Die Zusammenfassung „Schnellauslegung vom …“ im Wärmepumpen-Bereich konnte einen Fehler auslösen.']
+  ] },
   { version: '2.14', date: '2026-11-09', items: [
     ['modplace', 'Zwei-Finger-Zoom im Modulplan', 'Behoben: Nach dem Zoomen im Dachbild mit zwei Fingern trafen Tipps im Menü rechts den falschen Knopf. Der Zoom bleibt jetzt im Bild, die Seite selbst bleibt immer bei 100 %.']
   ] },
@@ -5611,7 +5618,7 @@ function quickHTML() {
   ${sec(4, 'Ergebnis & Wärmepumpe', `<div id="q-result">${qResultHTML(r)}</div>`)}
   </div>
   <div class="flex flex-col sm:flex-row gap-3 mt-6">${QPID
-    ? `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-apply">${ic('check', 17)}Werte übernehmen</button>`
+    ? `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-apply">${ic('check', 17)}${(findProject(QPID) || {}).type === 'pv' ? 'Als PV + Wärmepumpe übernehmen' : 'Werte übernehmen'}</button>`
     : `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="wp">${ic('fan', 17)}Als Wärmepumpe anlegen</button><button class="btn-s w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="pvwp">${ic('sun', 17)}Als PV + Wärmepumpe anlegen</button>`}</div>`;
 }
 function qLoadFrom() { return isNum(QS.load) && QS.load > 0 ? '' : QS.calcOpen && isNum(qMethodLoad()) ? '(aus „Heizlast berechnen“)' : ''; }
@@ -5669,7 +5676,7 @@ function quickApplyTo(p) {
 function quickCard(p) {
   if (!p.quick) return `<div class="mb-4 flex flex-wrap items-center gap-2 text-[13px] text-ink3">Leistung noch unklar?<button class="btn-g !h-8 !px-2.5 text-[13px] text-p" data-a="quick-redo" data-id="${p.id}">${ic('fan', 15)}Schnellauslegung</button></div>`;
   const q = p.quick, st = q.state || {};
-  const facts = q.v === 2 ? [st.build === 'neu' ? 'Neubau' : 'Bestand', st.art === 'mfh' ? 'Mehrfamilienhaus' : 'Einfamilienhaus', qInsul(st.insul)[1], `Normaußentemp. ${num(q.te, 1)} °C`, `${st.persons} Personen`, (QH.flow.find(f => f[0] === +st.flow) || [0, ''])[1]].join(' · ') : `${num(q.area)} m² · ${num(q.persons)} Personen`;
+  const facts = q.v === 2 ? [st.build === 'neu' ? 'Neubau' : 'Bestand', st.art === 'mfh' ? 'Mehrfamilienhaus' : 'Einfamilienhaus', qInsul(st.insul)[1], `Normaußentemp. ${num(q.te, 1)} °C`, `${st.persons} Personen`, (st.hsys === 'fbh' ? 'Fußbodenheizung' : st.hsys === 'both' ? 'Heizkörper + Fußbodenheizung' : 'Heizkörper')].join(' · ') : `${num(q.area)} m² · ${num(q.persons)} Personen`;
   return `<div class="mb-5 rounded-[calc(var(--r)-4px)] border border-p/30 p-4" style="background:rgb(var(--p-rgb)/.06)"><div class="flex flex-wrap items-center justify-between gap-2"><div class="text-[14px] font-semibold flex items-center gap-2"><span class="text-p">${ic('fan', 17)}</span>Schnellauslegung vom ${deDate(q.date)}</div><button class="btn-g !h-8 !px-2.5 text-[13px]" data-a="quick-redo" data-id="${p.id}">${ic('refresh', 14)}Neu auslegen</button></div>
   <div class="text-[13px] text-ink2 mt-1.5">${esc(facts)}</div><div class="text-[12px] mt-1.5 font-medium" style="color:#C7792F">Grobe Schätzung – die tatsächliche Heizlast ergibt erst eine vollständige Heizlastberechnung (DIN EN 12831).</div>
   <div class="text-[14px] mt-1.5">Heizlast <b>${num(q.total ?? q.load, 2)} kW</b>${q.prod ? ` · Wärmepumpe <b class="text-p">${esc(q.prod)}</b>` : ` · empfohlen <b class="text-p">${num(q.total, 1)} kW</b>`}${isNum(q.bv) ? ` · Bivalenzpunkt ${num(q.bv, 1)} °C · Deckung ${num(q.deck, 1)} %` : ''} · JAZ ca. <b>${num(q.jaz, 2)}</b></div></div>`;
@@ -5730,8 +5737,8 @@ document.addEventListener('click', async e => {
       quickApplyTo(np); PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`);
       toast(`Schnellauslegung übernommen: ${num(np.hp.kw, 1)} kW, JAZ ${num(np.hp.jaz, 2)}.`);
     } else {
-      const p = findProject(QPID); if (!p) return; quickApplyTo(p); saveProject(p); closeModal(); render();
-      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}.`);
+      const p = findProject(QPID); if (!p) return; const was = p.type; if (p.type === 'pv') p.type = 'pvwp'; quickApplyTo(p); saveProject(p); closeModal(); render();
+      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}.` + (was === 'pv' ? ' Kunde ist jetzt PV + Wärmepumpe.' : ''));
     }
   }
 });
@@ -5950,6 +5957,23 @@ function quickTechCard(p) {
 {
   const _ppr = preparePrintRoot;
   preparePrintRoot = async function () { try { await loadFiles(PRODUCTS.filter(x => x.cat === 'wp').map(x => x.img)); } catch (e) {} return _ppr.apply(this, arguments); };
+}
+
+/* Reine PV-Kunden (z. B. nach dem Modulplan): Schnellauslegung trotzdem anbieten – Übernahme macht daraus PV + Wärmepumpe */
+function quickPvOffer(p, small) {
+  if (hasWP(p)) return '';
+  return `<div class="${small ? 'mb-4' : 'mt-6'} rounded-[calc(var(--r)-4px)] border border-p/30 p-4 flex flex-wrap items-center gap-3" style="background:rgb(var(--p-rgb)/.06)"><div class="text-p shrink-0">${ic('fan', 22)}</div><div class="flex-1 min-w-[200px]"><div class="font-semibold text-[15px]">Auch eine Wärmepumpe?</div><div class="text-[13px] text-ink3">Schnellauslegung jederzeit möglich – beim Übernehmen wird der Kunde zu „PV + Wärmepumpe“, Modulplan und PV-Daten bleiben erhalten.</div></div><button class="btn-s !h-10" data-a="quick-redo" data-id="${p.id}">${ic('fan', 16)}Schnellauslegung</button></div>`;
+}
+
+/* Kundenübersicht: noch offene Schritte direkt anwählbar (verschwinden, sobald erledigt) */
+function custTodo(p) {
+  if (p.archived) return '';
+  const quickDone = (p.quick && p.quick.v === 2) || p.docs.some(d => d.role === 'tech');
+  const roofDone = p.roof && p.roof.faces && p.roof.faces.some(f => f.mods && f.mods.length);
+  const b = [];
+  if (!quickDone) b.push(`<button class="btn-s !h-9 !px-3 text-[13px] flex-1" data-a="quick-redo" data-id="${p.id}">${ic('fan', 15)}Schnellauslegung</button>`);
+  if (!roofDone && typeof roofOk === 'function' && roofOk()) b.push(`<button class="btn-s !h-9 !px-3 text-[13px] flex-1" data-a="roof-open" data-id="${p.id}">${ic('grid', 15)}Modulbelegung</button>`);
+  return b.length ? `<div class="flex flex-wrap gap-2 mt-3">${b.join('')}</div>` : '';
 }
 /* =========================================================
    Modulplan (PV-Dachbelegung) – nur auf PC, iPad und aufgeklapptem Foldable
@@ -6459,6 +6483,7 @@ async function roofApply(p) {
   const by = {}; let n = 0, kwp = 0;
   for (const f of p.roof.faces) { const pr = roofProd(f); n += f.mods.length; kwp += faceKwp(f); if (pr.id) by[pr.id] = (by[pr.id] || 0) + f.mods.length; }
   if (!n) return;
+  if (p.type === 'wp') p.type = 'pvwp';
   p.pv.kwp = Math.round(kwp * 1000) / 1000;
   const pr0 = roofProd(p.roof.faces.find(f => f.mods.length) || p.roof.faces[0]);
   p.pv.modules = `${n} × ${num(pr0.power)} W`;
