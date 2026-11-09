@@ -11,7 +11,7 @@ async function splashRun(el, replay) {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, k = reduce ? 0.25 : 1, W = t => (SPLASH.skip ? Promise.resolve() : spWait(t * k));
   const c = splashCfg(); if (c.logo === 'custom' && c.file) await loadFiles([c.file]);
   el.classList.toggle('sp-light', !appDark());
-  $('#sp-stage', el).innerHTML = houseSVG({ anim: true, car: true, bat: true, inv: true, style: 'modern', wide: false }).replace(' data-sky="1"', '');
+  $('#sp-stage', el).innerHTML = houseSVG({ anim: true, car: true, bat: true, style: 'modern', wide: false }).replace(' data-sky="1"', '');
   $('#sp-stage', el).classList.add('hero-anim');
   $('#sp-logo', el).innerHTML = splashLogoHTML();
   /* Module nacheinander einblenden */
