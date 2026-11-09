@@ -4199,7 +4199,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261109082032';
+const APP_VERSION = '20261109101235';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4616,6 +4616,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.18', date: '2026-11-09', items: [
+    ['modplace', 'Weitere Fläche im selben Foto', '„+ Fläche“ zeichnet eine weitere Dachfläche im selben Bild ein; die anderen Flächen und ihre Module bleiben sichtbar. Für eine andere Ausrichtung gibt es „Neues Foto“.'],
+    ['modplace', 'Ecken rasten ein', 'Die Referenz-Ecken rasten magnetisch an den Ecken der Dachfläche ein – und Dachflächen-Ecken an den Ecken anderer Flächen im selben Foto.'],
+    ['modplace', 'Rot nur bei Überlappung', 'Module werden nur noch rot markiert, wenn sie übereinander liegen – nicht mehr im Randbereich.']
+  ] },
   { version: '2.17', date: '2026-11-09', items: [
     ['modplace', 'Module nicht mehr zu lang', 'Behoben: Die automatische Zählung konnte sich bei den Reihen verzählen – Module wirkten dann zu lang (hochkant) bzw. zu dick (quer). Jetzt wird geprüft, nach welchem Abstand sich das Pfannenmuster wirklich wiederholt. Neu: „÷2“ und „×2“ neben „Pfannen waagerecht“ für Doppelmulden-Pfannen.'],
     ['quick', 'Nachträglich anpassen', 'Auf jeder Kundenkarte bleiben „Schnellauslegung“ und „Modulbelegung“ sichtbar – nach dem Erledigen als „… anpassen“ mit Häkchen.']
@@ -6156,7 +6161,7 @@ function roofFoot(p, f) {
       : `<button class="btn-p !h-10 !px-5 text-[14px] ml-auto" data-r="next">${{ photo: 'Weiter: Dachfläche', corners: 'Weiter: Referenz', ref: 'Weiter: Module belegen' }[RS.step]} ${ic('arrowR', 16)}</button>`}`;
 }
 function roofPanel(p, f, g) {
-  const faces = `<div><span class="lbl">Dachflächen</span><div class="flex flex-wrap gap-1.5">${p.roof.faces.map((x, i) => `<button class="chip ${i === RS.fi ? '!border-p !text-ink !bg-p/10' : ''}" data-r="face" data-v="${i}">${esc(x.name)} · ${x.mods.length}</button>`).join('')}<button class="chip" data-r="face-add">${ic('plus', 14)}Fläche</button></div>
+  const faces = `<div><span class="lbl">Dachflächen</span><div class="flex flex-wrap gap-1.5">${p.roof.faces.map((x, i) => `<button class="chip ${i === RS.fi ? '!border-p !text-ink !bg-p/10' : ''}" data-r="face" data-v="${i}">${esc(x.name)} · ${x.mods.length}</button>`).join('')}<button class="chip" data-r="face-add" title="Weitere Fläche im selben Foto einzeichnen">${ic('plus', 14)}Fläche</button><button class="chip" data-r="face-add-photo" title="Andere Ausrichtung – mit neuem Foto">${ic('image', 14)}Neues Foto</button></div>
     <div class="flex gap-2 mt-2"><input class="inp !h-10" data-rf="name" value="${esc(f.name)}" placeholder="Name der Fläche">${p.roof.faces.length > 1 ? `<button class="btn-g !h-10 !px-3" data-r="face-del" title="Fläche löschen">${ic('trash', 16)}</button>` : ''}</div></div>`;
   const saves = (p.roof.saves || []).length ? `<div><span class="lbl">Gespeicherte Stände</span><div class="space-y-1.5">${p.roof.saves.map(s => `<div class="flex items-center gap-2 text-[13px] rounded-lg bg-raised px-3 py-2"><span class="flex-1 min-w-0 truncate"><b>${esc(s.name)}</b> <span class="text-ink3">${esc(s.date)}</span></span><button class="text-p font-medium" data-r="load" data-v="${s.id}">Laden</button><button class="text-ink3" data-r="save-del" data-v="${s.id}">${ic('x', 14)}</button></div>`).join('')}</div></div>` : '';
   let body = '';
@@ -6245,6 +6250,7 @@ async function roofDraw() {
     const S = ([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k];
     const quad = (q, col, dash, labels) => { x.save(); x.setLineDash(dash || []); x.lineWidth = 2.5; x.strokeStyle = col; x.fillStyle = col.replace('rgb', 'rgba').replace(')', ',.14)'); x.beginPath(); q.map(S).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.fill(); x.stroke(); x.restore();
       q.map(S).forEach((p, i) => { x.beginPath(); x.arc(p[0], p[1], 13, 0, 7); x.fillStyle = col; x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(); x.fillStyle = '#fff'; x.font = '600 12px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(labels[i], p[0], p[1] + 0.5); }); };
+    roofOthers(x, f, ([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k], 1);
     if (RS.step === 'ref' || RS.step === 'corners') quad(f.corners, P, RS.step === 'ref' ? [6, 4] : null, ['1', '2', '3', '4']);
     if (RS.step === 'ref' && f.ref) {
       /* Kontrollraster: so viele Linien wie gezählte Pfannen/Reihen – müssen auf den echten Pfannenkanten liegen */
@@ -6270,6 +6276,7 @@ async function roofDraw() {
   x.save(); x.beginPath(); x.rect(0, 0, cw, ch); g.poly.map(p => M(...p)).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.fillStyle = V.kind === 'plane' ? 'rgba(8,10,14,.72)' : 'rgba(8,10,14,.12)'; x.fill('evenodd'); x.restore();
   const path = (q, col, w, dash) => { x.save(); x.setLineDash(dash || []); x.strokeStyle = col; x.lineWidth = w; x.beginPath(); q.map(p => M(...p)).forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.stroke(); x.restore(); };
   if (V.kind === 'plane') { path(g.poly, '#fff', 2); path(g.inset, 'rgba(255,214,120,.9)', 1.5, [6, 5]); } else { path(g.poly, 'rgba(255,255,255,.55)', 1); path(g.inset, 'rgba(255,214,120,.55)', 1, [5, 5]); }
+  if (V.kind === 'photo') roofOthers(x, f, ([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k], V.k);
   let warn = [0, 0]; const pr = roofProd(f), pimg = pr.planImg ? await roofPlanImg(pr.planImg) : null;
   const L = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
   f.mods.forEach((m, i) => {
@@ -6282,11 +6289,11 @@ async function roofDraw() {
     roofTri(x, src, [[0, 0], [iw2, 0], [iw2, ih2]], [c[0], c[1], c[2]]); roofTri(x, src, [[0, 0], [iw2, ih2], [0, ih2]], [c[0], c[2], c[3]]);
     const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
     x.fillStyle = gl; poly(); x.fill();
-    if (st !== 'ok') { x.fillStyle = st === 'over' ? 'rgba(229,72,77,.55)' : 'rgba(229,154,92,.5)'; poly(); x.fill(); }
+    if (st === 'over') { x.fillStyle = 'rgba(229,72,77,.55)'; poly(); x.fill(); }
     x.strokeStyle = RS.sel.has(i) ? P : 'rgba(0,0,0,.85)'; x.lineWidth = RS.sel.has(i) ? 3 : 0.7; poly(); x.stroke();
   });
   if (RS.drag && RS.drag.lasso) { const [a, b, c, d] = RS.drag.lasso; x.save(); x.setLineDash([5, 4]); x.strokeStyle = P; x.fillStyle = `rgba(${pc},.12)`; x.lineWidth = 1.5; x.fillRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.strokeRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.restore(); }
-  const wEl = $('#roof-warn'); if (wEl) wEl.innerHTML = [warn[0] ? `<span style="color:#E5484D">${warn[0]} überlappen</span>` : '', warn[1] ? `<span style="color:#E59A5C">${warn[1]} im Randbereich</span>` : ''].filter(Boolean).join(' · ');
+  const wEl = $('#roof-warn'); if (wEl) wEl.innerHTML = [warn[0] ? `<span style="color:#E5484D">${warn[0]} überlappen</span>` : ''].filter(Boolean).join(' · ');
   if (tip) tip.textContent = (RS.mode === 'add' ? 'Auf die Fläche tippen, um ein Modul zu setzen.' : 'Module antippen oder Rahmen ziehen – dann verschieben.') + ' Zoomen: zwei Finger bzw. Mausrad; verschieben: zwei Finger bzw. Leertaste + ziehen.';
 }
 function roofLoupe(x, img, [sx, sy], f, V, cw) {
@@ -6363,7 +6370,10 @@ function roofMove(e) {
   const f = roofF(), V = RS.view, d = RS.drag, [sx, sy] = evXY(e);
   if (d.pt) {
     const [k, i] = d.pt, u = Math.min(1, Math.max(0, (sx - V.ox) / (f.iw * V.k))), v = Math.min(1, Math.max(0, (sy - V.oy) / (f.ih * V.k)));
-    f[k][i] = [u, v]; d.loupe = [u, v]; if (RS.step === 'ref') { const el = $('#roof-dims'); if (el) el.innerHTML = roofDims(faceGeom(f)); } roofDraw(); return;
+    let uv = [u, v];
+    const tg = (k === 'ref' ? f.corners : []).concat(roofP().roof.faces.filter(o => o !== f && o.photo === f.photo && o.corners).flatMap(o => o.corners));
+    let bd = 22; for (const c of tg) { const dd = Math.hypot((c[0] - u) * f.iw * V.k, (c[1] - v) * f.ih * V.k); if (dd < bd) { bd = dd; uv = [c[0], c[1]]; } }
+    f[k][i] = uv; d.loupe = uv; if (RS.step === 'ref') { const el = $('#roof-dims'); if (el) el.innerHTML = roofDims(faceGeom(f)); } roofDraw(); return;
   }
   if (d.lasso) { d.lasso[2] = sx; d.lasso[3] = sy; roofDraw(); return; }
   if (d.move) {
@@ -6437,7 +6447,13 @@ document.addEventListener('click', async e => {
   }
   if (r === 'step' || r === 'next' || r === 'prev') { const v = a.dataset.v; roofZoomReset(); RS.act = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
   if (r === 'face') { roofZoomReset(); RS.fi = +v; RS.sel = new Set(); RS.hist = []; RS.warp = null; const nf = roofF(); RS.step = !nf.photo ? 'photo' : faceGeom(nf) ? 'mod' : 'corners'; return roofRender(); }
-  if (r === 'face-add') { p.roof.faces.push(roofNewFace(p.roof.faces.length + 1)); RS.fi = p.roof.faces.length - 1; RS.step = 'photo'; RS.sel = new Set(); RS.hist = []; roofSave(); return roofRender(); }
+  if (r === 'face-add' || r === 'face-add-photo') {
+    const nf = roofNewFace(p.roof.faces.length + 1), same = r === 'face-add' && f.photo;
+    if (same) Object.assign(nf, { photo: f.photo, iw: f.iw, ih: f.ih, tileId: f.tileId, prodId: f.prodId, mTop: f.mTop, mBot: f.mBot, mSide: f.mSide });
+    p.roof.faces.push(nf); RS.fi = p.roof.faces.length - 1; RS.step = same ? 'corners' : 'photo'; RS.sel = new Set(); RS.hist = []; RS.warp = null; roofZoomReset(); roofSave();
+    if (same) toast('Neue Fläche im selben Foto: Punkte 1–4 auf die Ecken der Fläche ziehen.', 'ok', 4500);
+    return roofRender();
+  }
   if (r === 'face-del') { if (!(await confirmDlg('Dachfläche löschen?', `„${f.name}“ mit ${f.mods.length} Modulen wird gelöscht.`))) return; p.roof.faces.splice(RS.fi, 1); RS.fi = 0; RS.sel = new Set(); roofSave(); return roofRender(); }
   if (r === 'refmode') { f.refMode = v; roofSave(); return roofRender(); }
   if (r === 'orient') { f.orient = v; roofSave(); return roofRefreshPanel(); }
@@ -6786,6 +6802,24 @@ document.addEventListener('click', e => {
   e.preventDefault(); const f = roofF(), v = +f.nx || 0; if (!v) return;
   f.nx = a.dataset.r === 'nxdiv' ? Math.max(1, Math.round(v / 2)) : v * 2; roofSave(); roofSoft();
 });
+
+/* Weitere Dachflächen im selben Foto: Umriss, Name und ihre Module (zur Orientierung, nicht bearbeitbar) */
+function roofOthers(x, f, S, k) {
+  const p = roofP(); if (!p || !f.photo) return;
+  p.roof.faces.forEach(o => {
+    if (o === f || o.photo !== f.photo || !o.corners) return;
+    const pts = o.corners.map(S);
+    x.save(); x.setLineDash([6, 4]); x.strokeStyle = 'rgba(255,255,255,.75)'; x.lineWidth = 1.5; x.beginPath(); pts.forEach((q, j) => (j ? x.lineTo(...q) : x.moveTo(...q))); x.closePath(); x.stroke(); x.setLineDash([]);
+    const g = faceGeom(o);
+    if (g && !g.bad) o.mods.forEach(m => {
+      const b = modBox(o, m), q = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].map(([X, Y]) => S(g.toImg(X, Y).map((v, j) => v / (j ? o.ih : o.iw))));
+      x.beginPath(); q.forEach((pt, j) => (j ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); x.fillStyle = 'rgba(14,18,26,.88)'; x.fill(); x.strokeStyle = 'rgba(0,0,0,.9)'; x.lineWidth = 0.7; x.stroke();
+    });
+    const cx = pts.reduce((a, q) => a + q[0], 0) / 4, cy = pts.reduce((a, q) => a + q[1], 0) / 4;
+    x.font = '600 12px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = o.name + (o.mods.length ? ` · ${o.mods.length}` : ''), w = x.measureText(t).width + 14;
+    x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(cx - w / 2, cy - 11, w, 22); x.fillStyle = '#fff'; x.fillText(t, cx, cy); x.restore();
+  });
+}
 /* Startanimation: Haus → Photovoltaik → Speicher → Wärmepumpe → E-Auto → Zoom → Logo → Zoom → App */
 const SPLASH = { ready: false, done: false, skip: false };
 const splashCfg = () => Object.assign({ on: true, logo: 'company', file: '' }, S.design.splash || {});

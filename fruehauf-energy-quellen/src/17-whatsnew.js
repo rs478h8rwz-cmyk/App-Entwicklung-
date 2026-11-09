@@ -13,6 +13,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.18', date: '2026-11-09', items: [
+    ['modplace', 'Weitere Fläche im selben Foto', '„+ Fläche“ zeichnet eine weitere Dachfläche im selben Bild ein; die anderen Flächen und ihre Module bleiben sichtbar. Für eine andere Ausrichtung gibt es „Neues Foto“.'],
+    ['modplace', 'Ecken rasten ein', 'Die Referenz-Ecken rasten magnetisch an den Ecken der Dachfläche ein – und Dachflächen-Ecken an den Ecken anderer Flächen im selben Foto.'],
+    ['modplace', 'Rot nur bei Überlappung', 'Module werden nur noch rot markiert, wenn sie übereinander liegen – nicht mehr im Randbereich.']
+  ] },
   { version: '2.17', date: '2026-11-09', items: [
     ['modplace', 'Module nicht mehr zu lang', 'Behoben: Die automatische Zählung konnte sich bei den Reihen verzählen – Module wirkten dann zu lang (hochkant) bzw. zu dick (quer). Jetzt wird geprüft, nach welchem Abstand sich das Pfannenmuster wirklich wiederholt. Neu: „÷2“ und „×2“ neben „Pfannen waagerecht“ für Doppelmulden-Pfannen.'],
     ['quick', 'Nachträglich anpassen', 'Auf jeder Kundenkarte bleiben „Schnellauslegung“ und „Modulbelegung“ sichtbar – nach dem Erledigen als „… anpassen“ mit Häkchen.']
