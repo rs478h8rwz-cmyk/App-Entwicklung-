@@ -30,10 +30,5 @@ function heroWatch() { if (!heroIO) return; heroIO.disconnect(); $$('#app .hero-
 { const _rh = render; render = function () { const r = _rh.apply(this, arguments); heroWatch(); return r; }; }
 document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('app-hidden', document.hidden));
 
-/* iOS: nach dem Schließen der Tastatur bleibt die Seite manchmal verschoben – Tipp-Positionen liegen dann daneben.
-   Sobald kein Eingabefeld mehr aktiv ist, wird die Ansicht neu ausgerichtet. */
-document.addEventListener('focusout', () => setTimeout(() => {
-  const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
-  if (window.visualViewport && (visualViewport.offsetTop || visualViewport.pageTop !== window.scrollY)) window.scrollTo(window.scrollX, window.scrollY);
-  if ($('#roof-ed')) window.scrollTo(0, 0);
-}, 80));
+/* Modulplan offen: nach dem Schließen der Tastatur Ansicht oben halten (Seite ist dort fixiert) */
+document.addEventListener('focusout', e => { if (!$('#roof-ed') || !e.target.closest || !e.target.closest('#roof-ed')) return; setTimeout(() => { const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; window.scrollTo(0, 0); }, 120); });

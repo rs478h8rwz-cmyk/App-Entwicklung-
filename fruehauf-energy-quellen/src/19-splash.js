@@ -32,16 +32,22 @@ async function splashRun(el, replay) {
 function splashStart() {
   const el = $('#splash'); if (!el) return;
   if (!splashCfg().on) { el.remove(); SPLASH.done = true; return; }
-  el.addEventListener('click', () => { SPLASH.skip = true; (SPLASH.timers || []).forEach(clearTimeout); SPLASH.timers = []; splashFinishNow(el); });
+  splashBindSkip(el);
   splashRun(el).catch(() => el.remove());
 }
-function splashFinishNow(el) { el.classList.add('s-zoom', 's-logo', 's-out'); setTimeout(() => { el.remove(); SPLASH.done = true; SPLASH.skip = false; }, 450); }
+/* Überspringen: sofort beim Berühren (pointerdown/touchstart), nicht erst beim Klick */
+function splashBindSkip(el) {
+  const skip = e => { if (SPLASH.skipping) return; SPLASH.skipping = true; if (e && e.cancelable) e.preventDefault(); SPLASH.skip = true; (SPLASH.timers || []).forEach(clearTimeout); SPLASH.timers = []; splashFinishNow(el); };
+  ['pointerdown', 'touchstart', 'mousedown', 'click'].forEach(t => el.addEventListener(t, skip, { passive: false }));
+  document.addEventListener('keydown', function k(e) { if (!document.getElementById('splash')) return document.removeEventListener('keydown', k); if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') skip(e); });
+}
+function splashFinishNow(el) { el.style.pointerEvents = 'none'; el.classList.add('s-zoom', 's-logo', 's-out'); setTimeout(() => { el.remove(); SPLASH.done = true; SPLASH.skip = false; SPLASH.skipping = false; }, 380); }
 function splashDone() { SPLASH.ready = true; }
 /* Erneut ansehen (Einstellungen) */
 function splashReplay() {
   if ($('#splash')) return;
-  document.body.insertAdjacentHTML('beforeend', '<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><div class="sp-skip">Tippen zum Überspringen</div></div>');
-  const el = $('#splash'); el.addEventListener('click', () => { SPLASH.skip = true; (SPLASH.timers || []).forEach(clearTimeout); splashFinishNow(el); });
+  document.body.insertAdjacentHTML('beforeend', '<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><button type="button" class="sp-skipbtn" id="sp-skip">Überspringen ›</button></div>');
+  const el = $('#splash'); splashBindSkip(el);
   splashRun(el, true).catch(() => el.remove());
 }
 /* Sicherheitsnetz */

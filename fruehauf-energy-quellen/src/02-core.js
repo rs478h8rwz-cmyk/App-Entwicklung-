@@ -23,11 +23,14 @@
 #splash.sp-light .sp-name{color:#132430}
 #splash.s-logo .sp-logo{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #splash.s-out .sp-logo{transition:transform .75s cubic-bezier(.7,0,.2,1),opacity .55s .15s ease;transform:translate(-50%,-50%) scale(5);opacity:0}
-#splash.s-out{background:transparent;transition:background .6s .2s ease}
+#splash.s-out{background:transparent;transition:background .6s .2s ease;pointer-events:none}
+#splash.s-zoom{pointer-events:none}
+#splash .sp-skipbtn{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:2;font:600 15px system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:12px 20px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);touch-action:manipulation}
+#splash.sp-light .sp-skipbtn{color:#132430;background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.15)}
 #splash .sp-skip{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;font:500 12px system-ui,sans-serif;color:rgba(160,180,190,.6)}
 @media (prefers-reduced-motion: reduce){#splash *{transition-duration:.15s!important;transition-delay:0s!important}}
 </style>
-<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><div class="sp-skip">Tippen zum Überspringen</div></div>
+<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><button type="button" class="sp-skipbtn" id="sp-skip">Überspringen ›</button></div>
 <div id="app"></div>
 <div id="toasts" class="fixed top-3 left-1/2 -translate-x-1/2 z-[80] flex flex-col items-center gap-2 pointer-events-none w-[92vw] max-w-md"></div>
 <div id="modal"></div>
@@ -198,7 +201,7 @@ function C() {
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
 /* Doppeltipp-Zoom per CSS abschalten – Tipps werden nie verworfen (früherer touchend-Filter schluckte schnelle Tipps) */
-document.head.insertAdjacentHTML('beforeend', '<style>html,body,button,a,input,select,label,[data-a],[data-r]{touch-action:manipulation}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}</style>');
 
 /* ---------- Icons ---------- */
 const IP = {

@@ -267,11 +267,14 @@ label{min-width:0}
 #splash.sp-light .sp-name{color:#132430}
 #splash.s-logo .sp-logo{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #splash.s-out .sp-logo{transition:transform .75s cubic-bezier(.7,0,.2,1),opacity .55s .15s ease;transform:translate(-50%,-50%) scale(5);opacity:0}
-#splash.s-out{background:transparent;transition:background .6s .2s ease}
+#splash.s-out{background:transparent;transition:background .6s .2s ease;pointer-events:none}
+#splash.s-zoom{pointer-events:none}
+#splash .sp-skipbtn{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:2;font:600 15px system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:12px 20px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);touch-action:manipulation}
+#splash.sp-light .sp-skipbtn{color:#132430;background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.15)}
 #splash .sp-skip{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;font:500 12px system-ui,sans-serif;color:rgba(160,180,190,.6)}
 @media (prefers-reduced-motion: reduce){#splash *{transition-duration:.15s!important;transition-delay:0s!important}}
 </style>
-<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><div class="sp-skip">Tippen zum Überspringen</div></div>
+<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><button type="button" class="sp-skipbtn" id="sp-skip">Überspringen ›</button></div>
 <div id="app"></div>
 <div id="toasts" class="fixed top-3 left-1/2 -translate-x-1/2 z-[80] flex flex-col items-center gap-2 pointer-events-none w-[92vw] max-w-md"></div>
 <div id="modal"></div>
@@ -442,7 +445,7 @@ function C() {
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
 /* Doppeltipp-Zoom per CSS abschalten – Tipps werden nie verworfen (früherer touchend-Filter schluckte schnelle Tipps) */
-document.head.insertAdjacentHTML('beforeend', '<style>html,body,button,a,input,select,label,[data-a],[data-r]{touch-action:manipulation}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}</style>');
 
 /* ---------- Icons ---------- */
 const IP = {
@@ -4188,7 +4191,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261109001517';
+const APP_VERSION = '20261109002323';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4605,6 +4608,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.08', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur auf dem iPad', 'Behoben: Auf dem iPad öffnete sich die Tastatur beim Antippen von Eingabefeldern nicht mehr. Die Startanimation hat einen Knopf „Überspringen“ und endet sofort bei Berührung.']
+  ] },
   { version: '2.07', date: '2026-11-09', items: [
     ['anim', 'Startanimation', 'Beim Öffnen erscheint Ihr Haus – nacheinander kommen Photovoltaik, Speicher, Wärmepumpe und E-Auto dazu. Dann zoomt es auf Ihr Logo und hinein in die App. Logo und An/Aus unter Einstellungen → Startseite & Wetter.'],
     ['modplace', 'Zurück-Knopf und ruhigere Bedienung', 'Behoben: Auf iPad und iPhone gingen schnell aufeinanderfolgende Tipps verloren oder landeten scheinbar woanders – jetzt reagiert jeder Knopf sofort. Im Modulplan gibt es unten „Zurück“ zum vorherigen Schritt; die Randabstände lassen sich auch beim Belegen ändern. Neue Module bleiben dort, wo Sie tippen – der Magnet verschiebt nur noch wenig.']
@@ -5065,13 +5071,8 @@ function heroWatch() { if (!heroIO) return; heroIO.disconnect(); $$('#app .hero-
 { const _rh = render; render = function () { const r = _rh.apply(this, arguments); heroWatch(); return r; }; }
 document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('app-hidden', document.hidden));
 
-/* iOS: nach dem Schließen der Tastatur bleibt die Seite manchmal verschoben – Tipp-Positionen liegen dann daneben.
-   Sobald kein Eingabefeld mehr aktiv ist, wird die Ansicht neu ausgerichtet. */
-document.addEventListener('focusout', () => setTimeout(() => {
-  const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
-  if (window.visualViewport && (visualViewport.offsetTop || visualViewport.pageTop !== window.scrollY)) window.scrollTo(window.scrollX, window.scrollY);
-  if ($('#roof-ed')) window.scrollTo(0, 0);
-}, 80));
+/* Modulplan offen: nach dem Schließen der Tastatur Ansicht oben halten (Seite ist dort fixiert) */
+document.addEventListener('focusout', e => { if (!$('#roof-ed') || !e.target.closest || !e.target.closest('#roof-ed')) return; setTimeout(() => { const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; window.scrollTo(0, 0); }, 120); });
 /* Tastatur-Umschalter: Zahlenfelder starten mit Zahlentastatur, lassen sich aber
    jederzeit auf Buchstaben umstellen (und zurück). Nichts wird auf Zahlen begrenzt. */
 const KBD_TEXT = new Set();
@@ -6645,16 +6646,22 @@ async function splashRun(el, replay) {
 function splashStart() {
   const el = $('#splash'); if (!el) return;
   if (!splashCfg().on) { el.remove(); SPLASH.done = true; return; }
-  el.addEventListener('click', () => { SPLASH.skip = true; (SPLASH.timers || []).forEach(clearTimeout); SPLASH.timers = []; splashFinishNow(el); });
+  splashBindSkip(el);
   splashRun(el).catch(() => el.remove());
 }
-function splashFinishNow(el) { el.classList.add('s-zoom', 's-logo', 's-out'); setTimeout(() => { el.remove(); SPLASH.done = true; SPLASH.skip = false; }, 450); }
+/* Überspringen: sofort beim Berühren (pointerdown/touchstart), nicht erst beim Klick */
+function splashBindSkip(el) {
+  const skip = e => { if (SPLASH.skipping) return; SPLASH.skipping = true; if (e && e.cancelable) e.preventDefault(); SPLASH.skip = true; (SPLASH.timers || []).forEach(clearTimeout); SPLASH.timers = []; splashFinishNow(el); };
+  ['pointerdown', 'touchstart', 'mousedown', 'click'].forEach(t => el.addEventListener(t, skip, { passive: false }));
+  document.addEventListener('keydown', function k(e) { if (!document.getElementById('splash')) return document.removeEventListener('keydown', k); if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') skip(e); });
+}
+function splashFinishNow(el) { el.style.pointerEvents = 'none'; el.classList.add('s-zoom', 's-logo', 's-out'); setTimeout(() => { el.remove(); SPLASH.done = true; SPLASH.skip = false; SPLASH.skipping = false; }, 380); }
 function splashDone() { SPLASH.ready = true; }
 /* Erneut ansehen (Einstellungen) */
 function splashReplay() {
   if ($('#splash')) return;
-  document.body.insertAdjacentHTML('beforeend', '<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><div class="sp-skip">Tippen zum Überspringen</div></div>');
-  const el = $('#splash'); el.addEventListener('click', () => { SPLASH.skip = true; (SPLASH.timers || []).forEach(clearTimeout); splashFinishNow(el); });
+  document.body.insertAdjacentHTML('beforeend', '<div id="splash" aria-hidden="true"><div class="sp-stage" id="sp-stage"></div><div class="sp-logo" id="sp-logo"></div><button type="button" class="sp-skipbtn" id="sp-skip">Überspringen ›</button></div>');
+  const el = $('#splash'); splashBindSkip(el);
   splashRun(el, true).catch(() => el.remove());
 }
 /* Sicherheitsnetz */
