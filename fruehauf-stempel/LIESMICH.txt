@@ -1,4 +1,4 @@
-Frühauf – Stempeluhr (Version 1.2)
+Frühauf – Stempeluhr (Version 1.4)
 ==================================
 
 Eigenständige Web-App zur Zeiterfassung. Läuft auf iPhone, Android, iPad und PC, auch offline.
@@ -10,7 +10,8 @@ Auf dem Handy in Safari/Chrome öffnen → „Zum Home-Bildschirm“.
 Stempeln: Baustelle wählen → Kommen → Pause / Pause beenden → Baustelle wechseln → Gehen.
 Pausenregel: Es werden immer mindestens 30 Min. abgezogen – auch wenn keine Pause gestempelt wurde;
 längere Pausen werden voll abgezogen. Es gibt nur Überstunden – Minusstunden werden nicht verrechnet.
-Sollzeiten: Mo–Do 7:30–16:30 (8:30 Std.), Fr 7:30–13:45 (5:45 Std.) – unter Einstellungen änderbar.
+Sollzeiten: Mo–Do 7:30–16:30 (30 Min. Pause = 8:30 Std.), Fr 7:30–13:45 (15 Min. Pause = 6:00 Std.)
+= 40:00 Std. pro Woche. Überstunden = alles über 40 Std. pro Woche; Minusstunden zählen nicht.
 
 Stundenzettel: „An Jule“ erstellt das PDF der Woche, speichert es sofort und öffnet „Teilen“ –
 dort WhatsApp und Jule wählen. Monats-PDF unter „Woche“.
@@ -37,3 +38,14 @@ Urlaubskalender: unter „Urlaub“ – Urlaub, Betriebsurlaub, Feiertage, Krank
 Datenschutz: Alle Daten liegen nur auf dem Handy des Mitarbeiters – kein gemeinsamer Server,
 Kollegen sehen nichts. Optional App-PIN (Einstellungen → Daten), abgefragt beim Öffnen
 und nach 5 Minuten im Hintergrund.
+
+Uhrzeit: kommt vom Server (nicht vom Handy) – Verstellen der Handy-Uhr ändert nichts. Ohne Internet
+wird die Handy-Zeit verwendet und der Stempel als „offline“ markiert (auch im PDF).
+
+Standort (Pflicht): Hinweis wird einmal bestätigt. Bei jedem Stempel wird der Standort mit Adresse
+und Kartenausschnitt gespeichert (OpenStreetMap). Wird der Standort abgelehnt, ist Stempeln gesperrt.
+
+Krank: Knopf „Heute krank“ – optional direkt Jule per WhatsApp Bescheid geben.
+Erinnerung: freitags auf der Startseite (bis der Stundenzettel gesendet ist), zusätzlich als
+wiederkehrender Kalendertermin (Einstellungen → Ich & Empfänger). Freitags-Einblendungen beim Kommen/Gehen.
+Feiertage: nach Firmensitz Hasbergen (Niedersachsen) – steht in firma.json.

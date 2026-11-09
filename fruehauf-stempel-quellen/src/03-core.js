@@ -4,14 +4,28 @@
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.4';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = (p = 'x') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2, '0');
-const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+/* Geprüfte Uhrzeit: Abstand zur Serverzeit (HTTP-Date von Netlify). Verstellte Handy-Uhren ändern nichts. */
+const TIME = { off: 0, ok: false, at: 0 };
+const tNow = () => new Date(Date.now() + TIME.off);
+async function syncTime(timeout = 3000) {
+  try {
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), timeout), t0 = performance.now();
+    const r = await fetch('firma.json?time=' + Date.now(), { method: 'HEAD', cache: 'no-store', signal: ctl.signal }); clearTimeout(to);
+    const h = r.headers.get('date'); if (!h) throw new Error('keine Serverzeit');
+    const server = new Date(h).getTime() + 500 + (performance.now() - t0) / 2;   // Date-Header ist sekundengenau (abgerundet)
+    TIME.off = Math.abs(server - Date.now()) < 1500 ? 0 : server - Date.now(); TIME.ok = true; TIME.at = performance.now();
+    try { DB.put('kv', { off: TIME.off, at: Date.now() }, 'timeoff'); } catch (e) {}
+    return true;
+  } catch (e) { TIME.ok = TIME.ok && performance.now() - TIME.at < 30 * 60000; return TIME.ok; }
+}
+const isoToday = () => { const d = tNow(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
 const deDate = iso => { if (!iso) return '–'; const [y, m, d] = String(iso).slice(0, 10).split('-'); return d ? `${d}.${m}.${y}` : iso; };
 const WD = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 const wdOf = iso => WD[new Date(iso + 'T12:00').getDay()];
@@ -48,13 +62,14 @@ const DEFAULTS = {
   recipient: { name: 'Jule', phone: '' },
   state: 'NW',
   /* Sollzeiten je Wochentag (0 = Sonntag) */
-  hours: { 1: { on: true, von: '07:30', bis: '16:30' }, 2: { on: true, von: '07:30', bis: '16:30' }, 3: { on: true, von: '07:30', bis: '16:30' }, 4: { on: true, von: '07:30', bis: '16:30' }, 5: { on: true, von: '07:30', bis: '13:45' }, 6: { on: false, von: '', bis: '' }, 0: { on: false, von: '', bis: '' } },
+  hours: { 1: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 2: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 3: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 4: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 5: { on: true, von: '07:30', bis: '13:45', pause: 15 }, 6: { on: false, von: '', bis: '', pause: 30 }, 0: { on: false, von: '', bis: '', pause: 30 } },
   minPause: 30,            // wird immer abgezogen – längere Pausen werden voll abgezogen
   pauseOnlyOver6: false,   // optional: Mindestpause erst ab 6 Std. Arbeit
   sites: [],               // zuletzt genutzte Baustellen (Vorschläge)
   vacation: { perYear: 30, carry: 0 },
   balance: { from: '', min: 0 },   // Überstundenkonto: Startdatum und Startwert (Minuten)
-  gps: false,              // Standort beim Stempeln merken
+  gps: true,               // Standort beim Stempeln (Pflicht)
+  gpsConsent: '',          // Hinweis zur Standortnutzung bestätigt am
   admin: null,             // eigenes Admin-Passwort (nur als PBKDF2-Hash)
   bu: []                   // zusätzlicher Betriebsurlaub (vom Admin auf diesem Gerät)
 };
@@ -76,7 +91,7 @@ function deepMerge(base, add) {
 }
 async function loadSettings() { const s = await DB.get('kv', 'settings'); S = deepMerge(clone(DEFAULTS), s || {}); fixSettings(); }
 /* Fehlende Wochentage ergänzen */
-function fixSettings() { for (const k of [0, 1, 2, 3, 4, 5, 6]) if (!S.hours[k]) S.hours[k] = clone(DEFAULTS.hours[k]); }
+function fixSettings() { for (const k of [0, 1, 2, 3, 4, 5, 6]) { if (!S.hours[k]) S.hours[k] = clone(DEFAULTS.hours[k]); if (S.hours[k].pause === undefined) S.hours[k].pause = DEFAULTS.hours[k].pause; } }
 let SAVE_T = null;
 function saveSettings() { clearTimeout(SAVE_T); SAVE_T = setTimeout(() => DB.put('kv', clone(S), 'settings'), 250); }
 
@@ -111,7 +126,8 @@ function applyTheme() {
 /* ---------- Feiertage (bundesweit + Bundesland) ---------- */
 const STATES = [['BW', 'Baden-Württemberg'], ['BY', 'Bayern'], ['BE', 'Berlin'], ['BB', 'Brandenburg'], ['HB', 'Bremen'], ['HH', 'Hamburg'], ['HE', 'Hessen'], ['MV', 'Mecklenburg-Vorpommern'], ['NI', 'Niedersachsen'], ['NW', 'Nordrhein-Westfalen'], ['RP', 'Rheinland-Pfalz'], ['SL', 'Saarland'], ['SN', 'Sachsen'], ['ST', 'Sachsen-Anhalt'], ['SH', 'Schleswig-Holstein'], ['TH', 'Thüringen']];
 function easter(y) { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, mo - 1, da, 12); }
-function holiday(iso, st = S.state) {
+const firmState = () => (typeof FIRMA !== 'undefined' && FIRMA.firmensitz && FIRMA.firmensitz.bundesland) || S.state;
+function holiday(iso, st = firmState()) {
   if (!iso) return ''; const d = new Date(iso + 'T12:00'), y = d.getFullYear(), E = easter(y), off = n => { const x = new Date(E); x.setDate(x.getDate() + n); return x; };
   const same = (a, b) => a.getMonth() === b.getMonth() && a.getDate() === b.getDate(), md = (m, dd) => new Date(y, m - 1, dd, 12);
   const bb = (() => { const x = md(11, 22); while (x.getDay() !== 3) x.setDate(x.getDate() - 1); return x; })();

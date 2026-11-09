@@ -164,14 +164,28 @@ const IP = {
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.4';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = (p = 'x') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2, '0');
-const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+/* Geprüfte Uhrzeit: Abstand zur Serverzeit (HTTP-Date von Netlify). Verstellte Handy-Uhren ändern nichts. */
+const TIME = { off: 0, ok: false, at: 0 };
+const tNow = () => new Date(Date.now() + TIME.off);
+async function syncTime(timeout = 3000) {
+  try {
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), timeout), t0 = performance.now();
+    const r = await fetch('firma.json?time=' + Date.now(), { method: 'HEAD', cache: 'no-store', signal: ctl.signal }); clearTimeout(to);
+    const h = r.headers.get('date'); if (!h) throw new Error('keine Serverzeit');
+    const server = new Date(h).getTime() + 500 + (performance.now() - t0) / 2;   // Date-Header ist sekundengenau (abgerundet)
+    TIME.off = Math.abs(server - Date.now()) < 1500 ? 0 : server - Date.now(); TIME.ok = true; TIME.at = performance.now();
+    try { DB.put('kv', { off: TIME.off, at: Date.now() }, 'timeoff'); } catch (e) {}
+    return true;
+  } catch (e) { TIME.ok = TIME.ok && performance.now() - TIME.at < 30 * 60000; return TIME.ok; }
+}
+const isoToday = () => { const d = tNow(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
 const deDate = iso => { if (!iso) return '–'; const [y, m, d] = String(iso).slice(0, 10).split('-'); return d ? `${d}.${m}.${y}` : iso; };
 const WD = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 const wdOf = iso => WD[new Date(iso + 'T12:00').getDay()];
@@ -208,13 +222,14 @@ const DEFAULTS = {
   recipient: { name: 'Jule', phone: '' },
   state: 'NW',
   /* Sollzeiten je Wochentag (0 = Sonntag) */
-  hours: { 1: { on: true, von: '07:30', bis: '16:30' }, 2: { on: true, von: '07:30', bis: '16:30' }, 3: { on: true, von: '07:30', bis: '16:30' }, 4: { on: true, von: '07:30', bis: '16:30' }, 5: { on: true, von: '07:30', bis: '13:45' }, 6: { on: false, von: '', bis: '' }, 0: { on: false, von: '', bis: '' } },
+  hours: { 1: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 2: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 3: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 4: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 5: { on: true, von: '07:30', bis: '13:45', pause: 15 }, 6: { on: false, von: '', bis: '', pause: 30 }, 0: { on: false, von: '', bis: '', pause: 30 } },
   minPause: 30,            // wird immer abgezogen – längere Pausen werden voll abgezogen
   pauseOnlyOver6: false,   // optional: Mindestpause erst ab 6 Std. Arbeit
   sites: [],               // zuletzt genutzte Baustellen (Vorschläge)
   vacation: { perYear: 30, carry: 0 },
   balance: { from: '', min: 0 },   // Überstundenkonto: Startdatum und Startwert (Minuten)
-  gps: false,              // Standort beim Stempeln merken
+  gps: true,               // Standort beim Stempeln (Pflicht)
+  gpsConsent: '',          // Hinweis zur Standortnutzung bestätigt am
   admin: null,             // eigenes Admin-Passwort (nur als PBKDF2-Hash)
   bu: []                   // zusätzlicher Betriebsurlaub (vom Admin auf diesem Gerät)
 };
@@ -236,7 +251,7 @@ function deepMerge(base, add) {
 }
 async function loadSettings() { const s = await DB.get('kv', 'settings'); S = deepMerge(clone(DEFAULTS), s || {}); fixSettings(); }
 /* Fehlende Wochentage ergänzen */
-function fixSettings() { for (const k of [0, 1, 2, 3, 4, 5, 6]) if (!S.hours[k]) S.hours[k] = clone(DEFAULTS.hours[k]); }
+function fixSettings() { for (const k of [0, 1, 2, 3, 4, 5, 6]) { if (!S.hours[k]) S.hours[k] = clone(DEFAULTS.hours[k]); if (S.hours[k].pause === undefined) S.hours[k].pause = DEFAULTS.hours[k].pause; } }
 let SAVE_T = null;
 function saveSettings() { clearTimeout(SAVE_T); SAVE_T = setTimeout(() => DB.put('kv', clone(S), 'settings'), 250); }
 
@@ -271,7 +286,8 @@ function applyTheme() {
 /* ---------- Feiertage (bundesweit + Bundesland) ---------- */
 const STATES = [['BW', 'Baden-Württemberg'], ['BY', 'Bayern'], ['BE', 'Berlin'], ['BB', 'Brandenburg'], ['HB', 'Bremen'], ['HH', 'Hamburg'], ['HE', 'Hessen'], ['MV', 'Mecklenburg-Vorpommern'], ['NI', 'Niedersachsen'], ['NW', 'Nordrhein-Westfalen'], ['RP', 'Rheinland-Pfalz'], ['SL', 'Saarland'], ['SN', 'Sachsen'], ['ST', 'Sachsen-Anhalt'], ['SH', 'Schleswig-Holstein'], ['TH', 'Thüringen']];
 function easter(y) { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, mo - 1, da, 12); }
-function holiday(iso, st = S.state) {
+const firmState = () => (typeof FIRMA !== 'undefined' && FIRMA.firmensitz && FIRMA.firmensitz.bundesland) || S.state;
+function holiday(iso, st = firmState()) {
   if (!iso) return ''; const d = new Date(iso + 'T12:00'), y = d.getFullYear(), E = easter(y), off = n => { const x = new Date(E); x.setDate(x.getDate() + n); return x; };
   const same = (a, b) => a.getMonth() === b.getMonth() && a.getDate() === b.getDate(), md = (m, dd) => new Date(y, m - 1, dd, 12);
   const bb = (() => { const x = md(11, 22); while (x.getDay() !== 3) x.setDate(x.getDate() - 1); return x; })();
@@ -326,7 +342,8 @@ async function shrinkImage(file, max = 1600, q = 0.82, type = 'image/jpeg') {
    ist die Pause länger, wird die tatsächliche Pause abgezogen.
    ========================================================= */
 const toMin = t => { if (!t) return null; const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
-const nowHM = () => { const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const nowHM = () => { const d = tNow(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const nowHMS = () => { const d = tNow(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
 const hm = m => { if (m === null || m === undefined || isNaN(m)) return '–'; const neg = m < 0; m = Math.abs(Math.round(m)); return `${neg ? '−' : ''}${Math.floor(m / 60)}:${pad2(m % 60)}`; };
 const hmPlus = m => (Math.round(m) > 0 ? '+' + hm(m) : hm(m));
 const addDays = (iso, n) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
@@ -346,25 +363,30 @@ const betriebOf = iso => buList().find(x => x.von && x.bis && iso >= x.von && is
 let DAYS = {};   // iso → { iso, type, segs:[{site,von,bis}], pauses:[{von,bis}], note, geo:[] }
 const dayOf = iso => {
   if (DAYS[iso]) return DAYS[iso];
-  const b = sollOf(iso) > 0 && betriebOf(iso);
+  const b = isWorkday(iso) && betriebOf(iso);
   return { iso, type: holiday(iso) ? 'feiertag' : b ? 'urlaub' : 'work', betrieb: b ? b.name || 'Betriebsurlaub' : '', segs: [], pauses: [], note: '', geo: [] };
 };
 const hasData = d => !!((d.segs || []).length || (d.pauses || []).length || d.note || (DAYS[d.iso] && d.type !== 'work'));
 const curSeg = d => { const s = d.segs || []; return s.length && !s[s.length - 1].bis ? s[s.length - 1] : null; };
 const openPause = d => (d.pauses || []).find(p => p.von && !p.bis) || null;
 
-/* Mindestpause für eine Nettozeit */
-const minPauseFor = net => (S.pauseOnlyOver6 && net <= 360 ? 0 : +S.minPause || 0);
-/* Sollzeit eines Tages (Arbeitszeit ohne Pause) */
-function sollOf(iso) {
-  if (holiday(iso)) return 0;
+/* Mindestpause je Wochentag (Mo–Do 30, Fr 15 Min.) */
+const dayPause = iso => { const h = S.hours[new Date(iso + 'T12:00').getDay()]; return h && h.pause !== undefined && h.pause !== '' ? +h.pause : +S.minPause || 0; };
+const minPauseFor = (net, iso) => (S.pauseOnlyOver6 && net <= 360 ? 0 : dayPause(iso));
+/* Regelarbeitszeit eines Wochentags (ohne Pause) – auch an Feiertagen (werden gutgeschrieben) */
+function tplSoll(iso) {
   const h = S.hours[new Date(iso + 'T12:00').getDay()]; if (!h || !h.on || !h.von || !h.bis) return 0;
-  const b = span(h.von, h.bis); return Math.max(0, b - minPauseFor(b - (+S.minPause || 0)));
+  const b = span(h.von, h.bis); return Math.max(0, b - minPauseFor(b - dayPause(iso), iso));
 }
+const isWorkday = iso => tplSoll(iso) > 0 && !holiday(iso);
+const sollOf = iso => tplSoll(iso);
+/* Wochen-Soll (Summe der Regelzeiten Mo–So, Standard 40:00) */
+const weekTarget = () => [1, 2, 3, 4, 5, 6, 7].reduce((s, i) => s + tplSoll(addDays('2026-11-08', i)), 0);
 function calcDay(d, now = nowHM()) {
   const iso = d.iso, today = iso === isoToday(), soll = sollOf(iso);
   const r = { soll, start: '', end: '', brutto: 0, pause: 0, abzug: 0, netto: 0, credit: 0, diff: 0, over: 0, open: false, inPause: false, missingEnd: false, sites: [] };
   if (d.type !== 'work') { r.credit = d.type === 'frei' ? 0 : soll; r.diff = r.credit - soll; return r; }
+  if (holiday(iso) && !(d.segs || []).length) { r.credit = soll; return r; }
   const segs = (d.segs || []).filter(s => s.von).slice().sort((a, b) => toMin(a.von) - toMin(b.von));
   if (!segs.length) { r.diff = iso < isoToday() ? -soll : 0; return r; }
   const last = segs[segs.length - 1], endOf = s => s.bis || (today ? now : null);
@@ -375,10 +397,10 @@ function calcDay(d, now = nowHM()) {
   for (const p of pz) stamped += span(p.von, p.bis);
   r.inPause = today && r.open && !!openPause(d);
   r.pause = gaps + stamped;
-  r.abzug = r.brutto ? Math.min(r.brutto, Math.max(r.pause, minPauseFor(r.brutto - r.pause))) : 0;
+  r.abzug = r.brutto ? Math.min(r.brutto, Math.max(r.pause, minPauseFor(r.brutto - r.pause, iso))) : 0;
   r.netto = Math.max(0, r.brutto - r.abzug);
   r.diff = r.missingEnd ? 0 : r.netto - soll;
-  r.over = r.missingEnd || (today && r.open) ? 0 : Math.max(0, r.diff);   // Minusstunden gibt es nicht
+  r.over = r.missingEnd ? 0 : Math.max(0, r.diff);
   /* Stunden je Baustelle: Abschnitt minus Pausen darin, Mindestpausen-Rest anteilig */
   const per = {};
   for (const s of segs) { const e = endOf(s); if (!e) continue; let m = span(s.von, e); for (const p of pz) m -= overlap(s.von, e, p.von, p.bis); const k = s.site || 'Ohne Baustelle'; per[k] = (per[k] || 0) + Math.max(0, m); }
@@ -392,18 +414,25 @@ function calcRange(isos) {
   days.forEach(x => x.c.sites.forEach(s => { sites[s.site] = (sites[s.site] || 0) + s.min; }));
   return { days, netto: sum('netto'), credit: sum('credit'), soll: sum('soll'), diff: sum('diff'), over: sum('over'), pause: sum('pause'), abzug: sum('abzug'), sites, count: t => days.filter(x => x.d.type === t && x.c.soll > 0).length };
 }
-/* Überstundenkonto: Startwert + Überstunden aller Tage ab Startdatum (Minusstunden zählen nicht) */
+/* Wochenbilanz: Ist (Arbeit + Gutschriften für Urlaub/Krank/Feiertag) gegen Wochen-Soll; Überstunden nur über dem Soll */
+function weekStat(mon) {
+  const R = calcRange(weekOf(mon)), target = R.soll || weekTarget(), ist = R.netto + R.credit;
+  return { ist, target, rest: Math.max(0, target - ist), over: Math.max(0, ist - target), pct: target ? Math.min(100, ist / target * 100) : 0, R };
+}
+/* Überstundenkonto: Startwert + Überstunden aller Wochen ab Startdatum (Minusstunden zählen nicht) */
 function balance() {
-  const b = S.balance || {}, from = b.from || '2000-01-01', today = isoToday(); let m = Math.max(0, +b.min || 0);
-  for (const iso in DAYS) if (iso >= from && iso <= today) m += calcDay(dayOf(iso)).over;
+  const b = S.balance || {}, keys = Object.keys(DAYS).sort(); let m = Math.max(0, +b.min || 0);
+  if (!keys.length) return m;
+  const from = mondayOf(b.from && b.from > keys[0] ? b.from : keys[0]), last = mondayOf(isoToday());
+  for (let mon = from; mon <= last; mon = addDays(mon, 7)) m += weekStat(mon).over;
   return m;
 }
 /* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
-const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (sollOf(i) > 0) l.push(i); return l; };
-function vacation(year = new Date().getFullYear()) {
+const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (isWorkday(i)) l.push(i); return l; };
+function vacation(year = tNow().getFullYear()) {
   let taken = 0, planned = 0, betrieb = 0; const today = isoToday();
   for (let iso = `${year}-01-01`; iso <= `${year}-12-31`; iso = addDays(iso, 1)) {
-    if (sollOf(iso) <= 0) continue; const d = dayOf(iso); if (d.type !== 'urlaub') continue;
+    if (!isWorkday(iso)) continue; const d = dayOf(iso); if (d.type !== 'urlaub') continue;
     const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; if (b) betrieb++;
     if (iso <= today) taken++; else planned++;
   }
@@ -438,13 +467,41 @@ const kpi = (k, v, id = '', cls = '') => `<div class="kpi"><div class="text-[12p
 const diffCls = m => (Math.round(m) > 0 ? 'text-p' : '');
 const overTxt = m => (Math.round(m) > 0 ? '+' + hm(m) : '–');
 
+const clockSrc = () => (TIME.ok ? `<span class="text-p">${ic('check', 12, 2.6)} Uhrzeit vom Server geprüft</span>` : `<span class="text-yel-ink">${ic('alert', 12)} Offline – Uhrzeit des Handys, Stempel werden markiert</span>`);
+
+const GEO_K = { in: 'Kommen', out: 'Gehen', pause: 'Pause' };
+const geoTile = g => g.lat ? `<a class="block rounded-[var(--rb)] overflow-hidden border border-line bg-raised" target="_blank" rel="noopener" href="https://maps.apple.com/?ll=${g.lat},${g.lon}&q=${encodeURIComponent(GEO_K[g.k] || '')}">${g.map ? `<img src="${g.map}" class="w-full aspect-[8/5] object-cover block" alt="">` : `<div class="w-full aspect-[8/5] grid place-items-center text-ink3">${ic('pin', 22)}</div>`}<div class="px-2 py-1.5 text-[12px] leading-tight"><b>${GEO_K[g.k] || g.k} ${esc(g.t)}</b><div class="text-ink3 truncate">${esc(g.addr || `${g.lat}, ${g.lon}`)}${g.acc ? ` · ±${g.acc} m` : ''}</div></div></a>`
+  : `<div class="rounded-[var(--rb)] border border-line p-2 text-[12px]" style="background:var(--t-yel)"><b>${GEO_K[g.k] || g.k} ${esc(g.t)}</b><div class="text-yel-ink">Standort nicht ermittelbar</div></div>`;
+
+/* ---------- Wochenstunden (Ziel 40:00) ---------- */
+function weekCard(mon, big) {
+  const w = weekStat(mon), done = w.ist >= w.target;
+  return `<div class="card p-5 ${big ? 'sm:p-6' : ''}" style="${done ? 'background:var(--p-light)' : ''}">
+    <div class="flex flex-wrap items-end justify-between gap-2"><div><div class="text-[13px] text-ink3">Wochenstunden KW ${isoWeek(mon).w}</div><div class="text-[30px] sm:text-[36px] font-semibold leading-tight mt-1 mono whitespace-nowrap" id="wk-ist">${hm(w.ist)} <span class="text-[15px] text-ink3 font-normal font-sans">von ${hm(w.target)} Std.</span></div></div>
+      <div class="text-right">${done ? `<div class="text-[12px] text-ink3">Überstunden</div><div class="text-[26px] font-semibold text-p mono" id="wk-over">+${hm(w.over)}</div>` : `<div class="text-[12px] text-ink3">Noch zu arbeiten</div><div class="text-[26px] font-semibold mono" id="wk-rest">${hm(w.rest)}</div>`}</div></div>
+    <div class="prog !h-3 mt-4"><i id="wk-bar" style="width:${w.pct}%"></i></div>
+    <div class="flex justify-between text-[12px] text-ink3 mt-2"><span>${Math.round(w.pct)} % geschafft</span><span>Urlaub, Krank und Feiertage zählen voll mit</span></div></div>`;
+}
+
+/* ---------- Erinnerung: Stundenzettel freitags übermitteln ---------- */
+let SENT = {};   // Montag der Woche → Zeitpunkt des Sendens
+function reminderCard() {
+  const today = isoToday(), wd = tNow().getDay(), mon = mondayOf(today), last = addDays(mon, -7);
+  let m = '', wk = '';
+  if (wd === 5 && !SENT[mon]) { m = tNow().getHours() >= 12 || calcDay(dayOf(today)).end ? 'Heute ist Freitag – bitte den Stundenzettel an ' : 'Denk heute daran, den Stundenzettel an '; wk = mon; }
+  else if ((wd === 6 || wd === 0) && !SENT[mon] && Object.keys(DAYS).some(i => i >= mon && i <= today)) { m = 'Stundenzettel dieser Woche noch nicht übermittelt – bitte an '; wk = mon; }
+  else if (wd >= 1 && wd <= 4 && !SENT[last] && Object.keys(DAYS).some(i => i >= last && i < mon)) { m = 'Der Stundenzettel der letzten Woche fehlt noch – bitte an '; wk = last; }
+  if (!m) return '';
+  return `<div class="card p-4 mb-4 flex flex-wrap items-center gap-3 border-s/50" style="background:rgb(var(--s-rgb)/.14)"><span class="w-10 h-10 rounded-full grid place-items-center shrink-0" style="background:rgb(var(--s-rgb)/.25);color:var(--yel-ink)">${ic('alert', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]"><b>Erinnerung:</b> ${m}${esc(S.recipient.name || 'das Büro')} schicken (KW ${isoWeek(wk).w}).</div><button class="btn-p !h-10" data-a="send-week" data-mon="${wk}">${ic('send', 16)}Jetzt senden</button></div>`;
+}
+
 /* ---------- Heute ---------- */
 function siteChips(target) {
   const l = (S.sites || []).slice(0, 8); if (!l.length) return '';
   return `<div class="flex flex-wrap gap-1.5 mt-2">${l.map(x => `<button type="button" class="chip" data-a="site-pick" data-t="${target}" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
 }
 function viewHome() {
-  const iso = isoToday(), d = dayOf(iso), c = calcDay(d), seg = curSeg(d), wk = isoWeek(iso), dt = new Date();
+  const iso = isoToday(), d = dayOf(iso), c = calcDay(d), seg = curSeg(d), wk = isoWeek(iso), dt = tNow();
   const state = d.type !== 'work' ? 'absent' : c.inPause ? 'pause' : seg ? 'work' : 'idle';
   const status = { idle: (d.segs || []).length ? `Ausgestempelt um ${esc(c.end)} Uhr` : 'Noch nicht eingestempelt', work: `Bei der Arbeit seit ${esc(seg ? seg.von : '')} Uhr${seg && seg.site ? ` · ${esc(seg.site)}` : ''}`, pause: `In Pause seit ${esc((openPause(d) || {}).von || '')} Uhr`, absent: typeName(d.type) }[state];
   const dot = { idle: 'bg-ink3', work: 'bg-p', pause: 'bg-s', absent: 'bg-s' }[state];
@@ -452,34 +509,36 @@ function viewHome() {
   const G = 'background:rgb(var(--p-rgb));color:#fff', Y = 'background:rgb(var(--s-rgb));color:#1b1405', R = 'background:#D9482B;color:#fff', N = 'background:var(--raised);color:var(--ink);border:1px solid var(--line2)';
   let buttons = '';
   const V = 'background:rgb(var(--s-rgb)/.16);color:var(--yel-ink);border:1px solid rgb(var(--s-rgb)/.45)';
-  if (state === 'idle') buttons = `<div class="grid gap-3">${btn('in', (d.segs || []).length ? 'Wieder kommen' : 'Kommen', 'play', G)}${(d.segs || []).length || !sollOf(iso) ? '' : btn('vac-today', 'Heute Urlaub', 'palm', V)}</div>`;
+  if (state === 'idle') buttons = `<div class="grid gap-3">${btn('in', (d.segs || []).length ? 'Wieder kommen' : 'Kommen', 'play', G)}${(d.segs || []).length || !isWorkday(iso) ? '' : `<div class="grid grid-cols-2 gap-3">${btn('vac-today', 'Heute Urlaub', 'palm', V)}${btn('sick-today', 'Heute krank', 'heartp', 'background:var(--t-red);color:var(--red-ink);border:1px solid rgba(217,72,43,.35)')}</div>`}</div>`;
   else if (state === 'work') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause', 'coffee', Y)}${btn('switch', 'Baustelle wechseln', 'refresh', N)}<div class="col-span-2">${btn('out', 'Gehen', 'stop', R)}</div></div>`;
   else if (state === 'pause') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause beenden', 'play', G)}${btn('out', 'Gehen', 'stop', R)}</div>`;
-  else buttons = `<div class="rounded-[var(--r)] p-5 text-center" style="background:rgb(var(--s-rgb)/.14)"><div class="text-yel-ink">${ic(d.type === 'urlaub' ? 'palm' : d.type === 'krank' ? 'heartp' : 'cal', 34, 1.7)}</div><div class="text-[20px] font-semibold mt-2">Heute: ${d.betrieb ? esc(d.betrieb) : typeName(d.type)}</div>${d.type === 'feiertag' && holiday(iso) ? `<div class="text-ink3 text-[14px]">${esc(holiday(iso))}</div>` : ''}</div><div class="grid grid-cols-2 gap-3 mt-3">${btn('in', 'Trotzdem kommen', 'play', G)}${d.type === 'urlaub' ? btn('vac-undo', 'Urlaub zurücknehmen', 'x', N) : ''}</div>`;
+  else buttons = `<div class="rounded-[var(--r)] p-5 text-center" style="background:rgb(var(--s-rgb)/.14)"><div class="text-yel-ink">${ic(d.type === 'urlaub' ? 'palm' : d.type === 'krank' ? 'heartp' : 'cal', 34, 1.7)}</div><div class="text-[20px] font-semibold mt-2">Heute: ${d.betrieb ? esc(d.betrieb) : typeName(d.type)}</div>${d.type === 'feiertag' && holiday(iso) ? `<div class="text-ink3 text-[14px]">${esc(holiday(iso))}</div>` : ''}</div><div class="grid grid-cols-2 gap-3 mt-3">${btn('in', 'Trotzdem kommen', 'play', G)}${d.type === 'urlaub' ? btn('vac-undo', 'Urlaub zurücknehmen', 'x', N) : d.type === 'krank' ? btn('sick-undo', 'Doch nicht krank', 'x', N) : ''}</div>${d.type === 'krank' ? `<button class="btn-s w-full mt-3" data-a="sick-tell">${ic('send', 16)}${esc(S.recipient.name || 'Büro')} Bescheid geben</button><p class="hint text-center">Gute Besserung! Bitte die Krankmeldung (AU) wie gewohnt einreichen.</p>` : ''}`;
   /* fehlendes Gehen an früheren Tagen */
   const miss = Object.values(DAYS).filter(x => x.iso < iso && x.iso >= addDays(iso, -21) && calcDay(x).missingEnd).sort((a, b) => a.iso.localeCompare(b.iso));
   const missCard = miss.length ? `<div class="card p-4 mt-4 border-ember/50 flex flex-wrap items-center gap-3" style="background:var(--t-red)"><span class="text-ember">${ic('alert', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">Ausstempeln fehlt: ${miss.map(x => `<b>${wdOf(x.iso).slice(0, 2)}, ${deDate(x.iso)}</b>`).join(', ')} – bitte vom Admin korrigieren lassen.</div><a class="btn-s !h-9" href="#/woche/${mondayOf(miss[0].iso)}">Ansehen</a></div>` : '';
   const segs = (d.segs || []).map(s => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[14px]"><span class="w-2 h-2 rounded-full ${s.bis ? 'bg-ink3' : 'bg-p'}"></span><span class="flex-1 min-w-0 truncate">${esc(s.site || 'Ohne Baustelle')}</span><span class="mono text-ink2">${esc(s.von)}–${esc(s.bis || 'jetzt')}</span></div>`).join('');
   const W = calcRange(weekOf(mondayOf(iso))), bal = balance(), vac = vacation();
-  const week = W.days.filter(x => x.c.soll > 0 || hasData(x.d)).map(x => `<a href="#/woche/${mondayOf(iso)}" class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px] ${x.d.iso === iso ? 'font-semibold' : ''}"><span class="w-24">${wdOf(x.d.iso).slice(0, 2)}, ${deDate(x.d.iso).slice(0, 6)}</span><span class="flex-1 text-ink3 truncate">${x.d.type !== 'work' ? typeName(x.d.type) : x.c.start ? `${x.c.start}–${x.c.end || '…'}` : '–'}</span><span class="mono w-14 text-right">${hm(x.c.netto + x.c.credit)}</span><span class="mono w-16 text-right ${diffCls(x.c.over)}">${overTxt(x.c.over)}</span></a>`).join('');
+  const week = W.days.filter(x => x.c.soll > 0 || hasData(x.d)).map(x => `<a href="#/woche/${mondayOf(iso)}" class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px] ${x.d.iso === iso ? 'font-semibold' : ''}"><span class="w-24">${wdOf(x.d.iso).slice(0, 2)}, ${deDate(x.d.iso).slice(0, 6)}</span><span class="flex-1 text-ink3 truncate">${x.d.type !== 'work' ? typeName(x.d.type) : x.c.start ? `${x.c.start}–${x.c.end || '…'}` : '–'}</span><span class="mono w-14 text-right">${hm(x.c.netto + x.c.credit)}</span><span class="mono w-12 text-right text-ink3 text-[12px] whitespace-nowrap">/ ${hm(x.c.soll)}</span></a>`).join('');
   return `<section class="pt-6 sm:pt-10">
+    ${reminderCard()}
     ${S.person.name ? '' : `<a href="#/einstellungen/person" class="card p-4 mb-4 flex items-center gap-3 text-[14px]" style="background:var(--t-yel)"><span class="text-yel-ink">${ic('info', 18)}</span><span class="flex-1">Bitte zuerst deinen Namen eintragen – er steht auf dem Stundenzettel.</span>${ic('arrowR', 16)}</a>`}
     <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-4">
       <div class="card p-5 sm:p-7">
         <div class="flex items-center justify-between gap-3"><span class="text-[13px] text-ink3">${WD[dt.getDay()]}, ${deDate(iso)} · KW ${wk.w}</span><span class="inline-flex items-center gap-2 text-[13px]"><span class="w-2 h-2 rounded-full ${dot} ${state === 'work' ? 'animate-pulse' : ''}"></span>${esc(status)}</span></div>
-        <div class="big-clock text-[64px] sm:text-[84px] leading-none mt-4" id="clock">${nowHM()}</div>
+        <div class="big-clock text-[52px] sm:text-[76px] leading-none mt-4" id="clock">${nowHMS()}</div><div class="text-[12px] mt-2" id="clock-src">${clockSrc()}</div>
         ${state === 'idle' || state === 'work' ? `<label class="block mt-6"><span class="lbl">${state === 'work' ? 'Neue Baustelle (für „Baustelle wechseln“)' : 'Baustelle'}</span><input class="inp" id="site" list="dl-sites" placeholder="z. B. Meier, Lotte" autocomplete="off" value="${state === 'idle' && (d.segs || []).length ? esc(d.segs[d.segs.length - 1].site || '') : ''}"></label>${siteChips('site')}` : ''}
-        <div class="mt-5">${buttons}</div>
+        <div class="mt-5">${GEO_STATE === 'denied' ? `<div class="rounded-[var(--r)] p-5" style="background:var(--t-red)"><div class="flex items-center gap-2 font-semibold text-red-ink">${ic('pin', 18)}Standort nicht freigegeben – Stempeln gesperrt</div><div class="mt-3">${geoHelp()}</div><button class="btn-p w-full mt-4" data-a="geo-retry">${ic('refresh', 16)}Erneut prüfen</button></div>` : `${GEO_STATE !== 'granted' && !S.gpsConsent ? `<button class="w-full text-left rounded-[var(--rb)] p-3 mb-3 text-[13px] flex items-center gap-2" style="background:var(--p-light)" data-a="geo-ask">${ic('pin', 16)}<span class="flex-1">Zum Stempeln wird der Standort benötigt – jetzt freigeben</span>${ic('arrowR', 15)}</button>` : ''}${buttons}`}</div>
         ${missCard}
       </div>
       <div class="space-y-4">
-        <div class="grid grid-cols-2 gap-2">${kpi('Arbeitszeit heute', hm(c.netto + c.credit), 'live-netto')}${kpi('Soll heute', hm(c.soll))}${kpi('Pause (abgezogen)', `${hm(c.abzug)}`, 'live-pause')}${kpi('Überstunden heute', overTxt(Math.max(0, c.diff)), 'live-diff', diffCls(c.diff))}</div>
-        <p class="text-[12px] text-ink3 -mt-2">Mindestens ${S.minPause} Min. Pause werden immer abgezogen – auch ohne gestempelte Pause; längere Pausen voll.</p>
-        ${segs ? `<div class="card p-4"><div class="text-[13px] text-ink3 mb-1">Heute</div>${segs}</div>` : ''}
-        <div class="grid grid-cols-2 gap-2"><div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[26px] font-semibold mt-1 text-p">${overTxt(bal)}</div></div><a href="#/urlaub" class="kpi block"><div class="text-[12px] text-ink3">Resturlaub ${new Date().getFullYear()}</div><div class="text-[26px] font-semibold mt-1">${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span></div></a></div>
+        <div class="grid grid-cols-2 gap-2">${kpi('Arbeitszeit heute', hm(c.netto + c.credit), 'live-netto')}${kpi('Soll heute', hm(c.soll))}${kpi('Pause (abgezogen)', `${hm(c.abzug)}`, 'live-pause')}${kpi('Pause gestempelt', hm(c.pause))}</div>
+        <p class="text-[12px] text-ink3 -mt-2">Heute werden mindestens ${dayPause(iso)} Min. Pause abgezogen – auch ohne gestempelte Pause; längere Pausen voll.</p>
+        ${segs ? `<div class="card p-4"><div class="text-[13px] text-ink3 mb-1">Heute</div>${segs}${(d.geo || []).length ? `<div class="grid grid-cols-2 gap-2 mt-3">${d.geo.slice(-2).map(geoTile).join('')}</div>` : ''}</div>` : ''}
+        <div class="grid grid-cols-2 gap-2"><div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[26px] font-semibold mt-1 text-p">${overTxt(bal)}</div></div><a href="#/urlaub" class="kpi block"><div class="text-[12px] text-ink3">Resturlaub ${tNow().getFullYear()}</div><div class="text-[26px] font-semibold mt-1">${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span></div></a></div>
       </div>
     </div>
-    <div class="card p-5 mt-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><h2 class="sec-t">Diese Woche</h2><span class="text-[14px]">${hm(W.netto + W.credit)} / ${hm(W.soll)} · Überstunden <b class="text-p">${overTxt(W.over)}</b></span></div>${week || '<div class="text-ink3 text-[14px]">Noch keine Einträge.</div>'}
+    <div class="mt-4">${weekCard(mondayOf(iso), true)}</div>
+    <div class="card p-5 mt-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><h2 class="sec-t">Diese Woche</h2></div>${week || '<div class="text-ink3 text-[14px]">Noch keine Einträge.</div>'}
       <div class="flex flex-wrap gap-2 mt-4"><a class="btn-s" href="#/woche">${ic('cal', 16)}Woche ansehen</a><button class="btn-p" data-a="send-week" data-mon="${mondayOf(iso)}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button></div></div>
   </section>`;
 }
@@ -508,9 +567,9 @@ function viewWeek() {
           ${d.type !== 'work' ? `<span class="badge bg-tyel text-yel-ink">${d.betrieb ? esc(d.betrieb) : typeName(d.type)}${d.type === 'feiertag' && holiday(d.iso) ? ' · ' + esc(holiday(d.iso)) : ''}</span>` : c.start ? `<div><span class="mono">${c.start}–${c.end || (c.missingEnd ? '?' : 'jetzt')}</span> <span class="text-ink3">· Pause ${hm(c.pause)}${c.abzug > c.pause ? ` (abgezogen ${hm(c.abzug)})` : ''}</span></div>` : `<span class="text-ink3">${c.soll ? 'Kein Eintrag' : 'Frei'}</span>`}
           ${c.missingEnd ? `<div class="text-ember text-[13px] mt-1">${ic('alert', 13)} Ausstempeln fehlt</div>` : ''}
           ${c.sites.length ? `<div class="flex flex-wrap gap-1.5 mt-2">${c.sites.map(s => `<span class="badge bg-raised text-ink2">${ic('pin', 12)}${esc(s.site)} · ${hm(s.min)}</span>`).join('')}</div>` : ''}
-          ${d.edited ? `<div class="text-[12px] text-ink3 mt-1.5">${ic('edit', 12)} nachgetragen${log ? ` (${log} Änderung${log > 1 ? 'en' : ''})` : ''}</div>` : ''}
+          ${(d.geo || []).length ? `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">${d.geo.map(geoTile).join('')}</div>` : ''}${(d.offline || []).length ? `<div class="text-[12px] text-yel-ink mt-1.5">${ic('alert', 12)} offline gestempelt (Handy-Uhr): ${esc(d.offline.join(', '))}</div>` : ''}${d.edited ? `<div class="text-[12px] text-ink3 mt-1.5">${ic('edit', 12)} nachgetragen${log ? ` (${log} Änderung${log > 1 ? 'en' : ''})` : ''}</div>` : ''}
         </div>
-        <div class="text-right"><div class="text-[18px] font-semibold mono">${hm(c.netto + c.credit)}</div><div class="text-[12px] text-ink3">Soll ${hm(c.soll)}</div>${c.over ? `<div class="text-[13px] mono text-p">+${hm(c.over)} Überst.</div>` : ''}</div>
+        <div class="text-right"><div class="text-[18px] font-semibold mono">${hm(c.netto + c.credit)}</div><div class="text-[12px] text-ink3">Soll ${hm(c.soll)}</div></div>
       </div>
       <label class="block mt-3"><span class="sr-only">Notiz</span><input class="inp !h-10 text-[14px]" data-note="${d.iso}" value="${esc(d.note || '')}" placeholder="Notiz zum Tag (optional)"></label>
       ${edit ? (open ? dayEditor(d) : `<button class="btn-g !h-8 mt-2 -ml-2" data-a="ed-open" data-iso="${d.iso}">${ic('edit', 14)}Zeiten bearbeiten</button>`) : ''}
@@ -522,7 +581,7 @@ function viewWeek() {
     <div class="flex flex-wrap items-center gap-3"><h1 class="h-font text-[38px] sm:text-[48px] leading-none mr-auto">KW ${wk.w}</h1>
       <div class="flex items-center gap-1"><a class="btn-s !px-3" href="#/woche/${addDays(mon, -7)}" aria-label="Vorige Woche">${ic('chevL', 18)}</a><a class="btn-s" href="#/woche/${mondayOf(today)}">Heute</a><a class="btn-s !px-3" href="#/woche/${addDays(mon, 7)}" aria-label="Nächste Woche">${ic('chevR', 18)}</a></div></div>
     <p class="text-ink3 text-[14px] mt-2">${deDate(mon)} – ${deDate(addDays(mon, 6))} · ${esc(S.person.name || 'Name fehlt')}</p>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi('Arbeitszeit', hm(W.netto + W.credit))}${kpi('Soll', hm(W.soll))}${kpi('Überstunden Woche', overTxt(W.over), '', 'text-p')}${kpi('Überstunden gesamt', overTxt(balance()), '', 'text-p')}</div>
+    <div class="grid lg:grid-cols-[1fr_260px] gap-3 mt-5">${weekCard(mon)}${kpi('Überstunden gesamt', overTxt(balance()), '', 'text-p')}</div>
     <div class="flex flex-wrap items-center gap-2 mt-5"><button class="btn-p" data-a="send-week" data-mon="${mon}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button><button class="btn-s" data-a="send-month" data-iso="${mon}">${ic('file', 16)}Monat ${MONTHS[+mon.slice(5, 7) - 1]}</button><span class="flex-1"></span>${lock}</div>
     <div class="space-y-3 mt-5">${cards}</div>
     ${Object.keys(W.sites).length ? `<div class="card p-5 mt-4"><h2 class="sec-t mb-3">Baustellen dieser Woche</h2>${Object.entries(W.sites).sort((a, b) => b[1] - a[1]).map(([k, m]) => `<div class="flex justify-between py-2 border-b border-line last:border-0 text-[14px]"><span>${esc(k)}</span><b class="mono">${hm(m)}</b></div>`).join('')}</div>` : ''}
@@ -552,7 +611,7 @@ function calendar() {
     <p class="hint mt-3">${ic('alert', 12)} Nur deine eigenen Einträge – Kollegen sehen diesen Kalender nicht.</p></div>`;
 }
 function viewUrlaub() {
-  const y = new Date().getFullYear(), v = vacation(y), today = isoToday();
+  const y = tNow().getFullYear(), v = vacation(y), today = isoToday();
   const von = UI.vVon || today, bis = UI.vBis || von, days = workDaysIn(von, bis);
   const list = Object.values(DAYS).filter(d => d.type === 'urlaub' && d.iso.startsWith(y + '-') && !betriebOf(d.iso)).sort((a, b) => a.iso.localeCompare(b.iso));
   const blocks = []; list.forEach(d => { const l = blocks[blocks.length - 1]; if (l && workDaysIn(addDays(l.bis, 1), addDays(d.iso, -1)).length === 0) { l.bis = d.iso; l.n += sollOf(d.iso) > 0 ? 1 : 0; } else blocks.push({ von: d.iso, bis: d.iso, n: sollOf(d.iso) > 0 ? 1 : 0 }); });
@@ -584,12 +643,14 @@ function setBody() {
     case 'person': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('person.name', 'Mein Name', 'Vor- und Nachname')}${sIn('person.nr', 'Personalnummer (optional)')}</div>
       <h3 class="font-semibold mt-7 mb-3">Stundenzettel senden an</h3><div class="grid sm:grid-cols-2 gap-4">${sIn('recipient.name', 'Name', 'z. B. Jule')}${sIn('recipient.phone', 'WhatsApp-Nummer (optional)', 'z. B. 0176 …', 'tel')}</div>
       <p class="hint">Das PDF wird gespeichert und über „Teilen“ an WhatsApp übergeben – dort ${esc(S.recipient.name || 'den Empfänger')} auswählen. Die Nummer wird genutzt, wenn das Gerät kein Teilen von Dateien kann.</p>
-      <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-6"><input type="checkbox" data-a="gps" ${S.gps ? 'checked' : ''} ${canEdit() ? '' : 'disabled'}>Standort beim Stempeln speichern (GPS)${canEdit() ? '' : ' – nur Admin'}</label>`;
+      <h3 class="font-semibold mt-7 mb-2">Erinnerung jeden Freitag</h3><p class="text-ink3 text-[14px] mb-3">Die App erinnert freitags auf der Startseite. Zusätzlich kann eine wiederkehrende Erinnerung in den Handy-Kalender übernommen werden – sie meldet sich jeden Freitag um 13:30 Uhr, auch wenn die App geschlossen ist.</p><button class="btn-s" data-a="ics">${ic('cal', 16)}Erinnerung in Kalender übernehmen</button>
+      <div class="kpi mt-6 text-[14px] flex items-start gap-2"><span class="text-p mt-0.5">${ic('pin', 16)}</span><span>Beim Kommen, bei Pausen und beim Gehen wird der Standort gespeichert (Pflicht). Ohne Standortfreigabe ist Stempeln nicht möglich.${S.gpsConsent ? ` Hinweis bestätigt am ${deDate(S.gpsConsent.slice(0, 10))}.` : ''}</span></div>`;
     case 'zeiten': return `${lockNote}<p class="text-ink3 text-[14px] mb-4">Sollzeiten je Wochentag. Die Mindestpause wird bei der Sollzeit und bei jedem Arbeitstag abgezogen.</p>
-      <div class="space-y-2">${[1, 2, 3, 4, 5, 6, 0].map(k => { const h = S.hours[k]; return `<div class="grid grid-cols-[110px_1fr_1fr_70px] gap-2 items-center"><label class="flex items-center gap-2 text-[14px]"><input type="checkbox" data-hour="${k}" data-k="on" ${h.on ? 'checked' : ''} ${ro ? 'disabled' : ''}>${WD[k].slice(0, 2)}</label><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="von" value="${esc(h.von)}" ${ro || !h.on ? 'disabled' : ''}><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="bis" value="${esc(h.bis)}" ${ro || !h.on ? 'disabled' : ''}><span class="text-[13px] text-ink3 mono text-right">${h.on ? hm(sollOf(k === 0 ? '2026-11-15' : addDays('2026-11-09', k - 1))) : '–'}</span></div>`; }).join('')}</div>
-      <div class="grid sm:grid-cols-2 gap-4 mt-6">${sIn('minPause', 'Mindestpause (Min.)', '30', 'number', ro)}<label class="block"><span class="lbl">Bundesland (Feiertage)</span><select class="inp" data-s="state" ${ro ? 'disabled' : ''}>${STATES.map(([k, l]) => `<option value="${k}" ${S.state === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <div class="grid grid-cols-[70px_1fr_1fr_64px_58px] gap-2 text-[12px] text-ink3 mb-1"><span>Tag</span><span>Beginn</span><span>Ende</span><span>Pause</span><span class="text-right">Soll</span></div><div class="space-y-2">${[1, 2, 3, 4, 5, 6, 0].map(k => { const h = S.hours[k]; return `<div class="grid grid-cols-[70px_1fr_1fr_64px_58px] gap-2 items-center"><label class="flex items-center gap-2 text-[14px]"><input type="checkbox" data-hour="${k}" data-k="on" ${h.on ? 'checked' : ''} ${ro ? 'disabled' : ''}>${WD[k].slice(0, 2)}</label><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="von" value="${esc(h.von)}" ${ro || !h.on ? 'disabled' : ''}><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="bis" value="${esc(h.bis)}" ${ro || !h.on ? 'disabled' : ''}><input class="inp !h-10 !px-2" inputmode="numeric" data-hour="${k}" data-k="pause" value="${esc(h.pause ?? '')}" ${ro || !h.on ? 'disabled' : ''}><span class="text-[13px] text-ink3 mono text-right">${h.on ? hm(tplSoll(k === 0 ? '2026-11-15' : addDays('2026-11-09', k - 1))) : '–'}</span></div>`; }).join('')}</div>
+      <div class="kpi mt-3 flex justify-between text-[14px]"><span>Wochen-Soll</span><b>${hm(weekTarget())} Std.</b></div>
+      <p class="hint">Pause = Mindestpause in Minuten, die an diesem Tag immer abgezogen wird (längere Pausen voll).</p><div class="grid sm:grid-cols-2 gap-4 mt-6"><div class="kpi"><div class="text-[12px] text-ink3">Feiertage nach Firmensitz</div><div class="text-[15px] font-semibold mt-1">${esc((STATES.find(x => x[0] === firmState()) || ['', firmState()])[1])}</div><div class="text-[12px] text-ink3 mt-0.5">${esc(FIRMA.firmensitz ? `${FIRMA.firmensitz.name}, ${FIRMA.firmensitz.ort}` : '')}</div></div></div>
       <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-4"><input type="checkbox" data-a="over6" ${S.pauseOnlyOver6 ? 'checked' : ''} ${ro ? 'disabled' : ''}>Mindestpause nur bei mehr als 6 Std. Arbeit abziehen</label>`;
-    case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${new Date().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('vacation.perYear', 'Urlaubstage pro Jahr', '30', 'number', ro)}${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div><p class="hint">Genommen: ${v.taken} · Geplant: ${v.planned} · Übrig: ${v.left} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)</p>
+    case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${tNow().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('vacation.perYear', 'Urlaubstage pro Jahr', '30', 'number', ro)}${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div><p class="hint">Genommen: ${v.taken} · Geplant: ${v.planned} · Übrig: ${v.left} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)</p>
       <h3 class="font-semibold mt-7 mb-3">Betriebsurlaub</h3>
       <div class="space-y-1.5">${(FIRMA.betriebsurlaub || []).map(b => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span><span class="text-[12px] text-ink3">für alle (Firmenvorgabe)</span></div>`).join('')}
       ${(S.bu || []).map((b, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}${b.abzug === false ? ' · zählt nicht' : ''}</span>${ro ? '' : `<button class="text-ink3 hover:text-ember" data-a="bu-del" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button>`}</div>`).join('')}</div>
@@ -649,22 +710,108 @@ function geoStamp(iso, kind) {
   if (!S.gps || !navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(async pos => { const d = clone(dayOf(iso)); (d.geo = d.geo || []).push({ k: kind, t: nowHM(), lat: +pos.coords.latitude.toFixed(5), lon: +pos.coords.longitude.toFixed(5), acc: Math.round(pos.coords.accuracy) }); await saveDay(d); }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
 }
+/* Große Einblendung, verschwindet von selbst */
+function cheer(title, sub, icon) {
+  const el = document.createElement('div');
+  el.className = 'fixed inset-0 z-[95] grid place-items-center p-6 cheer'; el.style.cssText = 'background:rgba(0,0,0,.35);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)';
+  el.innerHTML = `<div class="card px-8 py-9 text-center max-w-sm w-full" style="animation:chIn .45s cubic-bezier(.2,1.4,.4,1) both"><div class="w-20 h-20 rounded-full grid place-items-center mx-auto" style="background:rgb(var(--s-rgb)/.2);color:rgb(var(--s-rgb))">${ic(icon, 40, 1.8)}</div><div class="h-font text-[38px] leading-tight mt-5">${esc(title)}</div><div class="text-ink2 text-[16px] mt-2">${esc(sub)}</div></div>`;
+  document.body.appendChild(el); const close = () => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 420); };
+  el.onclick = close; setTimeout(close, 2800);
+}
+document.head.insertAdjacentHTML('beforeend', '<style>@keyframes chIn{from{opacity:0;transform:scale(.7) translateY(20px)}to{opacity:1;transform:none}}</style>');
+const isFriday = () => tNow().getDay() === 5;
+/* ---------- Standort (Pflicht beim Stempeln) ---------- */
+let GEO_STATE = 'unknown';   // granted | denied | prompt | unknown
+function getPos(timeout = 12000) {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res({ err: 'unsupported' });
+    navigator.geolocation.getCurrentPosition(p => { GEO_STATE = 'granted'; res({ lat: +p.coords.latitude.toFixed(5), lon: +p.coords.longitude.toFixed(5), acc: Math.round(p.coords.accuracy) }); },
+      e => { if (e.code === 1) GEO_STATE = 'denied'; res({ err: e.code === 1 ? 'denied' : e.code === 3 ? 'timeout' : 'unavailable' }); },
+      { enableHighAccuracy: true, timeout, maximumAge: 30000 });
+  });
+}
+async function checkGeoPerm() { try { if (navigator.permissions) { const st = await navigator.permissions.query({ name: 'geolocation' }); GEO_STATE = st.state; st.onchange = () => { GEO_STATE = st.state; if (UI.route === 'home') rerender(); }; } } catch (e) {} }
+function geoHelp() {
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  return `<div class="text-[14px] text-ink2 space-y-1.5 text-left">${ios
+    ? '<div><b>iPhone/iPad:</b> Einstellungen → Datenschutz &amp; Sicherheit → Ortungsdienste einschalten → <b>Safari-Websites</b> → „Beim Verwenden der App“ und „Genauer Standort“ an.</div><div>Danach die Stempeluhr schließen und neu öffnen, beim Stempeln „Erlauben“ tippen.</div>'
+    : '<div><b>Android (Chrome):</b> in der Adresszeile bzw. im App-Menü auf das Schloss/„Website-Einstellungen“ → <b>Standort: Zulassen</b>.</div><div>Außerdem in den Handy-Einstellungen den Standort einschalten.</div>'}</div>`;
+}
+function geoBlockedModal() {
+  modal(`<div class="text-center"><div class="w-14 h-14 rounded-full grid place-items-center mx-auto" style="background:var(--t-red);color:var(--red-ink)">${ic('pin', 26)}</div><div class="font-semibold text-[19px] mt-4">Standort erforderlich</div><p class="text-ink3 text-[14px] mt-1">Ohne Standortfreigabe kann nicht gestempelt werden.</p></div><div class="rounded-[var(--rb)] bg-raised p-4 mt-5">${geoHelp()}</div><button class="btn-p w-full mt-4" data-a="geo-retry">${ic('refresh', 16)}Erneut prüfen</button>`);
+}
+function consentModal() {
+  return new Promise(res => {
+    modal(`<div class="text-center"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('pin', 26)}</div><div class="font-semibold text-[19px] mt-4">Hinweis zum Standort</div></div>
+      <div class="text-[14px] text-ink2 mt-4 space-y-2"><p>Beim <b>Kommen, bei Pausen und beim Gehen</b> speichert die Stempeluhr einmalig deinen Standort – nicht dauerhaft und nicht im Hintergrund.</p><p>Der Standort liegt auf deinem Handy und erscheint in deinem Stundenzettel, den du an ${esc(S.recipient.name || 'das Büro')} schickst. Ohne Standortfreigabe ist Stempeln nicht möglich.</p></div>
+      <button class="btn-p w-full mt-5" id="cs-ok">${ic('check', 16)}Verstanden und einverstanden</button>`);
+    $('#cs-ok').onclick = () => { S.gpsConsent = tNow().toISOString(); saveSettings(); closeModal(); res(true); };
+  });
+}
+
+/* ---------- Kartenausschnitt und Adresse zum Stempel ----------
+   Karte: OpenStreetMap (© OpenStreetMap-Mitwirkende), Adresse: Photon/Nominatim. Blauer Punkt wie in Apple Karten. */
+async function geoAddr(lat, lon) {
+  try {
+    const j = await (await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&lang=de`)).json(), p = (j.features[0] || {}).properties || {};
+    const a = [[p.street || p.name, p.housenumber].filter(Boolean).join(' '), [p.postcode, p.city || p.town || p.village || p.district].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    if (a) return a;
+  } catch (e) {}
+  try {
+    const j = await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&accept-language=de`)).json(), a = j.address || {};
+    return [[a.road, a.house_number].filter(Boolean).join(' '), [a.postcode, a.city || a.town || a.village].filter(Boolean).join(' ')].filter(Boolean).join(', ') || j.display_name || '';
+  } catch (e) { return ''; }
+}
+async function geoMap(lat, lon, acc) {
+  const z = 17, W = 480, H = 300, n = 2 ** z, rad = lat * Math.PI / 180;
+  const px = (lon + 180) / 360 * n * 256, py = (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n * 256, x0 = px - W / 2, y0 = py - H / 2;
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#e8eef0'; x.fillRect(0, 0, W, H);
+  const jobs = [];
+  for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++)
+    jobs.push(new Promise(res => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { x.drawImage(im, tx * 256 - x0, ty * 256 - y0); res(true); }; im.onerror = () => res(false); im.src = `https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`; }));
+  const ok = (await Promise.all(jobs)).some(Boolean); if (!ok) return '';
+  const mpp = 156543.03 * Math.cos(rad) / n, r = Math.max(14, Math.min(120, (acc || 10) / mpp)), cx = W / 2, cy = H / 2;
+  x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fillStyle = 'rgba(10,132,255,.16)'; x.fill(); x.strokeStyle = 'rgba(10,132,255,.45)'; x.lineWidth = 1.5; x.stroke();
+  x.save(); x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowBlur = 6; x.beginPath(); x.arc(cx, cy, 11, 0, 7); x.fillStyle = '#fff'; x.fill(); x.restore();
+  x.beginPath(); x.arc(cx, cy, 8, 0, 7); x.fillStyle = '#0A84FF'; x.fill();
+  x.font = '11px system-ui,sans-serif'; const t = '© OpenStreetMap', w = x.measureText(t).width + 8; x.fillStyle = 'rgba(255,255,255,.8)'; x.fillRect(W - w, H - 16, w, 16); x.fillStyle = '#333'; x.fillText(t, W - w + 4, H - 4.5);
+  try { return c.toDataURL('image/jpeg', 0.82); } catch (e) { return ''; }
+}
+async function enrichGeo(iso, idx) {
+  const g0 = (dayOf(iso).geo || [])[idx]; if (!g0 || !g0.lat) return;
+  const [addr, map] = await Promise.all([geoAddr(g0.lat, g0.lon), geoMap(g0.lat, g0.lon, g0.acc)]);
+  const d = clone(dayOf(iso)), g = d.geo[idx]; if (!g) return; if (addr) g.addr = addr; if (map) g.map = map; await saveDay(d); if (UI.route !== 'settings') rerender();
+}
+
+let STAMPING = false;
 async function stamp(kind) {
+  if (STAMPING) return; STAMPING = true;
+  try { await stampInner(kind); } finally { STAMPING = false; }
+}
+async function stampInner(kind) {
+  if (!S.gpsConsent && !(await consentModal())) return;
+  const [ok, pos] = await Promise.all([syncTime(2500), getPos()]);
+  if (pos.err === 'denied' || pos.err === 'unsupported') { rerender(); return geoBlockedModal(); }
   const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d);
+  const geo = pos.err ? { k: kind, t, err: 'Standort nicht ermittelbar' } : { k: kind, t, ...pos }; (d.geo = d.geo || []).push(geo); const gi = d.geo.length - 1; setTimeout(() => enrichGeo(d.iso, gi), 300); if (pos.err) toast('Standort gerade nicht ermittelbar – Stempel wird trotzdem gespeichert und vermerkt.', 'warn', 4500);
+  if (!ok) { d.offline = (d.offline || []).concat(`${kind === 'in' ? 'Kommen' : kind === 'out' ? 'Gehen' : 'Pause'} ${t}`); toast('Kein Internet – Uhrzeit des Handys verwendet, Eintrag wird als „offline“ markiert.', 'warn', 5000); }
   d.segs = d.segs || []; d.pauses = d.pauses || [];
   if (kind === 'in') {
     if (seg) return;
     if (d.type !== 'work') d.type = 'work';
     const site = ($('#site') || {}).value ? $('#site').value.trim() : ''; rememberSite(site);
-    d.segs.push({ site, von: t, bis: '' }); toast(`Gekommen um ${t} Uhr${site ? ' · ' + site : ''}`);
+    const first = !d.segs.length; d.segs.push({ site, von: t, bis: '' }); toast(`Gekommen um ${t} Uhr${site ? ' · ' + site : ''}`);
+    if (isFriday() && first) cheer('Bald geschafft!', 'Letzter Tag der Woche – gib Gas! 💪'.replace(' 💪', ''), 'sun');
   } else if (kind === 'pause') {
     if (!seg) return;
     if (op) { op.bis = t; toast(`Pause beendet um ${t} Uhr`); } else { d.pauses.push({ von: t, bis: '' }); toast(`Pause ab ${t} Uhr`); }
   } else if (kind === 'out') {
     if (!seg) return; if (op) op.bis = t; seg.bis = t;
-    await saveDay(d); const c = calcDay(d); toast(`Gegangen um ${t} Uhr · heute ${hm(c.netto)} Std.`, 'ok', 4500); geoStamp(d.iso, kind); return rerender();
+    await saveDay(d); const c = calcDay(d); toast(`Gegangen um ${t} Uhr · heute ${hm(c.netto)} Std.`, 'ok', 4500); rerender();
+    if (isFriday()) { const w = weekStat(mondayOf(d.iso)); cheer('Geschafft!', `Schönes Wochenende!${w.over ? ` Diese Woche +${hm(w.over)} Überstunden.` : ''}${SENT[mondayOf(d.iso)] ? '' : ` Denk an den Stundenzettel für ${S.recipient.name || 'das Büro'}.`}`, 'check'); }
+    return;
   }
-  await saveDay(d); geoStamp(d.iso, kind); rerender();
+  await saveDay(d); rerender();
 }
 function switchDialog() {
   modal(`<h3 class="text-[20px] font-semibold pr-8">Baustelle wechseln</h3><p class="text-ink3 text-[14px] mt-1">Die Zeit bis jetzt bleibt bei der bisherigen Baustelle.</p>
@@ -673,7 +820,7 @@ function switchDialog() {
 }
 async function doSwitch() {
   const site = $('#site2').value.trim(); if (!site) { toast('Bitte eine Baustelle angeben.', 'warn'); return; }
-  const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d); if (!seg) return closeModal();
+  await syncTime(2500); const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d); if (!seg) return closeModal();
   if (op) op.bis = t; seg.bis = t; d.segs.push({ site, von: t, bis: '' }); rememberSite(site);
   await saveDay(d); closeModal(); toast(`Ab ${t} Uhr: ${site}`); rerender();
 }
@@ -692,16 +839,22 @@ function unlockDialog() {
 }
 async function needEdit() { if (canEdit()) return true; return unlockDialog(); }
 /* Änderung protokollieren: was, alter und neuer Wert, wann, auf welchem Gerät */
-function logChange(d, what, from, to) { if ((from ?? '') === (to ?? '') && what !== 'Zeitraum hinzugefügt') return; (d.log = d.log || []).push({ at: new Date().toISOString(), what, from: from ?? '', to: to ?? '', admin: DEVICE.admin ? 'Admin-Gerät' : 'Passwort' }); d.edited = true; }
+function logChange(d, what, from, to) { if ((from ?? '') === (to ?? '') && what !== 'Zeitraum hinzugefügt') return; (d.log = d.log || []).push({ at: tNow().toISOString(), what, from: from ?? '', to: to ?? '', admin: DEVICE.admin ? 'Admin-Gerät' : 'Passwort' }); d.edited = true; }
 
 document.addEventListener('click', async e => {
   const a = e.target.closest('[data-a]'); if (!a) return;
   const act = a.dataset.a, iso = a.dataset.iso;
   switch (act) {
     case 'in': case 'pause': case 'out': stamp(act); break;
-    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[new Date().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
+    case 'geo-retry': { closeModal(); const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else { toast(p.err ? 'Standort noch nicht ermittelbar – bitte draußen erneut versuchen.' : 'Standort freigegeben.', p.err ? 'warn' : 'ok'); rerender(); } break; }
+    case 'geo-ask': { if (!S.gpsConsent && !(await consentModal())) return; const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else rerender(); break; }
+    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
     case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'vac-set': await setVacation(); break;
+    case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); tellSick(); break; }
+    case 'sick-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Krank', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
+    case 'sick-tell': tellSick(); break;
+    case 'ics': icsReminder(); break;
     case 'cal': UI.calM = a.dataset.v; rerender(); break;
     case 'bu-add': { if (!(await needEdit())) return; const von = $('#bu-von').value, bis = $('#bu-bis').value; if (!von || !bis || bis < von) return toast('Bitte Von und Bis angeben.', 'warn'); S.bu = (S.bu || []).concat({ name: $('#bu-name').value.trim() || 'Betriebsurlaub', von, bis, abzug: $('#bu-abzug').checked }); saveSettings(); toast('Betriebsurlaub eingetragen.'); rerender(); break; }
     case 'bu-del': { if (!(await needEdit())) return; S.bu.splice(+a.dataset.i, 1); saveSettings(); rerender(); break; }
@@ -760,6 +913,22 @@ document.addEventListener('change', async e => {
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
 
+/* ---------- Krank melden ---------- */
+function tellSick() {
+  const text = `Hallo ${S.recipient.name || ''}, ich bin heute (${WD[tNow().getDay()]}, ${deDate(isoToday())}) krank und kann nicht arbeiten. Die Krankmeldung reiche ich nach. Viele Grüße, ${S.person.name || ''}`;
+  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
+  modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full grid place-items-center mx-auto" style="background:var(--t-red);color:var(--red-ink)">${ic('heartp', 26)}</div><div class="font-semibold text-[19px] mt-4">Gute Besserung!</div><p class="text-ink3 text-[14px] mt-1">Heute ist als Krankheitstag eingetragen.</p></div>
+    <div class="rounded-[var(--rb)] bg-raised p-3 text-[14px] mt-5">${esc(text)}</div>
+    <div class="grid gap-2 mt-4">${navigator.share ? `<button class="btn-p !h-12" id="sick-share">${ic('send', 17)}${esc(S.recipient.name || 'Büro')} Bescheid geben (WhatsApp)</button>` : ''}<a class="${navigator.share ? 'btn-s' : 'btn-p !h-12'}" href="https://wa.me/${phone}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp öffnen</a><button class="btn-g" data-a="modal-close">Später</button></div>`);
+  const b = $('#sick-share'); if (b) b.onclick = async () => { try { await navigator.share({ text }); closeModal(); } catch (e) {} };
+}
+/* Wiederkehrende Kalender-Erinnerung (jeden Freitag 13:30, Hinweis 0 Min. vorher) */
+function icsReminder() {
+  let d = tNow(); while (d.getDay() !== 5) d.setDate(d.getDate() + 1); const ymd = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`, stamp = tNow().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fruehauf//Stempeluhr//DE', 'BEGIN:VEVENT', `UID:stundenzettel-${Date.now()}@fruehauf`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Europe/Berlin:${ymd}T133000`, `DTEND;TZID=Europe/Berlin:${ymd}T134500`, 'RRULE:FREQ=WEEKLY;BYDAY=FR', `SUMMARY:Stundenzettel an ${S.recipient.name || 'Büro'} senden`, 'DESCRIPTION:Stempeluhr öffnen → „Stundenzettel senden“.', 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Stundenzettel senden', 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  saveBlob(new Blob([ics], { type: 'text/calendar' }), 'Erinnerung-Stundenzettel.ics'); toast('Kalender-Datei gespeichert – zum Übernehmen öffnen.', 'ok', 4500);
+}
+
 /* ---------- Urlaub ---------- */
 async function setVacation(silent) {
   const days = workDaysIn(UI.vVon || isoToday(), UI.vBis || UI.vVon || isoToday());
@@ -780,7 +949,7 @@ async function submitVacation() {
     const blob = await buildVacationPdf({ von, bis, n: days.length, note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
     const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
     saveBlob(blob, name);
-    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: new Date().toISOString() }); await DB.put('kv', UI.requests, 'requests');
+    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
     await setVacation(true);
     shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${days.length} Arbeitstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
     render();
@@ -807,13 +976,14 @@ async function sendPdf(kind, iso) {
     const blob = await buildPdf(isos, label), who = S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_');
     const name = `Stundenzettel_${label.replace(/[\s/]+/g, '_')}_${who}.pdf`;
     saveBlob(blob, name);
+    if (kind === 'week') { SENT[mondayOf(iso)] = Date.now(); DB.put('kv', SENT, 'sent'); }
     shareModal(blob, name, `Hallo ${S.recipient.name || ''}, anbei mein Stundenzettel ${label}. Viele Grüße, ${S.person.name}`, 'Stundenzettel gespeichert');
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
 
 /* ---------- Datensicherung ---------- */
 function backup() {
-  const data = { app: 'fruehauf-stempel', version: APP_VERSION, date: new Date().toISOString(), settings: S, days: Object.values(DAYS) };
+  const data = { app: 'fruehauf-stempel', version: APP_VERSION, date: tNow().toISOString(), settings: S, days: Object.values(DAYS) };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); saveBlob(blob, `stempeluhr-sicherung-${isoToday()}.json`); toast('Sicherung gespeichert.');
 }
 async function restore(file) {
@@ -846,15 +1016,21 @@ setInterval(() => {
   const c = $('#clock'); if (c) c.textContent = nowHM();
   if (UI.route === 'home' && !document.activeElement.matches('input,textarea,select')) {
     const d = dayOf(isoToday()), x = calcDay(d), n = $('#live-netto'), p = $('#live-pause'), df = $('#live-diff');
-    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug); if (df) { df.textContent = overTxt(Math.max(0, x.diff)); df.className = `text-[22px] font-semibold mt-1 ${diffCls(x.diff)}`; }
+    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug);
+    const w = weekStat(mondayOf(isoToday())), wi = $('#wk-ist'), wr = $('#wk-rest'), wo = $('#wk-over'), wb = $('#wk-bar');
+    if (wi) wi.innerHTML = `${hm(w.ist)} <span class="text-[16px] text-ink3 font-normal">von ${hm(w.target)} Std.</span>`; if (wr) wr.textContent = hm(w.rest); if (wo) wo.textContent = '+' + hm(w.over); if (wb) wb.style.width = w.pct + '%';
   }
 }, 15000);
-setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHM(); }, 1000);
+setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHMS(); const v = $('#clock-src'); if (v) v.innerHTML = clockSrc(); }, 1000);
+setInterval(() => syncTime(), 5 * 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncTime(); });
 (async function init() {
   await DB.open(); await loadSettings();
-  DEVICE = (await DB.get('kv', 'device')) || { admin: false }; UI.requests = (await DB.get('kv', 'requests')) || [];
+  { const o = await DB.get('kv', 'timeoff'); if (o) TIME.off = o.off || 0; } await syncTime();
+  DEVICE = (await DB.get('kv', 'device')) || { admin: false }; UI.requests = (await DB.get('kv', 'requests')) || []; SENT = (await DB.get('kv', 'sent')) || {};
   ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; });
   try { FIRMA = await (await fetch('firma.json?t=' + Date.now(), { cache: 'no-store' })).json(); DB.put('kv', FIRMA, 'firma'); } catch (e) { FIRMA = (await DB.get('kv', 'firma')) || FIRMA; }
+  await checkGeoPerm();
   applyTheme(); route();
   if (S.pin) pinCheck();
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
@@ -891,7 +1067,7 @@ async function buildPdf(isos, label) {
   };
   header();
   /* Tabelle */
-  const cols = [['Tag', 23], ['Kommen', 14], ['Gehen', 14], ['Pause', 13], ['Abzug', 13], ['Arbeit', 14], ['Soll', 13], ['Überst.', 15], ['Baustellen / Bemerkung', CW - 119]];
+  const cols = [['Tag', 23], ['Kommen', 14], ['Gehen', 14], ['Pause', 13], ['Abzug', 13], ['Arbeit', 14], ['Soll', 13], ['', 15], ['Baustellen / Bemerkung', CW - 119]];
   const thead = () => { doc.setFillColor(238, 242, 245); doc.rect(M, y - 1, CW, 7, 'F'); doc.setFontSize(7.8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GRAY); let x = M + 1.5; cols.forEach(([l, w], i) => { doc.text(l, i >= 3 && i <= 7 ? x + w - 3 : x, y + 3.6, { align: i >= 3 && i <= 7 ? 'right' : 'left' }); x += w; }); y += 8; };
   thead();
   const rows = R.days.filter(x => x.c.soll > 0 || hasData(x.d));
@@ -902,10 +1078,11 @@ async function buildPdf(isos, label) {
     if (c.missingEnd) bem.push('Ausstempeln fehlt');
     if (d.note) bem.push('Notiz: ' + d.note);
     if (d.edited) bem.push('nachgetragen');
+    if ((d.offline || []).length) bem.push('offline gestempelt: ' + d.offline.join(', '));
     doc.setFontSize(8.4); doc.setFont('helvetica', 'normal');
     const bl = doc.splitTextToSize(T(bem.join('\n') || '-'), cols[8][1] - 3), h = Math.max(1, bl.length) * 3.7 + 3;
     if (y + h > H - 60) { doc.addPage(); header(); thead(); }
-    const vals = [`${wdOf(d.iso).slice(0, 2)}, ${deDate(d.iso).slice(0, 6)}`, work ? c.start || '-' : '-', work ? c.end || (c.open ? '?' : '-') : '-', work && c.start ? hm(c.pause) : '-', work && c.start ? hm(c.abzug) : '-', hm(c.netto + c.credit), hm(c.soll), c.over ? '+' + hm(c.over) : '-'];
+    const vals = [`${wdOf(d.iso).slice(0, 2)}, ${deDate(d.iso).slice(0, 6)}`, work ? c.start || '-' : '-', work ? c.end || (c.open ? '?' : '-') : '-', work && c.start ? hm(c.pause) : '-', work && c.start ? hm(c.abzug) : '-', hm(c.netto + c.credit), hm(c.soll), ''];
     let x = M + 1.5;
     vals.forEach((v, i) => { const w = cols[i][1], right = i >= 3; doc.setTextColor(...(i === 7 && c.over > 0 ? GREEN : INK)); if (i === 5) doc.setFont('helvetica', 'bold'); doc.text(T(v), right ? x + w - 3 : x, y + 3.2, { align: right ? 'right' : 'left' }); doc.setFont('helvetica', 'normal'); x += w; });
     doc.setTextColor(...INK); doc.text(bl, x, y + 3.2);
@@ -913,8 +1090,8 @@ async function buildPdf(isos, label) {
   }
   /* Summen */
   y += 3; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 24, 2, 2, 'F');
-  const vac = vacation(+isos[0].slice(0, 4)), bal = balance();
-  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden', R.over ? '+' + hm(R.over) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], ['Urlaub / Krank', `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
+  const vac = vacation(+isos[0].slice(0, 4)), bal = balance(), mons = [...new Set(isos.map(mondayOf))], wover = mons.reduce((a, m) => a + weekStat(m).over, 0);
+  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden (über ' + hm(weekTarget()) + ' / Woche)', wover ? '+' + hm(wover) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], ['Urlaub / Krank', `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
   tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(v.startsWith('+') ? GREEN : INK)); doc.text(T(v), cx, cy + 4.6); });
   y += 30;
   /* Baustellen-Summen */
@@ -929,10 +1106,27 @@ async function buildPdf(isos, label) {
   /* Hinweis und Unterschriften */
   if (y > H - 45) { doc.addPage(); header(); }
   doc.setFontSize(7.8); doc.setTextColor(...GRAY);
-  doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag werden mindestens ${S.minPause} Min. Pause abgezogen${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Minusstunden werden nicht verrechnet. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet.`), CW), M, y + 2);
+  doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag wird die Mindestpause abgezogen (Mo-Do ${S.hours[1].pause} Min., Fr ${S.hours[5].pause} Min.)${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; Überstunden = Wochenstunden über ${hm(weekTarget())}; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Minusstunden werden nicht verrechnet. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet; Stempelzeiten kommen vom Server, ohne Internet gestempelte Zeiten sind als "offline" markiert. Standorte je Stempel mit Kartenausschnitt auf der Seite "Standorte".`), CW), M, y + 2);
   y = Math.max(y + 16, H - 38);
   const bw = (CW - 12) / 2;
   [['Mitarbeiter', S.person.name], ['Geprüft', S.recipient.name]].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });
+  /* Standorte mit Kartenausschnitt */
+  const geos = R.days.flatMap(({ d }) => (d.geo || []).map(g => ({ g, iso: d.iso })));
+  if (geos.length) {
+    doc.addPage(); header();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...INK); doc.setFillColor(...P); doc.rect(M, y - 3.2, 1.2, 4.6, 'F'); doc.text('Standorte beim Stempeln', M + 3.5, y); y += 6;
+    const cw = (CW - 8) / 3, mh = cw * 5 / 8, ch = mh + 12;
+    for (let i = 0; i < geos.length; i++) {
+      const { g, iso } = geos[i], col = i % 3;
+      if (col === 0 && y + ch > H - 18) { doc.addPage(); header(); }
+      const x0 = M + col * (cw + 4);
+      if (g.map) doc.addImage(g.map, 'JPEG', x0, y, cw, mh, undefined, 'FAST'); else { doc.setFillColor(244, 247, 249); doc.rect(x0, y, cw, mh, 'F'); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(g.lat ? `${g.lat}, ${g.lon}` : 'Standort nicht ermittelbar', x0 + cw / 2, y + mh / 2, { align: 'center' }); }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...INK); doc.text(T(`${wdOf(iso).slice(0, 2)} ${deDate(iso).slice(0, 6)} · ${({ in: 'Kommen', out: 'Gehen', pause: 'Pause' })[g.k] || g.k} ${g.t}`), x0, y + mh + 4);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2); doc.setTextColor(...GRAY); doc.text(doc.splitTextToSize(T(g.addr || (g.lat ? `${g.lat}, ${g.lon}` : '')) + (g.acc ? T(` (±${g.acc} m)`) : ''), cw)[0] || '', x0, y + mh + 7.8);
+      if (col === 2 || i === geos.length - 1) y += ch + 2;
+    }
+    doc.setFontSize(7); doc.setTextColor(...GRAY); doc.text('Karten: © OpenStreetMap-Mitwirkende · Adressen: Photon/OpenStreetMap', M, y + 2);
+  }
   /* Fußzeile */
   const n = doc.getNumberOfPages(), c = S.company, foot = T([c.name, c.street, c.city, c.phone].filter(Boolean).join(' · '));
   for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, H - 12, W - M, H - 12); doc.setFontSize(7.2); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY); doc.text(foot, M, H - 8); doc.text(T(`Erstellt ${deDate(isoToday())} ${nowHM()} · Seite ${i} / ${n}`), W - M, H - 8, { align: 'right' }); }

@@ -7,7 +7,8 @@
    ist die Pause länger, wird die tatsächliche Pause abgezogen.
    ========================================================= */
 const toMin = t => { if (!t) return null; const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
-const nowHM = () => { const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const nowHM = () => { const d = tNow(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const nowHMS = () => { const d = tNow(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
 const hm = m => { if (m === null || m === undefined || isNaN(m)) return '–'; const neg = m < 0; m = Math.abs(Math.round(m)); return `${neg ? '−' : ''}${Math.floor(m / 60)}:${pad2(m % 60)}`; };
 const hmPlus = m => (Math.round(m) > 0 ? '+' + hm(m) : hm(m));
 const addDays = (iso, n) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
@@ -27,25 +28,30 @@ const betriebOf = iso => buList().find(x => x.von && x.bis && iso >= x.von && is
 let DAYS = {};   // iso → { iso, type, segs:[{site,von,bis}], pauses:[{von,bis}], note, geo:[] }
 const dayOf = iso => {
   if (DAYS[iso]) return DAYS[iso];
-  const b = sollOf(iso) > 0 && betriebOf(iso);
+  const b = isWorkday(iso) && betriebOf(iso);
   return { iso, type: holiday(iso) ? 'feiertag' : b ? 'urlaub' : 'work', betrieb: b ? b.name || 'Betriebsurlaub' : '', segs: [], pauses: [], note: '', geo: [] };
 };
 const hasData = d => !!((d.segs || []).length || (d.pauses || []).length || d.note || (DAYS[d.iso] && d.type !== 'work'));
 const curSeg = d => { const s = d.segs || []; return s.length && !s[s.length - 1].bis ? s[s.length - 1] : null; };
 const openPause = d => (d.pauses || []).find(p => p.von && !p.bis) || null;
 
-/* Mindestpause für eine Nettozeit */
-const minPauseFor = net => (S.pauseOnlyOver6 && net <= 360 ? 0 : +S.minPause || 0);
-/* Sollzeit eines Tages (Arbeitszeit ohne Pause) */
-function sollOf(iso) {
-  if (holiday(iso)) return 0;
+/* Mindestpause je Wochentag (Mo–Do 30, Fr 15 Min.) */
+const dayPause = iso => { const h = S.hours[new Date(iso + 'T12:00').getDay()]; return h && h.pause !== undefined && h.pause !== '' ? +h.pause : +S.minPause || 0; };
+const minPauseFor = (net, iso) => (S.pauseOnlyOver6 && net <= 360 ? 0 : dayPause(iso));
+/* Regelarbeitszeit eines Wochentags (ohne Pause) – auch an Feiertagen (werden gutgeschrieben) */
+function tplSoll(iso) {
   const h = S.hours[new Date(iso + 'T12:00').getDay()]; if (!h || !h.on || !h.von || !h.bis) return 0;
-  const b = span(h.von, h.bis); return Math.max(0, b - minPauseFor(b - (+S.minPause || 0)));
+  const b = span(h.von, h.bis); return Math.max(0, b - minPauseFor(b - dayPause(iso), iso));
 }
+const isWorkday = iso => tplSoll(iso) > 0 && !holiday(iso);
+const sollOf = iso => tplSoll(iso);
+/* Wochen-Soll (Summe der Regelzeiten Mo–So, Standard 40:00) */
+const weekTarget = () => [1, 2, 3, 4, 5, 6, 7].reduce((s, i) => s + tplSoll(addDays('2026-11-08', i)), 0);
 function calcDay(d, now = nowHM()) {
   const iso = d.iso, today = iso === isoToday(), soll = sollOf(iso);
   const r = { soll, start: '', end: '', brutto: 0, pause: 0, abzug: 0, netto: 0, credit: 0, diff: 0, over: 0, open: false, inPause: false, missingEnd: false, sites: [] };
   if (d.type !== 'work') { r.credit = d.type === 'frei' ? 0 : soll; r.diff = r.credit - soll; return r; }
+  if (holiday(iso) && !(d.segs || []).length) { r.credit = soll; return r; }
   const segs = (d.segs || []).filter(s => s.von).slice().sort((a, b) => toMin(a.von) - toMin(b.von));
   if (!segs.length) { r.diff = iso < isoToday() ? -soll : 0; return r; }
   const last = segs[segs.length - 1], endOf = s => s.bis || (today ? now : null);
@@ -56,10 +62,10 @@ function calcDay(d, now = nowHM()) {
   for (const p of pz) stamped += span(p.von, p.bis);
   r.inPause = today && r.open && !!openPause(d);
   r.pause = gaps + stamped;
-  r.abzug = r.brutto ? Math.min(r.brutto, Math.max(r.pause, minPauseFor(r.brutto - r.pause))) : 0;
+  r.abzug = r.brutto ? Math.min(r.brutto, Math.max(r.pause, minPauseFor(r.brutto - r.pause, iso))) : 0;
   r.netto = Math.max(0, r.brutto - r.abzug);
   r.diff = r.missingEnd ? 0 : r.netto - soll;
-  r.over = r.missingEnd || (today && r.open) ? 0 : Math.max(0, r.diff);   // Minusstunden gibt es nicht
+  r.over = r.missingEnd ? 0 : Math.max(0, r.diff);
   /* Stunden je Baustelle: Abschnitt minus Pausen darin, Mindestpausen-Rest anteilig */
   const per = {};
   for (const s of segs) { const e = endOf(s); if (!e) continue; let m = span(s.von, e); for (const p of pz) m -= overlap(s.von, e, p.von, p.bis); const k = s.site || 'Ohne Baustelle'; per[k] = (per[k] || 0) + Math.max(0, m); }
@@ -73,18 +79,25 @@ function calcRange(isos) {
   days.forEach(x => x.c.sites.forEach(s => { sites[s.site] = (sites[s.site] || 0) + s.min; }));
   return { days, netto: sum('netto'), credit: sum('credit'), soll: sum('soll'), diff: sum('diff'), over: sum('over'), pause: sum('pause'), abzug: sum('abzug'), sites, count: t => days.filter(x => x.d.type === t && x.c.soll > 0).length };
 }
-/* Überstundenkonto: Startwert + Überstunden aller Tage ab Startdatum (Minusstunden zählen nicht) */
+/* Wochenbilanz: Ist (Arbeit + Gutschriften für Urlaub/Krank/Feiertag) gegen Wochen-Soll; Überstunden nur über dem Soll */
+function weekStat(mon) {
+  const R = calcRange(weekOf(mon)), target = R.soll || weekTarget(), ist = R.netto + R.credit;
+  return { ist, target, rest: Math.max(0, target - ist), over: Math.max(0, ist - target), pct: target ? Math.min(100, ist / target * 100) : 0, R };
+}
+/* Überstundenkonto: Startwert + Überstunden aller Wochen ab Startdatum (Minusstunden zählen nicht) */
 function balance() {
-  const b = S.balance || {}, from = b.from || '2000-01-01', today = isoToday(); let m = Math.max(0, +b.min || 0);
-  for (const iso in DAYS) if (iso >= from && iso <= today) m += calcDay(dayOf(iso)).over;
+  const b = S.balance || {}, keys = Object.keys(DAYS).sort(); let m = Math.max(0, +b.min || 0);
+  if (!keys.length) return m;
+  const from = mondayOf(b.from && b.from > keys[0] ? b.from : keys[0]), last = mondayOf(isoToday());
+  for (let mon = from; mon <= last; mon = addDays(mon, 7)) m += weekStat(mon).over;
   return m;
 }
 /* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
-const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (sollOf(i) > 0) l.push(i); return l; };
-function vacation(year = new Date().getFullYear()) {
+const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (isWorkday(i)) l.push(i); return l; };
+function vacation(year = tNow().getFullYear()) {
   let taken = 0, planned = 0, betrieb = 0; const today = isoToday();
   for (let iso = `${year}-01-01`; iso <= `${year}-12-31`; iso = addDays(iso, 1)) {
-    if (sollOf(iso) <= 0) continue; const d = dayOf(iso); if (d.type !== 'urlaub') continue;
+    if (!isWorkday(iso)) continue; const d = dayOf(iso); if (d.type !== 'urlaub') continue;
     const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; if (b) betrieb++;
     if (iso <= today) taken++; else planned++;
   }

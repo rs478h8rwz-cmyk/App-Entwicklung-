@@ -1,5 +1,5 @@
 {
-  "hinweis": "Firmenweite Vorgaben – gelten für alle Mitarbeiter. Betriebsurlaub: von/bis (inklusive), abzug=true zieht die Tage vom Urlaubsanspruch ab.",
+  "hinweis": "Firmenweite Vorgaben – gelten für alle Mitarbeiter. Firmensitz bestimmt die Feiertage (bundesland: NI = Niedersachsen). Betriebsurlaub: von/bis (inklusive), abzug=true zieht die Tage vom Urlaubsanspruch ab.",
   "betriebsurlaub": [
     {
       "name": "Betriebsurlaub Weihnachten",
@@ -7,5 +7,11 @@
       "bis": "2027-01-04",
       "abzug": true
     }
-  ]
+  ],
+  "firmensitz": {
+    "name": "Frühauf Solar",
+    "strasse": "Im Hamme 1",
+    "ort": "49205 Hasbergen",
+    "bundesland": "NI"
+  }
 }

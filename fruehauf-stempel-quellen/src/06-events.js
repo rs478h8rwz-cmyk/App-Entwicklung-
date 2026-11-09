@@ -7,22 +7,108 @@ function geoStamp(iso, kind) {
   if (!S.gps || !navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(async pos => { const d = clone(dayOf(iso)); (d.geo = d.geo || []).push({ k: kind, t: nowHM(), lat: +pos.coords.latitude.toFixed(5), lon: +pos.coords.longitude.toFixed(5), acc: Math.round(pos.coords.accuracy) }); await saveDay(d); }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
 }
+/* Große Einblendung, verschwindet von selbst */
+function cheer(title, sub, icon) {
+  const el = document.createElement('div');
+  el.className = 'fixed inset-0 z-[95] grid place-items-center p-6 cheer'; el.style.cssText = 'background:rgba(0,0,0,.35);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)';
+  el.innerHTML = `<div class="card px-8 py-9 text-center max-w-sm w-full" style="animation:chIn .45s cubic-bezier(.2,1.4,.4,1) both"><div class="w-20 h-20 rounded-full grid place-items-center mx-auto" style="background:rgb(var(--s-rgb)/.2);color:rgb(var(--s-rgb))">${ic(icon, 40, 1.8)}</div><div class="h-font text-[38px] leading-tight mt-5">${esc(title)}</div><div class="text-ink2 text-[16px] mt-2">${esc(sub)}</div></div>`;
+  document.body.appendChild(el); const close = () => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 420); };
+  el.onclick = close; setTimeout(close, 2800);
+}
+document.head.insertAdjacentHTML('beforeend', '<style>@keyframes chIn{from{opacity:0;transform:scale(.7) translateY(20px)}to{opacity:1;transform:none}}</style>');
+const isFriday = () => tNow().getDay() === 5;
+/* ---------- Standort (Pflicht beim Stempeln) ---------- */
+let GEO_STATE = 'unknown';   // granted | denied | prompt | unknown
+function getPos(timeout = 12000) {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res({ err: 'unsupported' });
+    navigator.geolocation.getCurrentPosition(p => { GEO_STATE = 'granted'; res({ lat: +p.coords.latitude.toFixed(5), lon: +p.coords.longitude.toFixed(5), acc: Math.round(p.coords.accuracy) }); },
+      e => { if (e.code === 1) GEO_STATE = 'denied'; res({ err: e.code === 1 ? 'denied' : e.code === 3 ? 'timeout' : 'unavailable' }); },
+      { enableHighAccuracy: true, timeout, maximumAge: 30000 });
+  });
+}
+async function checkGeoPerm() { try { if (navigator.permissions) { const st = await navigator.permissions.query({ name: 'geolocation' }); GEO_STATE = st.state; st.onchange = () => { GEO_STATE = st.state; if (UI.route === 'home') rerender(); }; } } catch (e) {} }
+function geoHelp() {
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  return `<div class="text-[14px] text-ink2 space-y-1.5 text-left">${ios
+    ? '<div><b>iPhone/iPad:</b> Einstellungen → Datenschutz &amp; Sicherheit → Ortungsdienste einschalten → <b>Safari-Websites</b> → „Beim Verwenden der App“ und „Genauer Standort“ an.</div><div>Danach die Stempeluhr schließen und neu öffnen, beim Stempeln „Erlauben“ tippen.</div>'
+    : '<div><b>Android (Chrome):</b> in der Adresszeile bzw. im App-Menü auf das Schloss/„Website-Einstellungen“ → <b>Standort: Zulassen</b>.</div><div>Außerdem in den Handy-Einstellungen den Standort einschalten.</div>'}</div>`;
+}
+function geoBlockedModal() {
+  modal(`<div class="text-center"><div class="w-14 h-14 rounded-full grid place-items-center mx-auto" style="background:var(--t-red);color:var(--red-ink)">${ic('pin', 26)}</div><div class="font-semibold text-[19px] mt-4">Standort erforderlich</div><p class="text-ink3 text-[14px] mt-1">Ohne Standortfreigabe kann nicht gestempelt werden.</p></div><div class="rounded-[var(--rb)] bg-raised p-4 mt-5">${geoHelp()}</div><button class="btn-p w-full mt-4" data-a="geo-retry">${ic('refresh', 16)}Erneut prüfen</button>`);
+}
+function consentModal() {
+  return new Promise(res => {
+    modal(`<div class="text-center"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('pin', 26)}</div><div class="font-semibold text-[19px] mt-4">Hinweis zum Standort</div></div>
+      <div class="text-[14px] text-ink2 mt-4 space-y-2"><p>Beim <b>Kommen, bei Pausen und beim Gehen</b> speichert die Stempeluhr einmalig deinen Standort – nicht dauerhaft und nicht im Hintergrund.</p><p>Der Standort liegt auf deinem Handy und erscheint in deinem Stundenzettel, den du an ${esc(S.recipient.name || 'das Büro')} schickst. Ohne Standortfreigabe ist Stempeln nicht möglich.</p></div>
+      <button class="btn-p w-full mt-5" id="cs-ok">${ic('check', 16)}Verstanden und einverstanden</button>`);
+    $('#cs-ok').onclick = () => { S.gpsConsent = tNow().toISOString(); saveSettings(); closeModal(); res(true); };
+  });
+}
+
+/* ---------- Kartenausschnitt und Adresse zum Stempel ----------
+   Karte: OpenStreetMap (© OpenStreetMap-Mitwirkende), Adresse: Photon/Nominatim. Blauer Punkt wie in Apple Karten. */
+async function geoAddr(lat, lon) {
+  try {
+    const j = await (await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&lang=de`)).json(), p = (j.features[0] || {}).properties || {};
+    const a = [[p.street || p.name, p.housenumber].filter(Boolean).join(' '), [p.postcode, p.city || p.town || p.village || p.district].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    if (a) return a;
+  } catch (e) {}
+  try {
+    const j = await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&accept-language=de`)).json(), a = j.address || {};
+    return [[a.road, a.house_number].filter(Boolean).join(' '), [a.postcode, a.city || a.town || a.village].filter(Boolean).join(' ')].filter(Boolean).join(', ') || j.display_name || '';
+  } catch (e) { return ''; }
+}
+async function geoMap(lat, lon, acc) {
+  const z = 17, W = 480, H = 300, n = 2 ** z, rad = lat * Math.PI / 180;
+  const px = (lon + 180) / 360 * n * 256, py = (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * n * 256, x0 = px - W / 2, y0 = py - H / 2;
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#e8eef0'; x.fillRect(0, 0, W, H);
+  const jobs = [];
+  for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + W) / 256); tx++) for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + H) / 256); ty++)
+    jobs.push(new Promise(res => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { x.drawImage(im, tx * 256 - x0, ty * 256 - y0); res(true); }; im.onerror = () => res(false); im.src = `https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`; }));
+  const ok = (await Promise.all(jobs)).some(Boolean); if (!ok) return '';
+  const mpp = 156543.03 * Math.cos(rad) / n, r = Math.max(14, Math.min(120, (acc || 10) / mpp)), cx = W / 2, cy = H / 2;
+  x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fillStyle = 'rgba(10,132,255,.16)'; x.fill(); x.strokeStyle = 'rgba(10,132,255,.45)'; x.lineWidth = 1.5; x.stroke();
+  x.save(); x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowBlur = 6; x.beginPath(); x.arc(cx, cy, 11, 0, 7); x.fillStyle = '#fff'; x.fill(); x.restore();
+  x.beginPath(); x.arc(cx, cy, 8, 0, 7); x.fillStyle = '#0A84FF'; x.fill();
+  x.font = '11px system-ui,sans-serif'; const t = '© OpenStreetMap', w = x.measureText(t).width + 8; x.fillStyle = 'rgba(255,255,255,.8)'; x.fillRect(W - w, H - 16, w, 16); x.fillStyle = '#333'; x.fillText(t, W - w + 4, H - 4.5);
+  try { return c.toDataURL('image/jpeg', 0.82); } catch (e) { return ''; }
+}
+async function enrichGeo(iso, idx) {
+  const g0 = (dayOf(iso).geo || [])[idx]; if (!g0 || !g0.lat) return;
+  const [addr, map] = await Promise.all([geoAddr(g0.lat, g0.lon), geoMap(g0.lat, g0.lon, g0.acc)]);
+  const d = clone(dayOf(iso)), g = d.geo[idx]; if (!g) return; if (addr) g.addr = addr; if (map) g.map = map; await saveDay(d); if (UI.route !== 'settings') rerender();
+}
+
+let STAMPING = false;
 async function stamp(kind) {
+  if (STAMPING) return; STAMPING = true;
+  try { await stampInner(kind); } finally { STAMPING = false; }
+}
+async function stampInner(kind) {
+  if (!S.gpsConsent && !(await consentModal())) return;
+  const [ok, pos] = await Promise.all([syncTime(2500), getPos()]);
+  if (pos.err === 'denied' || pos.err === 'unsupported') { rerender(); return geoBlockedModal(); }
   const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d);
+  const geo = pos.err ? { k: kind, t, err: 'Standort nicht ermittelbar' } : { k: kind, t, ...pos }; (d.geo = d.geo || []).push(geo); const gi = d.geo.length - 1; setTimeout(() => enrichGeo(d.iso, gi), 300); if (pos.err) toast('Standort gerade nicht ermittelbar – Stempel wird trotzdem gespeichert und vermerkt.', 'warn', 4500);
+  if (!ok) { d.offline = (d.offline || []).concat(`${kind === 'in' ? 'Kommen' : kind === 'out' ? 'Gehen' : 'Pause'} ${t}`); toast('Kein Internet – Uhrzeit des Handys verwendet, Eintrag wird als „offline“ markiert.', 'warn', 5000); }
   d.segs = d.segs || []; d.pauses = d.pauses || [];
   if (kind === 'in') {
     if (seg) return;
     if (d.type !== 'work') d.type = 'work';
     const site = ($('#site') || {}).value ? $('#site').value.trim() : ''; rememberSite(site);
-    d.segs.push({ site, von: t, bis: '' }); toast(`Gekommen um ${t} Uhr${site ? ' · ' + site : ''}`);
+    const first = !d.segs.length; d.segs.push({ site, von: t, bis: '' }); toast(`Gekommen um ${t} Uhr${site ? ' · ' + site : ''}`);
+    if (isFriday() && first) cheer('Bald geschafft!', 'Letzter Tag der Woche – gib Gas! 💪'.replace(' 💪', ''), 'sun');
   } else if (kind === 'pause') {
     if (!seg) return;
     if (op) { op.bis = t; toast(`Pause beendet um ${t} Uhr`); } else { d.pauses.push({ von: t, bis: '' }); toast(`Pause ab ${t} Uhr`); }
   } else if (kind === 'out') {
     if (!seg) return; if (op) op.bis = t; seg.bis = t;
-    await saveDay(d); const c = calcDay(d); toast(`Gegangen um ${t} Uhr · heute ${hm(c.netto)} Std.`, 'ok', 4500); geoStamp(d.iso, kind); return rerender();
+    await saveDay(d); const c = calcDay(d); toast(`Gegangen um ${t} Uhr · heute ${hm(c.netto)} Std.`, 'ok', 4500); rerender();
+    if (isFriday()) { const w = weekStat(mondayOf(d.iso)); cheer('Geschafft!', `Schönes Wochenende!${w.over ? ` Diese Woche +${hm(w.over)} Überstunden.` : ''}${SENT[mondayOf(d.iso)] ? '' : ` Denk an den Stundenzettel für ${S.recipient.name || 'das Büro'}.`}`, 'check'); }
+    return;
   }
-  await saveDay(d); geoStamp(d.iso, kind); rerender();
+  await saveDay(d); rerender();
 }
 function switchDialog() {
   modal(`<h3 class="text-[20px] font-semibold pr-8">Baustelle wechseln</h3><p class="text-ink3 text-[14px] mt-1">Die Zeit bis jetzt bleibt bei der bisherigen Baustelle.</p>
@@ -31,7 +117,7 @@ function switchDialog() {
 }
 async function doSwitch() {
   const site = $('#site2').value.trim(); if (!site) { toast('Bitte eine Baustelle angeben.', 'warn'); return; }
-  const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d); if (!seg) return closeModal();
+  await syncTime(2500); const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d); if (!seg) return closeModal();
   if (op) op.bis = t; seg.bis = t; d.segs.push({ site, von: t, bis: '' }); rememberSite(site);
   await saveDay(d); closeModal(); toast(`Ab ${t} Uhr: ${site}`); rerender();
 }
@@ -50,16 +136,22 @@ function unlockDialog() {
 }
 async function needEdit() { if (canEdit()) return true; return unlockDialog(); }
 /* Änderung protokollieren: was, alter und neuer Wert, wann, auf welchem Gerät */
-function logChange(d, what, from, to) { if ((from ?? '') === (to ?? '') && what !== 'Zeitraum hinzugefügt') return; (d.log = d.log || []).push({ at: new Date().toISOString(), what, from: from ?? '', to: to ?? '', admin: DEVICE.admin ? 'Admin-Gerät' : 'Passwort' }); d.edited = true; }
+function logChange(d, what, from, to) { if ((from ?? '') === (to ?? '') && what !== 'Zeitraum hinzugefügt') return; (d.log = d.log || []).push({ at: tNow().toISOString(), what, from: from ?? '', to: to ?? '', admin: DEVICE.admin ? 'Admin-Gerät' : 'Passwort' }); d.edited = true; }
 
 document.addEventListener('click', async e => {
   const a = e.target.closest('[data-a]'); if (!a) return;
   const act = a.dataset.a, iso = a.dataset.iso;
   switch (act) {
     case 'in': case 'pause': case 'out': stamp(act); break;
-    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[new Date().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
+    case 'geo-retry': { closeModal(); const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else { toast(p.err ? 'Standort noch nicht ermittelbar – bitte draußen erneut versuchen.' : 'Standort freigegeben.', p.err ? 'warn' : 'ok'); rerender(); } break; }
+    case 'geo-ask': { if (!S.gpsConsent && !(await consentModal())) return; const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else rerender(); break; }
+    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
     case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'vac-set': await setVacation(); break;
+    case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); tellSick(); break; }
+    case 'sick-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Krank', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
+    case 'sick-tell': tellSick(); break;
+    case 'ics': icsReminder(); break;
     case 'cal': UI.calM = a.dataset.v; rerender(); break;
     case 'bu-add': { if (!(await needEdit())) return; const von = $('#bu-von').value, bis = $('#bu-bis').value; if (!von || !bis || bis < von) return toast('Bitte Von und Bis angeben.', 'warn'); S.bu = (S.bu || []).concat({ name: $('#bu-name').value.trim() || 'Betriebsurlaub', von, bis, abzug: $('#bu-abzug').checked }); saveSettings(); toast('Betriebsurlaub eingetragen.'); rerender(); break; }
     case 'bu-del': { if (!(await needEdit())) return; S.bu.splice(+a.dataset.i, 1); saveSettings(); rerender(); break; }
@@ -118,6 +210,22 @@ document.addEventListener('change', async e => {
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
 
+/* ---------- Krank melden ---------- */
+function tellSick() {
+  const text = `Hallo ${S.recipient.name || ''}, ich bin heute (${WD[tNow().getDay()]}, ${deDate(isoToday())}) krank und kann nicht arbeiten. Die Krankmeldung reiche ich nach. Viele Grüße, ${S.person.name || ''}`;
+  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
+  modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full grid place-items-center mx-auto" style="background:var(--t-red);color:var(--red-ink)">${ic('heartp', 26)}</div><div class="font-semibold text-[19px] mt-4">Gute Besserung!</div><p class="text-ink3 text-[14px] mt-1">Heute ist als Krankheitstag eingetragen.</p></div>
+    <div class="rounded-[var(--rb)] bg-raised p-3 text-[14px] mt-5">${esc(text)}</div>
+    <div class="grid gap-2 mt-4">${navigator.share ? `<button class="btn-p !h-12" id="sick-share">${ic('send', 17)}${esc(S.recipient.name || 'Büro')} Bescheid geben (WhatsApp)</button>` : ''}<a class="${navigator.share ? 'btn-s' : 'btn-p !h-12'}" href="https://wa.me/${phone}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp öffnen</a><button class="btn-g" data-a="modal-close">Später</button></div>`);
+  const b = $('#sick-share'); if (b) b.onclick = async () => { try { await navigator.share({ text }); closeModal(); } catch (e) {} };
+}
+/* Wiederkehrende Kalender-Erinnerung (jeden Freitag 13:30, Hinweis 0 Min. vorher) */
+function icsReminder() {
+  let d = tNow(); while (d.getDay() !== 5) d.setDate(d.getDate() + 1); const ymd = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`, stamp = tNow().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fruehauf//Stempeluhr//DE', 'BEGIN:VEVENT', `UID:stundenzettel-${Date.now()}@fruehauf`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Europe/Berlin:${ymd}T133000`, `DTEND;TZID=Europe/Berlin:${ymd}T134500`, 'RRULE:FREQ=WEEKLY;BYDAY=FR', `SUMMARY:Stundenzettel an ${S.recipient.name || 'Büro'} senden`, 'DESCRIPTION:Stempeluhr öffnen → „Stundenzettel senden“.', 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Stundenzettel senden', 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  saveBlob(new Blob([ics], { type: 'text/calendar' }), 'Erinnerung-Stundenzettel.ics'); toast('Kalender-Datei gespeichert – zum Übernehmen öffnen.', 'ok', 4500);
+}
+
 /* ---------- Urlaub ---------- */
 async function setVacation(silent) {
   const days = workDaysIn(UI.vVon || isoToday(), UI.vBis || UI.vVon || isoToday());
@@ -138,7 +246,7 @@ async function submitVacation() {
     const blob = await buildVacationPdf({ von, bis, n: days.length, note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
     const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
     saveBlob(blob, name);
-    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: new Date().toISOString() }); await DB.put('kv', UI.requests, 'requests');
+    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
     await setVacation(true);
     shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${days.length} Arbeitstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
     render();
@@ -165,13 +273,14 @@ async function sendPdf(kind, iso) {
     const blob = await buildPdf(isos, label), who = S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_');
     const name = `Stundenzettel_${label.replace(/[\s/]+/g, '_')}_${who}.pdf`;
     saveBlob(blob, name);
+    if (kind === 'week') { SENT[mondayOf(iso)] = Date.now(); DB.put('kv', SENT, 'sent'); }
     shareModal(blob, name, `Hallo ${S.recipient.name || ''}, anbei mein Stundenzettel ${label}. Viele Grüße, ${S.person.name}`, 'Stundenzettel gespeichert');
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
 
 /* ---------- Datensicherung ---------- */
 function backup() {
-  const data = { app: 'fruehauf-stempel', version: APP_VERSION, date: new Date().toISOString(), settings: S, days: Object.values(DAYS) };
+  const data = { app: 'fruehauf-stempel', version: APP_VERSION, date: tNow().toISOString(), settings: S, days: Object.values(DAYS) };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); saveBlob(blob, `stempeluhr-sicherung-${isoToday()}.json`); toast('Sicherung gespeichert.');
 }
 async function restore(file) {
@@ -204,15 +313,21 @@ setInterval(() => {
   const c = $('#clock'); if (c) c.textContent = nowHM();
   if (UI.route === 'home' && !document.activeElement.matches('input,textarea,select')) {
     const d = dayOf(isoToday()), x = calcDay(d), n = $('#live-netto'), p = $('#live-pause'), df = $('#live-diff');
-    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug); if (df) { df.textContent = overTxt(Math.max(0, x.diff)); df.className = `text-[22px] font-semibold mt-1 ${diffCls(x.diff)}`; }
+    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug);
+    const w = weekStat(mondayOf(isoToday())), wi = $('#wk-ist'), wr = $('#wk-rest'), wo = $('#wk-over'), wb = $('#wk-bar');
+    if (wi) wi.innerHTML = `${hm(w.ist)} <span class="text-[16px] text-ink3 font-normal">von ${hm(w.target)} Std.</span>`; if (wr) wr.textContent = hm(w.rest); if (wo) wo.textContent = '+' + hm(w.over); if (wb) wb.style.width = w.pct + '%';
   }
 }, 15000);
-setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHM(); }, 1000);
+setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHMS(); const v = $('#clock-src'); if (v) v.innerHTML = clockSrc(); }, 1000);
+setInterval(() => syncTime(), 5 * 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncTime(); });
 (async function init() {
   await DB.open(); await loadSettings();
-  DEVICE = (await DB.get('kv', 'device')) || { admin: false }; UI.requests = (await DB.get('kv', 'requests')) || [];
+  { const o = await DB.get('kv', 'timeoff'); if (o) TIME.off = o.off || 0; } await syncTime();
+  DEVICE = (await DB.get('kv', 'device')) || { admin: false }; UI.requests = (await DB.get('kv', 'requests')) || []; SENT = (await DB.get('kv', 'sent')) || {};
   ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; });
   try { FIRMA = await (await fetch('firma.json?t=' + Date.now(), { cache: 'no-store' })).json(); DB.put('kv', FIRMA, 'firma'); } catch (e) { FIRMA = (await DB.get('kv', 'firma')) || FIRMA; }
+  await checkGeoPerm();
   applyTheme(); route();
   if (S.pin) pinCheck();
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
