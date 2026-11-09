@@ -1,4 +1,4 @@
-Frühauf – Abnahme & Service (Version 1.0)
+Frühauf – Abnahme & Service (Version 1.1)
 =========================================
 
 Eigenständige Web-App für Monteure: Baustellen-Abnahme und Serviceaufträge
@@ -13,7 +13,7 @@ Veröffentlichen (Netlify):
 Ablauf:
   Gewerk wählen → „Neue Baustelle – Abnahme“ oder „Serviceauftrag“ →
   Schritt für Schritt ausfüllen → Fotos → Unterschrift Monteur und Kunde →
-  Zusammenfassung → „Abschließen & PDF“ → teilen (Mail, WhatsApp …).
+  Zusammenfassung → „Abschließen & PDF“ → das PDF wird sofort gespeichert (Downloads / Dateien), zusätzlich teilen möglich.
 
 Service: Grund, Behebung, Material, Einsatzzeiten (Ankunft/Abfahrt/Pause).
 Zuschläge werden automatisch erkannt: Samstag 150 %, Sonntag/Feiertag 200 %,

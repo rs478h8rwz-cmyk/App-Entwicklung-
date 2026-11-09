@@ -44,7 +44,7 @@ const IP = {
    Eigenständige App: Baustellen-Abnahme und Serviceeinsätze für DC, AC und SHK.
    Daten bleiben auf dem Gerät (IndexedDB), Protokolle als PDF teilen.
    ========================================================= */
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -794,14 +794,22 @@ function initSig() {
 }
 
 /* ---------- PDF anzeigen / teilen ---------- */
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+/* PDF erstellen und sofort speichern; danach zusätzlich Teilen anbieten */
 async function pdfFlow(rec) {
   modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">PDF wird erstellt …</div></div>`);
   try {
-    const blob = await buildPdf(rec), name = `${rec.nr}_${(rec.answers.kunde || 'Kunde').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`, url = URL.createObjectURL(blob);
+    const blob = await buildPdf(rec), name = `${rec.nr}_${(rec.answers.kunde || 'Kunde').replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
+    saveBlob(blob, name);
     const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
-    modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">PDF ist fertig</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
-      <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p" id="pdf-share">${ic('share', 17)}Teilen (Mail, WhatsApp …)</button>` : ''}<a class="${canShare ? 'btn-s' : 'btn-p'}" href="${url}" download="${esc(name)}" target="_blank" rel="noopener">${ic('download', 17)}Öffnen / Speichern</a></div>`);
-    const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – bitte „Öffnen / Speichern“.', 'warn'); } };
+    modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">PDF gespeichert</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div><p class="text-[13px] text-ink3 mt-2">Zu finden unter „Downloads“ bzw. in der Dateien-App.</p></div>
+      <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p" id="pdf-share">${ic('share', 17)}Zusätzlich teilen (Mail, WhatsApp …)</button>` : ''}<button class="${canShare ? 'btn-s' : 'btn-p'}" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
+    $('#pdf-again').onclick = () => saveBlob(blob, name);
+    const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist bereits gespeichert.', 'warn'); } };
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
 
