@@ -31,7 +31,7 @@ async function splashRun(el, replay) {
 }
 function splashStart() {
   const el = $('#splash'); if (!el) return;
-  if (!splashCfg().on) { el.remove(); SPLASH.done = true; return; }
+  if (!splashCfg().on || SAFE.splash) { el.remove(); SPLASH.done = true; return; }
   splashBindSkip(el);
   splashRun(el).catch(() => el.remove());
 }

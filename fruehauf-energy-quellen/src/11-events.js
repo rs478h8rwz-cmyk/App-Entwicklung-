@@ -274,7 +274,8 @@ document.addEventListener('click', async e => {
   try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
   if (!PERSONAL.tutorialDone) { PERSONAL.tutorialDone = true; PERSONAL.seenRelease = WHATS_NEW.id; savePersonal(); (function tut() { if (!SPLASH.done) return setTimeout(tut, 300); setTimeout(() => showTutorial(0), 300); })(); }
   else (function wn() { if (!SPLASH.done) return setTimeout(wn, 300); setTimeout(maybeWhatsNew, 500); })();
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(e => console.warn('Offline-Betrieb nicht verfügbar', e));
+  if (SAFE.sw && 'serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+  else if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(e => console.warn('Offline-Betrieb nicht verfügbar', e));
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 })();
 </script>

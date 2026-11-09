@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tastatur-Test</title>
+<style>
+  body{font:16px/1.45 system-ui,-apple-system,sans-serif;margin:0;padding:20px;background:#f4f7f9;color:#132430}
+  h1{font-size:22px;margin:0 0 4px} h2{font-size:16px;margin:22px 0 8px}
+  .card{background:#fff;border:1px solid #d8e2e8;border-radius:14px;padding:16px;margin-bottom:14px;max-width:640px}
+  label{display:block;margin:10px 0 4px;font-weight:600;font-size:14px}
+  input,textarea{width:100%;box-sizing:border-box;font-size:17px;padding:12px;border:1px solid #b9c7d0;border-radius:10px;background:#fff}
+  .row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:15px}
+  .row input{width:auto;transform:scale(1.4)}
+  button,a.btn{display:inline-block;font:600 15px system-ui,sans-serif;padding:12px 16px;border-radius:10px;border:0;background:#1f8a5b;color:#fff;text-decoration:none;margin:4px 6px 4px 0}
+  button.g{background:#e6edf1;color:#132430}
+  #st{font-size:13px;color:#4a5d68;white-space:pre-wrap}
+  #kb{font-weight:700;font-size:17px;padding:10px;border-radius:10px;background:#fff4d6}
+  #kb.ok{background:#d9f5e6}
+</style>
+</head>
+<body>
+<h1>Tastatur-Test</h1>
+<p><a href="./#/einstellungen/ansicht">‹ Zurück zur App</a></p>
+<p>Diese Felder enthalten <b>nichts</b> von der App. Tippen Sie in ein Feld und schauen Sie, ob die Tastatur erscheint.</p>
+
+<div class="card">
+  <div id="kb">Noch kein Feld angetippt.</div>
+  <label>Text</label><input id="t1" placeholder="Hier tippen …" autocomplete="off">
+  <label>Zahl</label><input id="t2" inputmode="decimal" placeholder="z. B. 12,5">
+  <label>Mehrzeilig</label><textarea id="t3" rows="2"></textarea>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Teile der App testweise abschalten</h2>
+  <p style="font-size:14px;margin:0">Haken setzen → „App öffnen“ → in ein Feld tippen. Kommt die Tastatur, war es der zuletzt gesetzte Haken. Am besten <b>einen Haken nach dem anderen</b> probieren.</p>
+  <div class="row"><input type="checkbox" data-k="splash"><span>Startanimation</span></div>
+  <div class="row"><input type="checkbox" data-k="bg"><span>Bewegter Hintergrund</span></div>
+  <div class="row"><input type="checkbox" data-k="anim"><span>Alle Animationen (Haus, Wetter, Zahlen)</span></div>
+  <div class="row"><input type="checkbox" data-k="zoom"><span>Zoom-Sperre</span></div>
+  <div class="row"><input type="checkbox" data-k="touch"><span>Doppeltipp-Regel für Knöpfe</span></div>
+  <div class="row"><input type="checkbox" data-k="sw"><span>Offline-Betrieb (Service Worker)</span></div>
+  <a class="btn" href="./#/einstellungen/ansicht">App öffnen</a>
+  <button class="g" id="all">Alle Haken setzen</button><button class="g" id="none">Alle zurücksetzen</button>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Falls nichts hilft</h2>
+  <p style="font-size:14px;margin:0 0 6px">Löscht nur den Offline-Speicher der App (nicht Ihre Kunden und Einstellungen) und lädt neu.</p>
+  <button class="g" id="clr">Offline-Speicher leeren und neu laden</button>
+</div>
+
+<div class="card"><div id="st"></div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const base = innerHeight;
+let last = '';
+function info() {
+  const vv = window.visualViewport;
+  $('#st').textContent =
+    'Home-Bildschirm-App: ' + (navigator.standalone ? 'ja' : 'nein (Browser)') + '\n' +
+    'Gerät: ' + navigator.userAgent + '\n' +
+    'Bildschirm: ' + screen.width + '×' + screen.height + ', Fenster: ' + innerWidth + '×' + innerHeight +
+    (vv ? ', sichtbar: ' + Math.round(vv.width) + '×' + Math.round(vv.height) : '') + '\n' +
+    'Fokus: ' + (document.activeElement && document.activeElement.id || '–') + (last ? '\n' + last : '');
+}
+function kbCheck() {
+  const vv = window.visualViewport, el = document.activeElement;
+  if (!el || !/INPUT|TEXTAREA/.test(el.tagName)) return info();
+  const open = vv && vv.height < base - 120;
+  const k = $('#kb'); k.className = open ? 'ok' : '';
+  k.textContent = open ? '✓ Tastatur ist offen.' : 'Feld aktiv – Tastatur nicht erkannt. (Falls sie doch da ist: alles gut.)';
+  info();
+}
+document.addEventListener('focusin', () => { setTimeout(kbCheck, 700); info(); });
+document.addEventListener('focusout', () => setTimeout(info, 50));
+if (window.visualViewport) visualViewport.addEventListener('resize', kbCheck);
+
+const KEY = 'fe-safe', rd = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } };
+const boxes = [...document.querySelectorAll('[data-k]')];
+function sync() { const v = rd(); boxes.forEach(b => b.checked = !!v[b.dataset.k]); last = 'Abgeschaltet: ' + (Object.keys(v).filter(k => v[k]).join(', ') || 'nichts'); info(); }
+function save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} sync(); }
+boxes.forEach(b => b.onchange = () => { const v = rd(); v[b.dataset.k] = b.checked; save(v); });
+$('#all').onclick = () => save(Object.fromEntries(boxes.map(b => [b.dataset.k, true])));
+$('#none').onclick = () => save({});
+$('#clr').onclick = async () => {
+  try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } catch (e) {}
+  try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) {}
+  location.replace('./?u=' + Date.now() + '#/kunden');
+};
+sync();
+</script>
+</body>
+</html>

@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.11', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur-Testseite', 'Unter Einstellungen → Ansicht → Tastatur-Hilfe gibt es eine Testseite: Dort lassen sich einzelne Teile der App testweise abschalten, um den iPad-Tastaturfehler einzugrenzen.']
+  ] },
   { version: '2.10', date: '2026-11-09', items: [
     ['kbd', 'Tastatur auf dem iPad', 'Im Modulplan ist die Seite dahinter nicht mehr fixiert. Eingabefelder sind für das iPad jetzt ausdrücklich als Textfelder markiert – gegen einen bekannten Apple-Fehler, bei dem in Home-Bildschirm-Apps keine Tastatur erscheint.']
   ] },

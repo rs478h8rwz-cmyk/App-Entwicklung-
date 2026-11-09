@@ -12,7 +12,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 @media (prefers-reduced-motion: reduce){#bg-anim i{animation:none}}
 @media print{#bg-anim{display:none}}
 </style>`);
-function bgAnimOn() { if (typeof PERSONAL === 'undefined' || !PERSONAL) return true; if (PERSONAL.bgAnim === false) return false; if (PERSONAL.bgAnim === true) return true; return !(matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) >= 700); }
+function bgAnimOn() { if (SAFE.bg) return false; if (typeof PERSONAL === 'undefined' || !PERSONAL) return true; if (PERSONAL.bgAnim === false) return false; if (PERSONAL.bgAnim === true) return true; return !(matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) >= 700); }
 function bgAnimApply() { const el = document.getElementById('bg-anim'); if (bgAnimOn()) { if (!el) document.body.insertAdjacentHTML('afterbegin', '<div id="bg-anim" aria-hidden="true"><i></i><i></i><i></i></div>'); bgAnimTone && bgAnimTone(); } else if (el) el.remove(); }
 document.body.insertAdjacentHTML('afterbegin', '<div id="bg-anim" aria-hidden="true"><i></i><i></i><i></i></div>');
 /* Stärke je Ansicht: im dunklen Modus etwas kräftiger, im hellen sehr zart */
@@ -44,6 +44,7 @@ document.addEventListener('visibilitychange', () => document.documentElement.cla
     const pillOn = PERSONAL.kbdPill === true || (PERSONAL.kbdPill !== false && !tab), bgOn = bgAnimOn(), spOn = (S.design.splash || {}).on !== false;
     return _sa() + sCard('info', 'Tastatur-Hilfe', 'Öffnet sich auf dem iPad keine Tastatur? Hier testen und einzeln abschalten.',
       `<label class="block"><span class="lbl">Testfeld – hier antippen</span><input class="inp" id="kbd-test" placeholder="Hier tippen …" autocomplete="off"></label>
+      <a class="btn-s w-full justify-center" href="diag.html">${ic('info', 16)}Tastatur-Testseite öffnen</a>${Object.values(SAFE).some(Boolean) ? '<div class="hint text-warn">Test-Schalter aktiv – auf der Testseite wieder zurücksetzen.</div>' : ''}
       ${row('kbdPill', 'Knopf „ABC Buchstaben“ bei Zahlenfeldern', 'Auf dem iPad standardmäßig aus.', pillOn)}
       ${row('bgAnim', 'Bewegter Hintergrund', 'Auf dem iPad standardmäßig aus.', bgOn)}
       ${row('splash', 'Startanimation', 'Haus und Logo beim Öffnen der App.', spOn)}`);

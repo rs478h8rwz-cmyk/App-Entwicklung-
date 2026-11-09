@@ -197,11 +197,17 @@ function C() {
   };
 }
 
+/* ---------- Tastatur-Test: einzelne Teile abschaltbar (Testseite diag.html) ---------- */
+const SAFE = (() => { try { return JSON.parse(localStorage.getItem('fe-safe') || '{}') || {}; } catch (e) { return {}; } })();
+if (SAFE.zoom) { const m = document.querySelector('meta[name=viewport]'); if (m) m.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover'); }
+if (SAFE.anim) document.head.insertAdjacentHTML('beforeend', '<style>*,*::before,*::after{animation:none!important;transition:none!important}</style>');
 /* ---------- Zoom unterbinden ---------- */
+if (!SAFE.zoom) {
 document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+}
 /* Doppeltipp-Zoom per CSS abschalten – Tipps werden nie verworfen (früherer touchend-Filter schluckte schnelle Tipps) */
-document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}input,textarea,select,[contenteditable]{touch-action:auto!important;-webkit-user-select:text;user-select:text}</style>');
+if (!SAFE.touch) document.head.insertAdjacentHTML('beforeend', '<style>button,a,[data-a],[data-r],.chip,.btn,.btn-p,.btn-s,.btn-g{touch-action:manipulation}input,textarea,select,[contenteditable]{touch-action:auto!important;-webkit-user-select:text;user-select:text}</style>');
 
 /* ---------- Icons ---------- */
 const IP = {
