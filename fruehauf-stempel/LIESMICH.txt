@@ -1,4 +1,4 @@
-Frühauf – Stempeluhr (Version 1.1)
+Frühauf – Stempeluhr (Version 1.2)
 ==================================
 
 Eigenständige Web-App zur Zeiterfassung. Läuft auf iPhone, Android, iPad und PC, auch offline.
@@ -26,3 +26,14 @@ optional GPS-Standort beim Stempeln, Datensicherung (auch zum Übertragen auf ei
 Urlaub: Großer Knopf „Heute Urlaub“ auf der Startseite. Unter „Urlaub“ einen Zeitraum wählen –
 Wochenenden und Feiertage zählen nicht mit. „Urlaub einreichen“ erstellt einen Urlaubsantrag als PDF
 (mit Resturlaub vorher/nachher und Feld „genehmigt/abgelehnt“), speichert ihn und öffnet Teilen (WhatsApp).
+
+Betriebsurlaub (für alle): steht in der Datei firma.json (z. B. 18.12.2026 – 04.01.2027).
+Diese Tage werden automatisch als Urlaub geführt und vom Anspruch abgezogen (abzug=false = zählt nicht).
+Änderungen an firma.json kommen mit dem nächsten Hochladen bei Netlify auf alle Handys.
+Admins können zusätzlich unter Einstellungen → Konten weitere Zeiträume auf einem Gerät eintragen.
+
+Urlaubskalender: unter „Urlaub“ – Urlaub, Betriebsurlaub, Feiertage, Krank und gearbeitete Tage.
+
+Datenschutz: Alle Daten liegen nur auf dem Handy des Mitarbeiters – kein gemeinsamer Server,
+Kollegen sehen nichts. Optional App-PIN (Einstellungen → Daten), abgefragt beim Öffnen
+und nach 5 Minuten im Hintergrund.

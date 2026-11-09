@@ -21,8 +21,15 @@ const overlap = (a1, b1, a2, b2) => { const s = Math.max(toMin(a1), toMin(a2)), 
 
 const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun']];
 const typeName = t => (DAY_TYPES.find(x => x[0] === t) || DAY_TYPES[0])[1];
+let FIRMA = { betriebsurlaub: [] };   // aus firma.json (für alle)
+const buList = () => (FIRMA.betriebsurlaub || []).map(x => ({ ...x, firm: true })).concat((S.bu || []).map(x => ({ ...x, firm: false })));
+const betriebOf = iso => buList().find(x => x.von && x.bis && iso >= x.von && iso <= x.bis) || null;
 let DAYS = {};   // iso → { iso, type, segs:[{site,von,bis}], pauses:[{von,bis}], note, geo:[] }
-const dayOf = iso => DAYS[iso] || { iso, type: holiday(iso) ? 'feiertag' : 'work', segs: [], pauses: [], note: '', geo: [] };
+const dayOf = iso => {
+  if (DAYS[iso]) return DAYS[iso];
+  const b = sollOf(iso) > 0 && betriebOf(iso);
+  return { iso, type: holiday(iso) ? 'feiertag' : b ? 'urlaub' : 'work', betrieb: b ? b.name || 'Betriebsurlaub' : '', segs: [], pauses: [], note: '', geo: [] };
+};
 const hasData = d => !!((d.segs || []).length || (d.pauses || []).length || d.note || (DAYS[d.iso] && d.type !== 'work'));
 const curSeg = d => { const s = d.segs || []; return s.length && !s[s.length - 1].bis ? s[s.length - 1] : null; };
 const openPause = d => (d.pauses || []).find(p => p.von && !p.bis) || null;
@@ -75,9 +82,13 @@ function balance() {
 /* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
 const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (sollOf(i) > 0) l.push(i); return l; };
 function vacation(year = new Date().getFullYear()) {
-  let taken = 0, planned = 0; const today = isoToday();
-  for (const iso in DAYS) if (iso.startsWith(year + '-') && DAYS[iso].type === 'urlaub' && sollOf(iso) > 0) { if (iso <= today) taken++; else planned++; }
-  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, used, total, left: total - used };
+  let taken = 0, planned = 0, betrieb = 0; const today = isoToday();
+  for (let iso = `${year}-01-01`; iso <= `${year}-12-31`; iso = addDays(iso, 1)) {
+    if (sollOf(iso) <= 0) continue; const d = dayOf(iso); if (d.type !== 'urlaub') continue;
+    const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; if (b) betrieb++;
+    if (iso <= today) taken++; else planned++;
+  }
+  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, betrieb, used, total, left: total - used };
 }
 async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }
 function rememberSite(name) { const n = (name || '').trim(); if (!n) return; S.sites = [n].concat((S.sites || []).filter(x => x !== n)).slice(0, 40); saveSettings(); }

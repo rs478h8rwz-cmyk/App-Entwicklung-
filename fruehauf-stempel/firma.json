@@ -1,0 +1,11 @@
+{
+  "hinweis": "Firmenweite Vorgaben – gelten für alle Mitarbeiter. Betriebsurlaub: von/bis (inklusive), abzug=true zieht die Tage vom Urlaubsanspruch ab.",
+  "betriebsurlaub": [
+    {
+      "name": "Betriebsurlaub Weihnachten",
+      "von": "2026-12-18",
+      "bis": "2027-01-04",
+      "abzug": true
+    }
+  ]
+}

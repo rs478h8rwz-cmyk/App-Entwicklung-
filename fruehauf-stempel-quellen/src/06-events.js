@@ -60,6 +60,11 @@ document.addEventListener('click', async e => {
     case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[new Date().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
     case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'vac-set': await setVacation(); break;
+    case 'cal': UI.calM = a.dataset.v; rerender(); break;
+    case 'bu-add': { if (!(await needEdit())) return; const von = $('#bu-von').value, bis = $('#bu-bis').value; if (!von || !bis || bis < von) return toast('Bitte Von und Bis angeben.', 'warn'); S.bu = (S.bu || []).concat({ name: $('#bu-name').value.trim() || 'Betriebsurlaub', von, bis, abzug: $('#bu-abzug').checked }); saveSettings(); toast('Betriebsurlaub eingetragen.'); rerender(); break; }
+    case 'bu-del': { if (!(await needEdit())) return; S.bu.splice(+a.dataset.i, 1); saveSettings(); rerender(); break; }
+    case 'pin-set': { const v = $('#pin-new').value.trim(); if (!/^\d{4,8}$/.test(v)) return toast('Bitte 4 bis 8 Ziffern.', 'warn'); const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join(''); S.pin = { salt, hash: await pbkdf2(v, salt, 60000) }; saveSettings(); toast('PIN festgelegt.'); rerender(); break; }
+    case 'pin-off': { if (!(await pinCheck('Zum Entfernen bitte die PIN eingeben'))) return; S.pin = null; saveSettings(); rerender(); break; }
     case 'vac-submit': await submitVacation(); break;
     case 'vac-del': { const past = a.dataset.von < isoToday(); if (past && !(await needEdit())) return; if (!(await confirmDlg('Urlaub entfernen?', `${deDate(a.dataset.von)} – ${deDate(a.dataset.bis)} wird wieder zu Arbeitstagen.`, 'Entfernen', true))) return; for (let i = a.dataset.von; i <= a.dataset.bis; i = addDays(i, 1)) { const d = clone(dayOf(i)); if (d.type !== 'urlaub') continue; logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); if (i >= isoToday()) d.edited = !!(d.log || []).some(x => x.what !== 'Art des Tages'); d.type = 'work'; await saveDay(d); } rerender(); break; }
     case 'switch': { const v = ($('#site') || {}).value; if (v && v.trim()) { $('#site').id = 'site2'; return doSwitch(); } switchDialog(); break; }
@@ -180,6 +185,20 @@ async function restore(file) {
   } catch (err) { toast('Sicherung konnte nicht gelesen werden: ' + err.message, 'err', 5000); }
 }
 
+/* ---------- App-PIN ---------- */
+function pinCheck(msg = 'PIN eingeben') {
+  return new Promise(res => {
+    $('#modal').innerHTML = `<div class="fixed inset-0 z-[90] grid place-items-center p-6" style="background:var(--bg)"><div class="w-full max-w-xs text-center">${logoMark(44)}<div class="font-semibold text-[18px] mt-5">${esc(msg)}</div>
+      <input class="inp mt-5 text-center !text-[24px] !h-14 tracking-[.4em]" id="pin-in" inputmode="numeric" maxlength="8" autocomplete="off" name="x-${Date.now()}" style="-webkit-text-security:disc"><button class="btn-p w-full mt-3" id="pin-ok">Öffnen</button>${msg !== 'PIN eingeben' ? '<button class="btn-g w-full mt-2" id="pin-cancel">Abbrechen</button>' : ''}</div></div>`;
+    const go = async () => { const v = $('#pin-in').value; if (await pbkdf2(v, S.pin.salt, 60000) === S.pin.hash) { closeModal(); res(true); } else { toast('PIN falsch.', 'err'); $('#pin-in').value = ''; } };
+    $('#pin-ok').onclick = go; $('#pin-in').onkeyup = e => { if (e.key === 'Enter' || $('#pin-in').value.length >= 4 && e.key !== 'Backspace') { if (e.key === 'Enter') go(); } };
+    const c = $('#pin-cancel'); if (c) c.onclick = () => { closeModal(); res(false); };
+    setTimeout(() => { const el = $('#pin-in'); if (el) el.focus(); }, 80);
+  });
+}
+let HIDDEN_AT = 0;
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') HIDDEN_AT = Date.now(); else if (S.pin && HIDDEN_AT && Date.now() - HIDDEN_AT > 5 * 60000) pinCheck(); });
+
 /* ---------- Uhr und Start ---------- */
 setInterval(() => {
   const c = $('#clock'); if (c) c.textContent = nowHM();
@@ -193,7 +212,9 @@ setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHM(); }, 10
   await DB.open(); await loadSettings();
   DEVICE = (await DB.get('kv', 'device')) || { admin: false }; UI.requests = (await DB.get('kv', 'requests')) || [];
   ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; });
+  try { FIRMA = await (await fetch('firma.json?t=' + Date.now(), { cache: 'no-store' })).json(); DB.put('kv', FIRMA, 'firma'); } catch (e) { FIRMA = (await DB.get('kv', 'firma')) || FIRMA; }
   applyTheme(); route();
+  if (S.pin) pinCheck();
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && UI.route === 'home') rerender(); });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});

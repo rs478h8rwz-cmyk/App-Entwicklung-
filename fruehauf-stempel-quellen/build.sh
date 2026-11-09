@@ -12,7 +12,7 @@ s=open(APP+'/index.html').read()
 js=re.findall(r'<script>\n(.*?)</script>',s,re.S)[-1]
 open(SP+'/app.js','w').write(js)
 ver=time.strftime('%Y%m%d%H%M%S')
-core=['./','index.html','manifest.webmanifest','favicon.svg','icon-180.png','icon-192.png','icon-512.png','logo.png','vendor/fonts.css','vendor/tailwind.js','vendor/jspdf.umd.min.js']
+core=['./','index.html','manifest.webmanifest','favicon.svg','icon-180.png','icon-192.png','icon-512.png','logo.png','firma.json','vendor/fonts.css','vendor/tailwind.js','vendor/jspdf.umd.min.js']
 core+=['vendor/fonts/'+f for f in sorted(os.listdir(APP+'/vendor/fonts'))]
 t=open(SP+'/sw-template.js').read().replace('__VERSION__',ver).replace('__CORE__',json.dumps(core))
 open(APP+'/sw.js','w').write(t)

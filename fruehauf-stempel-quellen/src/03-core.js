@@ -4,7 +4,7 @@
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -55,7 +55,8 @@ const DEFAULTS = {
   vacation: { perYear: 30, carry: 0 },
   balance: { from: '', min: 0 },   // Überstundenkonto: Startdatum und Startwert (Minuten)
   gps: false,              // Standort beim Stempeln merken
-  admin: null              // eigenes Admin-Passwort (nur als PBKDF2-Hash)
+  admin: null,             // eigenes Admin-Passwort (nur als PBKDF2-Hash)
+  bu: []                   // zusätzlicher Betriebsurlaub (vom Admin auf diesem Gerät)
 };
 /* Admin-Passwort für nachträgliche Änderungen – nur als PBKDF2-Hash, nie im Klartext */
 const ADMIN_DEFAULT = {"salt": "98ca4569816c7cf7ab78c9ca05af31d3", "hash": "a10b07b319ad55321647f139e3ab13d26e8f75d2b8949e49870d768843f71394", "iter": 150000};

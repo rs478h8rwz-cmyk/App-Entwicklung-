@@ -33,7 +33,7 @@ async function buildPdf(isos, label) {
   const rows = R.days.filter(x => x.c.soll > 0 || hasData(x.d));
   for (const { d, c } of rows) {
     const work = d.type === 'work', bem = [];
-    if (!work) bem.push(typeName(d.type) + (d.type === 'feiertag' && holiday(d.iso) ? ' (' + holiday(d.iso) + ')' : ''));
+    if (!work) bem.push((d.betrieb || typeName(d.type)) + (d.type === 'feiertag' && holiday(d.iso) ? ' (' + holiday(d.iso) + ')' : ''));
     c.sites.forEach(s => bem.push(`${s.site} (${hm(s.min)})`));
     if (c.missingEnd) bem.push('Ausstempeln fehlt');
     if (d.note) bem.push('Notiz: ' + d.note);
