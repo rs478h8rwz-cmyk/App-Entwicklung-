@@ -53,7 +53,7 @@ const IP = {
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -244,7 +244,7 @@ function sollOf(iso) {
 }
 function calcDay(d, now = nowHM()) {
   const iso = d.iso, today = iso === isoToday(), soll = sollOf(iso);
-  const r = { soll, start: '', end: '', brutto: 0, pause: 0, abzug: 0, netto: 0, credit: 0, diff: 0, open: false, inPause: false, missingEnd: false, sites: [] };
+  const r = { soll, start: '', end: '', brutto: 0, pause: 0, abzug: 0, netto: 0, credit: 0, diff: 0, over: 0, open: false, inPause: false, missingEnd: false, sites: [] };
   if (d.type !== 'work') { r.credit = d.type === 'frei' ? 0 : soll; r.diff = r.credit - soll; return r; }
   const segs = (d.segs || []).filter(s => s.von).slice().sort((a, b) => toMin(a.von) - toMin(b.von));
   if (!segs.length) { r.diff = iso < isoToday() ? -soll : 0; return r; }
@@ -259,6 +259,7 @@ function calcDay(d, now = nowHM()) {
   r.abzug = r.brutto ? Math.min(r.brutto, Math.max(r.pause, minPauseFor(r.brutto - r.pause))) : 0;
   r.netto = Math.max(0, r.brutto - r.abzug);
   r.diff = r.missingEnd ? 0 : r.netto - soll;
+  r.over = r.missingEnd || (today && r.open) ? 0 : Math.max(0, r.diff);   // Minusstunden gibt es nicht
   /* Stunden je Baustelle: Abschnitt minus Pausen darin, Mindestpausen-Rest anteilig */
   const per = {};
   for (const s of segs) { const e = endOf(s); if (!e) continue; let m = span(s.von, e); for (const p of pz) m -= overlap(s.von, e, p.von, p.bis); const k = s.site || 'Ohne Baustelle'; per[k] = (per[k] || 0) + Math.max(0, m); }
@@ -270,20 +271,20 @@ function calcRange(isos) {
   const days = isos.map(iso => { const d = dayOf(iso); return { d, c: calcDay(d) }; });
   const sum = k => days.reduce((s, x) => s + x.c[k], 0), sites = {};
   days.forEach(x => x.c.sites.forEach(s => { sites[s.site] = (sites[s.site] || 0) + s.min; }));
-  return { days, netto: sum('netto'), credit: sum('credit'), soll: sum('soll'), diff: sum('diff'), pause: sum('pause'), abzug: sum('abzug'), sites, count: t => days.filter(x => x.d.type === t && x.c.soll > 0).length };
+  return { days, netto: sum('netto'), credit: sum('credit'), soll: sum('soll'), diff: sum('diff'), over: sum('over'), pause: sum('pause'), abzug: sum('abzug'), sites, count: t => days.filter(x => x.d.type === t && x.c.soll > 0).length };
 }
-/* Überstundenkonto: Startwert + Differenzen aller Tage ab Startdatum bis gestern (heute erst nach Gehen) */
+/* Überstundenkonto: Startwert + Überstunden aller Tage ab Startdatum (Minusstunden zählen nicht) */
 function balance() {
-  const b = S.balance || {}, from = b.from || '2000-01-01', today = isoToday(); let m = +b.min || 0;
-  const isos = new Set(Object.keys(DAYS).filter(i => i >= from && i <= today));
-  /* Tage ohne Eintrag mit Soll zählen nur, wenn das Konto ein Startdatum hat */
-  if (b.from) { for (let i = from; i < today; i = addDays(i, 1)) isos.add(i); }
-  for (const iso of isos) { const d = dayOf(iso), c = calcDay(d); if (iso === today && c.open) continue; m += c.diff; }
+  const b = S.balance || {}, from = b.from || '2000-01-01', today = isoToday(); let m = Math.max(0, +b.min || 0);
+  for (const iso in DAYS) if (iso >= from && iso <= today) m += calcDay(dayOf(iso)).over;
   return m;
 }
+/* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
+const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (sollOf(i) > 0) l.push(i); return l; };
 function vacation(year = new Date().getFullYear()) {
-  let used = 0; for (const iso in DAYS) if (iso.startsWith(year + '-') && DAYS[iso].type === 'urlaub' && sollOf(iso) > 0) used++;
-  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0); return { used, total, left: total - used };
+  let taken = 0, planned = 0; const today = isoToday();
+  for (const iso in DAYS) if (iso.startsWith(year + '-') && DAYS[iso].type === 'urlaub' && sollOf(iso) > 0) { if (iso <= today) taken++; else planned++; }
+  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, used, total, left: total - used };
 }
 async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }
 function rememberSite(name) { const n = (name || '').trim(); if (!n) return; S.sites = [n].concat((S.sites || []).filter(x => x !== n)).slice(0, 40); saveSettings(); }
@@ -291,7 +292,7 @@ function rememberSite(name) { const n = (name || '').trim(); if (!n) return; S.s
 /* =========================================================
    Oberfläche
    ========================================================= */
-const UI = { route: 'home', mon: '', tab: 'person', editUntil: 0, openDay: '' };
+const UI = { route: 'home', mon: '', tab: 'person', editUntil: 0, openDay: '', vVon: '', vBis: '', vNote: '' };
 let DEVICE = { admin: false };   // Admin-Gerät: dauerhaft freigeschaltet (nur auf diesem Gerät, nicht in der Sicherung)
 const canEdit = () => DEVICE.admin || Date.now() < UI.editUntil;
 
@@ -300,7 +301,7 @@ function logoMark(h = 34) {
   return l ? `<span class="inline-grid place-items-center rounded-[10px] bg-white px-2" style="height:${h}px"><img src="${esc(l)}" alt="" style="max-height:${h - 8}px;max-width:${h * 3.2}px"></span>` : `<span class="w-9 h-9 rounded-[10px] grid place-items-center text-white" style="background:rgb(var(--p-rgb))">${ic('clock', 18, 2.2)}</span>`;
 }
 function shell(inner) {
-  const nav = [['home', 'Heute', 'clock', '#/'], ['week', 'Woche', 'cal', '#/woche'], ['settings', 'Einstellungen', 'gear', '#/einstellungen']];
+  const nav = [['home', 'Heute', 'clock', '#/'], ['week', 'Woche', 'cal', '#/woche'], ['urlaub', 'Urlaub', 'palm', '#/urlaub'], ['settings', 'Einstellungen', 'gear', '#/einstellungen']];
   return `<header class="sticky top-0 z-40 border-b border-line backdrop-blur-xl" style="background:color-mix(in srgb,var(--bg) 86%,transparent);padding-top:env(safe-area-inset-top)">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
       <a href="#/" class="flex items-center gap-3 min-w-0">${logoMark()}<span class="hidden sm:block leading-tight"><span class="block font-semibold text-[15px]">Stempeluhr</span><span class="block text-[12px] text-ink3">${esc(S.person.name || S.company.name)}</span></span></a>
@@ -311,7 +312,8 @@ function shell(inner) {
     <datalist id="dl-sites">${(S.sites || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
 }
 const kpi = (k, v, id = '', cls = '') => `<div class="kpi"><div class="text-[12px] text-ink3">${k}</div><div class="text-[22px] font-semibold mt-1 ${cls}" ${id ? `id="${id}"` : ''}>${v}</div></div>`;
-const diffCls = m => (Math.round(m) > 0 ? 'text-p' : Math.round(m) < 0 ? 'text-ember' : '');
+const diffCls = m => (Math.round(m) > 0 ? 'text-p' : '');
+const overTxt = m => (Math.round(m) > 0 ? '+' + hm(m) : '–');
 
 /* ---------- Heute ---------- */
 function siteChips(target) {
@@ -326,16 +328,17 @@ function viewHome() {
   const btn = (a, label, icon, style, dis) => `<button class="stamp" data-a="${a}" style="${style}" ${dis ? 'disabled' : ''}>${ic(icon, 30, 2)}<span>${label}</span></button>`;
   const G = 'background:rgb(var(--p-rgb));color:#fff', Y = 'background:rgb(var(--s-rgb));color:#1b1405', R = 'background:#D9482B;color:#fff', N = 'background:var(--raised);color:var(--ink);border:1px solid var(--line2)';
   let buttons = '';
-  if (state === 'idle') buttons = `<div class="grid gap-3">${btn('in', (d.segs || []).length ? 'Wieder kommen' : 'Kommen', 'play', G)}</div>`;
+  const V = 'background:rgb(var(--s-rgb)/.16);color:var(--yel-ink);border:1px solid rgb(var(--s-rgb)/.45)';
+  if (state === 'idle') buttons = `<div class="grid gap-3">${btn('in', (d.segs || []).length ? 'Wieder kommen' : 'Kommen', 'play', G)}${(d.segs || []).length || !sollOf(iso) ? '' : btn('vac-today', 'Heute Urlaub', 'palm', V)}</div>`;
   else if (state === 'work') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause', 'coffee', Y)}${btn('switch', 'Baustelle wechseln', 'refresh', N)}<div class="col-span-2">${btn('out', 'Gehen', 'stop', R)}</div></div>`;
   else if (state === 'pause') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause beenden', 'play', G)}${btn('out', 'Gehen', 'stop', R)}</div>`;
-  else buttons = `<div class="rounded-[var(--r)] bg-tyel text-yel-ink p-4 text-[14px]">Heute ist als <b>${typeName(d.type)}</b> eingetragen.${d.type === 'feiertag' && holiday(iso) ? ` (${esc(holiday(iso))})` : ''}</div><div class="mt-3">${btn('in', 'Trotzdem kommen', 'play', G)}</div>`;
+  else buttons = `<div class="rounded-[var(--r)] p-5 text-center" style="background:rgb(var(--s-rgb)/.14)"><div class="text-yel-ink">${ic(d.type === 'urlaub' ? 'palm' : d.type === 'krank' ? 'heartp' : 'cal', 34, 1.7)}</div><div class="text-[20px] font-semibold mt-2">Heute: ${typeName(d.type)}</div>${d.type === 'feiertag' && holiday(iso) ? `<div class="text-ink3 text-[14px]">${esc(holiday(iso))}</div>` : ''}</div><div class="grid grid-cols-2 gap-3 mt-3">${btn('in', 'Trotzdem kommen', 'play', G)}${d.type === 'urlaub' ? btn('vac-undo', 'Urlaub zurücknehmen', 'x', N) : ''}</div>`;
   /* fehlendes Gehen an früheren Tagen */
   const miss = Object.values(DAYS).filter(x => x.iso < iso && x.iso >= addDays(iso, -21) && calcDay(x).missingEnd).sort((a, b) => a.iso.localeCompare(b.iso));
   const missCard = miss.length ? `<div class="card p-4 mt-4 border-ember/50 flex flex-wrap items-center gap-3" style="background:var(--t-red)"><span class="text-ember">${ic('alert', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">Ausstempeln fehlt: ${miss.map(x => `<b>${wdOf(x.iso).slice(0, 2)}, ${deDate(x.iso)}</b>`).join(', ')} – bitte vom Admin korrigieren lassen.</div><a class="btn-s !h-9" href="#/woche/${mondayOf(miss[0].iso)}">Ansehen</a></div>` : '';
   const segs = (d.segs || []).map(s => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[14px]"><span class="w-2 h-2 rounded-full ${s.bis ? 'bg-ink3' : 'bg-p'}"></span><span class="flex-1 min-w-0 truncate">${esc(s.site || 'Ohne Baustelle')}</span><span class="mono text-ink2">${esc(s.von)}–${esc(s.bis || 'jetzt')}</span></div>`).join('');
   const W = calcRange(weekOf(mondayOf(iso))), bal = balance(), vac = vacation();
-  const week = W.days.filter(x => x.c.soll > 0 || hasData(x.d)).map(x => `<a href="#/woche/${mondayOf(iso)}" class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px] ${x.d.iso === iso ? 'font-semibold' : ''}"><span class="w-24">${wdOf(x.d.iso).slice(0, 2)}, ${deDate(x.d.iso).slice(0, 6)}</span><span class="flex-1 text-ink3 truncate">${x.d.type !== 'work' ? typeName(x.d.type) : x.c.start ? `${x.c.start}–${x.c.end || '…'}` : '–'}</span><span class="mono w-14 text-right">${hm(x.c.netto + x.c.credit)}</span><span class="mono w-16 text-right ${diffCls(x.c.diff)}">${x.c.soll || x.c.netto ? hmPlus(x.c.diff) : ''}</span></a>`).join('');
+  const week = W.days.filter(x => x.c.soll > 0 || hasData(x.d)).map(x => `<a href="#/woche/${mondayOf(iso)}" class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px] ${x.d.iso === iso ? 'font-semibold' : ''}"><span class="w-24">${wdOf(x.d.iso).slice(0, 2)}, ${deDate(x.d.iso).slice(0, 6)}</span><span class="flex-1 text-ink3 truncate">${x.d.type !== 'work' ? typeName(x.d.type) : x.c.start ? `${x.c.start}–${x.c.end || '…'}` : '–'}</span><span class="mono w-14 text-right">${hm(x.c.netto + x.c.credit)}</span><span class="mono w-16 text-right ${diffCls(x.c.over)}">${overTxt(x.c.over)}</span></a>`).join('');
   return `<section class="pt-6 sm:pt-10">
     ${S.person.name ? '' : `<a href="#/einstellungen/person" class="card p-4 mb-4 flex items-center gap-3 text-[14px]" style="background:var(--t-yel)"><span class="text-yel-ink">${ic('info', 18)}</span><span class="flex-1">Bitte zuerst deinen Namen eintragen – er steht auf dem Stundenzettel.</span>${ic('arrowR', 16)}</a>`}
     <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-4">
@@ -347,13 +350,13 @@ function viewHome() {
         ${missCard}
       </div>
       <div class="space-y-4">
-        <div class="grid grid-cols-2 gap-2">${kpi('Arbeitszeit heute', hm(c.netto + c.credit), 'live-netto')}${kpi('Soll heute', hm(c.soll))}${kpi('Pause (abgezogen)', `${hm(c.abzug)}`, 'live-pause')}${kpi('Differenz', hmPlus(c.diff), 'live-diff', diffCls(c.diff))}</div>
-        <p class="text-[12px] text-ink3 -mt-2">Mindestens ${S.minPause} Min. Pause werden immer abgezogen – längere Pausen voll.</p>
+        <div class="grid grid-cols-2 gap-2">${kpi('Arbeitszeit heute', hm(c.netto + c.credit), 'live-netto')}${kpi('Soll heute', hm(c.soll))}${kpi('Pause (abgezogen)', `${hm(c.abzug)}`, 'live-pause')}${kpi('Überstunden heute', overTxt(Math.max(0, c.diff)), 'live-diff', diffCls(c.diff))}</div>
+        <p class="text-[12px] text-ink3 -mt-2">Mindestens ${S.minPause} Min. Pause werden immer abgezogen – auch ohne gestempelte Pause; längere Pausen voll.</p>
         ${segs ? `<div class="card p-4"><div class="text-[13px] text-ink3 mb-1">Heute</div>${segs}</div>` : ''}
-        <div class="grid grid-cols-2 gap-2">${kpi('Überstundenkonto', hmPlus(bal), '', diffCls(bal))}${kpi(`Urlaub ${new Date().getFullYear()}`, `${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span>`)}</div>
+        <div class="grid grid-cols-2 gap-2"><div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[26px] font-semibold mt-1 text-p">${overTxt(bal)}</div></div><a href="#/urlaub" class="kpi block"><div class="text-[12px] text-ink3">Resturlaub ${new Date().getFullYear()}</div><div class="text-[26px] font-semibold mt-1">${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span></div></a></div>
       </div>
     </div>
-    <div class="card p-5 mt-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><h2 class="sec-t">Diese Woche</h2><span class="text-[14px]">${hm(W.netto + W.credit)} / ${hm(W.soll)} · <b class="${diffCls(W.diff)}">${hmPlus(W.diff)}</b></span></div>${week || '<div class="text-ink3 text-[14px]">Noch keine Einträge.</div>'}
+    <div class="card p-5 mt-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><h2 class="sec-t">Diese Woche</h2><span class="text-[14px]">${hm(W.netto + W.credit)} / ${hm(W.soll)} · Überstunden <b class="text-p">${overTxt(W.over)}</b></span></div>${week || '<div class="text-ink3 text-[14px]">Noch keine Einträge.</div>'}
       <div class="flex flex-wrap gap-2 mt-4"><a class="btn-s" href="#/woche">${ic('cal', 16)}Woche ansehen</a><button class="btn-p" data-a="send-week" data-mon="${mondayOf(iso)}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button></div></div>
   </section>`;
 }
@@ -384,7 +387,7 @@ function viewWeek() {
           ${c.sites.length ? `<div class="flex flex-wrap gap-1.5 mt-2">${c.sites.map(s => `<span class="badge bg-raised text-ink2">${ic('pin', 12)}${esc(s.site)} · ${hm(s.min)}</span>`).join('')}</div>` : ''}
           ${d.edited ? `<div class="text-[12px] text-ink3 mt-1.5">${ic('edit', 12)} nachgetragen${log ? ` (${log} Änderung${log > 1 ? 'en' : ''})` : ''}</div>` : ''}
         </div>
-        <div class="text-right"><div class="text-[18px] font-semibold mono">${hm(c.netto + c.credit)}</div><div class="text-[12px] text-ink3">Soll ${hm(c.soll)}</div>${c.soll || c.netto ? `<div class="text-[13px] mono ${diffCls(c.diff)}">${hmPlus(c.diff)}</div>` : ''}</div>
+        <div class="text-right"><div class="text-[18px] font-semibold mono">${hm(c.netto + c.credit)}</div><div class="text-[12px] text-ink3">Soll ${hm(c.soll)}</div>${c.over ? `<div class="text-[13px] mono text-p">+${hm(c.over)} Überst.</div>` : ''}</div>
       </div>
       <label class="block mt-3"><span class="sr-only">Notiz</span><input class="inp !h-10 text-[14px]" data-note="${d.iso}" value="${esc(d.note || '')}" placeholder="Notiz zum Tag (optional)"></label>
       ${edit ? (open ? dayEditor(d) : `<button class="btn-g !h-8 mt-2 -ml-2" data-a="ed-open" data-iso="${d.iso}">${ic('edit', 14)}Zeiten bearbeiten</button>`) : ''}
@@ -396,11 +399,33 @@ function viewWeek() {
     <div class="flex flex-wrap items-center gap-3"><h1 class="h-font text-[38px] sm:text-[48px] leading-none mr-auto">KW ${wk.w}</h1>
       <div class="flex items-center gap-1"><a class="btn-s !px-3" href="#/woche/${addDays(mon, -7)}" aria-label="Vorige Woche">${ic('chevL', 18)}</a><a class="btn-s" href="#/woche/${mondayOf(today)}">Heute</a><a class="btn-s !px-3" href="#/woche/${addDays(mon, 7)}" aria-label="Nächste Woche">${ic('chevR', 18)}</a></div></div>
     <p class="text-ink3 text-[14px] mt-2">${deDate(mon)} – ${deDate(addDays(mon, 6))} · ${esc(S.person.name || 'Name fehlt')}</p>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi('Arbeitszeit', hm(W.netto + W.credit))}${kpi('Soll', hm(W.soll))}${kpi('Differenz', hmPlus(W.diff), '', diffCls(W.diff))}${kpi('Überstundenkonto', hmPlus(balance()), '', diffCls(balance()))}</div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi('Arbeitszeit', hm(W.netto + W.credit))}${kpi('Soll', hm(W.soll))}${kpi('Überstunden Woche', overTxt(W.over), '', 'text-p')}${kpi('Überstunden gesamt', overTxt(balance()), '', 'text-p')}</div>
     <div class="flex flex-wrap items-center gap-2 mt-5"><button class="btn-p" data-a="send-week" data-mon="${mon}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button><button class="btn-s" data-a="send-month" data-iso="${mon}">${ic('file', 16)}Monat ${MONTHS[+mon.slice(5, 7) - 1]}</button><span class="flex-1"></span>${lock}</div>
     <div class="space-y-3 mt-5">${cards}</div>
     ${Object.keys(W.sites).length ? `<div class="card p-5 mt-4"><h2 class="sec-t mb-3">Baustellen dieser Woche</h2>${Object.entries(W.sites).sort((a, b) => b[1] - a[1]).map(([k, m]) => `<div class="flex justify-between py-2 border-b border-line last:border-0 text-[14px]"><span>${esc(k)}</span><b class="mono">${hm(m)}</b></div>`).join('')}</div>` : ''}
   </section>`;
+}
+
+/* ---------- Urlaub ---------- */
+function viewUrlaub() {
+  const y = new Date().getFullYear(), v = vacation(y), today = isoToday();
+  const von = UI.vVon || today, bis = UI.vBis || von, days = workDaysIn(von, bis);
+  const list = Object.values(DAYS).filter(d => d.type === 'urlaub' && d.iso.startsWith(y + '-')).sort((a, b) => a.iso.localeCompare(b.iso));
+  const blocks = []; list.forEach(d => { const l = blocks[blocks.length - 1]; if (l && workDaysIn(addDays(l.bis, 1), addDays(d.iso, -1)).length === 0) { l.bis = d.iso; l.n += sollOf(d.iso) > 0 ? 1 : 0; } else blocks.push({ von: d.iso, bis: d.iso, n: sollOf(d.iso) > 0 ? 1 : 0 }); });
+  const reqs = (UI.requests || []).slice().reverse().slice(0, 8);
+  return `<section class="pt-6 sm:pt-10"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Urlaub</h1>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi(`Anspruch ${y}`, `${v.total} Tage`)}${kpi('Genommen', `${v.taken} Tage`)}${kpi('Geplant', `${v.planned} Tage`)}<div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Resturlaub</div><div class="text-[26px] font-semibold mt-1 text-p">${v.left} Tage</div></div></div>
+    <div class="grid lg:grid-cols-2 gap-4 mt-4">
+      <div class="card p-5 sm:p-6"><h2 class="sec-t mb-1">Urlaub eintragen oder einreichen</h2><p class="text-ink3 text-[14px] mb-5">Wochenenden und Feiertage werden nicht mitgezählt.</p>
+        <div class="grid grid-cols-2 gap-3"><label class="block"><span class="lbl">Von</span><input type="date" class="inp" data-vac="von" value="${esc(von)}"></label><label class="block"><span class="lbl">Bis</span><input type="date" class="inp" data-vac="bis" value="${esc(bis)}"></label></div>
+        <label class="block mt-3"><span class="lbl">Bemerkung (optional)</span><input class="inp" data-vac="note" value="${esc(UI.vNote || '')}" placeholder="z. B. Familienurlaub"></label>
+        <div class="kpi mt-4 flex items-center justify-between"><span class="text-[14px]">${deDate(von)} – ${deDate(bis)}</span><b class="text-[22px]" id="vac-n">${days.length} Arbeitstag${days.length === 1 ? '' : 'e'}</b></div>
+        ${days.length > v.left ? `<p class="text-ember text-[13px] mt-2">Achtung: mehr Tage als Resturlaub (${v.left}).</p>` : ''}
+        <div class="grid sm:grid-cols-2 gap-2 mt-4"><button class="btn-p !h-12" data-a="vac-submit">${ic('send', 17)}Urlaub einreichen (PDF an ${esc(S.recipient.name || 'Büro')})</button><button class="btn-s !h-12" data-a="vac-set">${ic('palm', 17)}Direkt eintragen</button></div>
+        <p class="hint">„Einreichen“ erstellt einen Urlaubsantrag als PDF, speichert ihn und öffnet Teilen (WhatsApp). „Direkt eintragen“ trägt die Tage in den Kalender ein – vergangene Tage nur mit Admin-Passwort.</p></div>
+      <div class="card p-5 sm:p-6"><h2 class="sec-t mb-3">Eingetragener Urlaub ${y}</h2>${blocks.length ? blocks.map(b => `<div class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px]"><span class="text-yel-ink">${ic('palm', 16)}</span><span class="flex-1">${deDate(b.von)}${b.bis !== b.von ? ' – ' + deDate(b.bis) : ''}</span><b>${b.n} Tag${b.n > 1 ? 'e' : ''}</b><button class="btn-g !h-8 !px-2 hover:!text-ember" data-a="vac-del" data-von="${b.von}" data-bis="${b.bis}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('') : '<div class="text-ink3 text-[14px]">Noch kein Urlaub eingetragen.</div>'}
+        ${reqs.length ? `<h3 class="font-semibold mt-6 mb-2 text-[15px]">Eingereichte Anträge</h3>${reqs.map(r => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[13px]"><span class="flex-1">${deDate(r.von)} – ${deDate(r.bis)} · ${r.n} Tage</span><span class="text-ink3">eingereicht ${deDate(r.at.slice(0, 10))}</span></div>`).join('')}` : ''}</div>
+    </div></section>`;
 }
 
 /* ---------- Einstellungen ---------- */
@@ -419,8 +444,8 @@ function setBody() {
       <div class="space-y-2">${[1, 2, 3, 4, 5, 6, 0].map(k => { const h = S.hours[k]; return `<div class="grid grid-cols-[110px_1fr_1fr_70px] gap-2 items-center"><label class="flex items-center gap-2 text-[14px]"><input type="checkbox" data-hour="${k}" data-k="on" ${h.on ? 'checked' : ''} ${ro ? 'disabled' : ''}>${WD[k].slice(0, 2)}</label><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="von" value="${esc(h.von)}" ${ro || !h.on ? 'disabled' : ''}><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="bis" value="${esc(h.bis)}" ${ro || !h.on ? 'disabled' : ''}><span class="text-[13px] text-ink3 mono text-right">${h.on ? hm(sollOf(k === 0 ? '2026-11-15' : addDays('2026-11-09', k - 1))) : '–'}</span></div>`; }).join('')}</div>
       <div class="grid sm:grid-cols-2 gap-4 mt-6">${sIn('minPause', 'Mindestpause (Min.)', '30', 'number', ro)}<label class="block"><span class="lbl">Bundesland (Feiertage)</span><select class="inp" data-s="state" ${ro ? 'disabled' : ''}>${STATES.map(([k, l]) => `<option value="${k}" ${S.state === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
       <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-4"><input type="checkbox" data-a="over6" ${S.pauseOnlyOver6 ? 'checked' : ''} ${ro ? 'disabled' : ''}>Mindestpause nur bei mehr als 6 Std. Arbeit abziehen</label>`;
-    case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${new Date().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('vacation.perYear', 'Urlaubstage pro Jahr', '30', 'number', ro)}${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div><p class="hint">Genommen: ${v.used} · Übrig: ${v.left} Tage</p>
-      <h3 class="font-semibold mt-7 mb-3">Überstundenkonto</h3><div class="grid grid-cols-2 gap-4">${sIn('balance.from', 'Zählt ab', '', 'date', ro)}<label class="block"><span class="lbl">Startwert (Std:Min, z. B. 12:30 oder −3:15)</span><input class="inp" data-bal value="${esc(hm(S.balance.min || 0))}" ${ro ? 'disabled' : ''}></label></div><p class="hint">Aktuell: <b>${hmPlus(balance())}</b></p>`; }
+    case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${new Date().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('vacation.perYear', 'Urlaubstage pro Jahr', '30', 'number', ro)}${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div><p class="hint">Genommen: ${v.taken} · Geplant: ${v.planned} · Übrig: ${v.left} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)</p>
+      <h3 class="font-semibold mt-7 mb-3">Überstundenkonto</h3><div class="grid grid-cols-2 gap-4">${sIn('balance.from', 'Zählt ab', '', 'date', ro)}<label class="block"><span class="lbl">Startwert Überstunden (Std:Min, z. B. 12:30)</span><input class="inp" data-bal value="${esc(hm(S.balance.min || 0))}" ${ro ? 'disabled' : ''}></label></div><p class="hint">Aktuell: <b>${overTxt(balance())}</b> · Minusstunden werden nicht verrechnet (nicht bezahlt).</p>`; }
     case 'firma': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('company.name', 'Firmenname')}${sIn('company.phone', 'Telefon')}${sIn('company.street', 'Straße')}${sIn('company.city', 'PLZ und Ort')}</div>
       <div class="mt-6"><span class="lbl">Logo (App und PDF)</span><div class="flex flex-wrap items-center gap-3">${S.company.logo ? `<span class="rounded-[var(--rb)] bg-white p-3 border border-line"><img src="${esc(S.company.logo)}" class="h-14" alt=""></span>` : '<span class="text-ink3 text-[14px]">Kein Logo</span>'}
         <label class="btn-s cursor-pointer">${ic('upload', 16)}Logo wählen<input type="file" accept="image/*" class="hidden" data-logo></label>${S.company.logo !== 'logo.png' ? '<button class="btn-g" data-a="logo-reset">Standard-Logo</button>' : ''}</div></div>`;
@@ -448,12 +473,13 @@ function viewSettings() {
 
 /* ---------- Rendern und Navigation ---------- */
 function render() {
-  const inner = UI.route === 'week' ? viewWeek() : UI.route === 'settings' ? viewSettings() : viewHome();
+  const inner = UI.route === 'week' ? viewWeek() : UI.route === 'urlaub' ? viewUrlaub() : UI.route === 'settings' ? viewSettings() : viewHome();
   $('#app').innerHTML = shell(inner);
 }
 function route() {
   const h = location.hash.replace(/^#\/?/, '').split('/');
   if (h[0] === 'woche') { UI.route = 'week'; UI.mon = h[1] && /^\d{4}-\d\d-\d\d$/.test(h[1]) ? mondayOf(h[1]) : mondayOf(isoToday()); }
+  else if (h[0] === 'urlaub') UI.route = 'urlaub';
   else if (h[0] === 'einstellungen') { UI.route = 'settings'; UI.tab = SET_TABS.some(t => t[0] === h[1]) ? h[1] : 'person'; }
   else UI.route = 'home';
   render(); window.scrollTo(0, 0);
@@ -519,6 +545,11 @@ document.addEventListener('click', async e => {
   const act = a.dataset.a, iso = a.dataset.iso;
   switch (act) {
     case 'in': case 'pause': case 'out': stamp(act); break;
+    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[new Date().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
+    case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
+    case 'vac-set': await setVacation(); break;
+    case 'vac-submit': await submitVacation(); break;
+    case 'vac-del': { const past = a.dataset.von < isoToday(); if (past && !(await needEdit())) return; if (!(await confirmDlg('Urlaub entfernen?', `${deDate(a.dataset.von)} – ${deDate(a.dataset.bis)} wird wieder zu Arbeitstagen.`, 'Entfernen', true))) return; for (let i = a.dataset.von; i <= a.dataset.bis; i = addDays(i, 1)) { const d = clone(dayOf(i)); if (d.type !== 'urlaub') continue; logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); if (i >= isoToday()) d.edited = !!(d.log || []).some(x => x.what !== 'Art des Tages'); d.type = 'work'; await saveDay(d); } rerender(); break; }
     case 'switch': { const v = ($('#site') || {}).value; if (v && v.trim()) { $('#site').id = 'site2'; return doSwitch(); } switchDialog(); break; }
     case 'switch-ok': doSwitch(); break;
     case 'site-pick': { const el = $('#' + a.dataset.t); if (el) el.value = a.dataset.v; break; }
@@ -546,6 +577,7 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.dataset.vac) { UI['v' + el.dataset.vac[0].toUpperCase() + el.dataset.vac.slice(1)] = el.value; if (el.dataset.vac === 'von' && (!UI.vBis || UI.vBis < el.value)) UI.vBis = el.value; if (el.dataset.vac !== 'note') rerender(); return; }
   if (el.dataset.s) {
     const path = el.dataset.s.split('.'), last = path.pop(), obj = path.reduce((o, k) => o[k], S);
     obj[last] = el.type === 'number' || el.type === 'range' ? (el.value === '' ? '' : +el.value) : el.value; saveSettings();
@@ -569,6 +601,42 @@ document.addEventListener('change', async e => {
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
 
+/* ---------- Urlaub ---------- */
+async function setVacation(silent) {
+  const days = workDaysIn(UI.vVon || isoToday(), UI.vBis || UI.vVon || isoToday());
+  if (!days.length) { toast('Im Zeitraum liegen keine Arbeitstage.', 'warn'); return false; }
+  if (days.some(i => i < isoToday()) && !(await needEdit())) return false;
+  for (const i of days) { const d = clone(dayOf(i)); if (hasData(d) && d.type === 'work' && (d.segs || []).length) continue; if (d.type !== 'urlaub') { logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); if (i >= isoToday()) d.edited = false; d.type = 'urlaub'; if (UI.vNote) d.note = UI.vNote; await saveDay(d); } }
+  if (!silent) { toast(`${days.length} Urlaubstag${days.length > 1 ? 'e' : ''} eingetragen.`); rerender(); }
+  return true;
+}
+async function submitVacation() {
+  if (!S.person.name) { toast('Bitte zuerst deinen Namen eintragen.', 'warn'); location.hash = '#/einstellungen/person'; return; }
+  const von = UI.vVon || isoToday(), bis = UI.vBis || von, days = workDaysIn(von, bis);
+  if (!days.length) return toast('Im Zeitraum liegen keine Arbeitstage.', 'warn');
+  const before = vacation(+von.slice(0, 4));
+  modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">Urlaubsantrag wird erstellt …</div></div>`);
+  try {
+    const left = before.left - days.filter(i => dayOf(i).type !== 'urlaub').length;
+    const blob = await buildVacationPdf({ von, bis, n: days.length, note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
+    const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
+    saveBlob(blob, name);
+    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: new Date().toISOString() }); await DB.put('kv', UI.requests, 'requests');
+    await setVacation(true);
+    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${days.length} Arbeitstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
+    render();
+  } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
+}
+function shareModal(blob, name, text, title) {
+  const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
+  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
+  modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">${esc(title)}</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
+    <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p !h-12" id="pdf-share">${ic('send', 17)}An ${esc(S.recipient.name || 'Büro')} senden (WhatsApp)</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp und dann ${esc(S.recipient.name || 'den Empfänger')} wählen.</p>` : `<a class="btn-p !h-12" href="https://wa.me/${phone}?text=${encodeURIComponent(text + ' (PDF folgt als Anhang)')}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp an ${esc(S.recipient.name || 'Büro')} öffnen</a><p class="hint text-center -mt-1">Dann das gespeicherte PDF im Chat anhängen.</p>`}
+    <button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
+  $('#pdf-again').onclick = () => saveBlob(blob, name);
+  const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist gespeichert.', 'warn'); } };
+}
+
 /* ---------- PDF speichern und senden ---------- */
 function saveBlob(blob, name) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
 async function sendPdf(kind, iso) {
@@ -580,14 +648,7 @@ async function sendPdf(kind, iso) {
     const blob = await buildPdf(isos, label), who = S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_');
     const name = `Stundenzettel_${label.replace(/[\s/]+/g, '_')}_${who}.pdf`;
     saveBlob(blob, name);
-    const text = `Hallo ${S.recipient.name || ''}, anbei mein Stundenzettel ${label}. Viele Grüße, ${S.person.name}`;
-    const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
-    const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
-    modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">PDF gespeichert</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
-      <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p !h-12" id="pdf-share">${ic('send', 17)}An ${esc(S.recipient.name || 'Büro')} senden (WhatsApp)</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp und dann ${esc(S.recipient.name || 'den Empfänger')} wählen.</p>` : `<a class="btn-p !h-12" href="https://wa.me/${phone}?text=${encodeURIComponent(text + ' (PDF folgt als Anhang)')}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp an ${esc(S.recipient.name || 'Büro')} öffnen</a><p class="hint text-center -mt-1">Dann das gespeicherte PDF im Chat anhängen.</p>`}
-      <button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
-    $('#pdf-again').onclick = () => saveBlob(blob, name);
-    const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist gespeichert.', 'warn'); } };
+    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, anbei mein Stundenzettel ${label}. Viele Grüße, ${S.person.name}`, 'Stundenzettel gespeichert');
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
 
@@ -612,13 +673,13 @@ setInterval(() => {
   const c = $('#clock'); if (c) c.textContent = nowHM();
   if (UI.route === 'home' && !document.activeElement.matches('input,textarea,select')) {
     const d = dayOf(isoToday()), x = calcDay(d), n = $('#live-netto'), p = $('#live-pause'), df = $('#live-diff');
-    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug); if (df) { df.textContent = hmPlus(x.diff); df.className = `text-[22px] font-semibold mt-1 ${diffCls(x.diff)}`; }
+    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug); if (df) { df.textContent = overTxt(Math.max(0, x.diff)); df.className = `text-[22px] font-semibold mt-1 ${diffCls(x.diff)}`; }
   }
 }, 15000);
 setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHM(); }, 1000);
 (async function init() {
   await DB.open(); await loadSettings();
-  DEVICE = (await DB.get('kv', 'device')) || { admin: false };
+  DEVICE = (await DB.get('kv', 'device')) || { admin: false }; UI.requests = (await DB.get('kv', 'requests')) || [];
   ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; });
   applyTheme(); route();
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
@@ -655,7 +716,7 @@ async function buildPdf(isos, label) {
   };
   header();
   /* Tabelle */
-  const cols = [['Tag', 23], ['Kommen', 14], ['Gehen', 14], ['Pause', 13], ['Abzug', 13], ['Arbeit', 14], ['Soll', 13], ['+/-', 15], ['Baustellen / Bemerkung', CW - 119]];
+  const cols = [['Tag', 23], ['Kommen', 14], ['Gehen', 14], ['Pause', 13], ['Abzug', 13], ['Arbeit', 14], ['Soll', 13], ['Überst.', 15], ['Baustellen / Bemerkung', CW - 119]];
   const thead = () => { doc.setFillColor(238, 242, 245); doc.rect(M, y - 1, CW, 7, 'F'); doc.setFontSize(7.8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GRAY); let x = M + 1.5; cols.forEach(([l, w], i) => { doc.text(l, i >= 3 && i <= 7 ? x + w - 3 : x, y + 3.6, { align: i >= 3 && i <= 7 ? 'right' : 'left' }); x += w; }); y += 8; };
   thead();
   const rows = R.days.filter(x => x.c.soll > 0 || hasData(x.d));
@@ -669,17 +730,17 @@ async function buildPdf(isos, label) {
     doc.setFontSize(8.4); doc.setFont('helvetica', 'normal');
     const bl = doc.splitTextToSize(T(bem.join('\n') || '-'), cols[8][1] - 3), h = Math.max(1, bl.length) * 3.7 + 3;
     if (y + h > H - 60) { doc.addPage(); header(); thead(); }
-    const vals = [`${wdOf(d.iso).slice(0, 2)}, ${deDate(d.iso).slice(0, 6)}`, work ? c.start || '-' : '-', work ? c.end || (c.open ? '?' : '-') : '-', work && c.start ? hm(c.pause) : '-', work && c.start ? hm(c.abzug) : '-', hm(c.netto + c.credit), hm(c.soll), c.soll || c.netto ? hmPlus(c.diff) : '-'];
+    const vals = [`${wdOf(d.iso).slice(0, 2)}, ${deDate(d.iso).slice(0, 6)}`, work ? c.start || '-' : '-', work ? c.end || (c.open ? '?' : '-') : '-', work && c.start ? hm(c.pause) : '-', work && c.start ? hm(c.abzug) : '-', hm(c.netto + c.credit), hm(c.soll), c.over ? '+' + hm(c.over) : '-'];
     let x = M + 1.5;
-    vals.forEach((v, i) => { const w = cols[i][1], right = i >= 3; doc.setTextColor(...(i === 7 && Math.round(c.diff) < 0 ? RED : i === 7 && Math.round(c.diff) > 0 ? GREEN : INK)); if (i === 5) doc.setFont('helvetica', 'bold'); doc.text(T(v), right ? x + w - 3 : x, y + 3.2, { align: right ? 'right' : 'left' }); doc.setFont('helvetica', 'normal'); x += w; });
+    vals.forEach((v, i) => { const w = cols[i][1], right = i >= 3; doc.setTextColor(...(i === 7 && c.over > 0 ? GREEN : INK)); if (i === 5) doc.setFont('helvetica', 'bold'); doc.text(T(v), right ? x + w - 3 : x, y + 3.2, { align: right ? 'right' : 'left' }); doc.setFont('helvetica', 'normal'); x += w; });
     doc.setTextColor(...INK); doc.text(bl, x, y + 3.2);
     y += h; doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, y - 0.8, W - M, y - 0.8);
   }
   /* Summen */
   y += 3; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 24, 2, 2, 'F');
   const vac = vacation(+isos[0].slice(0, 4)), bal = balance();
-  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Differenz', hmPlus(R.diff)], ['Überstundenkonto', hmPlus(bal)], ['Urlaub / Krank', `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
-  tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(k === 'Differenz' || k === 'Überstundenkonto' ? (v.startsWith('-') || v.startsWith('−') ? RED : v.startsWith('+') ? GREEN : INK) : INK)); doc.text(T(v), cx, cy + 4.6); });
+  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden', R.over ? '+' + hm(R.over) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], ['Urlaub / Krank', `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
+  tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(v.startsWith('+') ? GREEN : INK)); doc.text(T(v), cx, cy + 4.6); });
   y += 30;
   /* Baustellen-Summen */
   const sites = Object.entries(R.sites).sort((a, b) => b[1] - a[1]);
@@ -693,12 +754,48 @@ async function buildPdf(isos, label) {
   /* Hinweis und Unterschriften */
   if (y > H - 45) { doc.addPage(); header(); }
   doc.setFontSize(7.8); doc.setTextColor(...GRAY);
-  doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag werden mindestens ${S.minPause} Min. Pause abgezogen${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet.`), CW), M, y + 2);
+  doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag werden mindestens ${S.minPause} Min. Pause abgezogen${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Minusstunden werden nicht verrechnet. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet.`), CW), M, y + 2);
   y = Math.max(y + 16, H - 38);
   const bw = (CW - 12) / 2;
   [['Mitarbeiter', S.person.name], ['Geprüft', S.recipient.name]].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });
   /* Fußzeile */
   const n = doc.getNumberOfPages(), c = S.company, foot = T([c.name, c.street, c.city, c.phone].filter(Boolean).join(' · '));
   for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, H - 12, W - M, H - 12); doc.setFontSize(7.2); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY); doc.text(foot, M, H - 8); doc.text(T(`Erstellt ${deDate(isoToday())} ${nowHM()} · Seite ${i} / ${n}`), W - M, H - 8, { align: 'right' }); }
+  return doc.output('blob');
+}
+
+/* Urlaubsantrag */
+async function buildVacationPdf(v) {
+  await loadScript('vendor/jspdf.umd.min.js');
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const W = 210, M = 18, CW = W - 2 * M, P = hex2rgb(S.design.primary), INK = [19, 35, 52], GRAY = [110, 124, 138], LINE = [222, 228, 234];
+  const logo = await imgInfo(S.company.logo).catch(() => null);
+  doc.setFillColor(...P); doc.rect(0, 0, W, 2.2, 'F');
+  if (logo) { const h = 13, w = Math.min(52, (logo.w / logo.h) * h); doc.addImage(logo.data, logo.fmt, M, 10, w, w / (logo.w / logo.h)); }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...INK); doc.text('Urlaubsantrag', W - M, 18, { align: 'right' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY); doc.text(T(`eingereicht am ${deDate(isoToday())}`), W - M, 24, { align: 'right' });
+  doc.setDrawColor(...LINE); doc.line(M, 31, W - M, 31);
+  let y = 42;
+  const row = (k, val, big) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY); doc.text(T(k), M, y); doc.setFont('helvetica', 'bold'); doc.setFontSize(big ? 15 : 11.5); doc.setTextColor(...INK); doc.text(doc.splitTextToSize(T(val), CW - 62), M + 62, y); y += big ? 11 : 9; doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, y - 5, W - M, y - 5); };
+  row('Mitarbeiter', `${S.person.name}${S.person.nr ? ' (Pers.-Nr. ' + S.person.nr + ')' : ''}`);
+  row('Zeitraum', `${wdOf(v.von).slice(0, 2)}, ${deDate(v.von)} bis ${wdOf(v.bis).slice(0, 2)}, ${deDate(v.bis)}`, true);
+  row('Urlaubstage', `${v.n} Arbeitstag${v.n === 1 ? '' : 'e'} (ohne Wochenende und Feiertage)`);
+  row('Urlaubsanspruch', `${v.total} Tage`);
+  row('Resturlaub vorher', `${v.leftBefore} Tage`);
+  row('Resturlaub danach', `${v.leftAfter} Tage`);
+  if (v.note) row('Bemerkung', v.note);
+  /* einzelne Tage */
+  y += 4; doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.setFillColor(...P); doc.rect(M, y - 3.2, 1.2, 4.6, 'F'); doc.text('Urlaubstage', M + 3.5, y); y += 6;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); const days = workDaysIn(v.von, v.bis);
+  days.forEach((d, i) => { const cx = M + (i % 4) * (CW / 4), cy = y + Math.floor(i / 4) * 5.5; doc.text(T(`${wdOf(d).slice(0, 2)}, ${deDate(d)}`), cx, cy); });
+  y += Math.ceil(days.length / 4) * 5.5 + 12;
+  /* Unterschriften und Genehmigung */
+  const bw = (CW - 12) / 2;
+  doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(M, y + 12, M + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`Datum, Unterschrift ${S.person.name}`), M, y + 16);
+  y += 28; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 34, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(T(`Vom Büro auszufüllen${S.recipient.name ? ' (' + S.recipient.name + ')' : ''}`), M + 5, y + 7);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); [['genehmigt', 0], ['abgelehnt', 40]].forEach(([l, dx]) => { doc.setDrawColor(...INK); doc.rect(M + 5 + dx, y + 12, 4.5, 4.5); doc.text(l, M + 12 + dx, y + 15.6); });
+  doc.line(M + 5, y + 28, M + 5 + bw, y + 28); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text('Datum, Unterschrift', M + 5, y + 32);
+  const c = S.company; doc.setFontSize(7.2); doc.text(T([c.name, c.street, c.city, c.phone].filter(Boolean).join(' · ')), M, 287);
   return doc.output('blob');
 }

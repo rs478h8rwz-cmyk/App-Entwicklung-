@@ -57,6 +57,11 @@ document.addEventListener('click', async e => {
   const act = a.dataset.a, iso = a.dataset.iso;
   switch (act) {
     case 'in': case 'pause': case 'out': stamp(act); break;
+    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[new Date().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
+    case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
+    case 'vac-set': await setVacation(); break;
+    case 'vac-submit': await submitVacation(); break;
+    case 'vac-del': { const past = a.dataset.von < isoToday(); if (past && !(await needEdit())) return; if (!(await confirmDlg('Urlaub entfernen?', `${deDate(a.dataset.von)} – ${deDate(a.dataset.bis)} wird wieder zu Arbeitstagen.`, 'Entfernen', true))) return; for (let i = a.dataset.von; i <= a.dataset.bis; i = addDays(i, 1)) { const d = clone(dayOf(i)); if (d.type !== 'urlaub') continue; logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); if (i >= isoToday()) d.edited = !!(d.log || []).some(x => x.what !== 'Art des Tages'); d.type = 'work'; await saveDay(d); } rerender(); break; }
     case 'switch': { const v = ($('#site') || {}).value; if (v && v.trim()) { $('#site').id = 'site2'; return doSwitch(); } switchDialog(); break; }
     case 'switch-ok': doSwitch(); break;
     case 'site-pick': { const el = $('#' + a.dataset.t); if (el) el.value = a.dataset.v; break; }
@@ -84,6 +89,7 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.dataset.vac) { UI['v' + el.dataset.vac[0].toUpperCase() + el.dataset.vac.slice(1)] = el.value; if (el.dataset.vac === 'von' && (!UI.vBis || UI.vBis < el.value)) UI.vBis = el.value; if (el.dataset.vac !== 'note') rerender(); return; }
   if (el.dataset.s) {
     const path = el.dataset.s.split('.'), last = path.pop(), obj = path.reduce((o, k) => o[k], S);
     obj[last] = el.type === 'number' || el.type === 'range' ? (el.value === '' ? '' : +el.value) : el.value; saveSettings();
@@ -107,6 +113,42 @@ document.addEventListener('change', async e => {
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
 
+/* ---------- Urlaub ---------- */
+async function setVacation(silent) {
+  const days = workDaysIn(UI.vVon || isoToday(), UI.vBis || UI.vVon || isoToday());
+  if (!days.length) { toast('Im Zeitraum liegen keine Arbeitstage.', 'warn'); return false; }
+  if (days.some(i => i < isoToday()) && !(await needEdit())) return false;
+  for (const i of days) { const d = clone(dayOf(i)); if (hasData(d) && d.type === 'work' && (d.segs || []).length) continue; if (d.type !== 'urlaub') { logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); if (i >= isoToday()) d.edited = false; d.type = 'urlaub'; if (UI.vNote) d.note = UI.vNote; await saveDay(d); } }
+  if (!silent) { toast(`${days.length} Urlaubstag${days.length > 1 ? 'e' : ''} eingetragen.`); rerender(); }
+  return true;
+}
+async function submitVacation() {
+  if (!S.person.name) { toast('Bitte zuerst deinen Namen eintragen.', 'warn'); location.hash = '#/einstellungen/person'; return; }
+  const von = UI.vVon || isoToday(), bis = UI.vBis || von, days = workDaysIn(von, bis);
+  if (!days.length) return toast('Im Zeitraum liegen keine Arbeitstage.', 'warn');
+  const before = vacation(+von.slice(0, 4));
+  modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">Urlaubsantrag wird erstellt …</div></div>`);
+  try {
+    const left = before.left - days.filter(i => dayOf(i).type !== 'urlaub').length;
+    const blob = await buildVacationPdf({ von, bis, n: days.length, note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
+    const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
+    saveBlob(blob, name);
+    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: new Date().toISOString() }); await DB.put('kv', UI.requests, 'requests');
+    await setVacation(true);
+    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${days.length} Arbeitstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
+    render();
+  } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
+}
+function shareModal(blob, name, text, title) {
+  const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
+  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
+  modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">${esc(title)}</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
+    <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p !h-12" id="pdf-share">${ic('send', 17)}An ${esc(S.recipient.name || 'Büro')} senden (WhatsApp)</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp und dann ${esc(S.recipient.name || 'den Empfänger')} wählen.</p>` : `<a class="btn-p !h-12" href="https://wa.me/${phone}?text=${encodeURIComponent(text + ' (PDF folgt als Anhang)')}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp an ${esc(S.recipient.name || 'Büro')} öffnen</a><p class="hint text-center -mt-1">Dann das gespeicherte PDF im Chat anhängen.</p>`}
+    <button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
+  $('#pdf-again').onclick = () => saveBlob(blob, name);
+  const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist gespeichert.', 'warn'); } };
+}
+
 /* ---------- PDF speichern und senden ---------- */
 function saveBlob(blob, name) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
 async function sendPdf(kind, iso) {
@@ -118,14 +160,7 @@ async function sendPdf(kind, iso) {
     const blob = await buildPdf(isos, label), who = S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_');
     const name = `Stundenzettel_${label.replace(/[\s/]+/g, '_')}_${who}.pdf`;
     saveBlob(blob, name);
-    const text = `Hallo ${S.recipient.name || ''}, anbei mein Stundenzettel ${label}. Viele Grüße, ${S.person.name}`;
-    const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
-    const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
-    modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">PDF gespeichert</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
-      <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p !h-12" id="pdf-share">${ic('send', 17)}An ${esc(S.recipient.name || 'Büro')} senden (WhatsApp)</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp und dann ${esc(S.recipient.name || 'den Empfänger')} wählen.</p>` : `<a class="btn-p !h-12" href="https://wa.me/${phone}?text=${encodeURIComponent(text + ' (PDF folgt als Anhang)')}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp an ${esc(S.recipient.name || 'Büro')} öffnen</a><p class="hint text-center -mt-1">Dann das gespeicherte PDF im Chat anhängen.</p>`}
-      <button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
-    $('#pdf-again').onclick = () => saveBlob(blob, name);
-    const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist gespeichert.', 'warn'); } };
+    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, anbei mein Stundenzettel ${label}. Viele Grüße, ${S.person.name}`, 'Stundenzettel gespeichert');
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
 
@@ -150,13 +185,13 @@ setInterval(() => {
   const c = $('#clock'); if (c) c.textContent = nowHM();
   if (UI.route === 'home' && !document.activeElement.matches('input,textarea,select')) {
     const d = dayOf(isoToday()), x = calcDay(d), n = $('#live-netto'), p = $('#live-pause'), df = $('#live-diff');
-    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug); if (df) { df.textContent = hmPlus(x.diff); df.className = `text-[22px] font-semibold mt-1 ${diffCls(x.diff)}`; }
+    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug); if (df) { df.textContent = overTxt(Math.max(0, x.diff)); df.className = `text-[22px] font-semibold mt-1 ${diffCls(x.diff)}`; }
   }
 }, 15000);
 setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHM(); }, 1000);
 (async function init() {
   await DB.open(); await loadSettings();
-  DEVICE = (await DB.get('kv', 'device')) || { admin: false };
+  DEVICE = (await DB.get('kv', 'device')) || { admin: false }; UI.requests = (await DB.get('kv', 'requests')) || [];
   ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; });
   applyTheme(); route();
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}

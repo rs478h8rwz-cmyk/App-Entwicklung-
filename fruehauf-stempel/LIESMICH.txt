@@ -1,4 +1,4 @@
-Frühauf – Stempeluhr (Version 1.0)
+Frühauf – Stempeluhr (Version 1.1)
 ==================================
 
 Eigenständige Web-App zur Zeiterfassung. Läuft auf iPhone, Android, iPad und PC, auch offline.
@@ -8,7 +8,8 @@ Veröffentlichen (Netlify): NEUES Projekt anlegen, Inhalt dieses ZIPs hochladen.
 Auf dem Handy in Safari/Chrome öffnen → „Zum Home-Bildschirm“.
 
 Stempeln: Baustelle wählen → Kommen → Pause / Pause beenden → Baustelle wechseln → Gehen.
-Pausenregel: Es werden immer mindestens 30 Min. abgezogen; längere Pausen werden voll abgezogen.
+Pausenregel: Es werden immer mindestens 30 Min. abgezogen – auch wenn keine Pause gestempelt wurde;
+längere Pausen werden voll abgezogen. Es gibt nur Überstunden – Minusstunden werden nicht verrechnet.
 Sollzeiten: Mo–Do 7:30–16:30 (8:30 Std.), Fr 7:30–13:45 (5:45 Std.) – unter Einstellungen änderbar.
 
 Stundenzettel: „An Jule“ erstellt das PDF der Woche, speichert es sofort und öffnet „Teilen“ –
@@ -21,3 +22,7 @@ Unter Einstellungen → Admin kann ein Gerät dauerhaft als Admin-Gerät freiges
 
 Außerdem: Überstundenkonto, Urlaubskonto, Feiertage je Bundesland, Notiz je Tag,
 optional GPS-Standort beim Stempeln, Datensicherung (auch zum Übertragen auf ein neues Handy).
+
+Urlaub: Großer Knopf „Heute Urlaub“ auf der Startseite. Unter „Urlaub“ einen Zeitraum wählen –
+Wochenenden und Feiertage zählen nicht mit. „Urlaub einreichen“ erstellt einen Urlaubsantrag als PDF
+(mit Resturlaub vorher/nachher und Feld „genehmigt/abgelehnt“), speichert ihn und öffnet Teilen (WhatsApp).

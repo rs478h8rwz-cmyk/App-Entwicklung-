@@ -37,7 +37,7 @@ function sollOf(iso) {
 }
 function calcDay(d, now = nowHM()) {
   const iso = d.iso, today = iso === isoToday(), soll = sollOf(iso);
-  const r = { soll, start: '', end: '', brutto: 0, pause: 0, abzug: 0, netto: 0, credit: 0, diff: 0, open: false, inPause: false, missingEnd: false, sites: [] };
+  const r = { soll, start: '', end: '', brutto: 0, pause: 0, abzug: 0, netto: 0, credit: 0, diff: 0, over: 0, open: false, inPause: false, missingEnd: false, sites: [] };
   if (d.type !== 'work') { r.credit = d.type === 'frei' ? 0 : soll; r.diff = r.credit - soll; return r; }
   const segs = (d.segs || []).filter(s => s.von).slice().sort((a, b) => toMin(a.von) - toMin(b.von));
   if (!segs.length) { r.diff = iso < isoToday() ? -soll : 0; return r; }
@@ -52,6 +52,7 @@ function calcDay(d, now = nowHM()) {
   r.abzug = r.brutto ? Math.min(r.brutto, Math.max(r.pause, minPauseFor(r.brutto - r.pause))) : 0;
   r.netto = Math.max(0, r.brutto - r.abzug);
   r.diff = r.missingEnd ? 0 : r.netto - soll;
+  r.over = r.missingEnd || (today && r.open) ? 0 : Math.max(0, r.diff);   // Minusstunden gibt es nicht
   /* Stunden je Baustelle: Abschnitt minus Pausen darin, Mindestpausen-Rest anteilig */
   const per = {};
   for (const s of segs) { const e = endOf(s); if (!e) continue; let m = span(s.von, e); for (const p of pz) m -= overlap(s.von, e, p.von, p.bis); const k = s.site || 'Ohne Baustelle'; per[k] = (per[k] || 0) + Math.max(0, m); }
@@ -63,20 +64,20 @@ function calcRange(isos) {
   const days = isos.map(iso => { const d = dayOf(iso); return { d, c: calcDay(d) }; });
   const sum = k => days.reduce((s, x) => s + x.c[k], 0), sites = {};
   days.forEach(x => x.c.sites.forEach(s => { sites[s.site] = (sites[s.site] || 0) + s.min; }));
-  return { days, netto: sum('netto'), credit: sum('credit'), soll: sum('soll'), diff: sum('diff'), pause: sum('pause'), abzug: sum('abzug'), sites, count: t => days.filter(x => x.d.type === t && x.c.soll > 0).length };
+  return { days, netto: sum('netto'), credit: sum('credit'), soll: sum('soll'), diff: sum('diff'), over: sum('over'), pause: sum('pause'), abzug: sum('abzug'), sites, count: t => days.filter(x => x.d.type === t && x.c.soll > 0).length };
 }
-/* Überstundenkonto: Startwert + Differenzen aller Tage ab Startdatum bis gestern (heute erst nach Gehen) */
+/* Überstundenkonto: Startwert + Überstunden aller Tage ab Startdatum (Minusstunden zählen nicht) */
 function balance() {
-  const b = S.balance || {}, from = b.from || '2000-01-01', today = isoToday(); let m = +b.min || 0;
-  const isos = new Set(Object.keys(DAYS).filter(i => i >= from && i <= today));
-  /* Tage ohne Eintrag mit Soll zählen nur, wenn das Konto ein Startdatum hat */
-  if (b.from) { for (let i = from; i < today; i = addDays(i, 1)) isos.add(i); }
-  for (const iso of isos) { const d = dayOf(iso), c = calcDay(d); if (iso === today && c.open) continue; m += c.diff; }
+  const b = S.balance || {}, from = b.from || '2000-01-01', today = isoToday(); let m = Math.max(0, +b.min || 0);
+  for (const iso in DAYS) if (iso >= from && iso <= today) m += calcDay(dayOf(iso)).over;
   return m;
 }
+/* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
+const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (sollOf(i) > 0) l.push(i); return l; };
 function vacation(year = new Date().getFullYear()) {
-  let used = 0; for (const iso in DAYS) if (iso.startsWith(year + '-') && DAYS[iso].type === 'urlaub' && sollOf(iso) > 0) used++;
-  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0); return { used, total, left: total - used };
+  let taken = 0, planned = 0; const today = isoToday();
+  for (const iso in DAYS) if (iso.startsWith(year + '-') && DAYS[iso].type === 'urlaub' && sollOf(iso) > 0) { if (iso <= today) taken++; else planned++; }
+  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, used, total, left: total - used };
 }
 async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }
 function rememberSite(name) { const n = (name || '').trim(); if (!n) return; S.sites = [n].concat((S.sites || []).filter(x => x !== n)).slice(0, 40); saveSettings(); }
