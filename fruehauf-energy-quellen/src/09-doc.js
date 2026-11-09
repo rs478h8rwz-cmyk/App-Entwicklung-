@@ -512,8 +512,37 @@ async function preparePrintRoot(p, R) {
   await loadFiles(p.docs.flatMap(d => d.pages).concat(p.components.map(c => (PRODUCTS.find(x => x.id === c.id) || {}).img), p.sign ? [p.sign.cust, p.sign.adv] : []));
   const root = $('#print-root'); root.innerHTML = buildDocHtml(p, R);
   fixSvgColors(root); fitPages(root);
+  try { const d = S.design; await Promise.all([[d.fontHead, d.headWeight || 400], [d.fontBody, 400], [d.fontBody, 600], [d.fontBody, 700], [d.fontMono, 400], ['HandSig', 500]].filter(x => x[0]).map(([f, w]) => document.fonts.load(`${w} 20px "${f}"`))); } catch (e) {}
   await document.fonts.ready; await waitImages(root);
+  if (pdfWebKit()) { try { await rasterSvgs(root); } catch (e) { console.warn('Grafiken nicht umgewandelt', e); } }
   return root;
+}
+/* iPad/iPhone/Safari: html2canvas zeichnet dort Vektorgrafiken falsch (Haus vergrößert, Haken fehlen).
+   Deshalb vor dem Erstellen alle Grafiken selbst in PNG-Bilder umwandeln. */
+const pdfWebKit = () => { if (window.PDF_FORCE_RASTER) return true; const u = navigator.userAgent; return /iP(hone|ad|od)/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1) || (/Safari\//.test(u) && !/Chrome|Chromium|Edg|OPR|Android/.test(u)); };
+const pngFromImg = (im, w, h, sc) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * sc)); c.height = Math.max(1, Math.round(h * sc)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/png'); };
+const loadImg = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+async function rasterSvgs(root) {
+  const sc = 2.5;
+  for (const svg of $$('svg', root)) {
+    if (!svg.isConnected || (svg.parentElement && svg.parentElement.closest('svg')) || svg.querySelector('text')) continue;   // Diagramme mit Beschriftung bleiben (Schrift)
+    const r = svg.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
+    const cs = getComputedStyle(svg), cl = svg.cloneNode(true);
+    cl.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); cl.setAttribute('width', r.width); cl.setAttribute('height', r.height); cl.removeAttribute('class'); cl.removeAttribute('style');
+    try {
+      const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(cl)));
+      const img = document.createElement('img'); img.src = pngFromImg(im, r.width, r.height, sc); await img.decode().catch(() => {});
+      img.setAttribute('style', svg.getAttribute('style') || ''); img.style.width = r.width + 'px'; img.style.height = r.height + 'px'; img.style.maxWidth = 'none';
+      img.style.display = cs.display === 'inline' ? 'inline-block' : cs.display; img.style.verticalAlign = cs.verticalAlign;
+      if (cs.position !== 'static') { img.style.position = cs.position; img.style.left = cs.left; img.style.top = cs.top; img.style.right = cs.right; img.style.bottom = cs.bottom; }
+      svg.replaceWith(img);
+    } catch (e) {}
+  }
+  for (const img of $$('img', root)) {
+    if (!/^data:image\/svg/.test(img.getAttribute('src') || '')) continue;
+    const r = img.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
+    try { const im = await loadImg(img.getAttribute('src')); img.src = pngFromImg(im, r.width, r.height, sc); await img.decode().catch(() => {}); } catch (e) {}
+  }
 }
 let pdfBusy = false;
 async function makePdf(force, layout) {

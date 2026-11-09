@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.19', date: '2026-11-09', items: [
+    ['sign', 'PDF auf dem iPad', 'Behoben: Auf iPad und iPhone war im PDF das Haus auf dem Deckblatt stark vergrößert und die Haken bei „Angebot annehmen“ fehlten. Grafiken werden dort jetzt vor dem Erstellen in Bilder umgewandelt, Schriften sicher geladen.']
+  ] },
   { version: '2.18', date: '2026-11-09', items: [
     ['modplace', 'Weitere Fläche im selben Foto', '„+ Fläche“ zeichnet eine weitere Dachfläche im selben Bild ein; die anderen Flächen und ihre Module bleiben sichtbar. Für eine andere Ausrichtung gibt es „Neues Foto“.'],
     ['modplace', 'Ecken rasten ein', 'Die Referenz-Ecken rasten magnetisch an den Ecken der Dachfläche ein – und Dachflächen-Ecken an den Ecken anderer Flächen im selben Foto.'],
