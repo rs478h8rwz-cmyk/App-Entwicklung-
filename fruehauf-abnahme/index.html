@@ -151,7 +151,7 @@ const IP = {
    Eigenständige App: Baustellen-Abnahme und Serviceeinsätze für DC, AC und SHK.
    Daten bleiben auf dem Gerät (IndexedDB), Protokolle als PDF teilen.
    ========================================================= */
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -195,24 +195,43 @@ const DEFAULTS = {
   state: 'NW',
   zuschlag: { sat: 150, sun: 200, hol: 200, not: 50 },
   lists: {
-    wpWolf: ['CHA-07', 'CHA-10', 'CHA-16', 'CHA-20'],
-    wpBuderus: ['WLW186i-4', 'WLW186i-5', 'WLW186i-7', 'WLW186i-11', 'WLW186i-13', 'WLW186i-15'],
-    systeme: ['EcoFlow', 'Tesla', 'SigEnergy'],
     grundDC: ['String ausgefallen', 'Modul beschädigt', 'Stecker/Kabel defekt', 'Tierschaden (Marder)', 'Befestigung lose', 'Verschmutzung/Verschattung'],
     grundAC: ['Fehlermeldung Wechselrichter', 'Speicher lädt nicht', 'Keine Verbindung zur App', 'Zähler/Messung falsch', 'Wallbox lädt nicht', 'FI/Sicherung ausgelöst'],
     grundSHK: ['Störung Wärmepumpe (Fehlercode)', 'Kein Warmwasser', 'Heizung bleibt kalt', 'Druckverlust/Undicht', 'Geräusche', 'Regelung/Einstellung'],
     fixDC: ['Stecker getauscht', 'Modul getauscht', 'Kabel erneuert', 'Befestigung nachgezogen', 'Anlage gereinigt'],
     fixAC: ['Neustart/Reset', 'Firmware aktualisiert', 'Einstellungen angepasst', 'Komponente getauscht', 'Sicherung/FI zurückgesetzt'],
+    hkRaum: ['Wohnzimmer', 'Esszimmer', 'Küche', 'Schlafzimmer', 'Kinderzimmer', 'Bad', 'Gäste-WC', 'Flur', 'Arbeitszimmer', 'Hauswirtschaftsraum', 'Keller', 'Dachgeschoss'],
+    hkTyp: ['Typ 10', 'Typ 11', 'Typ 20', 'Typ 21', 'Typ 22', 'Typ 33', 'Badheizkörper'],
+    hkHoehe: ['300 mm', '400 mm', '500 mm', '600 mm', '900 mm'],
+    hkLaenge: ['400 mm', '500 mm', '600 mm', '700 mm', '800 mm', '900 mm', '1000 mm', '1100 mm', '1200 mm', '1400 mm', '1600 mm', '1800 mm', '2000 mm', '2300 mm', '2600 mm', '3000 mm'],
     fixSHK: ['Anlage entlüftet', 'Druck aufgefüllt', 'Einstellungen angepasst', 'Bauteil getauscht', 'Filter/Schmutzfänger gereinigt']
   },
-  numbers: {}
+  numbers: {},
+  /* Wärmepumpen (SHK): Hersteller mit Modellen – in den Einstellungen frei änderbar */
+  wps: [
+    { id: 'wolf', name: 'Wolf CHA-Monoblock', models: ['CHA-07 (1,6–6,8 kW)', 'CHA-10 (2,2–9,8 kW)', 'CHA-16/20 (3,0–16,7 kW)', 'CHA-20/24 (3,1–19,6 kW)'], multi: true, unit: 'Wärmepumpen (Kaskade)' },
+    { id: 'buderus', name: 'Buderus WLW186i', models: ['WLW186i-4', 'WLW186i-5', 'WLW186i-7', 'WLW186i-11', 'WLW186i-13', 'WLW186i-15'], multi: true, unit: 'Wärmepumpen (Kaskade)' },
+    { id: 'samsung', name: 'Samsung EHS Mono R290', models: ['AE050 – 5 kW', 'AE080 – 8 kW', 'AE120 – 12 kW (1-phasig)', 'AE120 – 12 kW (3-phasig)', 'AE160 – 16 kW (1-phasig)', 'AE160 – 16 kW (3-phasig)'], multi: true, unit: 'Wärmepumpen (Kaskade)' }
+  ],
+  /* AC-Systeme: Wechselrichter- und Speichergrößen als Vorauswahl – in den Einstellungen frei änderbar */
+  systems: [
+    { id: 'ecoflow', name: 'EcoFlow PowerOcean', wr: ['3 kW (1-phasig)', '5 kW (1-phasig)', '6 kW (1-phasig)', '6 kW (3-phasig)', '8 kW (3-phasig)', '10 kW (3-phasig)', '12 kW (3-phasig)'],
+      sp: ['5 kWh (1 Modul)', '10 kWh (2 Module)', '15 kWh (3 Module)', '20 kWh (4 Module)', '25 kWh (5 Module)', '30 kWh (6 Module)', '35 kWh (7 Module)', '40 kWh (8 Module)', '45 kWh (9 Module)'], multi: true, unit: 'Wechselrichter' },
+    { id: 'tesla', name: 'Tesla Powerwall 3', wr: ['Powerwall 3 (1-phasig, integriert)', 'Powerwall 3P (3-phasig, integriert)'],
+      sp: ['13,5 kWh (1 Einheit)', '27 kWh (2 Einheiten)', '40,5 kWh (3 Einheiten)', '54 kWh (4 Einheiten)', '67,5 kWh (5 Einheiten)', '81 kWh (6 Einheiten)', '94,5 kWh (7 Einheiten)'], multi: true, unit: 'Powerwalls' },
+    { id: 'e3dc', name: 'E3/DC One', wr: ['12 kW Hybrid (integriert)'],
+      sp: ['one 6 – 5,5 kWh', 'one 9 – 8,7 kWh', 'one 12 – 11,8 kWh', 'erweitert – bis 15 kWh', '2 Türme – bis ca. 30 kWh'], multi: true, unit: 'Geräte' }
+  ]
 };
 let S = clone(DEFAULTS);
 function deepMerge(base, add) {
   if (Array.isArray(base) || typeof base !== 'object' || base === null) return add === undefined ? base : add;
   const out = { ...base }; for (const k in add) out[k] = k in base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k] !== null ? deepMerge(base[k], add[k]) : add[k]; return out;
 }
-async function loadSettings() { const s = await DB.get('kv', 'settings'); S = deepMerge(clone(DEFAULTS), s || {}); }
+async function loadSettings() { const s = await DB.get('kv', 'settings'); S = deepMerge(clone(DEFAULTS), s || {}); fixSettings(); }
+/* Ältere Stände: Monteure als reine Namen → mit Gewerk-Zuordnung */
+function fixSettings() { S.monteure = (S.monteure || []).map(m => (typeof m === 'string' ? { name: m, gw: [] } : m)); if (!Array.isArray(S.systems)) S.systems = clone(DEFAULTS.systems); if (!Array.isArray(S.wps)) S.wps = clone(DEFAULTS.wps); }
+const monteureFor = g => S.monteure.filter(m => m.gw.includes(g));
 let SAVE_T = null;
 function saveSettings() { clearTimeout(SAVE_T); SAVE_T = setTimeout(() => DB.put('kv', clone(S), 'settings'), 250); }
 
@@ -316,7 +335,7 @@ const KOPF_ABNAHME = [
   { id: 'kunde', label: 'Kundenname', type: 'text', req: true, ph: 'Vor- und Nachname' },
   { id: 'adresse', label: 'Adresse der Baustelle', type: 'text', req: true, ph: 'Straße, PLZ, Ort' },
   { id: 'datum', label: 'Datum', type: 'date', req: true },
-  { id: 'monteur', label: 'Monteur', type: 'text', req: true, ph: 'Name des Monteurs', list: 'monteure' },
+  { id: 'monteur', label: 'Monteur(e)', type: 'monteur', req: true, ph: 'Name(n) – oder unten antippen' },
   { id: 'projekt', label: 'Baustelle / Projektbezeichnung', type: 'text', ph: 'z. B. Projektnummer' },
   { id: 'tage', label: 'An welchen Tagen war der Monteur vor Ort?', type: 'multiday', req: true }
 ];
@@ -360,19 +379,23 @@ const ABNAHME_DC = [
 ];
 
 /* ---------- Abnahme AC ---------- */
+const sysOf = a => S.systems.find(x => x.id === a.system);
 const ABNAHME_AC = [
-  { title: 'Stromzähler', sub: 'Pflicht vor Beginn des Protokolls.', fields: [
-    { id: 'zaehler_foto', label: 'Wurde der Stromzähler fotografiert?', type: 'radio', req: true, opts: YN, hint: 'Zählernummer und Zählerstand müssen per Foto dokumentiert sein.' }], block: a => a.zaehler_foto === 'nein' && 'Bitte zuerst den Stromzähler fotografieren.' },
   { title: 'Kopfdaten', sub: 'Kunde, Baustelle und Einsatztage.', fields: KOPF_ABNAHME },
   { title: 'Installation', sub: '', fields: [
     { id: 'installation', label: 'Was wurde installiert?', type: 'radio', req: true, opts: [['pv', 'Photovoltaik'], ['wp', 'Wärmepumpe'], ['beides', 'Beides']] }] },
-  { title: 'System', sub: '', fields: [
-    { id: 'system', label: 'Welches System wurde verbaut?', type: 'radio', req: true, opts: () => o(S.lists.systeme).concat([['sonstige', 'Sonstige']]) },
+  { title: 'System & Wechselrichter', sub: 'Welches System wurde verbaut?', fields: [
+    { id: 'system', label: 'System', type: 'radio', req: true, opts: () => S.systems.map(x => [x.id, x.name]).concat([['sonstige', 'Sonstiges System']]) },
     { id: 'system_text', label: 'Welches System?', type: 'text', req: true, show: a => a.system === 'sonstige' },
-    { id: 'wr_groesse', label: 'Größe des Wechselrichters', type: 'text', req: true, ph: 'z. B. 10 kW' }] },
-  { title: 'Speicher & Wallbox', sub: '', fields: [
+    { id: 'wr_groesse', label: 'Wechselrichter', type: 'radio', req: true, show: a => sysOf(a) && sysOf(a).wr.length, opts: a => sysOf(a).wr.map(x => [x, x]).concat([['andere', 'Andere Größe']]) },
+    { id: 'wr_text', label: 'Größe des Wechselrichters', type: 'text', req: true, ph: 'z. B. 10 kW', show: a => !a.system || a.system === 'sonstige' || !(sysOf(a) && sysOf(a).wr.length) || a.wr_groesse === 'andere' },
+    { id: 'mehrere', label: a => `Wurde mehr als ein Gerät verbaut${sysOf(a) ? ` (${sysOf(a).unit || 'Geräte'})` : ''}?`, type: 'radio', req: true, show: a => sysOf(a) && sysOf(a).multi, opts: YN },
+    { id: 'anzahl', label: 'Wie viele insgesamt?', type: 'number', req: true, unit: 'Stk', show: a => sysOf(a) && sysOf(a).multi && a.mehrere === 'ja' }] },
+  { title: 'Speicher', sub: '', fields: [
     { id: 'speicher', label: 'Speicher vorhanden?', type: 'radio', req: true, opts: YN },
-    { id: 'speicher_groesse', label: 'Größe des Speichers', type: 'text', req: true, show: a => a.speicher === 'ja', ph: 'z. B. 10 kWh' },
+    { id: 'speicher_groesse', label: 'Speichergröße (gesamt)', type: 'radio', req: true, show: a => a.speicher === 'ja' && sysOf(a) && sysOf(a).sp.length, opts: a => sysOf(a).sp.map(x => [x, x]).concat([['andere', 'Andere Größe']]) },
+    { id: 'speicher_text', label: 'Größe des Speichers', type: 'text', req: true, ph: 'z. B. 10 kWh', show: a => a.speicher === 'ja' && (!(sysOf(a) && sysOf(a).sp.length) || a.speicher_groesse === 'andere') }] },
+  { title: 'Wallbox & Heizstab', sub: '', fields: [
     { id: 'wallbox', label: 'Wallbox vorhanden?', type: 'radio', req: true, opts: YN },
     { id: 'wallbox_typ', label: 'Welche Wallbox?', type: 'text', req: true, show: a => a.wallbox === 'ja' },
     { id: 'heizstab', label: 'Wurde ein Heizstab angeschlossen?', type: 'radio', req: true, opts: YN }] },
@@ -380,6 +403,8 @@ const ABNAHME_AC = [
     { id: 'zk', label: 'Zusätzlicher Zählerkasten?', type: 'radio', req: true, opts: YN },
     { id: 'zk_typ', label: 'Welcher Zählerkasten?', type: 'radio', req: true, show: a => a.zk === 'ja', opts: [['2reihig', '2-reihig'], ['3reihig', '3-reihig'], ['sonstige', 'Sonstige']] },
     { id: 'zk_text', label: 'Bitte beschreiben', type: 'text', req: true, show: a => a.zk === 'ja' && a.zk_typ === 'sonstige' }] },
+  { title: 'Stromzähler fotografiert?', sub: 'Pflicht: Zählernummer und Zählerstand müssen per Foto dokumentiert sein.', danger: true, fields: [
+    { id: 'zaehler_foto', label: 'Wurde der Stromzähler fotografiert?', type: 'radio', req: true, opts: YN, danger: true }], block: a => a.zaehler_foto === 'nein' && 'Bitte zuerst den Stromzähler fotografieren – sonst kann das Protokoll nicht abgeschlossen werden.' },
   { title: 'Material & Mehraufwand', sub: '', fields: [
     { id: 'material', label: 'Zusätzliches Material', type: 'items' },
     { id: 'mehraufwand', label: 'Ist Mehraufwand entstanden?', type: 'radio', req: true, opts: YN },
@@ -394,13 +419,15 @@ const ABNAHME_AC = [
 ];
 
 /* ---------- Abnahme SHK ---------- */
+const wpOf = a => S.wps.find(x => x.id === a.wp_hersteller);
 const ABNAHME_SHK = [
   { title: 'Kopfdaten', sub: 'Kunde, Baustelle und Einsatztage.', fields: KOPF_ABNAHME },
   { title: 'Wärmepumpe', sub: 'Welche Wärmepumpe wurde verbaut?', fields: [
-    { id: 'wp_hersteller', label: 'Hersteller', type: 'radio', req: true, opts: [['wolf', 'Wolf'], ['buderus', 'Buderus'], ['sonstige', 'Sonstige']] },
-    { id: 'wp_modell_wolf', label: 'Modell (Wolf)', type: 'radio', req: true, show: a => a.wp_hersteller === 'wolf', opts: () => o(S.lists.wpWolf) },
-    { id: 'wp_modell_buderus', label: 'Modell (Buderus)', type: 'radio', req: true, show: a => a.wp_hersteller === 'buderus', opts: () => o(S.lists.wpBuderus) },
-    { id: 'wp_modell', label: 'Hersteller und Modell', type: 'text', req: true, show: a => a.wp_hersteller === 'sonstige' }] },
+    { id: 'wp_hersteller', label: 'Hersteller / Baureihe', type: 'radio', req: true, opts: () => S.wps.map(x => [x.id, x.name]).concat([['sonstige', 'Sonstige']]) },
+    { id: 'wp_modell', label: 'Modell', type: 'radio', req: true, show: a => wpOf(a) && wpOf(a).models.length, opts: a => wpOf(a).models.map(x => [x, x]).concat([['andere', 'Anderes Modell']]) },
+    { id: 'wp_text', label: 'Hersteller und Modell', type: 'text', req: true, show: a => a.wp_hersteller === 'sonstige' || (wpOf(a) && !wpOf(a).models.length) || a.wp_modell === 'andere' },
+    { id: 'wp_mehrere', label: 'Wurde mehr als eine Wärmepumpe verbaut (Kaskade)?', type: 'radio', req: true, show: a => wpOf(a) && wpOf(a).multi, opts: YN },
+    { id: 'wp_anzahl', label: 'Wie viele Wärmepumpen insgesamt?', type: 'number', req: true, unit: 'Stk', show: a => wpOf(a) && wpOf(a).multi && a.wp_mehrere === 'ja' }] },
   { title: 'Rohr & Fittinge', sub: '', fields: [
     { id: 'rohr_m', label: 'Wie viele Meter Rohr wurden verwendet?', type: 'number', req: true, unit: 'm' },
     { id: 'rohr_verlegung', label: 'Wärmepumpenrohr verlegt', type: 'radio', req: true, opts: [['ueber', 'Überirdisch'], ['unter', 'Unterirdisch'], ['beides', 'Beides']] },
@@ -435,9 +462,7 @@ const ABNAHME_SHK = [
     { id: 'thermo_anz', label: 'Wie viele Thermostatköpfe?', type: 'number', req: true, unit: 'Stk', show: a => a.thermo === 'ja' }] },
   { title: 'Heizkörper', sub: '', fields: [
     { id: 'hk', label: 'Heizkörper getauscht?', type: 'radio', req: true, opts: YN },
-    { id: 'hk_anz', label: 'Wie viele Heizkörper?', type: 'number', req: true, unit: 'Stk', show: a => a.hk === 'ja' },
-    { id: 'hk_raum', label: 'Welche Räume?', type: 'text', req: true, show: a => a.hk === 'ja' },
-    { id: 'hk_dim', label: 'Welche Dimension?', type: 'text', req: true, show: a => a.hk === 'ja' }] },
+    { id: 'hk_liste', label: 'Welche Heizkörper? (je Heizkörper Raum, Typ und Maße)', type: 'heizkoerper', req: true, show: a => a.hk === 'ja' }] },
   { title: 'Inbetriebnahme', sub: '', fields: [
     { id: 'ibn_fehler', label: 'Gab es bei der Inbetriebnahme einen Fehler?', type: 'radio', req: true, opts: YN },
     { id: 'ibn_text', label: 'Welcher Fehler?', type: 'text', req: true, show: a => a.ibn_fehler === 'ja' },
@@ -460,7 +485,7 @@ function serviceSteps(g) {
       { id: 'adresse', label: 'Adresse', type: 'text', req: true, ph: 'Straße, PLZ, Ort' },
       { id: 'telefon', label: 'Telefon (optional)', type: 'phone' },
       { id: 'auftrag', label: 'Auftrags- / Ticketnummer (optional)', type: 'text' },
-      { id: 'monteur', label: 'Monteur', type: 'text', req: true, ph: 'Name des Monteurs', list: 'monteure' }] },
+      { id: 'monteur', label: 'Monteur(e)', type: 'monteur', req: true, ph: 'Name(n) – oder unten antippen' }] },
     { title: 'Einsatz & Zeiten', sub: 'Wann und wie lange war der Monteur vor Ort?', fields: [
       { id: 'notdienst', label: 'War es ein Notfall (Notdienst-Einsatz)?', type: 'radio', req: true, opts: YN, hint: () => `Zuschläge: Samstag ${S.zuschlag.sat} %, Sonntag ${S.zuschlag.sun} %, Feiertag ${S.zuschlag.hol} % – im Notdienst jeweils + ${S.zuschlag.not} % (auch werktags).` },
       { id: 'einsaetze', label: 'Einsätze', type: 'einsaetze', req: true }] },
@@ -506,7 +531,7 @@ function newRecord(type, g) {
   const r = { id: uid('p'), type, gewerk: g, nr: nextNumber(type, g), created: Date.now(), updated: Date.now(), answers: {}, photos: [], sig: { monteur: { ort: '', datum: isoToday(), data: '' }, kunde: { ort: '', datum: isoToday(), data: '', absent: false } } };
   if (type === 'abnahme') r.answers.datum = isoToday();
   else r.answers.einsaetze = [{ id: uid('e'), datum: isoToday(), von: '', bis: '', pause: '' }];
-  if (S.monteure.length === 1) r.answers.monteur = S.monteure[0];
+  const mg = monteureFor(g); if (mg.length === 1) r.answers.monteur = mg[0].name;
   return r;
 }
 
@@ -515,14 +540,16 @@ const visSteps = r => stepsOf(r).filter(s => !s.show || s.show(r.answers));
 const visFields = (r, s) => s.fields.filter(f => !f.show || f.show(r.answers));
 const EXTRA = [['fotos', 'Fotos'], ['sig_monteur', 'Unterschrift Monteur'], ['sig_kunde', 'Unterschrift Kunde'], ['summary', 'Zusammenfassung']];
 const screens = r => visSteps(r).map(s => ['step', s.title, s]).concat(EXTRA.map(([k, t]) => [k, t]));
-const optsOf = f => (typeof f.opts === 'function' ? f.opts() : f.opts || []);
+const optsOf = (f, a = {}) => (typeof f.opts === 'function' ? f.opts(a) : f.opts || []);
+const labOf = (f, a = {}) => (typeof f.label === 'function' ? f.label(a) : f.label);
 const filled = v => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && String(v).trim() !== '');
 
 /* Wert für Anzeige und PDF */
 function fmtValue(r, f) {
   const v = r.answers[f.id];
-  if (f.type === 'radio') return (optsOf(f).find(x => x[0] === v) || [v, v])[1];
+  if (f.type === 'radio') return (optsOf(f, r.answers).find(x => x[0] === v) || [v, v])[1];
   if (f.type === 'multiday') return (v || []).map(d => `${wdOf(d).slice(0, 2)}, ${deDate(d)}`).join('\n');
+  if (f.type === 'heizkoerper') return (v || []).map((x, i) => `${i + 1}. ${x.raum} – ${x.typ}, ${x.h} × ${x.l}`).join('\n');
   if (f.type === 'items') return (v || []).map(x => `${x.q || 1} ${x.u || 'Stk'} × ${x.n}`).join('\n');
   if (f.type === 'einsaetze') return (v || []).map(e => { const z = zuschlag(e.datum, r.answers.notdienst === 'ja'); return `${wdOf(e.datum).slice(0, 2)}, ${deDate(e.datum)} · ${e.von || '?'}–${e.bis || '?'} Uhr${+e.pause ? ` (−${e.pause} Min. Pause)` : ''} · ${hrs(durH(e))} · ${z.typ}: ${z.label}`; }).join('\n');
   if (f.type === 'date') return v ? `${wdOf(v).slice(0, 2)}, ${deDate(v)}` : '';
@@ -554,7 +581,7 @@ function shell(inner) {
       <button class="btn-p !h-10 !px-4 ml-1" data-a="new">${ic('plus', 17)}<span class="hidden sm:inline">Neues Protokoll</span></button></nav>
     </div></header>
     <main class="max-w-6xl mx-auto px-4 sm:px-6 pb-28">${inner}</main>
-    <datalist id="dl-monteure">${S.monteure.map(m => `<option value="${esc(m)}">`).join('')}</datalist>`;
+    <datalist id="dl-monteure">${S.monteure.map(m => `<option value="${esc(m.name)}">`).join('')}</datalist>`;
 }
 
 /* ---------- Startseite ---------- */
@@ -601,7 +628,7 @@ function pickDialog(g) {
 
 /* ---------- Assistent ---------- */
 function fieldHTML(r, f, bad) {
-  const a = r.answers, v = a[f.id], err = bad.includes(f.id), lab = f.label ? `<span class="lbl">${esc(f.label)}${f.req ? ' <span class="text-ember">*</span>' : ''}</span>` : '';
+  const a = r.answers, v = a[f.id], err = bad.includes(f.id), lab = f.label ? `<span class="lbl ${f.danger ? '!text-ember !text-[15px] !font-semibold' : ''}">${esc(labOf(f, a))}${f.req ? ' <span class="text-ember">*</span>' : ''}</span>` : '';
   const hint = f.hint ? `<p class="hint">${esc(typeof f.hint === 'function' ? f.hint() : f.hint)}</p>` : '';
   const base = `class="inp ${err ? 'inp-req' : ''}" data-f="${f.id}"`;
   switch (f.type) {
@@ -609,12 +636,31 @@ function fieldHTML(r, f, bad) {
     case 'number': return `<label class="block">${lab}<div class="relative"><input ${base} inputmode="decimal" value="${esc(v ?? '')}" placeholder="${esc(f.ph || '0')}">${f.unit ? `<span class="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-ink3">${f.unit}</span>` : ''}</div>${hint}</label>`;
     case 'date': return `<label class="block">${lab}<input ${base} type="date" value="${esc(v || '')}">${hint}</label>`;
     case 'textarea': return `<label class="block">${lab}<textarea ${base} rows="3" placeholder="${esc(f.ph || '')}">${esc(v || '')}</textarea></label>${f.chips ? `<div class="flex flex-wrap gap-1.5 mt-2">${f.chips().map(c => `<button type="button" class="chip" data-a="chip" data-f="${f.id}" data-v="${esc(c)}">${ic('plus', 13)}${esc(c)}</button>`).join('')}</div>` : ''}${hint}`;
-    case 'radio': return `<div>${lab}<div class="grid ${optsOf(f).length > 3 ? 'sm:grid-cols-2' : ''} gap-2 ${err ? 'rounded-[var(--rb)] ring-4 ring-[rgba(217,72,43,0.18)]' : ''}">${optsOf(f).map(([k, l]) => `<button type="button" class="opt ${v === k ? 'on' : ''}" data-a="opt" data-f="${f.id}" data-v="${esc(k)}"><span class="dot"></span>${esc(l)}</button>`).join('')}</div>${hint}</div>`;
+    case 'monteur': {
+      const cur = (v || '').split(',').map(x => x.trim()).filter(Boolean), chip = m => `<button type="button" class="chip ${cur.includes(m.name) ? '!border-p !text-ink !bg-p/15' : ''}" data-a="mont-pick" data-f="${f.id}" data-v="${esc(m.name)}">${cur.includes(m.name) ? ic('check', 13, 2.6) : ic('plus', 13)}${esc(m.name)}</button>`;
+      const own = monteureFor(r.gewerk), other = S.monteure.filter(m => !m.gw.includes(r.gewerk));
+      return `<label class="block">${lab}<input ${base} type="text" value="${esc(v || '')}" placeholder="${esc(f.ph || '')}" list="dl-monteure" autocomplete="off"></label>
+        ${own.length ? `<div class="text-[12px] text-ink3 mt-3 mb-1.5">${GEWERKE[r.gewerk].name}</div><div class="flex flex-wrap gap-1.5">${own.map(chip).join('')}</div>` : ''}
+        ${other.length ? `<details class="mt-3" ${other.some(m => cur.includes(m.name)) ? 'open' : ''}><summary class="text-[12px] text-ink3 inline-flex items-center gap-1">${ic('chevD', 13)}Monteure anderer Gewerke</summary><div class="flex flex-wrap gap-1.5 mt-1.5">${other.map(chip).join('')}</div></details>` : ''}
+        ${S.monteure.length ? '' : '<p class="hint">Tipp: Monteure unter Einstellungen → Monteure anlegen, dann erscheinen sie hier zum Antippen.</p>'}`;
+    }
+    case 'radio': return `<div>${lab}<div class="grid ${optsOf(f, a).length > 3 ? 'sm:grid-cols-2' : ''} gap-2 ${err ? 'rounded-[var(--rb)] ring-4 ring-[rgba(217,72,43,0.18)]' : ''}">${optsOf(f, a).map(([k, l]) => `<button type="button" class="opt ${v === k ? 'on' : ''}" data-a="opt" data-f="${f.id}" data-v="${esc(k)}"><span class="dot"></span>${esc(l)}</button>`).join('')}</div>${hint}</div>`;
     case 'thumbs': return `<div class="thumbs">${ic('thumb', 40, 1.6)}<div class="font-semibold mt-2">Super – alles erledigt.</div></div>`;
     case 'multiday': return `<div>${lab}<div class="flex flex-wrap gap-1.5 mb-2">${(v || []).map((d, i) => `<span class="chip !h-9">${wdOf(d).slice(0, 2)}, ${deDate(d)}<button class="text-ink3 hover:text-ember -mr-1" data-a="day-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('x', 14)}</button></span>`).join('')}</div>
       <div class="flex gap-2"><input type="date" class="inp ${err ? 'inp-req' : ''}" id="day-${f.id}" value="${isoToday()}"><button type="button" class="btn-s shrink-0" data-a="day-add" data-f="${f.id}">${ic('plus', 16)}Tag</button></div><p class="hint">Mehrere Tage nacheinander hinzufügen.</p></div>`;
     case 'items': return `<div>${lab}<div class="space-y-1.5 mb-2">${(v || []).map((x, i) => `<div class="flex items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><b class="mono">${esc(x.q)} ${esc(x.u)}</b><span class="flex-1 min-w-0">${esc(x.n)}</span><button class="text-ink3 hover:text-ember" data-a="item-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
       <div class="grid grid-cols-[1fr_80px_86px] sm:grid-cols-[1fr_90px_96px_auto] gap-2"><input class="inp ${err ? 'inp-req' : ''}" id="it-n-${f.id}" placeholder="${esc(f.ph || 'Bezeichnung')}"><input class="inp" id="it-q-${f.id}" inputmode="decimal" value="1"><select class="inp appearance-none" id="it-u-${f.id}">${['Stk', 'm', 'l', 'kg', 'Set', 'Pkg'].map(u => `<option>${u}</option>`).join('')}</select><button type="button" class="btn-s col-span-3 sm:col-span-1" data-a="item-add" data-f="${f.id}">${ic('plus', 16)}Hinzufügen</button></div></div>`;
+    case 'heizkoerper': {
+      const last = UI.hkLast || {}, sel = (id, list, ph) => `<label class="block"><span class="text-[12px] text-ink3">${ph}</span><select class="inp appearance-none" id="${id}">${list.map(x => `<option ${last[id] === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>`;
+      return `<div>${lab}<div class="space-y-1.5 mb-3">${(v || []).map((x, i) => `<div class="flex items-center gap-3 rounded-[var(--rb)] bg-raised px-3 py-2.5 text-[14px]"><b class="mono text-ink3 w-6">${i + 1}.</b><span class="flex-1 min-w-0"><b>${esc(x.raum)}</b> <span class="text-ink2">· ${esc(x.typ)} · ${esc(x.h)} × ${esc(x.l)}</span></span><button class="text-ink3 hover:text-ember" data-a="hk-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
+        <div class="rounded-[var(--r)] border ${err ? 'border-ember' : 'border-line2'} p-3 sm:p-4"><div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <label class="block col-span-2 sm:col-span-1"><span class="text-[12px] text-ink3">Raum</span><input class="inp" id="hk-raum" list="dl-hkraum" placeholder="Raum wählen oder tippen" autocomplete="off"></label>
+          ${sel('hk-typ', S.lists.hkTyp, 'Typ')}${sel('hk-h', S.lists.hkHoehe, 'Bauhöhe')}${sel('hk-l', S.lists.hkLaenge, 'Baulänge')}</div>
+          <div class="flex flex-wrap gap-1.5 mt-3">${S.lists.hkRaum.map(x => `<button type="button" class="chip" data-a="hk-raum" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+          <button type="button" class="btn-s w-full sm:w-auto mt-3" data-a="hk-add" data-f="${f.id}">${ic('plus', 16)}Heizkörper hinzufügen</button></div>
+        <datalist id="dl-hkraum">${S.lists.hkRaum.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+        <p class="hint">${(v || []).length} Heizkörper erfasst. Typ, Höhen und Längen unter Einstellungen → Auswahllisten anpassbar.</p></div>`;
+    }
     case 'einsaetze': {
       const nd = a.notdienst === 'ja';
       return `<div>${lab}<div class="space-y-3">${(v || []).map((e, i) => { const z = zuschlag(e.datum, nd); return `<div class="rounded-[var(--r)] border ${err && (!e.datum || !e.von || !e.bis) ? 'border-ember' : 'border-line2'} p-3 sm:p-4" data-row="${i}">
@@ -652,7 +698,7 @@ function photosHTML(r) {
 }
 function summaryHTML(r, ro) {
   const parts = visSteps(r).map((s, si) => {
-    const rows = visFields(r, s).filter(f => f.type !== 'thumbs' && filled(r.answers[f.id])).map(f => `<div class="grid sm:grid-cols-[minmax(0,240px)_1fr] gap-x-4 gap-y-0.5 py-2 border-b border-line last:border-0"><span class="text-[13px] text-ink3">${esc(f.label)}</span><span class="text-[14px] whitespace-pre-line">${esc(fmtValue(r, f))}</span></div>`).join('');
+    const rows = visFields(r, s).filter(f => f.type !== 'thumbs' && filled(r.answers[f.id])).map(f => `<div class="grid sm:grid-cols-[minmax(0,240px)_1fr] gap-x-4 gap-y-0.5 py-2 border-b border-line last:border-0"><span class="text-[13px] text-ink3">${esc(labOf(f, r.answers))}</span><span class="text-[14px] whitespace-pre-line">${esc(fmtValue(r, f))}</span></div>`).join('');
     return `<div class="card p-4 sm:p-5"><div class="flex items-center justify-between mb-1"><b class="text-[15px]">${esc(s.title)}</b>${ro ? '' : `<button class="btn-g !h-8" data-a="goto" data-i="${si}">${ic('edit', 14)}Ändern</button>`}</div>${rows || '<div class="text-[13px] text-ink3 py-2">–</div>'}</div>`;
   }).join('');
   const sig = w => { const s = r.sig[w]; return `<div class="card p-4"><div class="text-[13px] text-ink3">Unterschrift ${w === 'kunde' ? 'Kunde' : 'Monteur'}</div>${w === 'kunde' && s.absent ? '<div class="text-[14px] mt-2">Kunde nicht anwesend</div>' : s.data ? `<div class="rounded-lg bg-white mt-2 p-2"><img src="${s.data}" class="h-16" alt=""></div>` : '<div class="text-ember text-[14px] mt-2">fehlt</div>'}<div class="text-[12px] text-ink3 mt-1">${esc(s.ort || '')}${s.ort ? ', ' : ''}${deDate(s.datum)}</div></div>`; };
@@ -666,7 +712,7 @@ function viewWizard() {
   const sc = screens(r), i = Math.min(UI.step, sc.length - 1), [kind, title, step] = sc[i], g = GEWERKE[r.gewerk];
   const bad = UI.bad || [];
   let body = '';
-  if (kind === 'step') body = `${step.sub ? `<p class="text-ink3 text-[14px] -mt-1 mb-5">${esc(step.sub)}</p>` : '<div class="mb-4"></div>'}<div class="space-y-5">${visFields(r, step).map(f => fieldHTML(r, f, bad)).join('')}</div>`;
+  if (kind === 'step') body = `${step.sub ? `<p class="${step.danger ? 'text-ember font-medium' : 'text-ink3'} text-[14px] -mt-1 mb-5">${esc(step.sub)}</p>` : '<div class="mb-4"></div>'}<div class="space-y-5">${visFields(r, step).map(f => fieldHTML(r, f, bad)).join('')}</div>`;
   else if (kind === 'fotos') body = `<p class="text-ink3 text-[14px] -mt-1 mb-5">Fotos von der Baustelle – Kamera oder Galerie.</p>${photosHTML(r)}`;
   else if (kind === 'sig_monteur') body = `<p class="text-ink3 text-[14px] -mt-1 mb-5">Ort, Datum und Unterschrift des Monteurs.</p>${sigHTML(r, 'monteur')}`;
   else if (kind === 'sig_kunde') body = `<p class="text-ink3 text-[14px] -mt-1 mb-5">Der Kunde bestätigt die ${r.type === 'service' ? 'Arbeiten' : 'Abnahme'}.</p>${sigHTML(r, 'kunde')}`;
@@ -680,7 +726,7 @@ function viewWizard() {
       <span class="text-[12px] text-ink3 whitespace-nowrap">Schritt ${i + 1}/${sc.length}</span></div>
     <div class="prog mt-4"><i style="width:${pct}%"></i></div>
     <div class="flex gap-6 mt-6">${side}
-      <section class="flex-1 min-w-0 max-w-3xl"><div class="card p-5 sm:p-7 fade-in"><h2 class="h-font text-[30px] sm:text-[34px] leading-tight mb-3">${esc(title)}</h2>${body}</div>
+      <section class="flex-1 min-w-0 max-w-3xl"><div class="card p-5 sm:p-7 fade-in ${step && step.danger ? '!border-ember border-2' : ''}" ${step && step.danger ? 'style="background:var(--t-red)"' : ''}><h2 class="h-font text-[30px] sm:text-[34px] leading-tight mb-3 ${step && step.danger ? 'text-ember' : ''}">${step && step.danger ? `<span class="inline-block align-middle mr-2">${ic('camera', 26)}</span>` : ''}${esc(title)}</h2>${body}</div>
         <div class="fixed lg:static left-0 right-0 bottom-0 z-30 lg:z-auto border-t lg:border-0 border-line lg:mt-4" style="background:color-mix(in srgb,var(--bg) 92%,transparent);padding-bottom:env(safe-area-inset-bottom)">
           <div class="max-w-3xl mx-auto px-4 lg:px-0 py-3 flex gap-2"><button class="btn-s" data-a="back">${ic('arrowL', 16)}Zurück</button>
           ${last ? `<button class="btn-p flex-1" data-a="finish">${ic('check', 17)}Abschließen &amp; PDF</button>` : `<button class="btn-p flex-1" data-a="next">Weiter ${ic('arrowR', 16)}</button>`}</div></div></section></div></div>`;
@@ -707,8 +753,8 @@ function viewProt() {
 }
 
 /* ---------- Einstellungen ---------- */
-const SET_TABS = [['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['monteure', 'Monteure', 'users'], ['zuschlag', 'Zuschläge', 'clock'], ['listen', 'Auswahllisten', 'list'], ['daten', 'Daten', 'download']];
-const LISTS = [['wpWolf', 'Wärmepumpen Wolf (SHK-Abnahme)'], ['wpBuderus', 'Wärmepumpen Buderus (SHK-Abnahme)'], ['systeme', 'Systeme (AC-Abnahme)'], ['grundDC', 'Service-Gründe DC'], ['grundAC', 'Service-Gründe AC'], ['grundSHK', 'Service-Gründe SHK'], ['fixDC', 'Behebung DC'], ['fixAC', 'Behebung AC'], ['fixSHK', 'Behebung SHK']];
+const SET_TABS = [['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['monteure', 'Monteure', 'users'], ['zuschlag', 'Zuschläge', 'clock'], ['systeme', 'Systeme (AC)', 'bolt'], ['wps', 'Wärmepumpen (SHK)', 'flame'], ['listen', 'Auswahllisten', 'list'], ['daten', 'Daten', 'download']];
+const LISTS = [['hkRaum', 'Räume (Heizkörper)'], ['hkTyp', 'Heizkörper-Typen'], ['hkHoehe', 'Heizkörper-Bauhöhen'], ['hkLaenge', 'Heizkörper-Baulängen'], ['grundDC', 'Service-Gründe DC'], ['grundAC', 'Service-Gründe AC'], ['grundSHK', 'Service-Gründe SHK'], ['fixDC', 'Behebung DC'], ['fixAC', 'Behebung AC'], ['fixSHK', 'Behebung SHK']];
 const sIn = (path, label, ph = '', type = 'text') => { const v = path.split('.').reduce((o, k) => (o || {})[k], S); return `<label class="block"><span class="lbl">${label}</span><input class="inp" data-s="${path}" type="${type}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" ${type === 'number' ? 'inputmode="decimal"' : ''}></label>`; };
 function setBody() {
   switch (UI.tab) {
@@ -720,9 +766,27 @@ function setBody() {
       <label class="block mt-6"><span class="lbl">Ecken-Rundung: ${S.design.radius} px</span><input type="range" min="4" max="24" step="1" class="w-full" data-s="design.radius" value="${S.design.radius}"></label>
       <div class="grid grid-cols-2 gap-4 mt-6">${[['fontHead', 'Schrift Überschriften', ['Instrument Serif', 'DM Serif Display', 'Fraunces', 'Geist', 'Inter']], ['fontBody', 'Schrift Text', ['Geist', 'Inter', 'DM Sans', 'Figtree', 'IBM Plex Sans', 'Instrument Sans']]].map(([k, l, fs]) => `<label class="block"><span class="lbl">${l}</span><select class="inp" data-s="design.${k}">${fs.map(f => `<option ${S.design[k] === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`).join('')}</div>
       <button class="btn-g mt-6" data-a="design-reset">${ic('refresh', 15)}Design zurücksetzen</button>`;
-    case 'monteure': return `<p class="text-ink3 text-[14px] mb-4">Monteure erscheinen als Vorschlag im Feld „Monteur“. Ist nur einer eingetragen, wird er automatisch eingesetzt.</p>
-      <div class="space-y-1.5">${S.monteure.map((m, i) => `<div class="flex items-center gap-2 rounded-[var(--rb)] bg-raised px-3 h-11"><span class="text-ink3">${ic('users', 16)}</span><span class="flex-1">${esc(m)}</span><button class="text-ink3 hover:text-ember" data-a="mont-del" data-i="${i}">${ic('trash', 15)}</button></div>`).join('') || '<div class="text-ink3 text-[14px]">Noch keine Monteure.</div>'}</div>
-      <div class="flex gap-2 mt-3"><input class="inp" id="mont-new" placeholder="Name"><button class="btn-s shrink-0" data-a="mont-add">${ic('plus', 16)}Hinzufügen</button></div>`;
+    case 'monteure': {
+      const gwBtn = (m, i, g) => `<button class="chip !h-7 !px-2 text-[12px] ${m.gw.includes(g) ? '!border-p !text-ink !bg-p/15' : ''}" data-a="mont-gw" data-i="${i}" data-g="${g}">${g}</button>`;
+      const row = (m, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2"><span class="text-ink3">${ic('users', 16)}</span><span class="flex-1 min-w-[120px] font-medium">${esc(m.name)}</span><span class="flex gap-1">${Object.keys(GEWERKE).map(g => gwBtn(m, i, g)).join('')}</span><button class="text-ink3 hover:text-ember ml-1" data-a="mont-del" data-i="${i}" aria-label="Löschen">${ic('trash', 15)}</button></div>`;
+      const groups = Object.entries(GEWERKE).map(([g, G]) => { const l = S.monteure.map((m, i) => [m, i]).filter(([m]) => m.gw.includes(g)); return `<div><div class="flex items-center gap-2 mb-2"><span style="color:${G.color}">${ic(G.icon, 16)}</span><b class="text-[14px]">${G.name}</b><span class="text-[12px] text-ink3">${l.length}</span></div><div class="space-y-1.5">${l.map(([m, i]) => row(m, i)).join('') || '<div class="text-[13px] text-ink3">Noch niemand zugeordnet.</div>'}</div></div>`; }).join('');
+      const none = S.monteure.map((m, i) => [m, i]).filter(([m]) => !m.gw.length);
+      return `<p class="text-ink3 text-[14px] mb-4">Monteure den Gewerken zuordnen (DC / AC / SHK antippen, auch mehrere). Im Protokoll erscheinen die Monteure des Gewerks als Schnellauswahl – Monteure anderer Gewerke lassen sich darunter zusätzlich auswählen.</p>
+      <div class="flex gap-2 mb-6"><input class="inp" id="mont-new" placeholder="Name des Monteurs"><button class="btn-s shrink-0" data-a="mont-add">${ic('plus', 16)}Hinzufügen</button></div>
+      <div class="space-y-6">${groups}${none.length ? `<div><b class="text-[14px]">Ohne Gewerk</b><div class="space-y-1.5 mt-2">${none.map(([m, i]) => row(m, i)).join('')}</div></div>` : ''}</div>`;
+    }
+    case 'wps': return `<p class="text-ink3 text-[14px] mb-4">Diese Hersteller und Modelle erscheinen bei der SHK-Abnahme. Je Zeile ein Modell – „Anderes Modell“ und „Sonstige“ sind immer möglich. Bitte bei neuen Modellen mit dem Herstellerdatenblatt abgleichen.</p>
+      <div class="space-y-4">${S.wps.map((x, i) => `<div class="rounded-[var(--r)] border border-line2 p-4">
+        <div class="flex gap-2"><input class="inp" data-wp="${i}" data-k="name" value="${esc(x.name)}" placeholder="Hersteller / Baureihe"><button class="btn-g !px-2.5 hover:!text-ember" data-a="wp-del" data-i="${i}" aria-label="Löschen">${ic('trash', 16)}</button></div>
+        <label class="block mt-3"><span class="lbl">Modelle</span><textarea class="inp" rows="5" data-wp="${i}" data-k="models">${esc(x.models.join('\n'))}</textarea></label>
+        <label class="flex items-center gap-2 text-[14px] text-ink2 mt-3"><input type="checkbox" data-wp="${i}" data-k="multi" ${x.multi ? 'checked' : ''}>Fragen, ob mehr als eine Wärmepumpe verbaut wurde (Kaskade)</label></div>`).join('')}</div>
+      <div class="flex flex-wrap gap-2 mt-4"><button class="btn-s" data-a="wp-add">${ic('plus', 16)}Hersteller hinzufügen</button><button class="btn-g" data-a="wp-reset">${ic('refresh', 15)}Auf Standard zurücksetzen</button></div>`;
+    case 'systeme': return `<p class="text-ink3 text-[14px] mb-4">Diese Systeme erscheinen bei der AC-Abnahme. Je Zeile eine Größe – Wechselrichter und Speicher werden als Vorauswahl angezeigt, „Andere Größe“ ist immer möglich. Bitte Größen bei neuen Modellen mit dem Herstellerdatenblatt abgleichen.</p>
+      <div class="space-y-4">${S.systems.map((x, i) => `<div class="rounded-[var(--r)] border border-line2 p-4">
+        <div class="flex gap-2"><input class="inp" data-sys="${i}" data-k="name" value="${esc(x.name)}" placeholder="Name des Systems"><button class="btn-g !px-2.5 hover:!text-ember" data-a="sys-del" data-i="${i}" aria-label="System löschen">${ic('trash', 16)}</button></div>
+        <div class="grid md:grid-cols-2 gap-3 mt-3"><label class="block"><span class="lbl">Wechselrichter-Größen</span><textarea class="inp" rows="5" data-sys="${i}" data-k="wr">${esc(x.wr.join('\n'))}</textarea></label><label class="block"><span class="lbl">Speichergrößen</span><textarea class="inp" rows="5" data-sys="${i}" data-k="sp">${esc(x.sp.join('\n'))}</textarea></label></div>
+        <div class="flex flex-wrap items-center gap-3 mt-3"><label class="flex items-center gap-2 text-[14px] text-ink2"><input type="checkbox" data-sys="${i}" data-k="multi" ${x.multi ? 'checked' : ''}>Fragen, ob mehr als ein Gerät verbaut wurde</label><input class="inp !h-9 !w-44" data-sys="${i}" data-k="unit" value="${esc(x.unit || '')}" placeholder="z. B. Powerwalls"></div></div>`).join('')}</div>
+      <div class="flex flex-wrap gap-2 mt-4"><button class="btn-s" data-a="sys-add">${ic('plus', 16)}System hinzufügen</button><button class="btn-g" data-a="sys-reset">${ic('refresh', 15)}Auf Standard zurücksetzen</button></div>`;
     case 'zuschlag': {
       const ex = [['Werktag', '2026-11-10'], ['Samstag', '2026-11-14'], ['Sonntag', '2026-11-15']];
       return `<p class="text-ink3 text-[14px] mb-4">Die App erfasst Stunden und Zuschlag in Prozent – abgerechnet wird im Büro. Sonntag und Feiertage werden am Datum automatisch erkannt.</p>
@@ -830,6 +894,9 @@ document.addEventListener('click', async e => {
     case 'day-add': { const d = $('#day-' + f).value; if (!d) return; const l = CUR.answers[f] || []; if (!l.includes(d)) l.push(d); l.sort(); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); render(); break; }
     case 'day-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'item-add': { const n = $('#it-n-' + f).value.trim(); if (!n) { $('#it-n-' + f).focus(); return; } const l = CUR.answers[f] || []; l.push({ n, q: $('#it-q-' + f).value.trim().replace('.', ',') || '1', u: $('#it-u-' + f).value }); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break; }
+    case 'hk-raum': { const el = $('#hk-raum'); if (el) el.value = a.dataset.v; $$('[data-a="hk-raum"]').forEach(b => b.classList.toggle('!border-p', b === a)); break; }
+    case 'hk-add': { const raum = $('#hk-raum').value.trim(); if (!raum) { toast('Bitte zuerst den Raum wählen.', 'warn'); return; } const l = CUR.answers[f] || []; l.push({ raum, typ: $('#hk-typ').value, h: $('#hk-h').value, l: $('#hk-l').value }); UI.hkLast = { 'hk-typ': $('#hk-typ').value, 'hk-h': $('#hk-h').value, 'hk-l': $('#hk-l').value }; CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } toast(`${raum} hinzugefügt.`); break; }
+    case 'hk-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'item-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'ein-add': { const l = CUR.answers.einsaetze || (CUR.answers.einsaetze = []); const last = l[l.length - 1]; l.push({ id: uid('e'), datum: last ? last.datum : isoToday(), von: '', bis: '', pause: '' }); saveDraft(); render(); break; }
     case 'ein-del': CUR.answers.einsaetze.splice(+a.dataset.i, 1); saveDraft(); render(); break;
@@ -845,7 +912,15 @@ document.addEventListener('click', async e => {
     case 'logo-reset': S.company.logo = 'logo.png'; saveSettings(); render(); break;
     case 'logo-none': S.company.logo = ''; saveSettings(); render(); break;
     case 'design-reset': S.design = clone(DEFAULTS.design); saveSettings(); applyTheme(); render(); break;
-    case 'mont-add': { const v = $('#mont-new').value.trim(); if (!v) return; if (!S.monteure.includes(v)) S.monteure.push(v); saveSettings(); render(); break; }
+    case 'mont-add': { const v = $('#mont-new').value.trim(); if (!v) return; if (!S.monteure.some(m => m.name === v)) S.monteure.push({ name: v, gw: [] }); saveSettings(); render(); break; }
+    case 'mont-gw': { const m = S.monteure[+a.dataset.i], g = a.dataset.g; m.gw = m.gw.includes(g) ? m.gw.filter(x => x !== g) : m.gw.concat(g); saveSettings(); render(); break; }
+    case 'mont-pick': { const el = $(`input[data-f="${f}"]`), l = (el ? el.value : CUR.answers[f] || '').split(',').map(x => x.trim()).filter(Boolean), v = a.dataset.v; const nl = l.includes(v) ? l.filter(x => x !== v) : l.concat(v); CUR.answers[f] = nl.join(', '); UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break; }
+    case 'wp-add': S.wps.push({ id: uid('w'), name: 'Neuer Hersteller', models: [], multi: true, unit: 'Wärmepumpen (Kaskade)' }); saveSettings(); render(); break;
+    case 'wp-del': { const x = S.wps[+a.dataset.i]; if (await confirmDlg('Hersteller löschen?', `„${x.name}“ wird aus der Auswahl entfernt.`, 'Löschen', true)) { S.wps.splice(+a.dataset.i, 1); saveSettings(); render(); } break; }
+    case 'wp-reset': if (await confirmDlg('Wärmepumpen zurücksetzen?', 'Wolf, Buderus und Samsung mit den Standardmodellen – eigene Änderungen gehen verloren.', 'Zurücksetzen')) { S.wps = clone(DEFAULTS.wps); saveSettings(); render(); } break;
+    case 'sys-add': S.systems.push({ id: uid('s'), name: 'Neues System', wr: [], sp: [], multi: false, unit: 'Geräte' }); saveSettings(); render(); break;
+    case 'sys-del': { const x = S.systems[+a.dataset.i]; if (await confirmDlg('System löschen?', `„${x.name}“ wird aus der Auswahl entfernt.`, 'Löschen', true)) { S.systems.splice(+a.dataset.i, 1); saveSettings(); render(); } break; }
+    case 'sys-reset': if (await confirmDlg('Systeme zurücksetzen?', 'EcoFlow, Tesla und E3/DC mit den Standardgrößen – eigene Änderungen gehen verloren.', 'Zurücksetzen')) { S.systems = clone(DEFAULTS.systems); saveSettings(); render(); } break;
     case 'mont-del': S.monteure.splice(+a.dataset.i, 1); saveSettings(); render(); break;
     case 'lists-reset': if (await confirmDlg('Listen zurücksetzen?', 'Alle Auswahllisten werden auf den Standard gesetzt.', 'Zurücksetzen')) { S.lists = clone(DEFAULTS.lists); saveSettings(); render(); } break;
     case 'backup': backup(); break;
@@ -869,6 +944,8 @@ document.addEventListener('input', e => {
     if (el.type === 'range' || el.type === 'color') { const lab = el.closest('label'); if (lab && el.type === 'range') lab.querySelector('.lbl').textContent = `Ecken-Rundung: ${el.value} px`; if (el.type === 'color') el.nextElementSibling.textContent = el.value; }
     return;
   }
+  if (el.dataset.wp !== undefined) { const x = S.wps[+el.dataset.wp], k = el.dataset.k; x[k] = k === 'multi' ? el.checked : k === 'models' ? el.value.split('\n').map(v => v.trim()).filter(Boolean) : el.value; saveSettings(); return; }
+  if (el.dataset.sys !== undefined) { const x = S.systems[+el.dataset.sys], k = el.dataset.k; x[k] = k === 'multi' ? el.checked : k === 'wr' || k === 'sp' ? el.value.split('\n').map(v => v.trim()).filter(Boolean) : el.value; saveSettings(); return; }
   if (el.dataset.list) { S.lists[el.dataset.list] = el.value.split('\n').map(x => x.trim()).filter(Boolean); saveSettings(); return; }
   if (el.id === 'q') { UI.q = el.value; const box = $('#plist'); if (box) { const tmp = document.createElement('div'); tmp.innerHTML = viewList(); box.innerHTML = $('#plist', tmp).innerHTML; } }
 });
@@ -931,7 +1008,7 @@ async function restore(file) {
   try {
     const d = JSON.parse(await file.text()); if (d.app !== 'fruehauf-abnahme') throw new Error('Keine Sicherung dieser App');
     if (!(await confirmDlg('Sicherung einspielen?', `${(d.protocols || []).length} Protokolle werden ergänzt bzw. aktualisiert, Einstellungen übernommen.`, 'Einspielen'))) return;
-    S = deepMerge(clone(DEFAULTS), d.settings || {}); saveSettings();
+    S = deepMerge(clone(DEFAULTS), d.settings || {}); fixSettings(); saveSettings();
     for (const p of d.protocols || []) await DB.put('prot', p);
     PROTS = (await DB.all('prot')) || []; applyTheme(); render(); toast('Sicherung eingespielt.');
   } catch (err) { toast('Sicherung konnte nicht gelesen werden: ' + err.message, 'err', 5000); }
@@ -1011,7 +1088,7 @@ async function buildPdf(r) {
   for (const s of visSteps(r)) {
     const fs = visFields(r, s).filter(f => f.type !== 'thumbs' && !skip.has(f.id) && filled(r.answers[f.id]));
     if (!fs.length) continue;
-    section(s.title); fs.forEach(f => row(f.label, fmtValue(r, f))); y += 4;
+    section(s.title); fs.forEach(f => row(labOf(f, r.answers), fmtValue(r, f))); y += 4;
   }
   /* Fotos */
   if (r.photos.length) {

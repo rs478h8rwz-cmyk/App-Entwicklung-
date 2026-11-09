@@ -60,6 +60,9 @@ document.addEventListener('click', async e => {
     case 'day-add': { const d = $('#day-' + f).value; if (!d) return; const l = CUR.answers[f] || []; if (!l.includes(d)) l.push(d); l.sort(); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); render(); break; }
     case 'day-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'item-add': { const n = $('#it-n-' + f).value.trim(); if (!n) { $('#it-n-' + f).focus(); return; } const l = CUR.answers[f] || []; l.push({ n, q: $('#it-q-' + f).value.trim().replace('.', ',') || '1', u: $('#it-u-' + f).value }); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break; }
+    case 'hk-raum': { const el = $('#hk-raum'); if (el) el.value = a.dataset.v; $$('[data-a="hk-raum"]').forEach(b => b.classList.toggle('!border-p', b === a)); break; }
+    case 'hk-add': { const raum = $('#hk-raum').value.trim(); if (!raum) { toast('Bitte zuerst den Raum wählen.', 'warn'); return; } const l = CUR.answers[f] || []; l.push({ raum, typ: $('#hk-typ').value, h: $('#hk-h').value, l: $('#hk-l').value }); UI.hkLast = { 'hk-typ': $('#hk-typ').value, 'hk-h': $('#hk-h').value, 'hk-l': $('#hk-l').value }; CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } toast(`${raum} hinzugefügt.`); break; }
+    case 'hk-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'item-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'ein-add': { const l = CUR.answers.einsaetze || (CUR.answers.einsaetze = []); const last = l[l.length - 1]; l.push({ id: uid('e'), datum: last ? last.datum : isoToday(), von: '', bis: '', pause: '' }); saveDraft(); render(); break; }
     case 'ein-del': CUR.answers.einsaetze.splice(+a.dataset.i, 1); saveDraft(); render(); break;
@@ -75,7 +78,15 @@ document.addEventListener('click', async e => {
     case 'logo-reset': S.company.logo = 'logo.png'; saveSettings(); render(); break;
     case 'logo-none': S.company.logo = ''; saveSettings(); render(); break;
     case 'design-reset': S.design = clone(DEFAULTS.design); saveSettings(); applyTheme(); render(); break;
-    case 'mont-add': { const v = $('#mont-new').value.trim(); if (!v) return; if (!S.monteure.includes(v)) S.monteure.push(v); saveSettings(); render(); break; }
+    case 'mont-add': { const v = $('#mont-new').value.trim(); if (!v) return; if (!S.monteure.some(m => m.name === v)) S.monteure.push({ name: v, gw: [] }); saveSettings(); render(); break; }
+    case 'mont-gw': { const m = S.monteure[+a.dataset.i], g = a.dataset.g; m.gw = m.gw.includes(g) ? m.gw.filter(x => x !== g) : m.gw.concat(g); saveSettings(); render(); break; }
+    case 'mont-pick': { const el = $(`input[data-f="${f}"]`), l = (el ? el.value : CUR.answers[f] || '').split(',').map(x => x.trim()).filter(Boolean), v = a.dataset.v; const nl = l.includes(v) ? l.filter(x => x !== v) : l.concat(v); CUR.answers[f] = nl.join(', '); UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break; }
+    case 'wp-add': S.wps.push({ id: uid('w'), name: 'Neuer Hersteller', models: [], multi: true, unit: 'Wärmepumpen (Kaskade)' }); saveSettings(); render(); break;
+    case 'wp-del': { const x = S.wps[+a.dataset.i]; if (await confirmDlg('Hersteller löschen?', `„${x.name}“ wird aus der Auswahl entfernt.`, 'Löschen', true)) { S.wps.splice(+a.dataset.i, 1); saveSettings(); render(); } break; }
+    case 'wp-reset': if (await confirmDlg('Wärmepumpen zurücksetzen?', 'Wolf, Buderus und Samsung mit den Standardmodellen – eigene Änderungen gehen verloren.', 'Zurücksetzen')) { S.wps = clone(DEFAULTS.wps); saveSettings(); render(); } break;
+    case 'sys-add': S.systems.push({ id: uid('s'), name: 'Neues System', wr: [], sp: [], multi: false, unit: 'Geräte' }); saveSettings(); render(); break;
+    case 'sys-del': { const x = S.systems[+a.dataset.i]; if (await confirmDlg('System löschen?', `„${x.name}“ wird aus der Auswahl entfernt.`, 'Löschen', true)) { S.systems.splice(+a.dataset.i, 1); saveSettings(); render(); } break; }
+    case 'sys-reset': if (await confirmDlg('Systeme zurücksetzen?', 'EcoFlow, Tesla und E3/DC mit den Standardgrößen – eigene Änderungen gehen verloren.', 'Zurücksetzen')) { S.systems = clone(DEFAULTS.systems); saveSettings(); render(); } break;
     case 'mont-del': S.monteure.splice(+a.dataset.i, 1); saveSettings(); render(); break;
     case 'lists-reset': if (await confirmDlg('Listen zurücksetzen?', 'Alle Auswahllisten werden auf den Standard gesetzt.', 'Zurücksetzen')) { S.lists = clone(DEFAULTS.lists); saveSettings(); render(); } break;
     case 'backup': backup(); break;
@@ -99,6 +110,8 @@ document.addEventListener('input', e => {
     if (el.type === 'range' || el.type === 'color') { const lab = el.closest('label'); if (lab && el.type === 'range') lab.querySelector('.lbl').textContent = `Ecken-Rundung: ${el.value} px`; if (el.type === 'color') el.nextElementSibling.textContent = el.value; }
     return;
   }
+  if (el.dataset.wp !== undefined) { const x = S.wps[+el.dataset.wp], k = el.dataset.k; x[k] = k === 'multi' ? el.checked : k === 'models' ? el.value.split('\n').map(v => v.trim()).filter(Boolean) : el.value; saveSettings(); return; }
+  if (el.dataset.sys !== undefined) { const x = S.systems[+el.dataset.sys], k = el.dataset.k; x[k] = k === 'multi' ? el.checked : k === 'wr' || k === 'sp' ? el.value.split('\n').map(v => v.trim()).filter(Boolean) : el.value; saveSettings(); return; }
   if (el.dataset.list) { S.lists[el.dataset.list] = el.value.split('\n').map(x => x.trim()).filter(Boolean); saveSettings(); return; }
   if (el.id === 'q') { UI.q = el.value; const box = $('#plist'); if (box) { const tmp = document.createElement('div'); tmp.innerHTML = viewList(); box.innerHTML = $('#plist', tmp).innerHTML; } }
 });
@@ -161,7 +174,7 @@ async function restore(file) {
   try {
     const d = JSON.parse(await file.text()); if (d.app !== 'fruehauf-abnahme') throw new Error('Keine Sicherung dieser App');
     if (!(await confirmDlg('Sicherung einspielen?', `${(d.protocols || []).length} Protokolle werden ergänzt bzw. aktualisiert, Einstellungen übernommen.`, 'Einspielen'))) return;
-    S = deepMerge(clone(DEFAULTS), d.settings || {}); saveSettings();
+    S = deepMerge(clone(DEFAULTS), d.settings || {}); fixSettings(); saveSettings();
     for (const p of d.protocols || []) await DB.put('prot', p);
     PROTS = (await DB.all('prot')) || []; applyTheme(); render(); toast('Sicherung eingespielt.');
   } catch (err) { toast('Sicherung konnte nicht gelesen werden: ' + err.message, 'err', 5000); }

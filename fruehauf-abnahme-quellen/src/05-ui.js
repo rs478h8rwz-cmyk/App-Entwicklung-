@@ -18,7 +18,7 @@ function newRecord(type, g) {
   const r = { id: uid('p'), type, gewerk: g, nr: nextNumber(type, g), created: Date.now(), updated: Date.now(), answers: {}, photos: [], sig: { monteur: { ort: '', datum: isoToday(), data: '' }, kunde: { ort: '', datum: isoToday(), data: '', absent: false } } };
   if (type === 'abnahme') r.answers.datum = isoToday();
   else r.answers.einsaetze = [{ id: uid('e'), datum: isoToday(), von: '', bis: '', pause: '' }];
-  if (S.monteure.length === 1) r.answers.monteur = S.monteure[0];
+  const mg = monteureFor(g); if (mg.length === 1) r.answers.monteur = mg[0].name;
   return r;
 }
 
@@ -27,14 +27,16 @@ const visSteps = r => stepsOf(r).filter(s => !s.show || s.show(r.answers));
 const visFields = (r, s) => s.fields.filter(f => !f.show || f.show(r.answers));
 const EXTRA = [['fotos', 'Fotos'], ['sig_monteur', 'Unterschrift Monteur'], ['sig_kunde', 'Unterschrift Kunde'], ['summary', 'Zusammenfassung']];
 const screens = r => visSteps(r).map(s => ['step', s.title, s]).concat(EXTRA.map(([k, t]) => [k, t]));
-const optsOf = f => (typeof f.opts === 'function' ? f.opts() : f.opts || []);
+const optsOf = (f, a = {}) => (typeof f.opts === 'function' ? f.opts(a) : f.opts || []);
+const labOf = (f, a = {}) => (typeof f.label === 'function' ? f.label(a) : f.label);
 const filled = v => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && String(v).trim() !== '');
 
 /* Wert für Anzeige und PDF */
 function fmtValue(r, f) {
   const v = r.answers[f.id];
-  if (f.type === 'radio') return (optsOf(f).find(x => x[0] === v) || [v, v])[1];
+  if (f.type === 'radio') return (optsOf(f, r.answers).find(x => x[0] === v) || [v, v])[1];
   if (f.type === 'multiday') return (v || []).map(d => `${wdOf(d).slice(0, 2)}, ${deDate(d)}`).join('\n');
+  if (f.type === 'heizkoerper') return (v || []).map((x, i) => `${i + 1}. ${x.raum} – ${x.typ}, ${x.h} × ${x.l}`).join('\n');
   if (f.type === 'items') return (v || []).map(x => `${x.q || 1} ${x.u || 'Stk'} × ${x.n}`).join('\n');
   if (f.type === 'einsaetze') return (v || []).map(e => { const z = zuschlag(e.datum, r.answers.notdienst === 'ja'); return `${wdOf(e.datum).slice(0, 2)}, ${deDate(e.datum)} · ${e.von || '?'}–${e.bis || '?'} Uhr${+e.pause ? ` (−${e.pause} Min. Pause)` : ''} · ${hrs(durH(e))} · ${z.typ}: ${z.label}`; }).join('\n');
   if (f.type === 'date') return v ? `${wdOf(v).slice(0, 2)}, ${deDate(v)}` : '';
@@ -66,7 +68,7 @@ function shell(inner) {
       <button class="btn-p !h-10 !px-4 ml-1" data-a="new">${ic('plus', 17)}<span class="hidden sm:inline">Neues Protokoll</span></button></nav>
     </div></header>
     <main class="max-w-6xl mx-auto px-4 sm:px-6 pb-28">${inner}</main>
-    <datalist id="dl-monteure">${S.monteure.map(m => `<option value="${esc(m)}">`).join('')}</datalist>`;
+    <datalist id="dl-monteure">${S.monteure.map(m => `<option value="${esc(m.name)}">`).join('')}</datalist>`;
 }
 
 /* ---------- Startseite ---------- */
@@ -113,7 +115,7 @@ function pickDialog(g) {
 
 /* ---------- Assistent ---------- */
 function fieldHTML(r, f, bad) {
-  const a = r.answers, v = a[f.id], err = bad.includes(f.id), lab = f.label ? `<span class="lbl">${esc(f.label)}${f.req ? ' <span class="text-ember">*</span>' : ''}</span>` : '';
+  const a = r.answers, v = a[f.id], err = bad.includes(f.id), lab = f.label ? `<span class="lbl ${f.danger ? '!text-ember !text-[15px] !font-semibold' : ''}">${esc(labOf(f, a))}${f.req ? ' <span class="text-ember">*</span>' : ''}</span>` : '';
   const hint = f.hint ? `<p class="hint">${esc(typeof f.hint === 'function' ? f.hint() : f.hint)}</p>` : '';
   const base = `class="inp ${err ? 'inp-req' : ''}" data-f="${f.id}"`;
   switch (f.type) {
@@ -121,12 +123,31 @@ function fieldHTML(r, f, bad) {
     case 'number': return `<label class="block">${lab}<div class="relative"><input ${base} inputmode="decimal" value="${esc(v ?? '')}" placeholder="${esc(f.ph || '0')}">${f.unit ? `<span class="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-ink3">${f.unit}</span>` : ''}</div>${hint}</label>`;
     case 'date': return `<label class="block">${lab}<input ${base} type="date" value="${esc(v || '')}">${hint}</label>`;
     case 'textarea': return `<label class="block">${lab}<textarea ${base} rows="3" placeholder="${esc(f.ph || '')}">${esc(v || '')}</textarea></label>${f.chips ? `<div class="flex flex-wrap gap-1.5 mt-2">${f.chips().map(c => `<button type="button" class="chip" data-a="chip" data-f="${f.id}" data-v="${esc(c)}">${ic('plus', 13)}${esc(c)}</button>`).join('')}</div>` : ''}${hint}`;
-    case 'radio': return `<div>${lab}<div class="grid ${optsOf(f).length > 3 ? 'sm:grid-cols-2' : ''} gap-2 ${err ? 'rounded-[var(--rb)] ring-4 ring-[rgba(217,72,43,0.18)]' : ''}">${optsOf(f).map(([k, l]) => `<button type="button" class="opt ${v === k ? 'on' : ''}" data-a="opt" data-f="${f.id}" data-v="${esc(k)}"><span class="dot"></span>${esc(l)}</button>`).join('')}</div>${hint}</div>`;
+    case 'monteur': {
+      const cur = (v || '').split(',').map(x => x.trim()).filter(Boolean), chip = m => `<button type="button" class="chip ${cur.includes(m.name) ? '!border-p !text-ink !bg-p/15' : ''}" data-a="mont-pick" data-f="${f.id}" data-v="${esc(m.name)}">${cur.includes(m.name) ? ic('check', 13, 2.6) : ic('plus', 13)}${esc(m.name)}</button>`;
+      const own = monteureFor(r.gewerk), other = S.monteure.filter(m => !m.gw.includes(r.gewerk));
+      return `<label class="block">${lab}<input ${base} type="text" value="${esc(v || '')}" placeholder="${esc(f.ph || '')}" list="dl-monteure" autocomplete="off"></label>
+        ${own.length ? `<div class="text-[12px] text-ink3 mt-3 mb-1.5">${GEWERKE[r.gewerk].name}</div><div class="flex flex-wrap gap-1.5">${own.map(chip).join('')}</div>` : ''}
+        ${other.length ? `<details class="mt-3" ${other.some(m => cur.includes(m.name)) ? 'open' : ''}><summary class="text-[12px] text-ink3 inline-flex items-center gap-1">${ic('chevD', 13)}Monteure anderer Gewerke</summary><div class="flex flex-wrap gap-1.5 mt-1.5">${other.map(chip).join('')}</div></details>` : ''}
+        ${S.monteure.length ? '' : '<p class="hint">Tipp: Monteure unter Einstellungen → Monteure anlegen, dann erscheinen sie hier zum Antippen.</p>'}`;
+    }
+    case 'radio': return `<div>${lab}<div class="grid ${optsOf(f, a).length > 3 ? 'sm:grid-cols-2' : ''} gap-2 ${err ? 'rounded-[var(--rb)] ring-4 ring-[rgba(217,72,43,0.18)]' : ''}">${optsOf(f, a).map(([k, l]) => `<button type="button" class="opt ${v === k ? 'on' : ''}" data-a="opt" data-f="${f.id}" data-v="${esc(k)}"><span class="dot"></span>${esc(l)}</button>`).join('')}</div>${hint}</div>`;
     case 'thumbs': return `<div class="thumbs">${ic('thumb', 40, 1.6)}<div class="font-semibold mt-2">Super – alles erledigt.</div></div>`;
     case 'multiday': return `<div>${lab}<div class="flex flex-wrap gap-1.5 mb-2">${(v || []).map((d, i) => `<span class="chip !h-9">${wdOf(d).slice(0, 2)}, ${deDate(d)}<button class="text-ink3 hover:text-ember -mr-1" data-a="day-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('x', 14)}</button></span>`).join('')}</div>
       <div class="flex gap-2"><input type="date" class="inp ${err ? 'inp-req' : ''}" id="day-${f.id}" value="${isoToday()}"><button type="button" class="btn-s shrink-0" data-a="day-add" data-f="${f.id}">${ic('plus', 16)}Tag</button></div><p class="hint">Mehrere Tage nacheinander hinzufügen.</p></div>`;
     case 'items': return `<div>${lab}<div class="space-y-1.5 mb-2">${(v || []).map((x, i) => `<div class="flex items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><b class="mono">${esc(x.q)} ${esc(x.u)}</b><span class="flex-1 min-w-0">${esc(x.n)}</span><button class="text-ink3 hover:text-ember" data-a="item-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
       <div class="grid grid-cols-[1fr_80px_86px] sm:grid-cols-[1fr_90px_96px_auto] gap-2"><input class="inp ${err ? 'inp-req' : ''}" id="it-n-${f.id}" placeholder="${esc(f.ph || 'Bezeichnung')}"><input class="inp" id="it-q-${f.id}" inputmode="decimal" value="1"><select class="inp appearance-none" id="it-u-${f.id}">${['Stk', 'm', 'l', 'kg', 'Set', 'Pkg'].map(u => `<option>${u}</option>`).join('')}</select><button type="button" class="btn-s col-span-3 sm:col-span-1" data-a="item-add" data-f="${f.id}">${ic('plus', 16)}Hinzufügen</button></div></div>`;
+    case 'heizkoerper': {
+      const last = UI.hkLast || {}, sel = (id, list, ph) => `<label class="block"><span class="text-[12px] text-ink3">${ph}</span><select class="inp appearance-none" id="${id}">${list.map(x => `<option ${last[id] === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>`;
+      return `<div>${lab}<div class="space-y-1.5 mb-3">${(v || []).map((x, i) => `<div class="flex items-center gap-3 rounded-[var(--rb)] bg-raised px-3 py-2.5 text-[14px]"><b class="mono text-ink3 w-6">${i + 1}.</b><span class="flex-1 min-w-0"><b>${esc(x.raum)}</b> <span class="text-ink2">· ${esc(x.typ)} · ${esc(x.h)} × ${esc(x.l)}</span></span><button class="text-ink3 hover:text-ember" data-a="hk-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
+        <div class="rounded-[var(--r)] border ${err ? 'border-ember' : 'border-line2'} p-3 sm:p-4"><div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <label class="block col-span-2 sm:col-span-1"><span class="text-[12px] text-ink3">Raum</span><input class="inp" id="hk-raum" list="dl-hkraum" placeholder="Raum wählen oder tippen" autocomplete="off"></label>
+          ${sel('hk-typ', S.lists.hkTyp, 'Typ')}${sel('hk-h', S.lists.hkHoehe, 'Bauhöhe')}${sel('hk-l', S.lists.hkLaenge, 'Baulänge')}</div>
+          <div class="flex flex-wrap gap-1.5 mt-3">${S.lists.hkRaum.map(x => `<button type="button" class="chip" data-a="hk-raum" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+          <button type="button" class="btn-s w-full sm:w-auto mt-3" data-a="hk-add" data-f="${f.id}">${ic('plus', 16)}Heizkörper hinzufügen</button></div>
+        <datalist id="dl-hkraum">${S.lists.hkRaum.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+        <p class="hint">${(v || []).length} Heizkörper erfasst. Typ, Höhen und Längen unter Einstellungen → Auswahllisten anpassbar.</p></div>`;
+    }
     case 'einsaetze': {
       const nd = a.notdienst === 'ja';
       return `<div>${lab}<div class="space-y-3">${(v || []).map((e, i) => { const z = zuschlag(e.datum, nd); return `<div class="rounded-[var(--r)] border ${err && (!e.datum || !e.von || !e.bis) ? 'border-ember' : 'border-line2'} p-3 sm:p-4" data-row="${i}">
@@ -164,7 +185,7 @@ function photosHTML(r) {
 }
 function summaryHTML(r, ro) {
   const parts = visSteps(r).map((s, si) => {
-    const rows = visFields(r, s).filter(f => f.type !== 'thumbs' && filled(r.answers[f.id])).map(f => `<div class="grid sm:grid-cols-[minmax(0,240px)_1fr] gap-x-4 gap-y-0.5 py-2 border-b border-line last:border-0"><span class="text-[13px] text-ink3">${esc(f.label)}</span><span class="text-[14px] whitespace-pre-line">${esc(fmtValue(r, f))}</span></div>`).join('');
+    const rows = visFields(r, s).filter(f => f.type !== 'thumbs' && filled(r.answers[f.id])).map(f => `<div class="grid sm:grid-cols-[minmax(0,240px)_1fr] gap-x-4 gap-y-0.5 py-2 border-b border-line last:border-0"><span class="text-[13px] text-ink3">${esc(labOf(f, r.answers))}</span><span class="text-[14px] whitespace-pre-line">${esc(fmtValue(r, f))}</span></div>`).join('');
     return `<div class="card p-4 sm:p-5"><div class="flex items-center justify-between mb-1"><b class="text-[15px]">${esc(s.title)}</b>${ro ? '' : `<button class="btn-g !h-8" data-a="goto" data-i="${si}">${ic('edit', 14)}Ändern</button>`}</div>${rows || '<div class="text-[13px] text-ink3 py-2">–</div>'}</div>`;
   }).join('');
   const sig = w => { const s = r.sig[w]; return `<div class="card p-4"><div class="text-[13px] text-ink3">Unterschrift ${w === 'kunde' ? 'Kunde' : 'Monteur'}</div>${w === 'kunde' && s.absent ? '<div class="text-[14px] mt-2">Kunde nicht anwesend</div>' : s.data ? `<div class="rounded-lg bg-white mt-2 p-2"><img src="${s.data}" class="h-16" alt=""></div>` : '<div class="text-ember text-[14px] mt-2">fehlt</div>'}<div class="text-[12px] text-ink3 mt-1">${esc(s.ort || '')}${s.ort ? ', ' : ''}${deDate(s.datum)}</div></div>`; };
@@ -178,7 +199,7 @@ function viewWizard() {
   const sc = screens(r), i = Math.min(UI.step, sc.length - 1), [kind, title, step] = sc[i], g = GEWERKE[r.gewerk];
   const bad = UI.bad || [];
   let body = '';
-  if (kind === 'step') body = `${step.sub ? `<p class="text-ink3 text-[14px] -mt-1 mb-5">${esc(step.sub)}</p>` : '<div class="mb-4"></div>'}<div class="space-y-5">${visFields(r, step).map(f => fieldHTML(r, f, bad)).join('')}</div>`;
+  if (kind === 'step') body = `${step.sub ? `<p class="${step.danger ? 'text-ember font-medium' : 'text-ink3'} text-[14px] -mt-1 mb-5">${esc(step.sub)}</p>` : '<div class="mb-4"></div>'}<div class="space-y-5">${visFields(r, step).map(f => fieldHTML(r, f, bad)).join('')}</div>`;
   else if (kind === 'fotos') body = `<p class="text-ink3 text-[14px] -mt-1 mb-5">Fotos von der Baustelle – Kamera oder Galerie.</p>${photosHTML(r)}`;
   else if (kind === 'sig_monteur') body = `<p class="text-ink3 text-[14px] -mt-1 mb-5">Ort, Datum und Unterschrift des Monteurs.</p>${sigHTML(r, 'monteur')}`;
   else if (kind === 'sig_kunde') body = `<p class="text-ink3 text-[14px] -mt-1 mb-5">Der Kunde bestätigt die ${r.type === 'service' ? 'Arbeiten' : 'Abnahme'}.</p>${sigHTML(r, 'kunde')}`;
@@ -192,7 +213,7 @@ function viewWizard() {
       <span class="text-[12px] text-ink3 whitespace-nowrap">Schritt ${i + 1}/${sc.length}</span></div>
     <div class="prog mt-4"><i style="width:${pct}%"></i></div>
     <div class="flex gap-6 mt-6">${side}
-      <section class="flex-1 min-w-0 max-w-3xl"><div class="card p-5 sm:p-7 fade-in"><h2 class="h-font text-[30px] sm:text-[34px] leading-tight mb-3">${esc(title)}</h2>${body}</div>
+      <section class="flex-1 min-w-0 max-w-3xl"><div class="card p-5 sm:p-7 fade-in ${step && step.danger ? '!border-ember border-2' : ''}" ${step && step.danger ? 'style="background:var(--t-red)"' : ''}><h2 class="h-font text-[30px] sm:text-[34px] leading-tight mb-3 ${step && step.danger ? 'text-ember' : ''}">${step && step.danger ? `<span class="inline-block align-middle mr-2">${ic('camera', 26)}</span>` : ''}${esc(title)}</h2>${body}</div>
         <div class="fixed lg:static left-0 right-0 bottom-0 z-30 lg:z-auto border-t lg:border-0 border-line lg:mt-4" style="background:color-mix(in srgb,var(--bg) 92%,transparent);padding-bottom:env(safe-area-inset-bottom)">
           <div class="max-w-3xl mx-auto px-4 lg:px-0 py-3 flex gap-2"><button class="btn-s" data-a="back">${ic('arrowL', 16)}Zurück</button>
           ${last ? `<button class="btn-p flex-1" data-a="finish">${ic('check', 17)}Abschließen &amp; PDF</button>` : `<button class="btn-p flex-1" data-a="next">Weiter ${ic('arrowR', 16)}</button>`}</div></div></section></div></div>`;
@@ -219,8 +240,8 @@ function viewProt() {
 }
 
 /* ---------- Einstellungen ---------- */
-const SET_TABS = [['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['monteure', 'Monteure', 'users'], ['zuschlag', 'Zuschläge', 'clock'], ['listen', 'Auswahllisten', 'list'], ['daten', 'Daten', 'download']];
-const LISTS = [['wpWolf', 'Wärmepumpen Wolf (SHK-Abnahme)'], ['wpBuderus', 'Wärmepumpen Buderus (SHK-Abnahme)'], ['systeme', 'Systeme (AC-Abnahme)'], ['grundDC', 'Service-Gründe DC'], ['grundAC', 'Service-Gründe AC'], ['grundSHK', 'Service-Gründe SHK'], ['fixDC', 'Behebung DC'], ['fixAC', 'Behebung AC'], ['fixSHK', 'Behebung SHK']];
+const SET_TABS = [['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['monteure', 'Monteure', 'users'], ['zuschlag', 'Zuschläge', 'clock'], ['systeme', 'Systeme (AC)', 'bolt'], ['wps', 'Wärmepumpen (SHK)', 'flame'], ['listen', 'Auswahllisten', 'list'], ['daten', 'Daten', 'download']];
+const LISTS = [['hkRaum', 'Räume (Heizkörper)'], ['hkTyp', 'Heizkörper-Typen'], ['hkHoehe', 'Heizkörper-Bauhöhen'], ['hkLaenge', 'Heizkörper-Baulängen'], ['grundDC', 'Service-Gründe DC'], ['grundAC', 'Service-Gründe AC'], ['grundSHK', 'Service-Gründe SHK'], ['fixDC', 'Behebung DC'], ['fixAC', 'Behebung AC'], ['fixSHK', 'Behebung SHK']];
 const sIn = (path, label, ph = '', type = 'text') => { const v = path.split('.').reduce((o, k) => (o || {})[k], S); return `<label class="block"><span class="lbl">${label}</span><input class="inp" data-s="${path}" type="${type}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" ${type === 'number' ? 'inputmode="decimal"' : ''}></label>`; };
 function setBody() {
   switch (UI.tab) {
@@ -232,9 +253,27 @@ function setBody() {
       <label class="block mt-6"><span class="lbl">Ecken-Rundung: ${S.design.radius} px</span><input type="range" min="4" max="24" step="1" class="w-full" data-s="design.radius" value="${S.design.radius}"></label>
       <div class="grid grid-cols-2 gap-4 mt-6">${[['fontHead', 'Schrift Überschriften', ['Instrument Serif', 'DM Serif Display', 'Fraunces', 'Geist', 'Inter']], ['fontBody', 'Schrift Text', ['Geist', 'Inter', 'DM Sans', 'Figtree', 'IBM Plex Sans', 'Instrument Sans']]].map(([k, l, fs]) => `<label class="block"><span class="lbl">${l}</span><select class="inp" data-s="design.${k}">${fs.map(f => `<option ${S.design[k] === f ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`).join('')}</div>
       <button class="btn-g mt-6" data-a="design-reset">${ic('refresh', 15)}Design zurücksetzen</button>`;
-    case 'monteure': return `<p class="text-ink3 text-[14px] mb-4">Monteure erscheinen als Vorschlag im Feld „Monteur“. Ist nur einer eingetragen, wird er automatisch eingesetzt.</p>
-      <div class="space-y-1.5">${S.monteure.map((m, i) => `<div class="flex items-center gap-2 rounded-[var(--rb)] bg-raised px-3 h-11"><span class="text-ink3">${ic('users', 16)}</span><span class="flex-1">${esc(m)}</span><button class="text-ink3 hover:text-ember" data-a="mont-del" data-i="${i}">${ic('trash', 15)}</button></div>`).join('') || '<div class="text-ink3 text-[14px]">Noch keine Monteure.</div>'}</div>
-      <div class="flex gap-2 mt-3"><input class="inp" id="mont-new" placeholder="Name"><button class="btn-s shrink-0" data-a="mont-add">${ic('plus', 16)}Hinzufügen</button></div>`;
+    case 'monteure': {
+      const gwBtn = (m, i, g) => `<button class="chip !h-7 !px-2 text-[12px] ${m.gw.includes(g) ? '!border-p !text-ink !bg-p/15' : ''}" data-a="mont-gw" data-i="${i}" data-g="${g}">${g}</button>`;
+      const row = (m, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2"><span class="text-ink3">${ic('users', 16)}</span><span class="flex-1 min-w-[120px] font-medium">${esc(m.name)}</span><span class="flex gap-1">${Object.keys(GEWERKE).map(g => gwBtn(m, i, g)).join('')}</span><button class="text-ink3 hover:text-ember ml-1" data-a="mont-del" data-i="${i}" aria-label="Löschen">${ic('trash', 15)}</button></div>`;
+      const groups = Object.entries(GEWERKE).map(([g, G]) => { const l = S.monteure.map((m, i) => [m, i]).filter(([m]) => m.gw.includes(g)); return `<div><div class="flex items-center gap-2 mb-2"><span style="color:${G.color}">${ic(G.icon, 16)}</span><b class="text-[14px]">${G.name}</b><span class="text-[12px] text-ink3">${l.length}</span></div><div class="space-y-1.5">${l.map(([m, i]) => row(m, i)).join('') || '<div class="text-[13px] text-ink3">Noch niemand zugeordnet.</div>'}</div></div>`; }).join('');
+      const none = S.monteure.map((m, i) => [m, i]).filter(([m]) => !m.gw.length);
+      return `<p class="text-ink3 text-[14px] mb-4">Monteure den Gewerken zuordnen (DC / AC / SHK antippen, auch mehrere). Im Protokoll erscheinen die Monteure des Gewerks als Schnellauswahl – Monteure anderer Gewerke lassen sich darunter zusätzlich auswählen.</p>
+      <div class="flex gap-2 mb-6"><input class="inp" id="mont-new" placeholder="Name des Monteurs"><button class="btn-s shrink-0" data-a="mont-add">${ic('plus', 16)}Hinzufügen</button></div>
+      <div class="space-y-6">${groups}${none.length ? `<div><b class="text-[14px]">Ohne Gewerk</b><div class="space-y-1.5 mt-2">${none.map(([m, i]) => row(m, i)).join('')}</div></div>` : ''}</div>`;
+    }
+    case 'wps': return `<p class="text-ink3 text-[14px] mb-4">Diese Hersteller und Modelle erscheinen bei der SHK-Abnahme. Je Zeile ein Modell – „Anderes Modell“ und „Sonstige“ sind immer möglich. Bitte bei neuen Modellen mit dem Herstellerdatenblatt abgleichen.</p>
+      <div class="space-y-4">${S.wps.map((x, i) => `<div class="rounded-[var(--r)] border border-line2 p-4">
+        <div class="flex gap-2"><input class="inp" data-wp="${i}" data-k="name" value="${esc(x.name)}" placeholder="Hersteller / Baureihe"><button class="btn-g !px-2.5 hover:!text-ember" data-a="wp-del" data-i="${i}" aria-label="Löschen">${ic('trash', 16)}</button></div>
+        <label class="block mt-3"><span class="lbl">Modelle</span><textarea class="inp" rows="5" data-wp="${i}" data-k="models">${esc(x.models.join('\n'))}</textarea></label>
+        <label class="flex items-center gap-2 text-[14px] text-ink2 mt-3"><input type="checkbox" data-wp="${i}" data-k="multi" ${x.multi ? 'checked' : ''}>Fragen, ob mehr als eine Wärmepumpe verbaut wurde (Kaskade)</label></div>`).join('')}</div>
+      <div class="flex flex-wrap gap-2 mt-4"><button class="btn-s" data-a="wp-add">${ic('plus', 16)}Hersteller hinzufügen</button><button class="btn-g" data-a="wp-reset">${ic('refresh', 15)}Auf Standard zurücksetzen</button></div>`;
+    case 'systeme': return `<p class="text-ink3 text-[14px] mb-4">Diese Systeme erscheinen bei der AC-Abnahme. Je Zeile eine Größe – Wechselrichter und Speicher werden als Vorauswahl angezeigt, „Andere Größe“ ist immer möglich. Bitte Größen bei neuen Modellen mit dem Herstellerdatenblatt abgleichen.</p>
+      <div class="space-y-4">${S.systems.map((x, i) => `<div class="rounded-[var(--r)] border border-line2 p-4">
+        <div class="flex gap-2"><input class="inp" data-sys="${i}" data-k="name" value="${esc(x.name)}" placeholder="Name des Systems"><button class="btn-g !px-2.5 hover:!text-ember" data-a="sys-del" data-i="${i}" aria-label="System löschen">${ic('trash', 16)}</button></div>
+        <div class="grid md:grid-cols-2 gap-3 mt-3"><label class="block"><span class="lbl">Wechselrichter-Größen</span><textarea class="inp" rows="5" data-sys="${i}" data-k="wr">${esc(x.wr.join('\n'))}</textarea></label><label class="block"><span class="lbl">Speichergrößen</span><textarea class="inp" rows="5" data-sys="${i}" data-k="sp">${esc(x.sp.join('\n'))}</textarea></label></div>
+        <div class="flex flex-wrap items-center gap-3 mt-3"><label class="flex items-center gap-2 text-[14px] text-ink2"><input type="checkbox" data-sys="${i}" data-k="multi" ${x.multi ? 'checked' : ''}>Fragen, ob mehr als ein Gerät verbaut wurde</label><input class="inp !h-9 !w-44" data-sys="${i}" data-k="unit" value="${esc(x.unit || '')}" placeholder="z. B. Powerwalls"></div></div>`).join('')}</div>
+      <div class="flex flex-wrap gap-2 mt-4"><button class="btn-s" data-a="sys-add">${ic('plus', 16)}System hinzufügen</button><button class="btn-g" data-a="sys-reset">${ic('refresh', 15)}Auf Standard zurücksetzen</button></div>`;
     case 'zuschlag': {
       const ex = [['Werktag', '2026-11-10'], ['Samstag', '2026-11-14'], ['Sonntag', '2026-11-15']];
       return `<p class="text-ink3 text-[14px] mb-4">Die App erfasst Stunden und Zuschlag in Prozent – abgerechnet wird im Büro. Sonntag und Feiertage werden am Datum automatisch erkannt.</p>

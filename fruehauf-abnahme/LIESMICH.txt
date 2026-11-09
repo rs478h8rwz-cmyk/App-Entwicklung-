@@ -1,4 +1,4 @@
-Frühauf – Abnahme & Service (Version 1.1)
+Frühauf – Abnahme & Service (Version 1.2)
 =========================================
 
 Eigenständige Web-App für Monteure: Baustellen-Abnahme und Serviceaufträge
@@ -19,6 +19,9 @@ Service: Grund, Behebung, Material, Einsatzzeiten (Ankunft/Abfahrt/Pause).
 Zuschläge werden automatisch erkannt: Samstag 150 %, Sonntag/Feiertag 200 %,
 im Notdienst jeweils + 50 % (auch werktags). Einstellbar unter Einstellungen → Zuschläge.
 
-Einstellungen: Firma & Logo, Design (hell/dunkel, Farben, Schriften), Monteure,
-Zuschläge & Bundesland, Auswahllisten (WP-Modelle, Systeme, Störungen, Behebungen),
+Einstellungen: Firma & Logo, Design (hell/dunkel, Farben, Schriften), Monteure je Gewerk
+(Schnellauswahl im Protokoll), Zuschläge & Bundesland, Systeme (AC: EcoFlow, Tesla, E3/DC mit
+Wechselrichter- und Speichergrößen), Wärmepumpen (SHK: Wolf, Buderus, Samsung mit Modellen),
+Auswahllisten (Heizkörper-Räume/Typen/Maße, Störungen, Behebungen) – alles frei änderbar.
+Größen bitte bei neuen Modellen mit dem Herstellerdatenblatt abgleichen.
 Datensicherung (Sicherung speichern / einspielen – auch zum Übertragen auf ein anderes Gerät).

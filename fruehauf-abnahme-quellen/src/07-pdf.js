@@ -62,7 +62,7 @@ async function buildPdf(r) {
   for (const s of visSteps(r)) {
     const fs = visFields(r, s).filter(f => f.type !== 'thumbs' && !skip.has(f.id) && filled(r.answers[f.id]));
     if (!fs.length) continue;
-    section(s.title); fs.forEach(f => row(f.label, fmtValue(r, f))); y += 4;
+    section(s.title); fs.forEach(f => row(labOf(f, r.answers), fmtValue(r, f))); y += 4;
   }
   /* Fotos */
   if (r.photos.length) {

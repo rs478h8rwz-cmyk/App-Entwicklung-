@@ -4,7 +4,7 @@
    Eigenständige App: Baustellen-Abnahme und Serviceeinsätze für DC, AC und SHK.
    Daten bleiben auf dem Gerät (IndexedDB), Protokolle als PDF teilen.
    ========================================================= */
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,24 +48,43 @@ const DEFAULTS = {
   state: 'NW',
   zuschlag: { sat: 150, sun: 200, hol: 200, not: 50 },
   lists: {
-    wpWolf: ['CHA-07', 'CHA-10', 'CHA-16', 'CHA-20'],
-    wpBuderus: ['WLW186i-4', 'WLW186i-5', 'WLW186i-7', 'WLW186i-11', 'WLW186i-13', 'WLW186i-15'],
-    systeme: ['EcoFlow', 'Tesla', 'SigEnergy'],
     grundDC: ['String ausgefallen', 'Modul beschädigt', 'Stecker/Kabel defekt', 'Tierschaden (Marder)', 'Befestigung lose', 'Verschmutzung/Verschattung'],
     grundAC: ['Fehlermeldung Wechselrichter', 'Speicher lädt nicht', 'Keine Verbindung zur App', 'Zähler/Messung falsch', 'Wallbox lädt nicht', 'FI/Sicherung ausgelöst'],
     grundSHK: ['Störung Wärmepumpe (Fehlercode)', 'Kein Warmwasser', 'Heizung bleibt kalt', 'Druckverlust/Undicht', 'Geräusche', 'Regelung/Einstellung'],
     fixDC: ['Stecker getauscht', 'Modul getauscht', 'Kabel erneuert', 'Befestigung nachgezogen', 'Anlage gereinigt'],
     fixAC: ['Neustart/Reset', 'Firmware aktualisiert', 'Einstellungen angepasst', 'Komponente getauscht', 'Sicherung/FI zurückgesetzt'],
+    hkRaum: ['Wohnzimmer', 'Esszimmer', 'Küche', 'Schlafzimmer', 'Kinderzimmer', 'Bad', 'Gäste-WC', 'Flur', 'Arbeitszimmer', 'Hauswirtschaftsraum', 'Keller', 'Dachgeschoss'],
+    hkTyp: ['Typ 10', 'Typ 11', 'Typ 20', 'Typ 21', 'Typ 22', 'Typ 33', 'Badheizkörper'],
+    hkHoehe: ['300 mm', '400 mm', '500 mm', '600 mm', '900 mm'],
+    hkLaenge: ['400 mm', '500 mm', '600 mm', '700 mm', '800 mm', '900 mm', '1000 mm', '1100 mm', '1200 mm', '1400 mm', '1600 mm', '1800 mm', '2000 mm', '2300 mm', '2600 mm', '3000 mm'],
     fixSHK: ['Anlage entlüftet', 'Druck aufgefüllt', 'Einstellungen angepasst', 'Bauteil getauscht', 'Filter/Schmutzfänger gereinigt']
   },
-  numbers: {}
+  numbers: {},
+  /* Wärmepumpen (SHK): Hersteller mit Modellen – in den Einstellungen frei änderbar */
+  wps: [
+    { id: 'wolf', name: 'Wolf CHA-Monoblock', models: ['CHA-07 (1,6–6,8 kW)', 'CHA-10 (2,2–9,8 kW)', 'CHA-16/20 (3,0–16,7 kW)', 'CHA-20/24 (3,1–19,6 kW)'], multi: true, unit: 'Wärmepumpen (Kaskade)' },
+    { id: 'buderus', name: 'Buderus WLW186i', models: ['WLW186i-4', 'WLW186i-5', 'WLW186i-7', 'WLW186i-11', 'WLW186i-13', 'WLW186i-15'], multi: true, unit: 'Wärmepumpen (Kaskade)' },
+    { id: 'samsung', name: 'Samsung EHS Mono R290', models: ['AE050 – 5 kW', 'AE080 – 8 kW', 'AE120 – 12 kW (1-phasig)', 'AE120 – 12 kW (3-phasig)', 'AE160 – 16 kW (1-phasig)', 'AE160 – 16 kW (3-phasig)'], multi: true, unit: 'Wärmepumpen (Kaskade)' }
+  ],
+  /* AC-Systeme: Wechselrichter- und Speichergrößen als Vorauswahl – in den Einstellungen frei änderbar */
+  systems: [
+    { id: 'ecoflow', name: 'EcoFlow PowerOcean', wr: ['3 kW (1-phasig)', '5 kW (1-phasig)', '6 kW (1-phasig)', '6 kW (3-phasig)', '8 kW (3-phasig)', '10 kW (3-phasig)', '12 kW (3-phasig)'],
+      sp: ['5 kWh (1 Modul)', '10 kWh (2 Module)', '15 kWh (3 Module)', '20 kWh (4 Module)', '25 kWh (5 Module)', '30 kWh (6 Module)', '35 kWh (7 Module)', '40 kWh (8 Module)', '45 kWh (9 Module)'], multi: true, unit: 'Wechselrichter' },
+    { id: 'tesla', name: 'Tesla Powerwall 3', wr: ['Powerwall 3 (1-phasig, integriert)', 'Powerwall 3P (3-phasig, integriert)'],
+      sp: ['13,5 kWh (1 Einheit)', '27 kWh (2 Einheiten)', '40,5 kWh (3 Einheiten)', '54 kWh (4 Einheiten)', '67,5 kWh (5 Einheiten)', '81 kWh (6 Einheiten)', '94,5 kWh (7 Einheiten)'], multi: true, unit: 'Powerwalls' },
+    { id: 'e3dc', name: 'E3/DC One', wr: ['12 kW Hybrid (integriert)'],
+      sp: ['one 6 – 5,5 kWh', 'one 9 – 8,7 kWh', 'one 12 – 11,8 kWh', 'erweitert – bis 15 kWh', '2 Türme – bis ca. 30 kWh'], multi: true, unit: 'Geräte' }
+  ]
 };
 let S = clone(DEFAULTS);
 function deepMerge(base, add) {
   if (Array.isArray(base) || typeof base !== 'object' || base === null) return add === undefined ? base : add;
   const out = { ...base }; for (const k in add) out[k] = k in base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k] !== null ? deepMerge(base[k], add[k]) : add[k]; return out;
 }
-async function loadSettings() { const s = await DB.get('kv', 'settings'); S = deepMerge(clone(DEFAULTS), s || {}); }
+async function loadSettings() { const s = await DB.get('kv', 'settings'); S = deepMerge(clone(DEFAULTS), s || {}); fixSettings(); }
+/* Ältere Stände: Monteure als reine Namen → mit Gewerk-Zuordnung */
+function fixSettings() { S.monteure = (S.monteure || []).map(m => (typeof m === 'string' ? { name: m, gw: [] } : m)); if (!Array.isArray(S.systems)) S.systems = clone(DEFAULTS.systems); if (!Array.isArray(S.wps)) S.wps = clone(DEFAULTS.wps); }
+const monteureFor = g => S.monteure.filter(m => m.gw.includes(g));
 let SAVE_T = null;
 function saveSettings() { clearTimeout(SAVE_T); SAVE_T = setTimeout(() => DB.put('kv', clone(S), 'settings'), 250); }
 

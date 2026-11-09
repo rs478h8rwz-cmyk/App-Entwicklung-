@@ -11,7 +11,7 @@ const KOPF_ABNAHME = [
   { id: 'kunde', label: 'Kundenname', type: 'text', req: true, ph: 'Vor- und Nachname' },
   { id: 'adresse', label: 'Adresse der Baustelle', type: 'text', req: true, ph: 'Straße, PLZ, Ort' },
   { id: 'datum', label: 'Datum', type: 'date', req: true },
-  { id: 'monteur', label: 'Monteur', type: 'text', req: true, ph: 'Name des Monteurs', list: 'monteure' },
+  { id: 'monteur', label: 'Monteur(e)', type: 'monteur', req: true, ph: 'Name(n) – oder unten antippen' },
   { id: 'projekt', label: 'Baustelle / Projektbezeichnung', type: 'text', ph: 'z. B. Projektnummer' },
   { id: 'tage', label: 'An welchen Tagen war der Monteur vor Ort?', type: 'multiday', req: true }
 ];
@@ -55,19 +55,23 @@ const ABNAHME_DC = [
 ];
 
 /* ---------- Abnahme AC ---------- */
+const sysOf = a => S.systems.find(x => x.id === a.system);
 const ABNAHME_AC = [
-  { title: 'Stromzähler', sub: 'Pflicht vor Beginn des Protokolls.', fields: [
-    { id: 'zaehler_foto', label: 'Wurde der Stromzähler fotografiert?', type: 'radio', req: true, opts: YN, hint: 'Zählernummer und Zählerstand müssen per Foto dokumentiert sein.' }], block: a => a.zaehler_foto === 'nein' && 'Bitte zuerst den Stromzähler fotografieren.' },
   { title: 'Kopfdaten', sub: 'Kunde, Baustelle und Einsatztage.', fields: KOPF_ABNAHME },
   { title: 'Installation', sub: '', fields: [
     { id: 'installation', label: 'Was wurde installiert?', type: 'radio', req: true, opts: [['pv', 'Photovoltaik'], ['wp', 'Wärmepumpe'], ['beides', 'Beides']] }] },
-  { title: 'System', sub: '', fields: [
-    { id: 'system', label: 'Welches System wurde verbaut?', type: 'radio', req: true, opts: () => o(S.lists.systeme).concat([['sonstige', 'Sonstige']]) },
+  { title: 'System & Wechselrichter', sub: 'Welches System wurde verbaut?', fields: [
+    { id: 'system', label: 'System', type: 'radio', req: true, opts: () => S.systems.map(x => [x.id, x.name]).concat([['sonstige', 'Sonstiges System']]) },
     { id: 'system_text', label: 'Welches System?', type: 'text', req: true, show: a => a.system === 'sonstige' },
-    { id: 'wr_groesse', label: 'Größe des Wechselrichters', type: 'text', req: true, ph: 'z. B. 10 kW' }] },
-  { title: 'Speicher & Wallbox', sub: '', fields: [
+    { id: 'wr_groesse', label: 'Wechselrichter', type: 'radio', req: true, show: a => sysOf(a) && sysOf(a).wr.length, opts: a => sysOf(a).wr.map(x => [x, x]).concat([['andere', 'Andere Größe']]) },
+    { id: 'wr_text', label: 'Größe des Wechselrichters', type: 'text', req: true, ph: 'z. B. 10 kW', show: a => !a.system || a.system === 'sonstige' || !(sysOf(a) && sysOf(a).wr.length) || a.wr_groesse === 'andere' },
+    { id: 'mehrere', label: a => `Wurde mehr als ein Gerät verbaut${sysOf(a) ? ` (${sysOf(a).unit || 'Geräte'})` : ''}?`, type: 'radio', req: true, show: a => sysOf(a) && sysOf(a).multi, opts: YN },
+    { id: 'anzahl', label: 'Wie viele insgesamt?', type: 'number', req: true, unit: 'Stk', show: a => sysOf(a) && sysOf(a).multi && a.mehrere === 'ja' }] },
+  { title: 'Speicher', sub: '', fields: [
     { id: 'speicher', label: 'Speicher vorhanden?', type: 'radio', req: true, opts: YN },
-    { id: 'speicher_groesse', label: 'Größe des Speichers', type: 'text', req: true, show: a => a.speicher === 'ja', ph: 'z. B. 10 kWh' },
+    { id: 'speicher_groesse', label: 'Speichergröße (gesamt)', type: 'radio', req: true, show: a => a.speicher === 'ja' && sysOf(a) && sysOf(a).sp.length, opts: a => sysOf(a).sp.map(x => [x, x]).concat([['andere', 'Andere Größe']]) },
+    { id: 'speicher_text', label: 'Größe des Speichers', type: 'text', req: true, ph: 'z. B. 10 kWh', show: a => a.speicher === 'ja' && (!(sysOf(a) && sysOf(a).sp.length) || a.speicher_groesse === 'andere') }] },
+  { title: 'Wallbox & Heizstab', sub: '', fields: [
     { id: 'wallbox', label: 'Wallbox vorhanden?', type: 'radio', req: true, opts: YN },
     { id: 'wallbox_typ', label: 'Welche Wallbox?', type: 'text', req: true, show: a => a.wallbox === 'ja' },
     { id: 'heizstab', label: 'Wurde ein Heizstab angeschlossen?', type: 'radio', req: true, opts: YN }] },
@@ -75,6 +79,8 @@ const ABNAHME_AC = [
     { id: 'zk', label: 'Zusätzlicher Zählerkasten?', type: 'radio', req: true, opts: YN },
     { id: 'zk_typ', label: 'Welcher Zählerkasten?', type: 'radio', req: true, show: a => a.zk === 'ja', opts: [['2reihig', '2-reihig'], ['3reihig', '3-reihig'], ['sonstige', 'Sonstige']] },
     { id: 'zk_text', label: 'Bitte beschreiben', type: 'text', req: true, show: a => a.zk === 'ja' && a.zk_typ === 'sonstige' }] },
+  { title: 'Stromzähler fotografiert?', sub: 'Pflicht: Zählernummer und Zählerstand müssen per Foto dokumentiert sein.', danger: true, fields: [
+    { id: 'zaehler_foto', label: 'Wurde der Stromzähler fotografiert?', type: 'radio', req: true, opts: YN, danger: true }], block: a => a.zaehler_foto === 'nein' && 'Bitte zuerst den Stromzähler fotografieren – sonst kann das Protokoll nicht abgeschlossen werden.' },
   { title: 'Material & Mehraufwand', sub: '', fields: [
     { id: 'material', label: 'Zusätzliches Material', type: 'items' },
     { id: 'mehraufwand', label: 'Ist Mehraufwand entstanden?', type: 'radio', req: true, opts: YN },
@@ -89,13 +95,15 @@ const ABNAHME_AC = [
 ];
 
 /* ---------- Abnahme SHK ---------- */
+const wpOf = a => S.wps.find(x => x.id === a.wp_hersteller);
 const ABNAHME_SHK = [
   { title: 'Kopfdaten', sub: 'Kunde, Baustelle und Einsatztage.', fields: KOPF_ABNAHME },
   { title: 'Wärmepumpe', sub: 'Welche Wärmepumpe wurde verbaut?', fields: [
-    { id: 'wp_hersteller', label: 'Hersteller', type: 'radio', req: true, opts: [['wolf', 'Wolf'], ['buderus', 'Buderus'], ['sonstige', 'Sonstige']] },
-    { id: 'wp_modell_wolf', label: 'Modell (Wolf)', type: 'radio', req: true, show: a => a.wp_hersteller === 'wolf', opts: () => o(S.lists.wpWolf) },
-    { id: 'wp_modell_buderus', label: 'Modell (Buderus)', type: 'radio', req: true, show: a => a.wp_hersteller === 'buderus', opts: () => o(S.lists.wpBuderus) },
-    { id: 'wp_modell', label: 'Hersteller und Modell', type: 'text', req: true, show: a => a.wp_hersteller === 'sonstige' }] },
+    { id: 'wp_hersteller', label: 'Hersteller / Baureihe', type: 'radio', req: true, opts: () => S.wps.map(x => [x.id, x.name]).concat([['sonstige', 'Sonstige']]) },
+    { id: 'wp_modell', label: 'Modell', type: 'radio', req: true, show: a => wpOf(a) && wpOf(a).models.length, opts: a => wpOf(a).models.map(x => [x, x]).concat([['andere', 'Anderes Modell']]) },
+    { id: 'wp_text', label: 'Hersteller und Modell', type: 'text', req: true, show: a => a.wp_hersteller === 'sonstige' || (wpOf(a) && !wpOf(a).models.length) || a.wp_modell === 'andere' },
+    { id: 'wp_mehrere', label: 'Wurde mehr als eine Wärmepumpe verbaut (Kaskade)?', type: 'radio', req: true, show: a => wpOf(a) && wpOf(a).multi, opts: YN },
+    { id: 'wp_anzahl', label: 'Wie viele Wärmepumpen insgesamt?', type: 'number', req: true, unit: 'Stk', show: a => wpOf(a) && wpOf(a).multi && a.wp_mehrere === 'ja' }] },
   { title: 'Rohr & Fittinge', sub: '', fields: [
     { id: 'rohr_m', label: 'Wie viele Meter Rohr wurden verwendet?', type: 'number', req: true, unit: 'm' },
     { id: 'rohr_verlegung', label: 'Wärmepumpenrohr verlegt', type: 'radio', req: true, opts: [['ueber', 'Überirdisch'], ['unter', 'Unterirdisch'], ['beides', 'Beides']] },
@@ -130,9 +138,7 @@ const ABNAHME_SHK = [
     { id: 'thermo_anz', label: 'Wie viele Thermostatköpfe?', type: 'number', req: true, unit: 'Stk', show: a => a.thermo === 'ja' }] },
   { title: 'Heizkörper', sub: '', fields: [
     { id: 'hk', label: 'Heizkörper getauscht?', type: 'radio', req: true, opts: YN },
-    { id: 'hk_anz', label: 'Wie viele Heizkörper?', type: 'number', req: true, unit: 'Stk', show: a => a.hk === 'ja' },
-    { id: 'hk_raum', label: 'Welche Räume?', type: 'text', req: true, show: a => a.hk === 'ja' },
-    { id: 'hk_dim', label: 'Welche Dimension?', type: 'text', req: true, show: a => a.hk === 'ja' }] },
+    { id: 'hk_liste', label: 'Welche Heizkörper? (je Heizkörper Raum, Typ und Maße)', type: 'heizkoerper', req: true, show: a => a.hk === 'ja' }] },
   { title: 'Inbetriebnahme', sub: '', fields: [
     { id: 'ibn_fehler', label: 'Gab es bei der Inbetriebnahme einen Fehler?', type: 'radio', req: true, opts: YN },
     { id: 'ibn_text', label: 'Welcher Fehler?', type: 'text', req: true, show: a => a.ibn_fehler === 'ja' },
@@ -155,7 +161,7 @@ function serviceSteps(g) {
       { id: 'adresse', label: 'Adresse', type: 'text', req: true, ph: 'Straße, PLZ, Ort' },
       { id: 'telefon', label: 'Telefon (optional)', type: 'phone' },
       { id: 'auftrag', label: 'Auftrags- / Ticketnummer (optional)', type: 'text' },
-      { id: 'monteur', label: 'Monteur', type: 'text', req: true, ph: 'Name des Monteurs', list: 'monteure' }] },
+      { id: 'monteur', label: 'Monteur(e)', type: 'monteur', req: true, ph: 'Name(n) – oder unten antippen' }] },
     { title: 'Einsatz & Zeiten', sub: 'Wann und wie lange war der Monteur vor Ort?', fields: [
       { id: 'notdienst', label: 'War es ein Notfall (Notdienst-Einsatz)?', type: 'radio', req: true, opts: YN, hint: () => `Zuschläge: Samstag ${S.zuschlag.sat} %, Sonntag ${S.zuschlag.sun} %, Feiertag ${S.zuschlag.hol} % – im Notdienst jeweils + ${S.zuschlag.not} % (auch werktags).` },
       { id: 'einsaetze', label: 'Einsätze', type: 'einsaetze', req: true }] },
