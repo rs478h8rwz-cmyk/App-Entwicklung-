@@ -12,11 +12,14 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 @media (prefers-reduced-motion: reduce){#bg-anim i{animation:none}}
 @media print{#bg-anim{display:none}}
 </style>`);
+function bgAnimOn() { if (typeof PERSONAL === 'undefined' || !PERSONAL) return true; if (PERSONAL.bgAnim === false) return false; if (PERSONAL.bgAnim === true) return true; return !(matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) >= 700); }
+function bgAnimApply() { const el = document.getElementById('bg-anim'); if (bgAnimOn()) { if (!el) document.body.insertAdjacentHTML('afterbegin', '<div id="bg-anim" aria-hidden="true"><i></i><i></i><i></i></div>'); bgAnimTone && bgAnimTone(); } else if (el) el.remove(); }
 document.body.insertAdjacentHTML('afterbegin', '<div id="bg-anim" aria-hidden="true"><i></i><i></i><i></i></div>');
 /* Stärke je Ansicht: im dunklen Modus etwas kräftiger, im hellen sehr zart */
 function bgAnimTone() { const el = $('#bg-anim'); if (el) el.style.setProperty('--bgo', appDark() ? '.24' : '.15'); }
 { const _at = applyTheme; applyTheme = function () { const r = _at.apply(this, arguments); bgAnimTone(); return r; }; }
 bgAnimTone();
+setTimeout(() => { try { bgAnimApply(); } catch (e) {} }, 0);
 
 /* Leistung: Haus-Animation pausieren, solange das Haus nicht zu sehen ist; nur jeder dritte Stern funkelt;
    im Hintergrund (App nicht sichtbar) alles anhalten */
@@ -32,3 +35,25 @@ document.addEventListener('visibilitychange', () => document.documentElement.cla
 
 /* Modulplan offen: nach dem Schließen der Tastatur Ansicht oben halten (Seite ist dort fixiert) */
 document.addEventListener('focusout', e => { if (!$('#roof-ed') || !e.target.closest || !e.target.closest('#roof-ed')) return; setTimeout(() => { const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; window.scrollTo(0, 0); }, 120); });
+
+/* Einstellungen → Ansicht: Tastatur-Hilfe (zum Eingrenzen auf dem iPad) */
+{
+  const _sa = SET.ansicht;
+  SET.ansicht = () => {
+    const tab = isTablet ? isTablet() : false, row = (k, l, h, on) => toggleRow(l, '', h, { action: 'kbdh', data: `data-k="${k}"`, on });
+    const pillOn = PERSONAL.kbdPill === true || (PERSONAL.kbdPill !== false && !tab), bgOn = bgAnimOn(), spOn = (S.design.splash || {}).on !== false;
+    return _sa() + sCard('info', 'Tastatur-Hilfe', 'Öffnet sich auf dem iPad keine Tastatur? Hier testen und einzeln abschalten.',
+      `<label class="block"><span class="lbl">Testfeld – hier antippen</span><input class="inp" id="kbd-test" placeholder="Hier tippen …" autocomplete="off"></label>
+      ${row('kbdPill', 'Knopf „ABC Buchstaben“ bei Zahlenfeldern', 'Auf dem iPad standardmäßig aus.', pillOn)}
+      ${row('bgAnim', 'Bewegter Hintergrund', 'Auf dem iPad standardmäßig aus.', bgOn)}
+      ${row('splash', 'Startanimation', 'Haus und Logo beim Öffnen der App.', spOn)}`);
+  };
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('[data-a="kbdh"]'); if (!a) return;
+  const k = a.dataset.k;
+  if (k === 'kbdPill') { const tab = isTablet(), cur = PERSONAL.kbdPill === true || (PERSONAL.kbdPill !== false && !tab); PERSONAL.kbdPill = !cur; savePersonal(); }
+  else if (k === 'bgAnim') { PERSONAL.bgAnim = !bgAnimOn(); savePersonal(); bgAnimApply(); }
+  else if (k === 'splash') { S.design.splash = { ...(S.design.splash || {}), on: (S.design.splash || {}).on === false }; saveSettings(); }
+  render();
+});

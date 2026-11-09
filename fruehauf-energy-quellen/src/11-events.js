@@ -264,6 +264,7 @@ document.addEventListener('click', async e => {
 (async function init() {
   await loadAll();
   await loadPersonal();
+  try { bgAnimApply(); } catch (e) {}
   applyTheme();
   try { splashStart(); } catch (e) {}
   ensureCoverPalette();

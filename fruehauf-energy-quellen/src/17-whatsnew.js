@@ -13,8 +13,11 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.09', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur-Hilfe für das iPad', 'Auf dem iPad sind der Knopf „ABC Buchstaben“ und der bewegte Hintergrund ausgeschaltet. Unter Einstellungen → Ansicht → Tastatur-Hilfe: Testfeld und Schalter zum Eingrenzen.']
+  ] },
   { version: '2.08', date: '2026-11-09', items: [
-    ['kbd', 'Tastatur auf dem iPad', 'Behoben: Auf dem iPad öffnete sich die Tastatur beim Antippen von Eingabefeldern nicht mehr. Die Startanimation hat einen Knopf „Überspringen“ und endet sofort bei Berührung.']
+    ['kbd', 'Tastatur auf dem iPad', 'Tastatur auf dem iPad: Der Knopf „ABC Buchstaben“ und der bewegte Hintergrund sind auf dem iPad ausgeschaltet; unter Einstellungen → Ansicht → Tastatur-Hilfe gibt es ein Testfeld und Schalter. Die Startanimation hat einen Knopf „Überspringen“ und endet sofort bei Berührung.']
   ] },
   { version: '2.07', date: '2026-11-09', items: [
     ['anim', 'Startanimation', 'Beim Öffnen erscheint Ihr Haus – nacheinander kommen Photovoltaik, Speicher, Wärmepumpe und E-Auto dazu. Dann zoomt es auf Ihr Logo und hinein in die App. Logo und An/Aus unter Einstellungen → Startseite & Wetter.'],

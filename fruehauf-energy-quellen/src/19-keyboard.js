@@ -41,7 +41,8 @@ function kbdShow(el) {
   }
   kbdEl = el; kbdBtn.style.display = 'block'; kbdPlace();
 }
-const kbdTouch = () => matchMedia('(pointer: coarse)').matches;
+const isTablet = () => matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) >= 700;
+const kbdTouch = () => matchMedia('(pointer: coarse)').matches && !(PERSONAL && PERSONAL.kbdPill === false) && !(isTablet() && PERSONAL.kbdPill !== true);
 document.addEventListener('focusin', e => {
   const el = e.target;
   if (!kbdNumeric(el)) { if (el !== kbdBtn) kbdHide(); return; }
