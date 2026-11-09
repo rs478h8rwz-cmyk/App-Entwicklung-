@@ -1,0 +1,704 @@
+const IP = {
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  gear: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  trash: '<path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  arrowR: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  arrowL: '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+  chevD: '<path d="m6 9 6 6 6-6"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  bolt: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+  pen: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+  share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/>',
+  eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  hard: '<path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><path d="M14 6a6 6 0 0 1 6 6v3"/>',
+  siren: '<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1-1v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1a1 1 0 0 0 1 1Z"/><path d="M21 12h1M18.5 4.5 18 5M2 12h1M12 2v1M4.93 4.93l.71.71"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  thumb: '<path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  stop: '<rect x="5" y="5" width="14" height="14" rx="2"/>',
+  coffee: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  chevL: '<path d="m15 18-6-6 6-6"/>',
+  chevR: '<path d="m9 18 6-6-6-6"/>',
+  palm: '<path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/><path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/><path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/><path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>',
+  heartp: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
+};
+
+/* =========================================================
+   Frühauf – Stempeluhr
+   Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
+   Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
+   ========================================================= */
+const APP_VERSION = '1.0';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = (p = 'x') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clone = o => JSON.parse(JSON.stringify(o));
+const pad2 = n => String(n).padStart(2, '0');
+const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+const deDate = iso => { if (!iso) return '–'; const [y, m, d] = String(iso).slice(0, 10).split('-'); return d ? `${d}.${m}.${y}` : iso; };
+const WD = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+const wdOf = iso => WD[new Date(iso + 'T12:00').getDay()];
+const num = (v, d = 0) => (isFinite(v) ? Number(v).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }) : '–');
+const hrs = h => (isFinite(h) && h > 0 ? `${num(h, h % 1 ? 2 : 0)} Std.` : '–');
+const ic = (n, s = 18, sw = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IP[n] || ''}</svg>`;
+const wait = t => new Promise(r => setTimeout(r, t));
+
+/* ---------- Speicher (IndexedDB) ---------- */
+const DB = {
+  db: null,
+  open() {
+    return new Promise(res => {
+      try {
+        const rq = indexedDB.open('fruehauf-stempel', 1);
+        rq.onupgradeneeded = () => { const d = rq.result; if (!d.objectStoreNames.contains('days')) d.createObjectStore('days', { keyPath: 'iso' }); if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv'); };
+        rq.onsuccess = () => { DB.db = rq.result; res(); }; rq.onerror = () => res();
+      } catch (e) { res(); }
+    });
+  },
+  req(store, mode, fn) { return new Promise((res, rej) => { const tx = DB.db.transaction(store, mode), r = fn(tx.objectStore(store)); tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }); },
+  mem: { days: new Map(), kv: new Map() },
+  get(store, key) { return DB.db ? DB.req(store, 'readonly', s => s.get(key)) : Promise.resolve(DB.mem[store].get(key)); },
+  put(store, val, key) { if (!DB.db) { DB.mem[store].set(key ?? val.iso, val); return Promise.resolve(); } return DB.req(store, 'readwrite', s => (key !== undefined ? s.put(val, key) : s.put(val))); },
+  del(store, key) { if (!DB.db) { DB.mem[store].delete(key); return Promise.resolve(); } return DB.req(store, 'readwrite', s => s.delete(key)); },
+  all(store) { return DB.db ? DB.req(store, 'readonly', s => s.getAll()) : Promise.resolve([...DB.mem[store].values()]); }
+};
+
+/* ---------- Einstellungen ---------- */
+const DEFAULTS = {
+  company: { name: 'Frühauf Solar', street: '', city: '', phone: '', email: '', logo: 'logo.png' },
+  design: { mode: 'system', primary: '#0E7C66', secondary: '#F5A524', radius: 14, fontBody: 'Geist', fontHead: 'Instrument Serif' },
+  person: { name: '', nr: '' },
+  recipient: { name: 'Jule', phone: '' },
+  state: 'NW',
+  /* Sollzeiten je Wochentag (0 = Sonntag) */
+  hours: { 1: { on: true, von: '07:30', bis: '16:30' }, 2: { on: true, von: '07:30', bis: '16:30' }, 3: { on: true, von: '07:30', bis: '16:30' }, 4: { on: true, von: '07:30', bis: '16:30' }, 5: { on: true, von: '07:30', bis: '13:45' }, 6: { on: false, von: '', bis: '' }, 0: { on: false, von: '', bis: '' } },
+  minPause: 30,            // wird immer abgezogen – längere Pausen werden voll abgezogen
+  pauseOnlyOver6: false,   // optional: Mindestpause erst ab 6 Std. Arbeit
+  sites: [],               // zuletzt genutzte Baustellen (Vorschläge)
+  vacation: { perYear: 30, carry: 0 },
+  balance: { from: '', min: 0 },   // Überstundenkonto: Startdatum und Startwert (Minuten)
+  gps: false,              // Standort beim Stempeln merken
+  admin: null              // eigenes Admin-Passwort (nur als PBKDF2-Hash)
+};
+/* Admin-Passwort für nachträgliche Änderungen – nur als PBKDF2-Hash, nie im Klartext */
+const ADMIN_DEFAULT = {"salt": "98ca4569816c7cf7ab78c9ca05af31d3", "hash": "a10b07b319ad55321647f139e3ab13d26e8f75d2b8949e49870d768843f71394", "iter": 150000};
+const adminCfg = () => (S.admin && S.admin.hash ? S.admin : ADMIN_DEFAULT);
+async function pbkdf2(pw, saltHex, iter) {
+  const enc = new TextEncoder(), key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const salt = new Uint8Array(saltHex.match(/../g).map(h => parseInt(h, 16)));
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, key, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function checkAdmin(pw) { const a = adminCfg(); return (await pbkdf2(pw, a.salt, a.iter)) === a.hash; }
+async function setAdminPassword(pw) { const salt = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join(''); S.admin = { salt, hash: await pbkdf2(pw, salt, 150000), iter: 150000 }; saveSettings(); }
+let S = clone(DEFAULTS);
+function deepMerge(base, add) {
+  if (Array.isArray(base) || typeof base !== 'object' || base === null) return add === undefined ? base : add;
+  const out = { ...base }; for (const k in add) out[k] = k in base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k] !== null ? deepMerge(base[k], add[k]) : add[k]; return out;
+}
+async function loadSettings() { const s = await DB.get('kv', 'settings'); S = deepMerge(clone(DEFAULTS), s || {}); fixSettings(); }
+/* Fehlende Wochentage ergänzen */
+function fixSettings() { for (const k of [0, 1, 2, 3, 4, 5, 6]) if (!S.hours[k]) S.hours[k] = clone(DEFAULTS.hours[k]); }
+let SAVE_T = null;
+function saveSettings() { clearTimeout(SAVE_T); SAVE_T = setTimeout(() => DB.put('kv', clone(S), 'settings'), 250); }
+
+/* ---------- Design (wie Wirtschaftlichkeits-App) ---------- */
+const hex2rgb = h => { const m = /^#?([\da-f]{6})$/i.exec(h || ''); const n = m ? parseInt(m[1], 16) : 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const rgb2hex = a => '#' + a.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => { const x = hex2rgb(a), y = hex2rgb(b); return rgb2hex(x.map((v, i) => v + (y[i] - v) * t)); };
+const rgba = (h, a) => { const [r, g, b] = hex2rgb(h); return `rgba(${r},${g},${b},${a})`; };
+const appDark = () => S.design.mode === 'dark' || (S.design.mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+function applyTheme() {
+  const d = S.design, dark = appDark(), st = document.documentElement.style, set = (k, v) => st.setProperty(k, v);
+  const P = dark ? mix(d.primary, '#ffffff', 0.28) : d.primary;
+  set('--p', P); set('--p-rgb', hex2rgb(P).join(' ')); set('--s', d.secondary); set('--s-rgb', hex2rgb(d.secondary).join(' '));
+  if (dark) {
+    const base = '#0A0E13';
+    set('--bg', base); set('--card', mix(base, '#ffffff', 0.035)); set('--raised', mix(base, '#ffffff', 0.07)); set('--field', mix(base, '#000000', 0.15));
+    set('--ink', '#ECEFF3'); set('--ink2', '#A7B2BE'); set('--ink3', '#7A8692'); set('--line', 'rgba(255,255,255,.07)'); set('--line2', 'rgba(255,255,255,.13)');
+    set('--p-light', rgba(P, 0.15)); set('--t-red', 'rgba(217,72,43,.15)'); set('--t-yel', rgba(d.secondary, 0.13)); set('--yel-ink', mix(d.secondary, '#ffffff', 0.35)); set('--red-ink', '#F08A6E');
+    set('--btn', '#ECEFF3'); set('--btn-ink', base); set('--btn-h', '#ffffff'); set('--hi', '.035'); set('--scheme', 'dark');
+  } else {
+    const base = '#F4F6F8', ink = '#0F1B26';
+    set('--bg', base); set('--card', '#ffffff'); set('--raised', mix(base, ink, 0.035)); set('--field', '#ffffff');
+    set('--ink', ink); set('--ink2', mix(ink, '#ffffff', 0.22)); set('--ink3', mix(ink, '#ffffff', 0.42)); set('--line', rgba(ink, 0.09)); set('--line2', rgba(ink, 0.16));
+    set('--p-light', mix(d.primary, '#ffffff', 0.88)); set('--t-red', mix('#D9482B', '#ffffff', 0.9)); set('--t-yel', mix(d.secondary, '#ffffff', 0.86)); set('--yel-ink', mix(d.secondary, '#000000', 0.45)); set('--red-ink', mix('#D9482B', '#000000', 0.25));
+    set('--btn', d.primary); set('--btn-ink', '#ffffff'); set('--btn-h', mix(d.primary, '#000000', 0.15)); set('--hi', '0'); set('--scheme', 'light');
+  }
+  set('--r', d.radius + 'px'); set('--rb', Math.max(4, Math.round(d.radius * 0.65)) + 'px');
+  set('--fb', `"${d.fontBody}"`); set('--fh', `"${d.fontHead}"`);
+  const m = $('meta[name=theme-color]'); if (m) m.content = dark ? '#0A0E13' : '#F4F6F8';
+}
+
+/* ---------- Feiertage (bundesweit + Bundesland) ---------- */
+const STATES = [['BW', 'Baden-Württemberg'], ['BY', 'Bayern'], ['BE', 'Berlin'], ['BB', 'Brandenburg'], ['HB', 'Bremen'], ['HH', 'Hamburg'], ['HE', 'Hessen'], ['MV', 'Mecklenburg-Vorpommern'], ['NI', 'Niedersachsen'], ['NW', 'Nordrhein-Westfalen'], ['RP', 'Rheinland-Pfalz'], ['SL', 'Saarland'], ['SN', 'Sachsen'], ['ST', 'Sachsen-Anhalt'], ['SH', 'Schleswig-Holstein'], ['TH', 'Thüringen']];
+function easter(y) { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, mo - 1, da, 12); }
+function holiday(iso, st = S.state) {
+  if (!iso) return ''; const d = new Date(iso + 'T12:00'), y = d.getFullYear(), E = easter(y), off = n => { const x = new Date(E); x.setDate(x.getDate() + n); return x; };
+  const same = (a, b) => a.getMonth() === b.getMonth() && a.getDate() === b.getDate(), md = (m, dd) => new Date(y, m - 1, dd, 12);
+  const bb = (() => { const x = md(11, 22); while (x.getDay() !== 3) x.setDate(x.getDate() - 1); return x; })();
+  const list = [[md(1, 1), 'Neujahr'], [off(-2), 'Karfreitag'], [off(1), 'Ostermontag'], [md(5, 1), 'Tag der Arbeit'], [off(39), 'Christi Himmelfahrt'], [off(50), 'Pfingstmontag'], [md(10, 3), 'Tag der Deutschen Einheit'], [md(12, 25), '1. Weihnachtstag'], [md(12, 26), '2. Weihnachtstag'],
+    [md(1, 6), 'Heilige Drei Könige', 'BW BY ST'], [md(3, 8), 'Frauentag', 'BE MV'], [off(60), 'Fronleichnam', 'BW BY HE NW RP SL'], [md(8, 15), 'Mariä Himmelfahrt', 'SL'], [md(9, 20), 'Weltkindertag', 'TH'],
+    [md(10, 31), 'Reformationstag', 'BB HB HH MV NI SN ST SH TH'], [md(11, 1), 'Allerheiligen', 'BW BY NW RP SL'], [bb, 'Buß- und Bettag', 'SN']];
+  const hit = list.find(([x, , only]) => same(x, d) && (!only || only.split(' ').includes(st)));
+  return hit ? hit[1] : '';
+}
+/* ---------- Toast, Dialoge ---------- */
+function toast(msg, kind = 'ok', ms = 3200) {
+  const t = document.createElement('div');
+  t.className = 'pointer-events-auto card px-4 py-3 text-[14px] flex items-center gap-2.5 shadow-xl fade-in';
+  t.innerHTML = `<span class="${kind === 'err' ? 'text-ember' : kind === 'warn' ? 'text-yel-ink' : 'text-p'}">${ic(kind === 'ok' ? 'check' : 'alert', 17)}</span><span>${esc(msg)}</span>`;
+  $('#toasts').appendChild(t); setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 320); }, ms);
+}
+function modal(html, opts = {}) {
+  $('#modal').innerHTML = `<div class="fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto overscroll-contain" style="padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))" data-modal-bg>
+    <div class="card w-full ${opts.wide ? 'max-w-2xl' : 'max-w-lg'} p-6 sm:p-7 fade-in my-4 sm:my-auto relative">
+      <button class="absolute right-4 top-4 w-9 h-9 rounded-full grid place-items-center text-ink3 hover:bg-raised" data-a="modal-close" aria-label="Schließen">${ic('x', 18)}</button>${html}</div></div>`;
+}
+const closeModal = () => { $('#modal').innerHTML = ''; };
+function confirmDlg(title, text, yes = 'Ja', danger = false) {
+  return new Promise(res => {
+    modal(`<h3 class="text-[20px] font-semibold pr-8">${esc(title)}</h3><p class="text-ink2 text-[14px] mt-2">${esc(text)}</p>
+      <div class="flex flex-col sm:flex-row gap-2 mt-6"><button class="btn-p sm:flex-1 ${danger ? '!bg-[#D9482B] !text-white' : ''}" id="cf-yes">${esc(yes)}</button><button class="btn-s sm:flex-1" id="cf-no">Abbrechen</button></div>`);
+    $('#cf-yes').onclick = () => { closeModal(); res(true); }; $('#cf-no').onclick = () => { closeModal(); res(false); };
+  });
+}
+document.addEventListener('click', e => { if (e.target.matches('[data-modal-bg]') || e.target.closest('[data-a="modal-close"]')) closeModal(); });
+
+/* Zoom per Doppeltipp/zwei Finger unterbinden (App-Gefühl) */
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+
+/* Bilder verkleinern (Fotos, Logo) */
+async function shrinkImage(file, max = 1600, q = 0.82, type = 'image/jpeg') {
+  const url = URL.createObjectURL(file);
+  try {
+    const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas');
+    c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+    const x = c.getContext('2d'); if (type === 'image/jpeg') { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); } x.drawImage(im, 0, 0, c.width, c.height);
+    return { data: c.toDataURL(type, q), w: c.width, h: c.height };
+  } finally { URL.revokeObjectURL(url); }
+}
+
+/* =========================================================
+   Zeiten und Regeln
+   Ein Tag besteht aus Abschnitten je Baustelle (von–bis) und gestempelten Pausen.
+   Lücken zwischen zwei Abschnitten (Gehen → wieder Kommen) zählen als Pause.
+   Pausenregel: Es wird immer mindestens die Mindestpause (30 Min.) abgezogen;
+   ist die Pause länger, wird die tatsächliche Pause abgezogen.
+   ========================================================= */
+const toMin = t => { if (!t) return null; const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
+const nowHM = () => { const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const hm = m => { if (m === null || m === undefined || isNaN(m)) return '–'; const neg = m < 0; m = Math.abs(Math.round(m)); return `${neg ? '−' : ''}${Math.floor(m / 60)}:${pad2(m % 60)}`; };
+const hmPlus = m => (Math.round(m) > 0 ? '+' + hm(m) : hm(m));
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+const mondayOf = iso => addDays(iso, -((new Date(iso + 'T12:00').getDay() + 6) % 7));
+function isoWeek(iso) { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); const y = d.getFullYear(), w1 = new Date(y, 0, 4, 12); return { w: 1 + Math.round(((d - w1) / 864e5 - 3 + ((w1.getDay() + 6) % 7)) / 7), y }; }
+const weekOf = mon => [0, 1, 2, 3, 4, 5, 6].map(i => addDays(mon, i));
+const monthOf = iso => { const [y, m] = iso.split('-').map(Number), n = new Date(y, m, 0).getDate(); return Array.from({ length: n }, (_, i) => `${y}-${pad2(m)}-${pad2(i + 1)}`); };
+const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const span = (a, b) => { const x = toMin(a), y = toMin(b); if (x === null || y === null) return 0; let m = y - x; if (m < 0) m += 1440; return m; };
+const overlap = (a1, b1, a2, b2) => { const s = Math.max(toMin(a1), toMin(a2)), e = Math.min(toMin(b1), toMin(b2)); return Math.max(0, e - s); };
+
+const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun']];
+const typeName = t => (DAY_TYPES.find(x => x[0] === t) || DAY_TYPES[0])[1];
+let DAYS = {};   // iso → { iso, type, segs:[{site,von,bis}], pauses:[{von,bis}], note, geo:[] }
+const dayOf = iso => DAYS[iso] || { iso, type: holiday(iso) ? 'feiertag' : 'work', segs: [], pauses: [], note: '', geo: [] };
+const hasData = d => !!((d.segs || []).length || (d.pauses || []).length || d.note || (DAYS[d.iso] && d.type !== 'work'));
+const curSeg = d => { const s = d.segs || []; return s.length && !s[s.length - 1].bis ? s[s.length - 1] : null; };
+const openPause = d => (d.pauses || []).find(p => p.von && !p.bis) || null;
+
+/* Mindestpause für eine Nettozeit */
+const minPauseFor = net => (S.pauseOnlyOver6 && net <= 360 ? 0 : +S.minPause || 0);
+/* Sollzeit eines Tages (Arbeitszeit ohne Pause) */
+function sollOf(iso) {
+  if (holiday(iso)) return 0;
+  const h = S.hours[new Date(iso + 'T12:00').getDay()]; if (!h || !h.on || !h.von || !h.bis) return 0;
+  const b = span(h.von, h.bis); return Math.max(0, b - minPauseFor(b - (+S.minPause || 0)));
+}
+function calcDay(d, now = nowHM()) {
+  const iso = d.iso, today = iso === isoToday(), soll = sollOf(iso);
+  const r = { soll, start: '', end: '', brutto: 0, pause: 0, abzug: 0, netto: 0, credit: 0, diff: 0, open: false, inPause: false, missingEnd: false, sites: [] };
+  if (d.type !== 'work') { r.credit = d.type === 'frei' ? 0 : soll; r.diff = r.credit - soll; return r; }
+  const segs = (d.segs || []).filter(s => s.von).slice().sort((a, b) => toMin(a.von) - toMin(b.von));
+  if (!segs.length) { r.diff = iso < isoToday() ? -soll : 0; return r; }
+  const last = segs[segs.length - 1], endOf = s => s.bis || (today ? now : null);
+  r.start = segs[0].von; r.open = !last.bis; r.missingEnd = r.open && !today; r.end = last.bis || '';
+  const end = endOf(last); r.brutto = end ? span(r.start, end) : 0;
+  let gaps = 0; for (let i = 1; i < segs.length; i++) if (segs[i - 1].bis) gaps += span(segs[i - 1].bis, segs[i].von);
+  let stamped = 0; const pz = (d.pauses || []).filter(p => p.von).map(p => ({ von: p.von, bis: p.bis || (today && r.open ? now : p.von) }));
+  for (const p of pz) stamped += span(p.von, p.bis);
+  r.inPause = today && r.open && !!openPause(d);
+  r.pause = gaps + stamped;
+  r.abzug = r.brutto ? Math.min(r.brutto, Math.max(r.pause, minPauseFor(r.brutto - r.pause))) : 0;
+  r.netto = Math.max(0, r.brutto - r.abzug);
+  r.diff = r.missingEnd ? 0 : r.netto - soll;
+  /* Stunden je Baustelle: Abschnitt minus Pausen darin, Mindestpausen-Rest anteilig */
+  const per = {};
+  for (const s of segs) { const e = endOf(s); if (!e) continue; let m = span(s.von, e); for (const p of pz) m -= overlap(s.von, e, p.von, p.bis); const k = s.site || 'Ohne Baustelle'; per[k] = (per[k] || 0) + Math.max(0, m); }
+  const tot = Object.values(per).reduce((a, b) => a + b, 0), extra = Math.max(0, tot - r.netto);
+  r.sites = Object.entries(per).map(([site, m]) => ({ site, min: Math.round(m - (tot ? extra * m / tot : 0)) }));
+  return r;
+}
+function calcRange(isos) {
+  const days = isos.map(iso => { const d = dayOf(iso); return { d, c: calcDay(d) }; });
+  const sum = k => days.reduce((s, x) => s + x.c[k], 0), sites = {};
+  days.forEach(x => x.c.sites.forEach(s => { sites[s.site] = (sites[s.site] || 0) + s.min; }));
+  return { days, netto: sum('netto'), credit: sum('credit'), soll: sum('soll'), diff: sum('diff'), pause: sum('pause'), abzug: sum('abzug'), sites, count: t => days.filter(x => x.d.type === t && x.c.soll > 0).length };
+}
+/* Überstundenkonto: Startwert + Differenzen aller Tage ab Startdatum bis gestern (heute erst nach Gehen) */
+function balance() {
+  const b = S.balance || {}, from = b.from || '2000-01-01', today = isoToday(); let m = +b.min || 0;
+  const isos = new Set(Object.keys(DAYS).filter(i => i >= from && i <= today));
+  /* Tage ohne Eintrag mit Soll zählen nur, wenn das Konto ein Startdatum hat */
+  if (b.from) { for (let i = from; i < today; i = addDays(i, 1)) isos.add(i); }
+  for (const iso of isos) { const d = dayOf(iso), c = calcDay(d); if (iso === today && c.open) continue; m += c.diff; }
+  return m;
+}
+function vacation(year = new Date().getFullYear()) {
+  let used = 0; for (const iso in DAYS) if (iso.startsWith(year + '-') && DAYS[iso].type === 'urlaub' && sollOf(iso) > 0) used++;
+  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0); return { used, total, left: total - used };
+}
+async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }
+function rememberSite(name) { const n = (name || '').trim(); if (!n) return; S.sites = [n].concat((S.sites || []).filter(x => x !== n)).slice(0, 40); saveSettings(); }
+
+/* =========================================================
+   Oberfläche
+   ========================================================= */
+const UI = { route: 'home', mon: '', tab: 'person', editUntil: 0, openDay: '' };
+let DEVICE = { admin: false };   // Admin-Gerät: dauerhaft freigeschaltet (nur auf diesem Gerät, nicht in der Sicherung)
+const canEdit = () => DEVICE.admin || Date.now() < UI.editUntil;
+
+function logoMark(h = 34) {
+  const l = S.company.logo;
+  return l ? `<span class="inline-grid place-items-center rounded-[10px] bg-white px-2" style="height:${h}px"><img src="${esc(l)}" alt="" style="max-height:${h - 8}px;max-width:${h * 3.2}px"></span>` : `<span class="w-9 h-9 rounded-[10px] grid place-items-center text-white" style="background:rgb(var(--p-rgb))">${ic('clock', 18, 2.2)}</span>`;
+}
+function shell(inner) {
+  const nav = [['home', 'Heute', 'clock', '#/'], ['week', 'Woche', 'cal', '#/woche'], ['settings', 'Einstellungen', 'gear', '#/einstellungen']];
+  return `<header class="sticky top-0 z-40 border-b border-line backdrop-blur-xl" style="background:color-mix(in srgb,var(--bg) 86%,transparent);padding-top:env(safe-area-inset-top)">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
+      <a href="#/" class="flex items-center gap-3 min-w-0">${logoMark()}<span class="hidden sm:block leading-tight"><span class="block font-semibold text-[15px]">Stempeluhr</span><span class="block text-[12px] text-ink3">${esc(S.person.name || S.company.name)}</span></span></a>
+      <nav class="ml-auto flex items-center gap-1">${nav.map(([k, l, i, h]) => `<a href="${h}" class="navl ${UI.route === k ? 'on' : ''}" aria-label="${l}">${ic(i, 17)}<span class="hidden md:inline">${l}</span></a>`).join('')}
+      <button class="btn-p !h-10 !px-4 ml-1" data-a="send-week" data-mon="${mondayOf(isoToday())}">${ic('send', 16)}<span class="hidden sm:inline">An ${esc(S.recipient.name || 'Büro')}</span></button></nav>
+    </div></header>
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 pb-24">${inner}</main>
+    <datalist id="dl-sites">${(S.sites || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
+}
+const kpi = (k, v, id = '', cls = '') => `<div class="kpi"><div class="text-[12px] text-ink3">${k}</div><div class="text-[22px] font-semibold mt-1 ${cls}" ${id ? `id="${id}"` : ''}>${v}</div></div>`;
+const diffCls = m => (Math.round(m) > 0 ? 'text-p' : Math.round(m) < 0 ? 'text-ember' : '');
+
+/* ---------- Heute ---------- */
+function siteChips(target) {
+  const l = (S.sites || []).slice(0, 8); if (!l.length) return '';
+  return `<div class="flex flex-wrap gap-1.5 mt-2">${l.map(x => `<button type="button" class="chip" data-a="site-pick" data-t="${target}" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
+}
+function viewHome() {
+  const iso = isoToday(), d = dayOf(iso), c = calcDay(d), seg = curSeg(d), wk = isoWeek(iso), dt = new Date();
+  const state = d.type !== 'work' ? 'absent' : c.inPause ? 'pause' : seg ? 'work' : 'idle';
+  const status = { idle: (d.segs || []).length ? `Ausgestempelt um ${esc(c.end)} Uhr` : 'Noch nicht eingestempelt', work: `Bei der Arbeit seit ${esc(seg ? seg.von : '')} Uhr${seg && seg.site ? ` · ${esc(seg.site)}` : ''}`, pause: `In Pause seit ${esc((openPause(d) || {}).von || '')} Uhr`, absent: typeName(d.type) }[state];
+  const dot = { idle: 'bg-ink3', work: 'bg-p', pause: 'bg-s', absent: 'bg-s' }[state];
+  const btn = (a, label, icon, style, dis) => `<button class="stamp" data-a="${a}" style="${style}" ${dis ? 'disabled' : ''}>${ic(icon, 30, 2)}<span>${label}</span></button>`;
+  const G = 'background:rgb(var(--p-rgb));color:#fff', Y = 'background:rgb(var(--s-rgb));color:#1b1405', R = 'background:#D9482B;color:#fff', N = 'background:var(--raised);color:var(--ink);border:1px solid var(--line2)';
+  let buttons = '';
+  if (state === 'idle') buttons = `<div class="grid gap-3">${btn('in', (d.segs || []).length ? 'Wieder kommen' : 'Kommen', 'play', G)}</div>`;
+  else if (state === 'work') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause', 'coffee', Y)}${btn('switch', 'Baustelle wechseln', 'refresh', N)}<div class="col-span-2">${btn('out', 'Gehen', 'stop', R)}</div></div>`;
+  else if (state === 'pause') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause beenden', 'play', G)}${btn('out', 'Gehen', 'stop', R)}</div>`;
+  else buttons = `<div class="rounded-[var(--r)] bg-tyel text-yel-ink p-4 text-[14px]">Heute ist als <b>${typeName(d.type)}</b> eingetragen.${d.type === 'feiertag' && holiday(iso) ? ` (${esc(holiday(iso))})` : ''}</div><div class="mt-3">${btn('in', 'Trotzdem kommen', 'play', G)}</div>`;
+  /* fehlendes Gehen an früheren Tagen */
+  const miss = Object.values(DAYS).filter(x => x.iso < iso && x.iso >= addDays(iso, -21) && calcDay(x).missingEnd).sort((a, b) => a.iso.localeCompare(b.iso));
+  const missCard = miss.length ? `<div class="card p-4 mt-4 border-ember/50 flex flex-wrap items-center gap-3" style="background:var(--t-red)"><span class="text-ember">${ic('alert', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">Ausstempeln fehlt: ${miss.map(x => `<b>${wdOf(x.iso).slice(0, 2)}, ${deDate(x.iso)}</b>`).join(', ')} – bitte vom Admin korrigieren lassen.</div><a class="btn-s !h-9" href="#/woche/${mondayOf(miss[0].iso)}">Ansehen</a></div>` : '';
+  const segs = (d.segs || []).map(s => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[14px]"><span class="w-2 h-2 rounded-full ${s.bis ? 'bg-ink3' : 'bg-p'}"></span><span class="flex-1 min-w-0 truncate">${esc(s.site || 'Ohne Baustelle')}</span><span class="mono text-ink2">${esc(s.von)}–${esc(s.bis || 'jetzt')}</span></div>`).join('');
+  const W = calcRange(weekOf(mondayOf(iso))), bal = balance(), vac = vacation();
+  const week = W.days.filter(x => x.c.soll > 0 || hasData(x.d)).map(x => `<a href="#/woche/${mondayOf(iso)}" class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px] ${x.d.iso === iso ? 'font-semibold' : ''}"><span class="w-24">${wdOf(x.d.iso).slice(0, 2)}, ${deDate(x.d.iso).slice(0, 6)}</span><span class="flex-1 text-ink3 truncate">${x.d.type !== 'work' ? typeName(x.d.type) : x.c.start ? `${x.c.start}–${x.c.end || '…'}` : '–'}</span><span class="mono w-14 text-right">${hm(x.c.netto + x.c.credit)}</span><span class="mono w-16 text-right ${diffCls(x.c.diff)}">${x.c.soll || x.c.netto ? hmPlus(x.c.diff) : ''}</span></a>`).join('');
+  return `<section class="pt-6 sm:pt-10">
+    ${S.person.name ? '' : `<a href="#/einstellungen/person" class="card p-4 mb-4 flex items-center gap-3 text-[14px]" style="background:var(--t-yel)"><span class="text-yel-ink">${ic('info', 18)}</span><span class="flex-1">Bitte zuerst deinen Namen eintragen – er steht auf dem Stundenzettel.</span>${ic('arrowR', 16)}</a>`}
+    <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-4">
+      <div class="card p-5 sm:p-7">
+        <div class="flex items-center justify-between gap-3"><span class="text-[13px] text-ink3">${WD[dt.getDay()]}, ${deDate(iso)} · KW ${wk.w}</span><span class="inline-flex items-center gap-2 text-[13px]"><span class="w-2 h-2 rounded-full ${dot} ${state === 'work' ? 'animate-pulse' : ''}"></span>${esc(status)}</span></div>
+        <div class="big-clock text-[64px] sm:text-[84px] leading-none mt-4" id="clock">${nowHM()}</div>
+        ${state === 'idle' || state === 'work' ? `<label class="block mt-6"><span class="lbl">${state === 'work' ? 'Neue Baustelle (für „Baustelle wechseln“)' : 'Baustelle'}</span><input class="inp" id="site" list="dl-sites" placeholder="z. B. Meier, Lotte" autocomplete="off" value="${state === 'idle' && (d.segs || []).length ? esc(d.segs[d.segs.length - 1].site || '') : ''}"></label>${siteChips('site')}` : ''}
+        <div class="mt-5">${buttons}</div>
+        ${missCard}
+      </div>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-2">${kpi('Arbeitszeit heute', hm(c.netto + c.credit), 'live-netto')}${kpi('Soll heute', hm(c.soll))}${kpi('Pause (abgezogen)', `${hm(c.abzug)}`, 'live-pause')}${kpi('Differenz', hmPlus(c.diff), 'live-diff', diffCls(c.diff))}</div>
+        <p class="text-[12px] text-ink3 -mt-2">Mindestens ${S.minPause} Min. Pause werden immer abgezogen – längere Pausen voll.</p>
+        ${segs ? `<div class="card p-4"><div class="text-[13px] text-ink3 mb-1">Heute</div>${segs}</div>` : ''}
+        <div class="grid grid-cols-2 gap-2">${kpi('Überstundenkonto', hmPlus(bal), '', diffCls(bal))}${kpi(`Urlaub ${new Date().getFullYear()}`, `${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span>`)}</div>
+      </div>
+    </div>
+    <div class="card p-5 mt-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><h2 class="sec-t">Diese Woche</h2><span class="text-[14px]">${hm(W.netto + W.credit)} / ${hm(W.soll)} · <b class="${diffCls(W.diff)}">${hmPlus(W.diff)}</b></span></div>${week || '<div class="text-ink3 text-[14px]">Noch keine Einträge.</div>'}
+      <div class="flex flex-wrap gap-2 mt-4"><a class="btn-s" href="#/woche">${ic('cal', 16)}Woche ansehen</a><button class="btn-p" data-a="send-week" data-mon="${mondayOf(iso)}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button></div></div>
+  </section>`;
+}
+
+/* ---------- Woche ---------- */
+function dayEditor(d) {
+  const iso = d.iso, segs = d.segs || [], pz = d.pauses || [];
+  return `<div class="mt-3 pt-3 border-t border-line space-y-4">
+    <div><span class="lbl">Art des Tages</span><div class="flex flex-wrap gap-1.5">${DAY_TYPES.map(([k, l, i]) => `<button class="chip ${d.type === k ? '!border-p !text-ink !bg-p/15' : ''}" data-a="ed-type" data-iso="${iso}" data-v="${k}">${ic(i, 14)}${l}</button>`).join('')}</div></div>
+    ${d.type === 'work' ? `<div><span class="lbl">Arbeitszeiten je Baustelle</span><div class="space-y-2">${segs.map((s, i) => `<div class="grid grid-cols-[1fr_88px_88px_auto] gap-2 items-center"><input class="inp !h-10" list="dl-sites" data-ed="${iso}" data-seg="${i}" data-k="site" value="${esc(s.site || '')}" placeholder="Baustelle"><input type="time" class="inp !h-10 !px-2" data-ed="${iso}" data-seg="${i}" data-k="von" value="${esc(s.von || '')}"><input type="time" class="inp !h-10 !px-2" data-ed="${iso}" data-seg="${i}" data-k="bis" value="${esc(s.bis || '')}"><button class="btn-g !px-2 hover:!text-ember" data-a="ed-seg-del" data-iso="${iso}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
+      <button class="btn-s !h-9 mt-2" data-a="ed-seg-add" data-iso="${iso}">${ic('plus', 15)}Zeitraum</button></div>
+    <div><span class="lbl">Gestempelte Pausen</span><div class="space-y-2">${pz.map((p, i) => `<div class="grid grid-cols-[88px_88px_auto] sm:w-max gap-2 items-center"><input type="time" class="inp !h-10 !px-2" data-ed="${iso}" data-pz="${i}" data-k="von" value="${esc(p.von || '')}"><input type="time" class="inp !h-10 !px-2" data-ed="${iso}" data-pz="${i}" data-k="bis" value="${esc(p.bis || '')}"><button class="btn-g !px-2 hover:!text-ember" data-a="ed-pz-del" data-iso="${iso}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
+      <button class="btn-s !h-9 mt-2" data-a="ed-pz-add" data-iso="${iso}">${ic('plus', 15)}Pause</button></div>` : ''}
+    ${hasData(d) ? `<button class="btn-g hover:!text-ember" data-a="ed-clear" data-iso="${iso}">${ic('trash', 15)}Tag leeren</button>` : ''}
+  </div>`;
+}
+function viewWeek() {
+  const mon = UI.mon || mondayOf(isoToday()), wk = isoWeek(mon), W = calcRange(weekOf(mon)), edit = canEdit(), today = isoToday();
+  const days = W.days.filter(x => x.c.soll > 0 || hasData(x.d) || x.d.iso === today || [1, 2, 3, 4, 5].includes(new Date(x.d.iso + 'T12:00').getDay()));
+  const cards = days.map(({ d, c }) => {
+    const open = UI.openDay === d.iso, log = (d.log || []).length;
+    return `<div class="card p-4 sm:p-5 ${d.iso === today ? 'border-p/50' : ''}">
+      <div class="flex flex-wrap items-start gap-3">
+        <div class="w-28"><div class="font-semibold">${wdOf(d.iso)}</div><div class="text-[13px] text-ink3">${deDate(d.iso)}</div></div>
+        <div class="flex-1 min-w-[180px] text-[14px]">
+          ${d.type !== 'work' ? `<span class="badge bg-tyel text-yel-ink">${typeName(d.type)}${d.type === 'feiertag' && holiday(d.iso) ? ' · ' + esc(holiday(d.iso)) : ''}</span>` : c.start ? `<div><span class="mono">${c.start}–${c.end || (c.missingEnd ? '?' : 'jetzt')}</span> <span class="text-ink3">· Pause ${hm(c.pause)}${c.abzug > c.pause ? ` (abgezogen ${hm(c.abzug)})` : ''}</span></div>` : `<span class="text-ink3">${c.soll ? 'Kein Eintrag' : 'Frei'}</span>`}
+          ${c.missingEnd ? `<div class="text-ember text-[13px] mt-1">${ic('alert', 13)} Ausstempeln fehlt</div>` : ''}
+          ${c.sites.length ? `<div class="flex flex-wrap gap-1.5 mt-2">${c.sites.map(s => `<span class="badge bg-raised text-ink2">${ic('pin', 12)}${esc(s.site)} · ${hm(s.min)}</span>`).join('')}</div>` : ''}
+          ${d.edited ? `<div class="text-[12px] text-ink3 mt-1.5">${ic('edit', 12)} nachgetragen${log ? ` (${log} Änderung${log > 1 ? 'en' : ''})` : ''}</div>` : ''}
+        </div>
+        <div class="text-right"><div class="text-[18px] font-semibold mono">${hm(c.netto + c.credit)}</div><div class="text-[12px] text-ink3">Soll ${hm(c.soll)}</div>${c.soll || c.netto ? `<div class="text-[13px] mono ${diffCls(c.diff)}">${hmPlus(c.diff)}</div>` : ''}</div>
+      </div>
+      <label class="block mt-3"><span class="sr-only">Notiz</span><input class="inp !h-10 text-[14px]" data-note="${d.iso}" value="${esc(d.note || '')}" placeholder="Notiz zum Tag (optional)"></label>
+      ${edit ? (open ? dayEditor(d) : `<button class="btn-g !h-8 mt-2 -ml-2" data-a="ed-open" data-iso="${d.iso}">${ic('edit', 14)}Zeiten bearbeiten</button>`) : ''}
+    </div>`;
+  }).join('');
+  const lock = edit ? `<div class="flex flex-wrap items-center gap-2 text-[13px] rounded-[var(--rb)] px-3 py-2" style="background:var(--p-light)"><span class="text-p">${ic('check', 15, 2.4)}</span>${DEVICE.admin ? 'Admin-Gerät – Nachtragen freigeschaltet' : `Bearbeiten freigeschaltet bis ${new Date(UI.editUntil).toTimeString().slice(0, 5)} Uhr`}${DEVICE.admin ? '' : `<button class="btn-g !h-7 !px-2" data-a="lock">Sperren</button>`}</div>`
+    : `<button class="btn-s" data-a="unlock">${ic('edit', 16)}Nachtragen / korrigieren</button>`;
+  return `<section class="pt-6 sm:pt-10">
+    <div class="flex flex-wrap items-center gap-3"><h1 class="h-font text-[38px] sm:text-[48px] leading-none mr-auto">KW ${wk.w}</h1>
+      <div class="flex items-center gap-1"><a class="btn-s !px-3" href="#/woche/${addDays(mon, -7)}" aria-label="Vorige Woche">${ic('chevL', 18)}</a><a class="btn-s" href="#/woche/${mondayOf(today)}">Heute</a><a class="btn-s !px-3" href="#/woche/${addDays(mon, 7)}" aria-label="Nächste Woche">${ic('chevR', 18)}</a></div></div>
+    <p class="text-ink3 text-[14px] mt-2">${deDate(mon)} – ${deDate(addDays(mon, 6))} · ${esc(S.person.name || 'Name fehlt')}</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi('Arbeitszeit', hm(W.netto + W.credit))}${kpi('Soll', hm(W.soll))}${kpi('Differenz', hmPlus(W.diff), '', diffCls(W.diff))}${kpi('Überstundenkonto', hmPlus(balance()), '', diffCls(balance()))}</div>
+    <div class="flex flex-wrap items-center gap-2 mt-5"><button class="btn-p" data-a="send-week" data-mon="${mon}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button><button class="btn-s" data-a="send-month" data-iso="${mon}">${ic('file', 16)}Monat ${MONTHS[+mon.slice(5, 7) - 1]}</button><span class="flex-1"></span>${lock}</div>
+    <div class="space-y-3 mt-5">${cards}</div>
+    ${Object.keys(W.sites).length ? `<div class="card p-5 mt-4"><h2 class="sec-t mb-3">Baustellen dieser Woche</h2>${Object.entries(W.sites).sort((a, b) => b[1] - a[1]).map(([k, m]) => `<div class="flex justify-between py-2 border-b border-line last:border-0 text-[14px]"><span>${esc(k)}</span><b class="mono">${hm(m)}</b></div>`).join('')}</div>` : ''}
+  </section>`;
+}
+
+/* ---------- Einstellungen ---------- */
+const SET_TABS = [['person', 'Ich & Empfänger', 'users'], ['zeiten', 'Arbeitszeiten', 'clock'], ['konten', 'Konten', 'cal'], ['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['admin', 'Admin', 'gear'], ['daten', 'Daten', 'download']];
+const LOCKED_TABS = ['zeiten', 'konten'];
+const sIn = (path, label, ph = '', type = 'text', dis = false) => { const v = path.split('.').reduce((o, k) => (o || {})[k], S); return `<label class="block"><span class="lbl">${label}</span><input class="inp" data-s="${path}" type="${type}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" ${type === 'number' ? 'inputmode="decimal"' : ''} ${dis ? 'disabled' : ''}></label>`; };
+function setBody() {
+  const ro = LOCKED_TABS.includes(UI.tab) && !canEdit();
+  const lockNote = ro ? `<div class="rounded-[var(--rb)] bg-raised p-3 mb-5 flex flex-wrap items-center gap-3 text-[14px]"><span class="text-ink3">${ic('alert', 17)}</span><span class="flex-1">Nur mit Admin-Passwort änderbar.</span><button class="btn-s !h-9" data-a="unlock">Freischalten</button></div>` : '';
+  switch (UI.tab) {
+    case 'person': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('person.name', 'Mein Name', 'Vor- und Nachname')}${sIn('person.nr', 'Personalnummer (optional)')}</div>
+      <h3 class="font-semibold mt-7 mb-3">Stundenzettel senden an</h3><div class="grid sm:grid-cols-2 gap-4">${sIn('recipient.name', 'Name', 'z. B. Jule')}${sIn('recipient.phone', 'WhatsApp-Nummer (optional)', 'z. B. 0176 …', 'tel')}</div>
+      <p class="hint">Das PDF wird gespeichert und über „Teilen“ an WhatsApp übergeben – dort ${esc(S.recipient.name || 'den Empfänger')} auswählen. Die Nummer wird genutzt, wenn das Gerät kein Teilen von Dateien kann.</p>
+      <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-6"><input type="checkbox" data-a="gps" ${S.gps ? 'checked' : ''} ${canEdit() ? '' : 'disabled'}>Standort beim Stempeln speichern (GPS)${canEdit() ? '' : ' – nur Admin'}</label>`;
+    case 'zeiten': return `${lockNote}<p class="text-ink3 text-[14px] mb-4">Sollzeiten je Wochentag. Die Mindestpause wird bei der Sollzeit und bei jedem Arbeitstag abgezogen.</p>
+      <div class="space-y-2">${[1, 2, 3, 4, 5, 6, 0].map(k => { const h = S.hours[k]; return `<div class="grid grid-cols-[110px_1fr_1fr_70px] gap-2 items-center"><label class="flex items-center gap-2 text-[14px]"><input type="checkbox" data-hour="${k}" data-k="on" ${h.on ? 'checked' : ''} ${ro ? 'disabled' : ''}>${WD[k].slice(0, 2)}</label><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="von" value="${esc(h.von)}" ${ro || !h.on ? 'disabled' : ''}><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="bis" value="${esc(h.bis)}" ${ro || !h.on ? 'disabled' : ''}><span class="text-[13px] text-ink3 mono text-right">${h.on ? hm(sollOf(k === 0 ? '2026-11-15' : addDays('2026-11-09', k - 1))) : '–'}</span></div>`; }).join('')}</div>
+      <div class="grid sm:grid-cols-2 gap-4 mt-6">${sIn('minPause', 'Mindestpause (Min.)', '30', 'number', ro)}<label class="block"><span class="lbl">Bundesland (Feiertage)</span><select class="inp" data-s="state" ${ro ? 'disabled' : ''}>${STATES.map(([k, l]) => `<option value="${k}" ${S.state === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-4"><input type="checkbox" data-a="over6" ${S.pauseOnlyOver6 ? 'checked' : ''} ${ro ? 'disabled' : ''}>Mindestpause nur bei mehr als 6 Std. Arbeit abziehen</label>`;
+    case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${new Date().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('vacation.perYear', 'Urlaubstage pro Jahr', '30', 'number', ro)}${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div><p class="hint">Genommen: ${v.used} · Übrig: ${v.left} Tage</p>
+      <h3 class="font-semibold mt-7 mb-3">Überstundenkonto</h3><div class="grid grid-cols-2 gap-4">${sIn('balance.from', 'Zählt ab', '', 'date', ro)}<label class="block"><span class="lbl">Startwert (Std:Min, z. B. 12:30 oder −3:15)</span><input class="inp" data-bal value="${esc(hm(S.balance.min || 0))}" ${ro ? 'disabled' : ''}></label></div><p class="hint">Aktuell: <b>${hmPlus(balance())}</b></p>`; }
+    case 'firma': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('company.name', 'Firmenname')}${sIn('company.phone', 'Telefon')}${sIn('company.street', 'Straße')}${sIn('company.city', 'PLZ und Ort')}</div>
+      <div class="mt-6"><span class="lbl">Logo (App und PDF)</span><div class="flex flex-wrap items-center gap-3">${S.company.logo ? `<span class="rounded-[var(--rb)] bg-white p-3 border border-line"><img src="${esc(S.company.logo)}" class="h-14" alt=""></span>` : '<span class="text-ink3 text-[14px]">Kein Logo</span>'}
+        <label class="btn-s cursor-pointer">${ic('upload', 16)}Logo wählen<input type="file" accept="image/*" class="hidden" data-logo></label>${S.company.logo !== 'logo.png' ? '<button class="btn-g" data-a="logo-reset">Standard-Logo</button>' : ''}</div></div>`;
+    case 'design': return `<div><span class="lbl">Ansicht</span><div class="seg">${[['system', 'Wie Gerät'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button class="${S.design.mode === k ? 'on' : ''}" data-a="mode" data-v="${k}">${l}</button>`).join('')}</div></div>
+      <div class="grid grid-cols-2 gap-4 mt-6">${[['primary', 'Hauptfarbe'], ['secondary', 'Akzentfarbe']].map(([k, l]) => `<label class="block"><span class="lbl">${l}</span><div class="flex items-center gap-2"><input type="color" class="w-12 h-11 rounded-[var(--rb)] border border-line2 bg-field p-1" data-s="design.${k}" value="${esc(S.design[k])}"><span class="mono text-[13px] text-ink3">${esc(S.design[k])}</span></div></label>`).join('')}</div>
+      <label class="block mt-6"><span class="lbl">Ecken-Rundung: ${S.design.radius} px</span><input type="range" min="4" max="24" step="1" class="w-full" data-s="design.radius" value="${S.design.radius}"></label>
+      <button class="btn-g mt-6" data-a="design-reset">${ic('refresh', 15)}Design zurücksetzen</button>`;
+    case 'admin': return DEVICE.admin ? `<div class="rounded-[var(--rb)] p-4 text-[14px] flex items-center gap-3" style="background:var(--p-light)"><span class="text-p">${ic('check', 20, 2.4)}</span><span class="flex-1">Dieses Gerät ist ein <b>Admin-Gerät</b>: Nachtragen und Korrigieren ohne erneute Abfrage. Alle Änderungen werden protokolliert.</span></div>
+      <button class="btn-s mt-4" data-a="admin-off">${ic('x', 16)}Admin-Gerät beenden</button>
+      <h3 class="font-semibold mt-8 mb-3">Admin-Passwort ändern</h3><div class="grid sm:grid-cols-2 gap-3"><input type="password" class="inp" id="pw-new1" placeholder="Neues Passwort" autocomplete="new-password"><input type="password" class="inp" id="pw-new2" placeholder="Wiederholen" autocomplete="new-password"></div><button class="btn-s mt-3" data-a="pw-change">Passwort ändern</button><p class="hint">Gilt für dieses Gerät und für Sicherungen, die von hier eingespielt werden.</p>`
+      : `<p class="text-ink3 text-[14px] mb-4">Nur für Manuel, Artjom und Jule: Mit dem Admin-Passwort wird dieses Gerät dauerhaft zum Admin-Gerät – dort lässt sich ohne erneute Abfrage nachtragen und korrigieren. Auf Mitarbeiter-Geräten wird bei jeder Änderung neu gefragt.</p>
+      <div class="flex flex-col sm:flex-row gap-2 max-w-md"><input type="password" class="inp" id="pw-admin" placeholder="Admin-Passwort" autocomplete="current-password"><button class="btn-p shrink-0" data-a="admin-on">Als Admin-Gerät freischalten</button></div>`;
+    case 'daten': return `<p class="text-ink3 text-[14px] mb-4">Alle Daten liegen nur auf diesem Gerät. Bitte regelmäßig eine Sicherung speichern – damit lassen sich die Zeiten auch auf ein neues Handy übertragen.</p>
+      <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="backup">${ic('download', 16)}Sicherung speichern</button><label class="btn-s cursor-pointer ${canEdit() ? '' : 'opacity-40 pointer-events-none'}">${ic('upload', 16)}Sicherung einspielen<input type="file" accept="application/json,.json" class="hidden" data-restore ${canEdit() ? '' : 'disabled'}></label></div>
+      ${canEdit() ? '' : '<p class="hint">Einspielen nur mit Admin-Freischaltung.</p>'}
+      <div class="kpi mt-5 text-[14px]">${Object.keys(DAYS).length} Tage gespeichert</div><p class="hint mt-6">Version ${APP_VERSION}</p>`;
+  }
+  return '';
+}
+function viewSettings() {
+  return `<section class="pt-8 sm:pt-12"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Einstellungen</h1>
+    <div class="flex flex-col md:flex-row gap-5 mt-6"><nav class="flex md:flex-col gap-1 overflow-x-auto no-scrollbar md:w-56 shrink-0">${SET_TABS.map(([k, l, i]) => `<a href="#/einstellungen/${k}" class="navl ${UI.tab === k ? 'on' : ''} md:w-full">${ic(i, 16)}${l}${LOCKED_TABS.includes(k) && !canEdit() ? `<span class="ml-auto text-ink3 hidden md:inline">${ic('alert', 13)}</span>` : ''}</a>`).join('')}</nav>
+    <div class="card p-5 sm:p-7 flex-1 min-w-0"><h2 class="sec-t mb-5">${SET_TABS.find(t => t[0] === UI.tab)[1]}</h2>${setBody()}</div></div></section>`;
+}
+
+/* ---------- Rendern und Navigation ---------- */
+function render() {
+  const inner = UI.route === 'week' ? viewWeek() : UI.route === 'settings' ? viewSettings() : viewHome();
+  $('#app').innerHTML = shell(inner);
+}
+function route() {
+  const h = location.hash.replace(/^#\/?/, '').split('/');
+  if (h[0] === 'woche') { UI.route = 'week'; UI.mon = h[1] && /^\d{4}-\d\d-\d\d$/.test(h[1]) ? mondayOf(h[1]) : mondayOf(isoToday()); }
+  else if (h[0] === 'einstellungen') { UI.route = 'settings'; UI.tab = SET_TABS.some(t => t[0] === h[1]) ? h[1] : 'person'; }
+  else UI.route = 'home';
+  render(); window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+const rerender = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };
+
+/* =========================================================
+   Ereignisse
+   ========================================================= */
+const todayDay = () => clone(dayOf(isoToday()));
+function geoStamp(iso, kind) {
+  if (!S.gps || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async pos => { const d = clone(dayOf(iso)); (d.geo = d.geo || []).push({ k: kind, t: nowHM(), lat: +pos.coords.latitude.toFixed(5), lon: +pos.coords.longitude.toFixed(5), acc: Math.round(pos.coords.accuracy) }); await saveDay(d); }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
+}
+async function stamp(kind) {
+  const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d);
+  d.segs = d.segs || []; d.pauses = d.pauses || [];
+  if (kind === 'in') {
+    if (seg) return;
+    if (d.type !== 'work') d.type = 'work';
+    const site = ($('#site') || {}).value ? $('#site').value.trim() : ''; rememberSite(site);
+    d.segs.push({ site, von: t, bis: '' }); toast(`Gekommen um ${t} Uhr${site ? ' · ' + site : ''}`);
+  } else if (kind === 'pause') {
+    if (!seg) return;
+    if (op) { op.bis = t; toast(`Pause beendet um ${t} Uhr`); } else { d.pauses.push({ von: t, bis: '' }); toast(`Pause ab ${t} Uhr`); }
+  } else if (kind === 'out') {
+    if (!seg) return; if (op) op.bis = t; seg.bis = t;
+    await saveDay(d); const c = calcDay(d); toast(`Gegangen um ${t} Uhr · heute ${hm(c.netto)} Std.`, 'ok', 4500); geoStamp(d.iso, kind); return rerender();
+  }
+  await saveDay(d); geoStamp(d.iso, kind); rerender();
+}
+function switchDialog() {
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Baustelle wechseln</h3><p class="text-ink3 text-[14px] mt-1">Die Zeit bis jetzt bleibt bei der bisherigen Baustelle.</p>
+    <label class="block mt-5"><span class="lbl">Neue Baustelle</span><input class="inp" id="site2" list="dl-sites" placeholder="z. B. Schulz, Osnabrück" autocomplete="off"></label>${siteChips('site2')}
+    <button class="btn-p w-full mt-5" data-a="switch-ok">${ic('refresh', 16)}Jetzt wechseln</button>`);
+}
+async function doSwitch() {
+  const site = $('#site2').value.trim(); if (!site) { toast('Bitte eine Baustelle angeben.', 'warn'); return; }
+  const d = todayDay(), t = nowHM(), seg = curSeg(d), op = openPause(d); if (!seg) return closeModal();
+  if (op) op.bis = t; seg.bis = t; d.segs.push({ site, von: t, bis: '' }); rememberSite(site);
+  await saveDay(d); closeModal(); toast(`Ab ${t} Uhr: ${site}`); rerender();
+}
+
+/* ---------- Freischalten (ohne „Passwort speichern?“) ----------
+   Kein <form>, kein type=password: Browser bieten dann kein Speichern an. */
+function unlockDialog() {
+  return new Promise(res => {
+    modal(`<h3 class="text-[20px] font-semibold pr-8">Admin-Freigabe</h3><p class="text-ink3 text-[14px] mt-1">Nachträgliche Änderungen nur mit Admin-Passwort. Jede Änderung wird protokolliert.</p>
+      <input class="inp mt-5" id="unl-pw" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore name="x-${Date.now()}" placeholder="Passwort" style="-webkit-text-security:disc;text-security:disc">
+      <button class="btn-p w-full mt-4" id="unl-ok">Freischalten</button><p class="hint text-center">Gilt 10 Minuten auf diesem Gerät.</p>`);
+    const go = async () => { const pw = $('#unl-pw').value; if (!pw) return; if (await checkAdmin(pw)) { UI.editUntil = Date.now() + 10 * 60000; closeModal(); toast('Freigeschaltet für 10 Minuten.'); res(true); } else { toast('Passwort falsch.', 'err'); $('#unl-pw').value = ''; } };
+    $('#unl-ok').onclick = go; $('#unl-pw').onkeydown = e => { if (e.key === 'Enter') go(); };
+    setTimeout(() => { const el = $('#unl-pw'); if (el) el.focus(); }, 60);
+  });
+}
+async function needEdit() { if (canEdit()) return true; return unlockDialog(); }
+/* Änderung protokollieren: was, alter und neuer Wert, wann, auf welchem Gerät */
+function logChange(d, what, from, to) { if ((from ?? '') === (to ?? '') && what !== 'Zeitraum hinzugefügt') return; (d.log = d.log || []).push({ at: new Date().toISOString(), what, from: from ?? '', to: to ?? '', admin: DEVICE.admin ? 'Admin-Gerät' : 'Passwort' }); d.edited = true; }
+
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-a]'); if (!a) return;
+  const act = a.dataset.a, iso = a.dataset.iso;
+  switch (act) {
+    case 'in': case 'pause': case 'out': stamp(act); break;
+    case 'switch': { const v = ($('#site') || {}).value; if (v && v.trim()) { $('#site').id = 'site2'; return doSwitch(); } switchDialog(); break; }
+    case 'switch-ok': doSwitch(); break;
+    case 'site-pick': { const el = $('#' + a.dataset.t); if (el) el.value = a.dataset.v; break; }
+    case 'send-week': sendPdf('week', a.dataset.mon); break;
+    case 'send-month': sendPdf('month', a.dataset.iso); break;
+    case 'unlock': if (await unlockDialog()) rerender(); break;
+    case 'lock': UI.editUntil = 0; UI.openDay = ''; rerender(); break;
+    case 'ed-open': if (await needEdit()) { UI.openDay = iso; rerender(); } break;
+    case 'ed-type': { if (!(await needEdit())) return; const d = clone(dayOf(iso)); logChange(d, 'Art des Tages', typeName(d.type), typeName(a.dataset.v)); d.type = a.dataset.v; await saveDay(d); rerender(); break; }
+    case 'ed-seg-add': { if (!(await needEdit())) return; const d = clone(dayOf(iso)); d.segs = d.segs || []; const last = d.segs[d.segs.length - 1], h = S.hours[new Date(iso + 'T12:00').getDay()] || {}; d.segs.push({ site: last ? last.site : '', von: last && last.bis ? last.bis : h.von || '07:30', bis: d.segs.length ? '' : h.bis || '' }); logChange(d, 'Zeitraum hinzugefügt', '', ''); await saveDay(d); rerender(); break; }
+    case 'ed-seg-del': { if (!(await needEdit())) return; const d = clone(dayOf(iso)), s = d.segs[+a.dataset.i]; logChange(d, 'Zeitraum gelöscht', `${s.site || ''} ${s.von}–${s.bis}`, ''); d.segs.splice(+a.dataset.i, 1); await saveDay(d); rerender(); break; }
+    case 'ed-pz-add': { if (!(await needEdit())) return; const d = clone(dayOf(iso)); (d.pauses = d.pauses || []).push({ von: '12:00', bis: '12:30' }); logChange(d, 'Pause hinzugefügt', '', '12:00–12:30'); await saveDay(d); rerender(); break; }
+    case 'ed-pz-del': { if (!(await needEdit())) return; const d = clone(dayOf(iso)), p = d.pauses[+a.dataset.i]; logChange(d, 'Pause gelöscht', `${p.von}–${p.bis}`, ''); d.pauses.splice(+a.dataset.i, 1); await saveDay(d); rerender(); break; }
+    case 'ed-clear': { if (!(await needEdit())) return; if (!(await confirmDlg('Tag leeren?', `Alle Zeiten am ${deDate(iso)} werden entfernt.`, 'Leeren', true))) return; const d = clone(dayOf(iso)); logChange(d, 'Tag geleert', `${(d.segs || []).length} Zeiträume`, ''); d.segs = []; d.pauses = []; d.type = holiday(iso) ? 'feiertag' : 'work'; await saveDay(d); rerender(); break; }
+    case 'gps': if (!canEdit()) { a.checked = S.gps; return; } S.gps = a.checked; saveSettings(); if (S.gps && navigator.geolocation) navigator.geolocation.getCurrentPosition(() => {}, () => toast('Standort ist nicht freigegeben.', 'warn')); break;
+    case 'over6': if (!canEdit()) { a.checked = S.pauseOnlyOver6; return; } S.pauseOnlyOver6 = a.checked; saveSettings(); rerender(); break;
+    case 'mode': S.design.mode = a.dataset.v; saveSettings(); applyTheme(); render(); break;
+    case 'design-reset': S.design = clone(DEFAULTS.design); saveSettings(); applyTheme(); render(); break;
+    case 'logo-reset': S.company.logo = 'logo.png'; saveSettings(); render(); break;
+    case 'admin-on': { const pw = $('#pw-admin').value; if (await checkAdmin(pw)) { DEVICE.admin = true; await DB.put('kv', DEVICE, 'device'); toast('Dieses Gerät ist jetzt ein Admin-Gerät.'); render(); } else toast('Passwort falsch.', 'err'); break; }
+    case 'admin-off': DEVICE.admin = false; await DB.put('kv', DEVICE, 'device'); UI.editUntil = 0; toast('Admin-Gerät beendet.'); render(); break;
+    case 'pw-change': { const p1 = $('#pw-new1').value, p2 = $('#pw-new2').value; if (p1.length < 6) return toast('Mindestens 6 Zeichen.', 'warn'); if (p1 !== p2) return toast('Die Passwörter stimmen nicht überein.', 'warn'); await setAdminPassword(p1); toast('Admin-Passwort geändert.'); render(); break; }
+    case 'backup': backup(); break;
+  }
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.s) {
+    const path = el.dataset.s.split('.'), last = path.pop(), obj = path.reduce((o, k) => o[k], S);
+    obj[last] = el.type === 'number' || el.type === 'range' ? (el.value === '' ? '' : +el.value) : el.value; saveSettings();
+    if (/^design\./.test(el.dataset.s)) { applyTheme(); if (el.type === 'color') el.nextElementSibling.textContent = el.value; if (el.type === 'range') el.closest('label').querySelector('.lbl').textContent = `Ecken-Rundung: ${el.value} px`; }
+  }
+});
+document.addEventListener('change', async e => {
+  const el = e.target;
+  if (el.dataset.note) { const d = clone(dayOf(el.dataset.note)); d.note = el.value; await saveDay(d); return; }
+  if (el.dataset.ed) {
+    const iso = el.dataset.ed, d = clone(dayOf(iso)), k = el.dataset.k;
+    if (!canEdit()) { toast('Bitte zuerst freischalten.', 'warn'); return rerender(); }
+    if (el.dataset.seg !== undefined) { const s = d.segs[+el.dataset.seg]; logChange(d, k === 'site' ? 'Baustelle' : k === 'von' ? 'Beginn' : 'Ende', s[k], el.value); s[k] = k === 'site' ? el.value.trim() : el.value; if (k === 'site') rememberSite(s.site); }
+    if (el.dataset.pz !== undefined) { const p = d.pauses[+el.dataset.pz]; logChange(d, k === 'von' ? 'Pause von' : 'Pause bis', p[k], el.value); p[k] = el.value; }
+    await saveDay(d); return rerender();
+  }
+  if (el.dataset.hour !== undefined) { if (!canEdit()) return rerender(); const h = S.hours[el.dataset.hour]; h[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; if (h.on && !h.von) { h.von = '07:30'; h.bis = '16:30'; } saveSettings(); return rerender(); }
+  if (el.dataset.bal !== undefined) { if (!canEdit()) return rerender(); const m = /^\s*([−-])?\s*(\d+)(?::(\d{1,2}))?\s*$/.exec(el.value); if (!m) { toast('Bitte als Std:Min eingeben, z. B. 12:30', 'warn'); return; } S.balance.min = (m[1] ? -1 : 1) * (+m[2] * 60 + (+m[3] || 0)); saveSettings(); return rerender(); }
+  if (el.dataset.s && (el.tagName === 'SELECT' || ['minPause', 'vacation.perYear', 'vacation.carry', 'balance.from'].includes(el.dataset.s))) { if (LOCKED_TABS.includes(UI.tab) && !canEdit()) return rerender(); return rerender(); }
+  if (el.matches('[data-logo]') && el.files && el.files[0]) { const im = await shrinkImage(el.files[0], 700, 0.92, 'image/png'); S.company.logo = im.data; saveSettings(); render(); toast('Logo gespeichert.'); return; }
+  if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
+});
+
+/* ---------- PDF speichern und senden ---------- */
+function saveBlob(blob, name) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+async function sendPdf(kind, iso) {
+  if (!S.person.name) { toast('Bitte zuerst deinen Namen eintragen.', 'warn'); location.hash = '#/einstellungen/person'; return; }
+  modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">Stundenzettel wird erstellt …</div></div>`);
+  try {
+    const isos = kind === 'week' ? weekOf(iso) : monthOf(iso), wk = isoWeek(isos[0]), mo = MONTHS[+isos[0].slice(5, 7) - 1];
+    const label = kind === 'week' ? `KW ${wk.w}/${wk.y}` : `${mo} ${isos[0].slice(0, 4)}`;
+    const blob = await buildPdf(isos, label), who = S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_');
+    const name = `Stundenzettel_${label.replace(/[\s/]+/g, '_')}_${who}.pdf`;
+    saveBlob(blob, name);
+    const text = `Hallo ${S.recipient.name || ''}, anbei mein Stundenzettel ${label}. Viele Grüße, ${S.person.name}`;
+    const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
+    const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
+    modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">PDF gespeichert</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
+      <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p !h-12" id="pdf-share">${ic('send', 17)}An ${esc(S.recipient.name || 'Büro')} senden (WhatsApp)</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp und dann ${esc(S.recipient.name || 'den Empfänger')} wählen.</p>` : `<a class="btn-p !h-12" href="https://wa.me/${phone}?text=${encodeURIComponent(text + ' (PDF folgt als Anhang)')}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp an ${esc(S.recipient.name || 'Büro')} öffnen</a><p class="hint text-center -mt-1">Dann das gespeicherte PDF im Chat anhängen.</p>`}
+      <button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
+    $('#pdf-again').onclick = () => saveBlob(blob, name);
+    const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist gespeichert.', 'warn'); } };
+  } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
+}
+
+/* ---------- Datensicherung ---------- */
+function backup() {
+  const data = { app: 'fruehauf-stempel', version: APP_VERSION, date: new Date().toISOString(), settings: S, days: Object.values(DAYS) };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); saveBlob(blob, `stempeluhr-sicherung-${isoToday()}.json`); toast('Sicherung gespeichert.');
+}
+async function restore(file) {
+  if (!canEdit()) return toast('Einspielen nur mit Admin-Freischaltung.', 'warn');
+  try {
+    const d = JSON.parse(await file.text()); if (d.app !== 'fruehauf-stempel') throw new Error('Keine Sicherung der Stempeluhr');
+    if (!(await confirmDlg('Sicherung einspielen?', `${(d.days || []).length} Tage werden übernommen bzw. überschrieben.`, 'Einspielen'))) return;
+    S = deepMerge(clone(DEFAULTS), d.settings || {}); saveSettings();
+    for (const x of d.days || []) await DB.put('days', x);
+    DAYS = {}; ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; }); applyTheme(); render(); toast('Sicherung eingespielt.');
+  } catch (err) { toast('Sicherung konnte nicht gelesen werden: ' + err.message, 'err', 5000); }
+}
+
+/* ---------- Uhr und Start ---------- */
+setInterval(() => {
+  const c = $('#clock'); if (c) c.textContent = nowHM();
+  if (UI.route === 'home' && !document.activeElement.matches('input,textarea,select')) {
+    const d = dayOf(isoToday()), x = calcDay(d), n = $('#live-netto'), p = $('#live-pause'), df = $('#live-diff');
+    if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug); if (df) { df.textContent = hmPlus(x.diff); df.className = `text-[22px] font-semibold mt-1 ${diffCls(x.diff)}`; }
+  }
+}, 15000);
+setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHM(); }, 1000);
+(async function init() {
+  await DB.open(); await loadSettings();
+  DEVICE = (await DB.get('kv', 'device')) || { admin: false };
+  ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; });
+  applyTheme(); route();
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && UI.route === 'home') rerender(); });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+})();
+
+/* =========================================================
+   Stundenzettel als PDF (direkt mit jsPDF – auch auf iPad/iPhone sauber)
+   ========================================================= */
+function loadScript(src) { return new Promise((res, rej) => { if ($(`script[src="${src}"]`)) return res(); const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Bibliothek fehlt: ' + src)); document.head.appendChild(s); }); }
+const T = s => String(s ?? '').replace(/[„“”]/g, '"').replace(/[‚‘’]/g, "'").replace(/[–—]/g, '-').replace(/−/g, '-').replace(/×/g, 'x').replace(/…/g, '...').replace(/[•·]/g, '·').replace(/[^\x00-\xFF€]/g, '');
+async function imgInfo(src) {
+  if (!src) return null; let data = src;
+  if (!/^data:/.test(src)) { const b = await (await fetch(src)).blob(); data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }); }
+  const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = data; });
+  return { data, w: im.naturalWidth, h: im.naturalHeight, fmt: /^data:image\/png/.test(data) ? 'PNG' : 'JPEG' };
+}
+async function buildPdf(isos, label) {
+  await loadScript('vendor/jspdf.umd.min.js');
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const W = 210, H = 297, M = 14, CW = W - 2 * M, P = hex2rgb(S.design.primary), INK = [19, 35, 52], GRAY = [110, 124, 138], LINE = [222, 228, 234], RED = [200, 60, 40], GREEN = P;
+  const logo = await imgInfo(S.company.logo).catch(() => null), R = calcRange(isos);
+  let y = 0;
+  const header = () => {
+    doc.setFillColor(...P); doc.rect(0, 0, W, 2.2, 'F');
+    if (logo) { const h = 12, w = Math.min(50, (logo.w / logo.h) * h); doc.addImage(logo.data, logo.fmt, M, 8, w, w / (logo.w / logo.h)); }
+    else { doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...INK); doc.text(T(S.company.name), M, 16); }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...INK); doc.text(T(`Stundenzettel ${label}`), W - M, 12.5, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+    doc.text(T(`${S.person.name}${S.person.nr ? ' · Pers.-Nr. ' + S.person.nr : ''} · ${deDate(isos[0])} - ${deDate(isos[isos.length - 1])}`), W - M, 18, { align: 'right' });
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, 25, W - M, 25); y = 31;
+  };
+  header();
+  /* Tabelle */
+  const cols = [['Tag', 23], ['Kommen', 14], ['Gehen', 14], ['Pause', 13], ['Abzug', 13], ['Arbeit', 14], ['Soll', 13], ['+/-', 15], ['Baustellen / Bemerkung', CW - 119]];
+  const thead = () => { doc.setFillColor(238, 242, 245); doc.rect(M, y - 1, CW, 7, 'F'); doc.setFontSize(7.8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GRAY); let x = M + 1.5; cols.forEach(([l, w], i) => { doc.text(l, i >= 3 && i <= 7 ? x + w - 3 : x, y + 3.6, { align: i >= 3 && i <= 7 ? 'right' : 'left' }); x += w; }); y += 8; };
+  thead();
+  const rows = R.days.filter(x => x.c.soll > 0 || hasData(x.d));
+  for (const { d, c } of rows) {
+    const work = d.type === 'work', bem = [];
+    if (!work) bem.push(typeName(d.type) + (d.type === 'feiertag' && holiday(d.iso) ? ' (' + holiday(d.iso) + ')' : ''));
+    c.sites.forEach(s => bem.push(`${s.site} (${hm(s.min)})`));
+    if (c.missingEnd) bem.push('Ausstempeln fehlt');
+    if (d.note) bem.push('Notiz: ' + d.note);
+    if (d.edited) bem.push('nachgetragen');
+    doc.setFontSize(8.4); doc.setFont('helvetica', 'normal');
+    const bl = doc.splitTextToSize(T(bem.join('\n') || '-'), cols[8][1] - 3), h = Math.max(1, bl.length) * 3.7 + 3;
+    if (y + h > H - 60) { doc.addPage(); header(); thead(); }
+    const vals = [`${wdOf(d.iso).slice(0, 2)}, ${deDate(d.iso).slice(0, 6)}`, work ? c.start || '-' : '-', work ? c.end || (c.open ? '?' : '-') : '-', work && c.start ? hm(c.pause) : '-', work && c.start ? hm(c.abzug) : '-', hm(c.netto + c.credit), hm(c.soll), c.soll || c.netto ? hmPlus(c.diff) : '-'];
+    let x = M + 1.5;
+    vals.forEach((v, i) => { const w = cols[i][1], right = i >= 3; doc.setTextColor(...(i === 7 && Math.round(c.diff) < 0 ? RED : i === 7 && Math.round(c.diff) > 0 ? GREEN : INK)); if (i === 5) doc.setFont('helvetica', 'bold'); doc.text(T(v), right ? x + w - 3 : x, y + 3.2, { align: right ? 'right' : 'left' }); doc.setFont('helvetica', 'normal'); x += w; });
+    doc.setTextColor(...INK); doc.text(bl, x, y + 3.2);
+    y += h; doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, y - 0.8, W - M, y - 0.8);
+  }
+  /* Summen */
+  y += 3; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 24, 2, 2, 'F');
+  const vac = vacation(+isos[0].slice(0, 4)), bal = balance();
+  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Differenz', hmPlus(R.diff)], ['Überstundenkonto', hmPlus(bal)], ['Urlaub / Krank', `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
+  tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(k === 'Differenz' || k === 'Überstundenkonto' ? (v.startsWith('-') || v.startsWith('−') ? RED : v.startsWith('+') ? GREEN : INK) : INK)); doc.text(T(v), cx, cy + 4.6); });
+  y += 30;
+  /* Baustellen-Summen */
+  const sites = Object.entries(R.sites).sort((a, b) => b[1] - a[1]);
+  if (sites.length) {
+    if (y + 10 + sites.length * 5 > H - 45) { doc.addPage(); header(); }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.setFillColor(...P); doc.rect(M, y - 3.2, 1.2, 4.6, 'F'); doc.text('Stunden je Baustelle', M + 3.5, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    sites.forEach(([k, m]) => { doc.setTextColor(...INK); doc.text(T(k), M + 1.5, y + 3); doc.setFont('helvetica', 'bold'); doc.text(hm(m), M + 90, y + 3, { align: 'right' }); doc.setFont('helvetica', 'normal'); y += 5; doc.setDrawColor(...LINE); doc.line(M, y - 0.6, M + 92, y - 0.6); });
+    y += 4;
+  }
+  /* Hinweis und Unterschriften */
+  if (y > H - 45) { doc.addPage(); header(); }
+  doc.setFontSize(7.8); doc.setTextColor(...GRAY);
+  doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag werden mindestens ${S.minPause} Min. Pause abgezogen${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet.`), CW), M, y + 2);
+  y = Math.max(y + 16, H - 38);
+  const bw = (CW - 12) / 2;
+  [['Mitarbeiter', S.person.name], ['Geprüft', S.recipient.name]].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });
+  /* Fußzeile */
+  const n = doc.getNumberOfPages(), c = S.company, foot = T([c.name, c.street, c.city, c.phone].filter(Boolean).join(' · '));
+  for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, H - 12, W - M, H - 12); doc.setFontSize(7.2); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY); doc.text(foot, M, H - 8); doc.text(T(`Erstellt ${deDate(isoToday())} ${nowHM()} · Seite ${i} / ${n}`), W - M, H - 8, { align: 'right' }); }
+  return doc.output('blob');
+}

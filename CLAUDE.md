@@ -34,3 +34,9 @@ Web-App (eine `index.html`, offline-fähig) für Frühauf Solar. Auslieferung al
 - Nie mit der Wirtschaftlichkeits-App vermischen; eigenes Netlify-Projekt, ZIP `fruehauf-abnahme-netlify.zip`.
 - Gleicher Stil (Schriften, Karten, Knöpfe, hell/dunkel). PDF direkt mit jsPDF (kein html2canvas).
 - Bei Änderungen `APP_VERSION` in `src/03-core.js` erhöhen.
+
+## Dritte App: Stempeluhr (eigenständig)
+- Quellen: `fruehauf-stempel-quellen/src/` → Bauen: `bash fruehauf-stempel-quellen/build.sh` → `fruehauf-stempel/`.
+- Eigenes Netlify-Projekt, ZIP `fruehauf-stempel-netlify.zip`. Gleicher Stil wie die anderen Apps.
+- Admin-Passwort nur als PBKDF2-Hash (`ADMIN_DEFAULT` in `src/03-core.js`); Freigabe-Feld ohne <form>/type=password (kein „Passwort speichern“).
+- Bei Änderungen `APP_VERSION` in `src/03-core.js` erhöhen.
