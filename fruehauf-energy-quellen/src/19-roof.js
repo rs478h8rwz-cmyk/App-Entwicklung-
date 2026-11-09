@@ -190,7 +190,7 @@ function roofPanel(p, f, g) {
       <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl">Deckbreite</span><div class="relative"><input class="inp pr-12" inputmode="decimal" data-rt="w" value="${inputFmt(t.w, 'n')}"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">cm</span></div></label><label><span class="lbl">Decklänge</span><div class="relative"><input class="inp pr-12" inputmode="decimal" data-rt="l" value="${inputFmt(t.l, 'n')}"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">cm</span></div></label></div>
       <p class="hint">Typische Werte – bitte prüfen. Änderungen werden für diesen Pfannentyp gespeichert.</p>
       <p class="hint" style="color:#C7792F">Kontrolle: Das gelbe Raster muss genau auf den Pfannenkanten liegen. Wenn nicht – Ecken oder Anzahl korrigieren. Tipp: Foto nicht mit 0,5×-Weitwinkel aufnehmen.</p>
-      <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl">Pfannen waagerecht</span>${roofIn('nx', 'Stk')}</label><label><span class="lbl">Reihen senkrecht</span>${roofIn('ny', 'Stk')}</label></div>
+      <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl flex items-center justify-between">Pfannen waagerecht<span class="flex gap-1"><button type="button" class="chip !h-6 !px-2 text-[11px]" data-r="nxdiv">÷2</button><button type="button" class="chip !h-6 !px-2 text-[11px]" data-r="nxmul">×2</button></span></span>${roofIn('nx', 'Stk')}</label><label><span class="lbl">Reihen senkrecht</span>${roofIn('ny', 'Stk')}</label></div>
       <button class="btn-s w-full mt-2" data-r="autocount">${ic('sparkle', 16)}Automatisch zählen</button>
       <p class="hint">Jedes gelbe Kästchen muss <b>genau eine</b> Pfanne sein. Liegen zwei Pfannen in einem Kästchen, ist die Anzahl zu klein (doppelte Zahl eintragen).</p>`}
       <div class="mt-3"><span class="lbl">Randabstände</span><div class="grid grid-cols-3 gap-2"><label><span class="text-[11px] text-ink3">First</span>${roofIn('mTop', 'cm')}</label><label><span class="text-[11px] text-ink3">Rinne</span>${roofIn('mBot', 'cm')}</label><label><span class="text-[11px] text-ink3">Seiten</span>${roofIn('mSide', 'cm')}</label></div></div>
@@ -760,10 +760,14 @@ function roofPeriod(p, nmin, nmax) {
   let best = 0, bp = -1; const all = [];
   for (let f = nmin; f <= nmax; f += 0.25) { const v = pow(d, f); all.push(v); if (v > bp) { bp = v; best = f; } }
   /* Oberwelle aussortieren: Ist das Grundmuster bei der halben (oder drittel) Zahl genauso kräftig, ist das die echte Anzahl */
-  /* Ein Schritt: unter halber, drittel und viertel Zahl die mit dem kräftigsten Grundmuster wählen */
-  const rb = near(r, best)[1]; let cb = best, cv = rb;
-  for (const dv of [2, 3, 4]) { const h = best / dv; if (h < Math.max(8, nmin)) continue; const [hf, hv] = near(r, h); if (hv >= 0.6 * rb && hv > cv * (cb === best ? 0 : 1)) { cb = hf; cv = hv; } }
-  best = cb;
+  /* Oberwellen und Fehlteiler aussortieren: Kandidaten (Zahl, halbe, drittel, viertel) über die
+     Selbstähnlichkeit prüfen – das Muster muss sich nach genau einer Pfanne wiederholen.
+     Gewählt wird der kleinste Abstand, bei dem die Wiederholung fast so stark ist wie die stärkste. */
+  let e = 0; for (let i = 0; i < n - 1; i++) e += d[i] * d[i]; e = e || 1;
+  const ac = L => { const l0 = Math.floor(L), t = L - l0; let s = 0; for (let i = 0; i + l0 + 1 < n - 1; i++) s += d[i] * (d[i + l0] * (1 - t) + d[i + l0 + 1] * t); return s / e * (n - 1) / Math.max(1, n - 2 - l0); };
+  const cand = [1, 2, 3, 4].map(dv => best / dv).filter(h => h >= Math.max(3, nmin * 0.75)).map(h => { const [hf] = near(d, h); return { h: hf, a: ac(n / hf) }; });
+  const amax = Math.max(...cand.map(c => c.a));
+  if (amax > 0) { const ok = cand.filter(c => c.a >= 0.8 * amax).sort((x, y) => y.h - x.h)[0]; if (ok) best = ok.h; }
   all.sort((a, b) => a - b); const med = all[all.length >> 1] || 1;
   return { n: Math.round(best), q: bp / med };
 }
@@ -781,7 +785,7 @@ async function roofAutoCount(f) {
   }
   const a = roofPeriod(col, 4, 160), b = roofPeriod(row, 3, 90); if (!a || !b) return null;
   const dbl = ROOF_DOUBLE.includes(f.tileId);
-  return { nx: dbl ? Math.max(1, Math.round(a.n / 2)) : a.n, waves: a.n, dbl, ny: b.n, qx: a.q, qy: b.q };
+  return { nx: a.n, dbl, ny: b.n, qx: a.q, qy: b.q };
 }
 document.addEventListener('click', async e => {
   const a = e.target.closest && e.target.closest('[data-r="autocount"]'); if (!a || !RS) return;
@@ -789,5 +793,11 @@ document.addEventListener('click', async e => {
   let r = null; try { r = await roofAutoCount(f); } catch (err) { r = null; }
   if (!r) { toast('Automatisches Zählen hat nicht geklappt – bitte von Hand zählen.', 'warn'); roofSoft(); return; }
   f.nx = r.nx; f.ny = r.ny; roofSave(); roofSoft();
-  toast(`Erkannt: ${r.nx} Pfannen waagerecht${r.dbl ? ` (${r.waves} Mulden, Doppelmulde)` : ''} × ${r.ny} Reihen. Bitte am gelben Raster prüfen – jedes Kästchen muss genau eine Pfanne sein.`, r.qx < 4 || r.qy < 4 ? 'warn' : 'ok', 6000);
+  toast(`Erkannt: ${r.nx} × ${r.ny}. Bitte am gelben Raster prüfen – jedes Kästchen muss genau eine Pfanne sein.${r.dbl ? ' Bei Doppelmulden-Pfannen liegen evtl. zwei Kästchen auf einer Pfanne – dann „÷2“.' : ''}`, r.qx < 4 || r.qy < 4 ? 'warn' : 'ok', 6000);
+});
+
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('[data-r="nxdiv"],[data-r="nxmul"]'); if (!a || !RS) return;
+  e.preventDefault(); const f = roofF(), v = +f.nx || 0; if (!v) return;
+  f.nx = a.dataset.r === 'nxdiv' ? Math.max(1, Math.round(v / 2)) : v * 2; roofSave(); roofSoft();
 });

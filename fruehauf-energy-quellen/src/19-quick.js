@@ -502,8 +502,8 @@ function custTodo(p) {
   if (p.archived) return '';
   const quickDone = (p.quick && p.quick.v === 2) || p.docs.some(d => d.role === 'tech');
   const roofDone = p.roof && p.roof.faces && p.roof.faces.some(f => f.mods && f.mods.length);
-  const b = [];
-  if (!quickDone) b.push(`<button class="btn-s !h-9 !px-3 text-[13px] flex-1" data-a="quick-redo" data-id="${p.id}">${ic('fan', 15)}Schnellauslegung</button>`);
-  if (!roofDone && typeof roofOk === 'function' && roofOk()) b.push(`<button class="btn-s !h-9 !px-3 text-[13px] flex-1" data-a="roof-open" data-id="${p.id}">${ic('grid', 15)}Modulbelegung</button>`);
-  return b.length ? `<div class="flex flex-wrap gap-2 mt-3">${b.join('')}</div>` : '';
+  const btn = (done, a, icon, l1, l2) => `<button class="${done ? 'btn-g border border-line' : 'btn-s'} !h-9 !px-3 text-[13px] flex-1" data-a="${a}" data-id="${p.id}">${done ? `<span class="text-p">${ic('check', 15)}</span>${l2}` : `${ic(icon, 15)}${l1}`}</button>`;
+  const b = [btn(quickDone && p.quick && p.quick.v === 2, 'quick-redo', 'fan', 'Schnellauslegung', 'Schnellauslegung anpassen')];
+  if (typeof roofOk === 'function' && roofOk()) b.push(btn(roofDone, 'roof-open', 'grid', 'Modulbelegung', 'Modulbelegung anpassen'));
+  return `<div class="flex flex-wrap gap-2 mt-3">${b.join('')}</div>`;
 }

@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.17', date: '2026-11-09', items: [
+    ['modplace', 'Module nicht mehr zu lang', 'Behoben: Die automatische Zählung konnte sich bei den Reihen verzählen – Module wirkten dann zu lang (hochkant) bzw. zu dick (quer). Jetzt wird geprüft, nach welchem Abstand sich das Pfannenmuster wirklich wiederholt. Neu: „÷2“ und „×2“ neben „Pfannen waagerecht“ für Doppelmulden-Pfannen.'],
+    ['quick', 'Nachträglich anpassen', 'Auf jeder Kundenkarte bleiben „Schnellauslegung“ und „Modulbelegung“ sichtbar – nach dem Erledigen als „… anpassen“ mit Häkchen.']
+  ] },
   { version: '2.16', date: '2026-11-09', items: [
     ['modplace', 'Pfannen automatisch zählen', 'Im Schritt „Referenz“ zählt „Automatisch zählen“ die Pfannen und Reihen im Foto selbst (ideal mit Drohnenfoto). Bei Doppelmulden-Pfannen (z. B. Frankfurter) werden zwei Mulden als eine Pfanne gezählt.'],
     ['modplace', 'Kontrolle am Raster', 'Neuer Hinweis: Jedes gelbe Kästchen muss genau eine Pfanne sein – liegen zwei darin, ist die Anzahl zu klein und Module werden zu breit gezeichnet.']
