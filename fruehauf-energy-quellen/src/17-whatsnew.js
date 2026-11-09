@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.16', date: '2026-11-09', items: [
+    ['modplace', 'Pfannen automatisch zählen', 'Im Schritt „Referenz“ zählt „Automatisch zählen“ die Pfannen und Reihen im Foto selbst (ideal mit Drohnenfoto). Bei Doppelmulden-Pfannen (z. B. Frankfurter) werden zwei Mulden als eine Pfanne gezählt.'],
+    ['modplace', 'Kontrolle am Raster', 'Neuer Hinweis: Jedes gelbe Kästchen muss genau eine Pfanne sein – liegen zwei darin, ist die Anzahl zu klein und Module werden zu breit gezeichnet.']
+  ] },
   { version: '2.15', date: '2026-11-09', items: [
     ['quick', 'Schnellauslegung bei jedem Kunden', 'Auch bei reinen PV-Kunden (z. B. nach dem Modulplan) gibt es jetzt „Auch eine Wärmepumpe? – Schnellauslegung“. Beim Übernehmen wird der Kunde zu PV + Wärmepumpe; Modulplan und PV-Daten bleiben erhalten.'],
     ['modplace', 'Direkt aus der Kundenübersicht', 'Jede Kundenkarte zeigt „Schnellauslegung“ und „Modulbelegung“, solange sie noch nicht gemacht sind. Eine Modulbelegung bei einem reinen Wärmepumpen-Kunden macht ihn zu PV + Wärmepumpe.'],

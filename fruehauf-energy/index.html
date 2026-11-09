@@ -4011,7 +4011,7 @@ async function saveSignature(p, auto) {
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
   ['download', '1 · Als App installieren', 'Legen Sie die App auf den Home-Bildschirm – iPhone: Teilen → „Zum Home-Bildschirm“, Android: Menü ⋮ → „App installieren“. So startet sie schneller, läuft offline und Ihre Daten sind geschützt.'],
-  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte.'],
+  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
@@ -4199,7 +4199,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261109070229';
+const APP_VERSION = '20261109075500';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4616,6 +4616,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.16', date: '2026-11-09', items: [
+    ['modplace', 'Pfannen automatisch zählen', 'Im Schritt „Referenz“ zählt „Automatisch zählen“ die Pfannen und Reihen im Foto selbst (ideal mit Drohnenfoto). Bei Doppelmulden-Pfannen (z. B. Frankfurter) werden zwei Mulden als eine Pfanne gezählt.'],
+    ['modplace', 'Kontrolle am Raster', 'Neuer Hinweis: Jedes gelbe Kästchen muss genau eine Pfanne sein – liegen zwei darin, ist die Anzahl zu klein und Module werden zu breit gezeichnet.']
+  ] },
   { version: '2.15', date: '2026-11-09', items: [
     ['quick', 'Schnellauslegung bei jedem Kunden', 'Auch bei reinen PV-Kunden (z. B. nach dem Modulplan) gibt es jetzt „Auch eine Wärmepumpe? – Schnellauslegung“. Beim Übernehmen wird der Kunde zu PV + Wärmepumpe; Modulplan und PV-Daten bleiben erhalten.'],
     ['modplace', 'Direkt aus der Kundenübersicht', 'Jede Kundenkarte zeigt „Schnellauslegung“ und „Modulbelegung“, solange sie noch nicht gemacht sind. Eine Modulbelegung bei einem reinen Wärmepumpen-Kunden macht ihn zu PV + Wärmepumpe.'],
@@ -6167,7 +6171,9 @@ function roofPanel(p, f, g) {
       <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl">Deckbreite</span><div class="relative"><input class="inp pr-12" inputmode="decimal" data-rt="w" value="${inputFmt(t.w, 'n')}"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">cm</span></div></label><label><span class="lbl">Decklänge</span><div class="relative"><input class="inp pr-12" inputmode="decimal" data-rt="l" value="${inputFmt(t.l, 'n')}"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">cm</span></div></label></div>
       <p class="hint">Typische Werte – bitte prüfen. Änderungen werden für diesen Pfannentyp gespeichert.</p>
       <p class="hint" style="color:#C7792F">Kontrolle: Das gelbe Raster muss genau auf den Pfannenkanten liegen. Wenn nicht – Ecken oder Anzahl korrigieren. Tipp: Foto nicht mit 0,5×-Weitwinkel aufnehmen.</p>
-      <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl">Pfannen waagerecht</span>${roofIn('nx', 'Stk')}</label><label><span class="lbl">Reihen senkrecht</span>${roofIn('ny', 'Stk')}</label></div>`}
+      <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl">Pfannen waagerecht</span>${roofIn('nx', 'Stk')}</label><label><span class="lbl">Reihen senkrecht</span>${roofIn('ny', 'Stk')}</label></div>
+      <button class="btn-s w-full mt-2" data-r="autocount">${ic('sparkle', 16)}Automatisch zählen</button>
+      <p class="hint">Jedes gelbe Kästchen muss <b>genau eine</b> Pfanne sein. Liegen zwei Pfannen in einem Kästchen, ist die Anzahl zu klein (doppelte Zahl eintragen).</p>`}
       <div class="mt-3"><span class="lbl">Randabstände</span><div class="grid grid-cols-3 gap-2"><label><span class="text-[11px] text-ink3">First</span>${roofIn('mTop', 'cm')}</label><label><span class="text-[11px] text-ink3">Rinne</span>${roofIn('mBot', 'cm')}</label><label><span class="text-[11px] text-ink3">Seiten</span>${roofIn('mSide', 'cm')}</label></div></div>
       <div id="roof-dims" class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px]">${roofDims(g)}</div>
       <button class="btn-p w-full mt-3" data-r="next">Weiter: Module belegen ${ic('arrowR', 16)}</button></div>`;
@@ -6716,6 +6722,56 @@ function pageZoomReset() {
 if (window.visualViewport) { visualViewport.addEventListener('resize', () => setTimeout(pageZoomReset, 60)); visualViewport.addEventListener('scroll', () => { if (RS) setTimeout(pageZoomReset, 60); }); }
 document.addEventListener('touchend', e => { if (!e.touches || !e.touches.length) setTimeout(pageZoomReset, 80); }, { passive: true });
 document.addEventListener('gestureend', () => setTimeout(pageZoomReset, 80));
+
+const ROOF_DOUBLE = ['frankfurter', 'doppels', 'harzer'];   // Pfannen mit zwei Mulden
+/* ---------- Pfannen automatisch zählen ----------
+   Der Referenzbereich wird entzerrt; dann wird gemessen, wie oft sich das Pfannenmuster
+   waagerecht (Mulden) und senkrecht (Reihenkanten) wiederholt. Ergebnis ist ein Vorschlag. */
+function roofPeriod(p, nmin, nmax) {
+  /* Ableitung des Profils: betont die feinen, gleichmäßigen Pfannenkanten statt Fenster oder Schornstein */
+  const n = p.length, w = Math.max(3, Math.round(n / 10)), d = new Float32Array(n - 1), r = new Float32Array(n - 1); let md = 0, mr = 0;
+  for (let i = 0; i < n - 1; i++) {
+    d[i] = p[i + 1] - p[i]; md += d[i];
+    let s = 0, c = 0; for (let k = Math.max(0, i - w); k <= Math.min(n - 1, i + w); k++) { s += p[k]; c++; } r[i] = p[i] - s / c; mr += r[i];
+  }
+  md /= n - 1; mr /= n - 1; for (let i = 0; i < n - 1; i++) { d[i] -= md; r[i] -= mr; }
+  const pow = (q, f) => { let a = 0, b = 0; for (let i = 0; i < n - 1; i++) { const t = 2 * Math.PI * f * i / n; a += q[i] * Math.cos(t); b += q[i] * Math.sin(t); } return a * a + b * b; };
+  const near = (q, c) => { let bf = c, bv = -1; for (let f = c * 0.96; f <= c * 1.04; f += 0.25) { const v = pow(q, f); if (v > bv) { bv = v; bf = f; } } return [bf, bv]; };
+  nmax = Math.min(nmax, Math.floor(n / 4)); if (nmax <= nmin) return null;
+  let best = 0, bp = -1; const all = [];
+  for (let f = nmin; f <= nmax; f += 0.25) { const v = pow(d, f); all.push(v); if (v > bp) { bp = v; best = f; } }
+  /* Oberwelle aussortieren: Ist das Grundmuster bei der halben (oder drittel) Zahl genauso kräftig, ist das die echte Anzahl */
+  /* Ein Schritt: unter halber, drittel und viertel Zahl die mit dem kräftigsten Grundmuster wählen */
+  const rb = near(r, best)[1]; let cb = best, cv = rb;
+  for (const dv of [2, 3, 4]) { const h = best / dv; if (h < Math.max(8, nmin)) continue; const [hf, hv] = near(r, h); if (hv >= 0.6 * rb && hv > cv * (cb === best ? 0 : 1)) { cb = hf; cv = hv; } }
+  best = cb;
+  all.sort((a, b) => a - b); const med = all[all.length >> 1] || 1;
+  return { n: Math.round(best), q: bp / med };
+}
+async function roofAutoCount(f) {
+  const img = await roofImg(f.photo); if (!img || !f.ref) return null;
+  const sc = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight)), sw = Math.round(img.naturalWidth * sc), sh = Math.round(img.naturalHeight * sc);
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, sw, sh);
+  const d = x.getImageData(0, 0, sw, sh).data, P = f.ref.map(([u, v]) => [u * sw, v * sh]), H = sqToQuad(P), L = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const W = Math.round(Math.max(L(P[0], P[1]), L(P[3], P[2]))), Hh = Math.round(Math.max(L(P[0], P[3]), L(P[1], P[2])));
+  if (W < 40 || Hh < 40) return null;
+  const col = new Float32Array(W), row = new Float32Array(Hh);
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
+    const [px, py] = hApply(H, (i + 0.5) / W, (j + 0.5) / Hh), xi = Math.min(sw - 1, Math.max(0, px | 0)), yi = Math.min(sh - 1, Math.max(0, py | 0)), k = (yi * sw + xi) * 4;
+    const v = d[k] * 0.3 + d[k + 1] * 0.59 + d[k + 2] * 0.11; col[i] += v; row[j] += v;
+  }
+  const a = roofPeriod(col, 4, 160), b = roofPeriod(row, 3, 90); if (!a || !b) return null;
+  const dbl = ROOF_DOUBLE.includes(f.tileId);
+  return { nx: dbl ? Math.max(1, Math.round(a.n / 2)) : a.n, waves: a.n, dbl, ny: b.n, qx: a.q, qy: b.q };
+}
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('[data-r="autocount"]'); if (!a || !RS) return;
+  const f = roofF(); a.disabled = true; a.innerHTML = 'Zähle …';
+  let r = null; try { r = await roofAutoCount(f); } catch (err) { r = null; }
+  if (!r) { toast('Automatisches Zählen hat nicht geklappt – bitte von Hand zählen.', 'warn'); roofSoft(); return; }
+  f.nx = r.nx; f.ny = r.ny; roofSave(); roofSoft();
+  toast(`Erkannt: ${r.nx} Pfannen waagerecht${r.dbl ? ` (${r.waves} Mulden, Doppelmulde)` : ''} × ${r.ny} Reihen. Bitte am gelben Raster prüfen – jedes Kästchen muss genau eine Pfanne sein.`, r.qx < 4 || r.qy < 4 ? 'warn' : 'ok', 6000);
+});
 /* Startanimation: Haus → Photovoltaik → Speicher → Wärmepumpe → E-Auto → Zoom → Logo → Zoom → App */
 const SPLASH = { ready: false, done: false, skip: false };
 const splashCfg = () => Object.assign({ on: true, logo: 'company', file: '' }, S.design.splash || {});
