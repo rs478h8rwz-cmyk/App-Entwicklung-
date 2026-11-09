@@ -315,7 +315,7 @@ setInterval(() => {
     const d = dayOf(isoToday()), x = calcDay(d), n = $('#live-netto'), p = $('#live-pause'), df = $('#live-diff');
     if (n) n.textContent = hm(x.netto + x.credit); if (p) p.textContent = hm(x.abzug);
     const w = weekStat(mondayOf(isoToday())), wi = $('#wk-ist'), wr = $('#wk-rest'), wo = $('#wk-over'), wb = $('#wk-bar');
-    if (wi) wi.innerHTML = `${hm(w.ist)} <span class="text-[16px] text-ink3 font-normal">von ${hm(w.target)} Std.</span>`; if (wr) wr.textContent = hm(w.rest); if (wo) wo.textContent = '+' + hm(w.over); if (wb) wb.style.width = w.pct + '%';
+    if (wi) wi.innerHTML = `${hm(w.ist)} <span class="text-[15px] text-ink3 font-normal font-sans">von ${hm(w.target)} Std.</span>`; if (wr) wr.textContent = hm(w.rest); if (wo) wo.textContent = '+' + hm(w.over); if (wb) wb.style.width = w.pct + '%';
   }
 }, 15000);
 setInterval(() => { const c = $('#clock'); if (c) c.textContent = nowHMS(); const v = $('#clock-src'); if (v) v.innerHTML = clockSrc(); }, 1000);
