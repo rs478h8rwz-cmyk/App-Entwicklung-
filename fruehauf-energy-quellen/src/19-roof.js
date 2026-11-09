@@ -125,12 +125,13 @@ async function roofOpen(pid) {
   RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', zm: { z: 1, x: 0, y: 0 }, ptrs: new Map(), pinch: null, mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
   document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col" style="height:100dvh"></div>');
   /* Seite fixieren – verhindert auf dem iPad versetzte Tipp-Positionen nach der Tastatur */
-  /* Hintergrund nur am Scrollen hindern – KEIN position:fixed am body (verhindert auf dem iPad die Tastatur) */
-  RS.scrollY = window.scrollY; document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden';
+  RS.scrollY = window.scrollY; const bs = document.body.style; RS.bodyCss = bs.cssText;
+  bs.position = 'fixed'; bs.top = `-${RS.scrollY}px`; bs.left = '0'; bs.right = '0'; bs.width = '100%';
+  document.documentElement.style.overflow = 'hidden';
   roofRender();
 }
 const roofNewFace = n => ({ id: uid('rf'), name: n === 1 ? 'Hauptdach' : `Dachfläche ${n}`, photo: '', iw: 0, ih: 0, corners: [[0.2, 0.8], [0.35, 0.35], [0.65, 0.35], [0.8, 0.8]], ref: null, refMode: 'tiles', tileId: 'frankfurter', nx: null, ny: null, lw: null, lh: null, mTop: 30, mBot: 30, mSide: 30, prodId: (roofMods()[0] || {}).id || '', orient: 'p', mods: [] });
-function roofClose() { const e = $('#roof-ed'); if (e) e.remove(); document.documentElement.style.overflow = ''; const y = RS ? RS.scrollY || 0 : 0; document.body.style.overflow = ''; RS = null; render(); window.scrollTo(0, y); }
+function roofClose() { const e = $('#roof-ed'); if (e) e.remove(); document.documentElement.style.overflow = ''; const y = RS ? RS.scrollY || 0 : 0; document.body.style.cssText = RS ? RS.bodyCss || '' : ''; RS = null; render(); window.scrollTo(0, y); }
 const roofP = () => RS && findProject(RS.pid), roofF = () => roofP().roof.faces[RS.fi];
 function roofSave() { const p = roofP(); if (p) saveProject(p); }
 

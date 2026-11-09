@@ -264,6 +264,7 @@ document.addEventListener('click', async e => {
 (async function init() {
   await loadAll();
   await loadPersonal();
+  if (!PERSONAL.kbdReset212) { PERSONAL.kbdReset212 = true; delete PERSONAL.kbdPill; delete PERSONAL.bgAnim; savePersonal(); if (S.design.splash && S.design.splash.on === false) { S.design.splash.on = true; saveSettings(); } try { localStorage.removeItem('fe-safe'); } catch (e) {} for (const k in SAFE) delete SAFE[k]; }
   try { bgAnimApply(); } catch (e) {}
   applyTheme();
   try { splashStart(); } catch (e) {}

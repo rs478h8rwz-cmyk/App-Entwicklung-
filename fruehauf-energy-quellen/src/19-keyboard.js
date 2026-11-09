@@ -42,7 +42,7 @@ function kbdShow(el) {
   kbdEl = el; kbdBtn.style.display = 'block'; kbdPlace();
 }
 const isTablet = () => matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) >= 700;
-const kbdTouch = () => matchMedia('(pointer: coarse)').matches && !(PERSONAL && PERSONAL.kbdPill === false) && !(isTablet() && PERSONAL.kbdPill !== true);
+const kbdTouch = () => matchMedia('(pointer: coarse)').matches && !(PERSONAL && PERSONAL.kbdPill === false);
 document.addEventListener('focusin', e => {
   const el = e.target;
   if (!kbdNumeric(el)) { if (el !== kbdBtn) kbdHide(); return; }

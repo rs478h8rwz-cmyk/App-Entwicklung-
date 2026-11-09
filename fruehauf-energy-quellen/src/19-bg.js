@@ -12,7 +12,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 @media (prefers-reduced-motion: reduce){#bg-anim i{animation:none}}
 @media print{#bg-anim{display:none}}
 </style>`);
-function bgAnimOn() { if (SAFE.bg) return false; if (typeof PERSONAL === 'undefined' || !PERSONAL) return true; if (PERSONAL.bgAnim === false) return false; if (PERSONAL.bgAnim === true) return true; return !(matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) >= 700); }
+function bgAnimOn() { if (SAFE.bg) return false; if (typeof PERSONAL === 'undefined' || !PERSONAL) return true; if (PERSONAL.bgAnim === false) return false; return true; }
 function bgAnimApply() { const el = document.getElementById('bg-anim'); if (bgAnimOn()) { if (!el) document.body.insertAdjacentHTML('afterbegin', '<div id="bg-anim" aria-hidden="true"><i></i><i></i><i></i></div>'); bgAnimTone && bgAnimTone(); } else if (el) el.remove(); }
 document.body.insertAdjacentHTML('afterbegin', '<div id="bg-anim" aria-hidden="true"><i></i><i></i><i></i></div>');
 /* Stärke je Ansicht: im dunklen Modus etwas kräftiger, im hellen sehr zart */
@@ -33,7 +33,13 @@ function heroWatch() { if (!heroIO) return; heroIO.disconnect(); $$('#app .hero-
 { const _rh = render; render = function () { const r = _rh.apply(this, arguments); heroWatch(); return r; }; }
 document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('app-hidden', document.hidden));
 
-/* Modulplan offen: nach dem Schließen der Tastatur Ansicht oben halten (Seite ist dort fixiert) */
+/* iOS: nach dem Schließen der Tastatur bleibt die Seite manchmal verschoben – Tipp-Positionen liegen dann daneben.
+   Sobald kein Eingabefeld mehr aktiv ist, wird die Ansicht neu ausgerichtet. */
+document.addEventListener('focusout', () => setTimeout(() => {
+  const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+  if (window.visualViewport && (visualViewport.offsetTop || visualViewport.pageTop !== window.scrollY)) window.scrollTo(window.scrollX, window.scrollY);
+  if ($('#roof-ed')) window.scrollTo(0, 0);
+}, 80));
 
 
 /* Einstellungen → Ansicht: Tastatur-Hilfe (zum Eingrenzen auf dem iPad) */
@@ -41,19 +47,19 @@ document.addEventListener('visibilitychange', () => document.documentElement.cla
   const _sa = SET.ansicht;
   SET.ansicht = () => {
     const tab = isTablet ? isTablet() : false, row = (k, l, h, on) => toggleRow(l, '', h, { action: 'kbdh', data: `data-k="${k}"`, on });
-    const pillOn = PERSONAL.kbdPill === true || (PERSONAL.kbdPill !== false && !tab), bgOn = bgAnimOn(), spOn = (S.design.splash || {}).on !== false;
-    return _sa() + sCard('info', 'Tastatur-Hilfe', 'Öffnet sich auf dem iPad keine Tastatur? Hier testen und einzeln abschalten.',
+    const pillOn = PERSONAL.kbdPill !== false, bgOn = bgAnimOn(), spOn = (S.design.splash || {}).on !== false;
+    return _sa() + sCard('info', 'Tastatur-Hilfe', 'Öffnet sich auf dem iPad keine Tastatur? Meist hilft ein Neustart des iPads. Hier testen und einzeln abschalten.',
       `<label class="block"><span class="lbl">Testfeld – hier antippen</span><input class="inp" id="kbd-test" placeholder="Hier tippen …" autocomplete="off"></label>
       <a class="btn-s w-full justify-center" href="diag.html">${ic('info', 16)}Tastatur-Testseite öffnen</a>${Object.values(SAFE).some(Boolean) ? '<div class="hint text-warn">Test-Schalter aktiv – auf der Testseite wieder zurücksetzen.</div>' : ''}
-      ${row('kbdPill', 'Knopf „ABC Buchstaben“ bei Zahlenfeldern', 'Auf dem iPad standardmäßig aus.', pillOn)}
-      ${row('bgAnim', 'Bewegter Hintergrund', 'Auf dem iPad standardmäßig aus.', bgOn)}
+      ${row('kbdPill', 'Knopf „ABC Buchstaben“ bei Zahlenfeldern', 'Wechsel zwischen Zahlen- und Buchstabentastatur.', pillOn)}
+      ${row('bgAnim', 'Bewegter Hintergrund', 'Sanfte Farbflächen hinter der App.', bgOn)}
       ${row('splash', 'Startanimation', 'Haus und Logo beim Öffnen der App.', spOn)}`);
   };
 }
 document.addEventListener('click', e => {
   const a = e.target.closest && e.target.closest('[data-a="kbdh"]'); if (!a) return;
   const k = a.dataset.k;
-  if (k === 'kbdPill') { const tab = isTablet(), cur = PERSONAL.kbdPill === true || (PERSONAL.kbdPill !== false && !tab); PERSONAL.kbdPill = !cur; savePersonal(); }
+  if (k === 'kbdPill') { PERSONAL.kbdPill = PERSONAL.kbdPill === false; savePersonal(); }
   else if (k === 'bgAnim') { PERSONAL.bgAnim = !bgAnimOn(); savePersonal(); bgAnimApply(); }
   else if (k === 'splash') { S.design.splash = { ...(S.design.splash || {}), on: (S.design.splash || {}).on === false }; saveSettings(); }
   render();
