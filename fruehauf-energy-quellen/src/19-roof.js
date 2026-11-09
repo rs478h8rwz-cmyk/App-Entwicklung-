@@ -722,3 +722,19 @@ function roofSoft() {
   if (ft) ft.innerHTML = roofFoot(p, f);
   roofDraw();
 }
+
+/* iPad: Zwei-Finger-Zoom im Dachbild darf nie die ganze Seite mitzoomen
+   (sonst liegen Tipps im Menü rechts daneben). Gesten auf der Bühne abfangen … */
+['touchstart', 'touchmove'].forEach(t => document.addEventListener(t, e => {
+  if (RS && e.touches && e.touches.length > 1 && e.target.closest && e.target.closest('#roof-stage')) e.preventDefault();
+}, { passive: false }));
+/* … und falls das iPad doch gezoomt hat: Seite sofort auf 100 % zurücksetzen */
+function pageZoomReset() {
+  const vv = window.visualViewport; if (!vv || (vv.scale < 1.01 && !vv.offsetLeft)) return;
+  const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+  const m = document.querySelector('meta[name=viewport]'); if (!m) return; const c = m.content;
+  m.content = c.replace('maximum-scale=1,', 'maximum-scale=1.01,'); requestAnimationFrame(() => { m.content = c; if (RS) window.scrollTo(0, RS.scrollY || 0); });
+}
+if (window.visualViewport) { visualViewport.addEventListener('resize', () => setTimeout(pageZoomReset, 60)); visualViewport.addEventListener('scroll', () => { if (RS) setTimeout(pageZoomReset, 60); }); }
+document.addEventListener('touchend', e => { if (!e.touches || !e.touches.length) setTimeout(pageZoomReset, 80); }, { passive: true });
+document.addEventListener('gestureend', () => setTimeout(pageZoomReset, 80));
