@@ -507,3 +507,19 @@ function custTodo(p) {
   if (typeof roofOk === 'function' && roofOk()) b.push(btn(roofDone, 'roof-open', 'grid', 'Modulbelegung', 'Modulbelegung anpassen'));
   return `<div class="flex flex-wrap gap-2 mt-3">${b.join('')}</div>`;
 }
+
+/* Art der Berechnung nachträglich ändern (z. B. WP → PV + WP) – alle Eingaben bleiben erhalten */
+const TYPE_OPTS = [['wp', 'Wärmepumpe', 'fan', 'Heizungstausch mit BEG-Förderung'], ['pv', 'Photovoltaik', 'sun', 'Solaranlage, optional mit Speicher'], ['pvwp', 'PV + Wärmepumpe', 'bolt', 'Beides zusammen – größte Ersparnis']];
+function typeDialog(p) {
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Art der Berechnung ändern</h3><p class="text-ink3 text-[14px] mt-1">${esc(p.customer.name || 'Dieser Kunde')} – alle bisherigen Eingaben bleiben erhalten.</p>
+    <div class="space-y-2 mt-5">${TYPE_OPTS.map(([k, l, i, d]) => `<button class="w-full text-left rounded-[var(--rb)] border ${p.type === k ? 'border-p bg-p/10' : 'border-line2 hover:border-p'} p-4 flex items-center gap-3" data-a="type-set" data-id="${p.id}" data-v="${k}"><span class="icon-box">${ic(i, 18)}</span><span class="flex-1"><span class="block font-semibold">${l}</span><span class="block text-[13px] text-ink3">${d}</span></span>${p.type === k ? `<span class="text-p">${ic('check', 18)}</span>` : ''}</button>`).join('')}</div>`);
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('[data-a="type-change"],[data-a="type-set"]'); if (!a) return;
+  const p = findProject(a.dataset.id); if (!p) return;
+  if (a.dataset.a === 'type-change') return typeDialog(p);
+  const v = a.dataset.v; if (v === p.type) return closeModal();
+  const was = p.type; p.type = v; saveProject(p); closeModal(); render();
+  const name = t => (TYPE_OPTS.find(x => x[0] === t) || [, t])[1];
+  toast(`Geändert: ${name(was)} → ${name(v)}.${v !== 'wp' && was === 'wp' ? ' Bitte die PV-Angaben (Anlagenleistung, Preis) ergänzen.' : v !== 'pv' && was === 'pv' ? ' Bitte die Wärmepumpen-Angaben ergänzen.' : ''}`, 'ok', 5000);
+});

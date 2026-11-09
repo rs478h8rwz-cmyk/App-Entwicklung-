@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.20', date: '2026-11-09', items: [
+    ['house', 'Art der Berechnung ändern', 'Im Kunden oben auf „WP“, „PV“ oder „PV + WP“ tippen – so wird z. B. aus einem reinen Wärmepumpen-Kunden nachträglich PV + Wärmepumpe. Alle Eingaben bleiben erhalten.']
+  ] },
   { version: '2.19', date: '2026-11-09', items: [
     ['sign', 'PDF auf dem iPad', 'Behoben: Auf iPad und iPhone war im PDF das Haus auf dem Deckblatt stark vergrößert und die Haken bei „Angebot annehmen“ fehlten. Grafiken werden dort jetzt vor dem Erstellen in Bilder umgewandelt, Schriften sicher geladen.']
   ] },

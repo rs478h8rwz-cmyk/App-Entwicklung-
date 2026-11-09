@@ -2343,7 +2343,7 @@ function viewProject() {
   const body = step === 1 ? step1(p, R) : step === 2 ? step2(p, R) : step === 3 ? step3(p, R) : step4(p, R);
   const wide = step === 4 && UI.resultTab === 'doc';
   return `<div class="max-w-7xl mx-auto px-4 pt-5">
-    <div class="flex items-center gap-3 flex-wrap"><a href="#/kunden" class="btn-g -ml-3">${ic('arrowL', 16)}Kunden</a><div class="h-font text-[22px] truncate">${esc(p.customer.name || 'Neue Berechnung')}</div>${typeBadge(p.type)}<div class="ml-auto flex items-center gap-2"><span class="text-[12px] text-ink3 hidden sm:inline">Status</span><select class="inp !h-9 !w-auto !pr-8 !text-[13px]" data-status-set>${Object.entries(STATUS).map(([k, [l]]) => `<option value="${k}" ${(p.status || 'offen') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
+    <div class="flex items-center gap-3 flex-wrap"><a href="#/kunden" class="btn-g -ml-3">${ic('arrowL', 16)}Kunden</a><div class="h-font text-[22px] truncate">${esc(p.customer.name || 'Neue Berechnung')}</div><button class="inline-flex items-center gap-1.5 rounded-full hover:opacity-80" data-a="type-change" data-id="${p.id}" title="Art der Berechnung ändern">${typeBadge(p.type)}<span class="text-ink3 text-[12px] inline-flex items-center gap-1">${ic('pen', 13)}<span class="hidden sm:inline">ändern</span></span></button><div class="ml-auto flex items-center gap-2"><span class="text-[12px] text-ink3 hidden sm:inline">Status</span><select class="inp !h-9 !w-auto !pr-8 !text-[13px]" data-status-set>${Object.entries(STATUS).map(([k, [l]]) => `<option value="${k}" ${(p.status || 'offen') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
     <div class="card p-4 sm:px-6 mt-3">${progressBar(step)}</div>
     <div class="grid ${wide ? '' : 'lg:grid-cols-[minmax(0,1fr)_340px]'} gap-5 mt-5 items-start">
       <div class="min-w-0 space-y-5">${body}
@@ -4040,7 +4040,7 @@ async function saveSignature(p, auto) {
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
   ['download', '1 · Als App installieren', 'Legen Sie die App auf den Home-Bildschirm – iPhone: Teilen → „Zum Home-Bildschirm“, Android: Menü ⋮ → „App installieren“. So startet sie schneller, läuft offline und Ihre Daten sind geschützt.'],
-  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte.'],
+  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
@@ -4228,7 +4228,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261109183315';
+const APP_VERSION = '20261109214356';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4645,6 +4645,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.20', date: '2026-11-09', items: [
+    ['house', 'Art der Berechnung ändern', 'Im Kunden oben auf „WP“, „PV“ oder „PV + WP“ tippen – so wird z. B. aus einem reinen Wärmepumpen-Kunden nachträglich PV + Wärmepumpe. Alle Eingaben bleiben erhalten.']
+  ] },
   { version: '2.19', date: '2026-11-09', items: [
     ['sign', 'PDF auf dem iPad', 'Behoben: Auf iPad und iPhone war im PDF das Haus auf dem Deckblatt stark vergrößert und die Haken bei „Angebot annehmen“ fehlten. Grafiken werden dort jetzt vor dem Erstellen in Bilder umgewandelt, Schriften sicher geladen.']
   ] },
@@ -6020,6 +6023,22 @@ function custTodo(p) {
   if (typeof roofOk === 'function' && roofOk()) b.push(btn(roofDone, 'roof-open', 'grid', 'Modulbelegung', 'Modulbelegung anpassen'));
   return `<div class="flex flex-wrap gap-2 mt-3">${b.join('')}</div>`;
 }
+
+/* Art der Berechnung nachträglich ändern (z. B. WP → PV + WP) – alle Eingaben bleiben erhalten */
+const TYPE_OPTS = [['wp', 'Wärmepumpe', 'fan', 'Heizungstausch mit BEG-Förderung'], ['pv', 'Photovoltaik', 'sun', 'Solaranlage, optional mit Speicher'], ['pvwp', 'PV + Wärmepumpe', 'bolt', 'Beides zusammen – größte Ersparnis']];
+function typeDialog(p) {
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Art der Berechnung ändern</h3><p class="text-ink3 text-[14px] mt-1">${esc(p.customer.name || 'Dieser Kunde')} – alle bisherigen Eingaben bleiben erhalten.</p>
+    <div class="space-y-2 mt-5">${TYPE_OPTS.map(([k, l, i, d]) => `<button class="w-full text-left rounded-[var(--rb)] border ${p.type === k ? 'border-p bg-p/10' : 'border-line2 hover:border-p'} p-4 flex items-center gap-3" data-a="type-set" data-id="${p.id}" data-v="${k}"><span class="icon-box">${ic(i, 18)}</span><span class="flex-1"><span class="block font-semibold">${l}</span><span class="block text-[13px] text-ink3">${d}</span></span>${p.type === k ? `<span class="text-p">${ic('check', 18)}</span>` : ''}</button>`).join('')}</div>`);
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('[data-a="type-change"],[data-a="type-set"]'); if (!a) return;
+  const p = findProject(a.dataset.id); if (!p) return;
+  if (a.dataset.a === 'type-change') return typeDialog(p);
+  const v = a.dataset.v; if (v === p.type) return closeModal();
+  const was = p.type; p.type = v; saveProject(p); closeModal(); render();
+  const name = t => (TYPE_OPTS.find(x => x[0] === t) || [, t])[1];
+  toast(`Geändert: ${name(was)} → ${name(v)}.${v !== 'wp' && was === 'wp' ? ' Bitte die PV-Angaben (Anlagenleistung, Preis) ergänzen.' : v !== 'pv' && was === 'pv' ? ' Bitte die Wärmepumpen-Angaben ergänzen.' : ''}`, 'ok', 5000);
+});
 /* =========================================================
    Modulplan (PV-Dachbelegung) – nur auf PC, iPad und aufgeklapptem Foldable
    Ablauf: Foto → Dachfläche (4 Ecken) → Referenz (Pfannen zählen oder Maß) → Module belegen
