@@ -28,3 +28,9 @@ Web-App (eine `index.html`, offline-fähig) für Frühauf Solar. Auslieferung al
   Symbole im PDF als Bild (`sImg`) statt Inline-SVG in Flex-Containern.
 - Bibliotheken/Schriften liegen lokal in `fruehauf-energy/vendor/` (Netlify cached sie lange –
   neue Schriften daher in `src/01-head.html` einbinden).
+
+## Zweite App: Abnahme & Service (eigenständig)
+- Quellen: `fruehauf-abnahme-quellen/src/` → Bauen: `bash fruehauf-abnahme-quellen/build.sh` → `fruehauf-abnahme/index.html` + `sw.js`.
+- Nie mit der Wirtschaftlichkeits-App vermischen; eigenes Netlify-Projekt, ZIP `fruehauf-abnahme-netlify.zip`.
+- Gleicher Stil (Schriften, Karten, Knöpfe, hell/dunkel). PDF direkt mit jsPDF (kein html2canvas).
+- Bei Änderungen `APP_VERSION` in `src/03-core.js` erhöhen.

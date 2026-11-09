@@ -1,0 +1,24 @@
+Frühauf – Abnahme & Service (Version 1.0)
+=========================================
+
+Eigenständige Web-App für Monteure: Baustellen-Abnahme und Serviceaufträge
+für DC-Montage, AC-Montage und SHK. Läuft auf iPhone, iPad, Android und PC,
+auch offline. Alle Daten bleiben auf dem Gerät.
+
+Veröffentlichen (Netlify):
+  1. Auf app.netlify.com ein NEUES Projekt anlegen (nicht das der Wirtschaftlichkeits-App).
+  2. Den Inhalt dieses ZIPs per Drag & Drop hochladen.
+  3. Auf dem iPad/iPhone in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
+
+Ablauf:
+  Gewerk wählen → „Neue Baustelle – Abnahme“ oder „Serviceauftrag“ →
+  Schritt für Schritt ausfüllen → Fotos → Unterschrift Monteur und Kunde →
+  Zusammenfassung → „Abschließen & PDF“ → teilen (Mail, WhatsApp …).
+
+Service: Grund, Behebung, Material, Einsatzzeiten (Ankunft/Abfahrt/Pause).
+Zuschläge werden automatisch erkannt: Samstag 150 %, Sonntag/Feiertag 200 %,
+im Notdienst jeweils + 50 % (auch werktags). Einstellbar unter Einstellungen → Zuschläge.
+
+Einstellungen: Firma & Logo, Design (hell/dunkel, Farben, Schriften), Monteure,
+Zuschläge & Bundesland, Auswahllisten (WP-Modelle, Systeme, Störungen, Behebungen),
+Datensicherung (Sicherung speichern / einspielen – auch zum Übertragen auf ein anderes Gerät).
