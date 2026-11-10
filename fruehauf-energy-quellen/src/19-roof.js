@@ -662,41 +662,58 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- Foto der Belegung (Originalfoto mit perspektivischen Modulen) ---------- */
-async function roofSnapshot(f) {
-  const g = faceGeom(f), img = await roofImg(f.photo); if (!g || g.bad || !img || !f.mods.length) return null;
-  /* Ausschnitt rund um das Dach */
-  const xs = f.corners.map(cc => cc[0] * f.iw), ys = f.corners.map(cc => cc[1] * f.ih), bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+/* Bild der Belegung fürs PDF: alle Dachflächen eines Fotos in EINEM Gesamtbild – mit kompletten Strings und Optimierern */
+async function roofSnapshot(f, group) {
+  group = (group || [f]).map(o => ({ o, g: faceGeom(o) })).filter(x => x.g && !x.g.bad);
+  const img = await roofImg(f.photo), total = group.reduce((a, x) => a + x.o.mods.length, 0);
+  if (!group.length || !img || !total) return null;
+  /* Ausschnitt rund um alle Dachflächen */
+  const xs = group.flatMap(x => x.o.corners.map(cc => cc[0] * f.iw)), ys = group.flatMap(x => x.o.corners.map(cc => cc[1] * f.ih)), bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
   const cx0 = Math.max(0, Math.min(...xs) - bw * 0.12), cx1 = Math.min(f.iw, Math.max(...xs) + bw * 0.12), cy0 = Math.max(0, Math.min(...ys) - bh * 0.3), cy1 = Math.min(f.ih, Math.max(...ys) + bh * 0.35);
   const k = Math.min(2, 1800 / Math.max(cx1 - cx0, cy1 - cy0)), c = document.createElement('canvas'); c.width = Math.round((cx1 - cx0) * k); c.height = Math.round((cy1 - cy0) * k);
   const x = c.getContext('2d'); x.drawImage(img, cx0, cy0, cx1 - cx0, cy1 - cy0, 0, 0, c.width, c.height);
-  const pr = roofProd(f), pimg = pr.planImg ? await roofPlanImg(pr.planImg) : null, src = pimg || roofCellImg();
-  for (const m of f.mods) {
-    const b = modBox(f, m), q = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].map(([X, Y]) => { const [a, bb] = g.toImg(X, Y); return [(a - cx0) * k, (bb - cy0) * k]; });
-    const cc = m.o === 'l' ? [q[1], q[2], q[3], q[0]] : q, iw2 = src.width, ih2 = src.height;
-    roofTri(x, src, [[0, 0], [iw2, 0], [iw2, ih2]], [cc[0], cc[1], cc[2]]); roofTri(x, src, [[0, 0], [iw2, ih2], [0, ih2]], [cc[0], cc[2], cc[3]]);
-    const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
-    x.fillStyle = gl; x.beginPath(); q.forEach((pt, j) => (j ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); x.fill(); x.strokeStyle = '#0B0D10'; x.lineJoin = 'round'; x.lineWidth = Math.max(0.8, Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) * 0.022); x.stroke();
+  for (const { o, g } of group) {
+    const pr = roofProd(o), pimg = pr.planImg ? await roofPlanImg(pr.planImg) : null, src = pimg || roofCellImg();
+    for (const m of o.mods) {
+      const b = modBox(o, m), q = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].map(([X, Y]) => { const [a, bb] = g.toImg(X, Y); return [(a - cx0) * k, (bb - cy0) * k]; });
+      const cc = m.o === 'l' ? [q[1], q[2], q[3], q[0]] : q, iw2 = src.width, ih2 = src.height;
+      roofTri(x, src, [[0, 0], [iw2, 0], [iw2, ih2]], [cc[0], cc[1], cc[2]]); roofTri(x, src, [[0, 0], [iw2, ih2], [0, ih2]], [cc[0], cc[2], cc[3]]);
+      const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
+      x.fillStyle = gl; x.beginPath(); q.forEach((pt, j) => (j ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); x.fill(); x.strokeStyle = '#0B0D10'; x.lineJoin = 'round'; x.lineWidth = Math.max(0.8, Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) * 0.022); x.stroke();
+    }
   }
-  { const pp = PROJECTS.find(q => q.roof && q.roof.faces && q.roof.faces.includes(f)); if (pp) { const map = (o, X, Y) => { if (o !== f) return null; const [a, bb] = g.toImg(X, Y); return [(a - cx0) * k, (bb - cy0) * k]; }; roofStrLayer(x, pp, map, roofStrSize(f, map), false); } }
+  /* Strings und Optimierer über alle Flächen des Bildes */
+  const pp = PROJECTS.find(q => q.roof && q.roof.faces && q.roof.faces.includes(f)); let nStr = 0;
+  if (pp) {
+    const G = new Map(group.map(z => [z.o, z.g])), map = (o, X, Y) => { const g = G.get(o); if (!g) return null; const [a, bb] = g.toImg(X, Y); return [(a - cx0) * k, (bb - cy0) * k]; };
+    roofStrLayer(x, pp, map, roofStrSize(f, map), false);
+    nStr = roofStrs(pp).filter(st => st.mods.some(r => group.some(z => z.o.id === r.f))).length;
+  }
   /* Beschriftung unten */
-  const n = f.mods.length, kw = faceKwp(f), h = Math.round(c.height * 0.06);
-  x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, c.height - h, c.width, h); x.fillStyle = '#fff'; x.font = `600 ${Math.round(h * 0.45)}px system-ui, sans-serif`; x.textBaseline = 'middle';
-  const nOpt = f.mods.filter(m => m.opt).length; x.fillText(`${f.name}: ${n} Module · ${num(kw, 2)} kWp · ${pr.name}${nOpt ? ` · ${nOpt} Optimierer` : ''}`, Math.round(h * 0.4), c.height - h / 2);
+  const kw = group.reduce((a, z) => a + faceKwp(z.o), 0), nOpt = group.reduce((a, z) => a + z.o.mods.filter(m => m.opt).length, 0), h = Math.round(c.height * 0.06);
+  const names = group.length > 1 ? group.filter(z => z.o.mods.length).map(z => `${z.o.name} ${z.o.mods.length}`).join(' + ') + ` = ${total} Module` : `${f.name}: ${total} Module`;
+  const prods = [...new Set(group.filter(z => z.o.mods.length).map(z => roofProd(z.o).name))].join(', ');
+  x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, c.height - h, c.width, h); x.fillStyle = '#fff'; x.font = `600 ${Math.round(h * 0.42)}px system-ui, sans-serif`; x.textBaseline = 'middle';
+  x.fillText(`${names} · ${num(kw, 2)} kWp · ${prods}${nStr ? ` · ${nStr} String${nStr > 1 ? 's' : ''}` : ''}${nOpt ? ` · ${nOpt} Optimierer` : ''}`, Math.round(h * 0.4), c.height - h / 2);
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86)); return putFile(blob, 'belegung.jpg');
 }
 async function roofSaveSnaps(p) {
   p.roof.snaps = p.roof.snaps || {};
   for (const f of p.roof.faces) {
-    const id = await roofSnapshot(f).catch(() => null);
+    /* Flächen im selben Foto: ein gemeinsames Bild an der ersten Fläche */
+    const first = p.roof.faces.find(o => o.photo === f.photo);
+    const id = first === f ? await roofSnapshot(f, p.roof.faces.filter(o => o.photo === f.photo)).catch(() => null) : null;
     if (p.roof.snaps[f.id] && p.roof.snaps[f.id] !== id) { try { await delFiles([p.roof.snaps[f.id]]); } catch (e) {} }
     if (id) p.roof.snaps[f.id] = id; else delete p.roof.snaps[f.id];
   }
   for (const k of Object.keys(p.roof.snaps)) if (!p.roof.faces.find(f => f.id === k)) { try { await delFiles([p.roof.snaps[k]]); } catch (e) {} delete p.roof.snaps[k]; }
-  p.roof.snapDate = isoToday(); saveProject(p);
+  p.roof.snapDate = isoToday(); p.roof.snapV2 = true; saveProject(p);
 }
 /* Karte im Schritt „Angebot“: Foto der Belegung (wie die Schnellauslegung) */
 function roofSnapCard(p) {
   if (!hasPV(p) || !p.roof || !p.roof.snaps || !Object.keys(p.roof.snaps).length) return '';
+  /* ältere Stände: getrennte Bilder je Fläche im selben Foto einmalig zu einem Gesamtbild zusammenfassen */
+  if (!p.roof.snapV2 && Object.keys(p.roof.snaps).length > 1) { p.roof.snapV2 = true; roofSaveSnaps(p).then(() => render()).catch(() => {}); }
   const ids = Object.values(p.roof.snaps); if (ids.some(id => !fileUrl(id))) { loadFiles(ids).then(() => { if (ids.every(id => fileUrl(id))) render(); }); }
   const n = p.roof.faces.reduce((a, f) => a + f.mods.length, 0), kw = p.roof.faces.reduce((a, f) => a + faceKwp(f), 0);
   return `<div class="mt-6"><div class="font-semibold text-[15px] mb-1">Modulbelegung</div>

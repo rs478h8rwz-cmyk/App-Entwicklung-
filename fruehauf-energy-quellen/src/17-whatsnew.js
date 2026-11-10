@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.27', date: '2026-11-10', items: [
+    ['house', 'Ein Gesamtbild der Belegung', 'Liegen mehrere Dachflächen im selben Foto, entsteht jetzt ein gemeinsames Bild – mit allen Modulen, den kompletten Strings über alle Flächen und allen Optimierern. Bestehende Kunden werden automatisch umgestellt.']
+  ] },
   { version: '2.26', date: '2026-11-10', items: [
     ['house', 'Stringplan', 'Neues Werkzeug „Strings“: Module der Reihe nach antippen – die App zieht die Stringlinie vom ersten zum nächsten Modul, nummeriert sie und zeigt kWp je String. Auch über mehrere Dachflächen, und im PDF-Bild der Belegung.'],
     ['house', 'Optimierer setzen', 'Werkzeug „Optimierer“: Modul antippen setzt oder entfernt einen Optimierer – sichtbar am Modul, gezählt in der Fußzeile und im PDF.'],
