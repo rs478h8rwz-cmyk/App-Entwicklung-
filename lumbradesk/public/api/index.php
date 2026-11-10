@@ -2,7 +2,8 @@
 /* LumbraDesk – Server-Schnittstelle: /api/?r=<aktion>
    Login, eigenes Konto, Benutzerverwaltung (nur Admin), Protokoll */
 declare(strict_types=1);
-require __DIR__ . '/../../private/bootstrap.php';
+/* private/ liegt neben public/ oder (IONOS, gesperrt) im Webordner */
+require (is_dir(__DIR__ . '/../private') ? __DIR__ . '/../private' : __DIR__ . '/../../private') . '/bootstrap.php';
 
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');

@@ -4,7 +4,7 @@
    /pvgis/…   → PVGIS der EU (Solarertrag je Standort)
    Nur für angemeldete Benutzer, nur diese zwei Ziele. */
 declare(strict_types=1);
-require __DIR__ . '/../private/bootstrap.php';
+require (is_dir(__DIR__ . '/private') ? __DIR__ . '/private' : __DIR__ . '/../private') . '/bootstrap.php';
 start_session();
 require_user();
 

@@ -49,11 +49,18 @@ TOKEN = secrets.token_urlsafe(12).replace('-', 'x').replace('_', 'y')
 open(os.path.join(APP, 'private', 'setup_token.php'), 'w').write("<?php return '" + TOKEN + "';\n")
 open(os.path.join(SP, 'dist', 'SCHLUESSEL.txt'), 'w').write(TOKEN + '\n')
 
-# ZIP für den IONOS-Upload
-z = os.path.join(ROOT, 'lumbradesk-ionos.zip')
-if os.path.exists(z): os.remove(z)
+# Für IONOS: alles in einem Webordner, private/ darin (per .htaccess gesperrt)
+WEB = os.path.join(DIST, 'web')
+shutil.copytree(os.path.join(APP, 'public'), WEB)
+shutil.copytree(os.path.join(APP, 'private'), os.path.join(WEB, 'private'))
+
+# ZIP für den IONOS-Upload (Dateien direkt im ZIP, ohne Oberordner) + Hilfsdatei zum Auspacken
+z = os.path.join(ROOT, 'lumbradesk.zip')
+for old in [z, os.path.join(ROOT, 'lumbradesk-ionos.zip')]:
+    if os.path.exists(old): os.remove(old)
 with zipfile.ZipFile(z, 'w', zipfile.ZIP_DEFLATED) as f:
-    for dp, dn, fn in os.walk(APP):
+    for dp, dn, fn in os.walk(WEB):
         for n in fn:
-            full = os.path.join(dp, n); f.write(full, os.path.relpath(full, DIST))
-print('LUMBRADESK OK →', os.path.relpath(z, ROOT))
+            full = os.path.join(dp, n); f.write(full, os.path.relpath(full, WEB))
+shutil.copy(os.path.join(SP, 'entpacken.php'), os.path.join(ROOT, 'entpacken.php'))
+print('LUMBRADESK OK →', os.path.relpath(z, ROOT), '+ entpacken.php')

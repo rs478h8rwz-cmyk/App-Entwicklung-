@@ -7,7 +7,8 @@
 declare(strict_types=1);
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
-$PRIV = __DIR__ . '/../private';
+$PRIV = is_dir(__DIR__ . '/private') ? __DIR__ . '/private' : __DIR__ . '/../private';
+define('LD_PRIV', $PRIV);
 $CFG = $PRIV . '/config.php';
 $TOKF = $PRIV . '/setup_token.php';
 require $PRIV . '/bootstrap.php';
@@ -18,11 +19,11 @@ $token = $haveCfg ? (string)(cfg('setup_token') ?? '') : (is_file($TOKF) ? (stri
 if ($token === '' && is_file($TOKF)) $token = (string)(require $TOKF);
 
 function installed(): bool {
-  if (!is_file(__DIR__ . '/../private/config.php')) return false;
+  if (!is_file(LD_PRIV . '/config.php')) return false;
   try { return (int)db()->query('SELECT COUNT(*) FROM users')->fetchColumn() > 0; } catch (Throwable $e) { return false; }
 }
 function make_schema(PDO $pdo): void {
-  foreach (array_filter(array_map('trim', explode(';', preg_replace('/^--.*$/m', '', file_get_contents(__DIR__ . '/../private/schema.sql'))))) as $sql) $pdo->exec($sql);
+  foreach (array_filter(array_map('trim', explode(';', preg_replace('/^--.*$/m', '', file_get_contents(LD_PRIV . '/schema.sql'))))) as $sql) $pdo->exec($sql);
 }
 
 $msg = ''; $ok = false; $P = $_POST;
