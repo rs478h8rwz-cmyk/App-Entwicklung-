@@ -23,7 +23,9 @@ const overlap = (a1, b1, a2, b2) => { const s = Math.max(toMin(a1), toMin(a2)), 
 const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun'], ['sonder', 'Sonderurlaub', 'star']];
 const typeName = t => (DAY_TYPES.find(x => x[0] === t) || DAY_TYPES[0])[1];
 let FIRMA = { betriebsurlaub: [] };   // aus firma.json (für alle)
-const buList = () => (FIRMA.betriebsurlaub || []).map(x => ({ ...x, firm: true })).concat((S.bu || []).map(x => ({ ...x, firm: false })));
+/* Betriebsurlaub für alle: Firmenvorgabe (firma.json) – außer das Büro hat danach eine neuere Liste geschickt bzw. auf diesem Gerät geändert */
+const firmBu = () => (S.buFirm && S.buFirm.list && (!FIRMA.stand || S.buFirm.at >= FIRMA.stand) ? S.buFirm.list : FIRMA.betriebsurlaub || []);
+const buList = () => firmBu().map(x => ({ ...x, firm: true })).concat((S.bu || []).map(x => ({ ...x, firm: false })));
 const betriebOf = iso => buList().find(x => x.von && x.bis && iso >= x.von && iso <= x.bis) || null;
 let DAYS = {};   // iso → { iso, type, segs:[{site,von,bis}], pauses:[{von,bis}], note, geo:[] }
 const dayOf = iso => {

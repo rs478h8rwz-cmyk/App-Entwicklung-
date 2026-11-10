@@ -1,5 +1,5 @@
 {
-  "hinweis": "Firmenweite Vorgaben – gelten für alle Mitarbeiter. Firmensitz bestimmt die Feiertage (bundesland: NI = Niedersachsen). Betriebsurlaub: von/bis (inklusive), abzug=true zieht die Tage vom Urlaubsanspruch ab.",
+  "hinweis": "Firmenweite Vorgaben – gelten für alle Mitarbeiter. Firmensitz bestimmt die Feiertage (bundesland: NI = Niedersachsen). Betriebsurlaub: von/bis (inklusive), abzug=true zieht die Tage vom Urlaubsanspruch ab. stand: Datum dieser Vorgabe – neuere Änderungen vom Büro (in der App) haben Vorrang.",
   "betriebsurlaub": [
     {
       "name": "Betriebsurlaub Weihnachten",
@@ -13,5 +13,6 @@
     "strasse": "Im Hamme 1",
     "ort": "49205 Hasbergen",
     "bundesland": "NI"
-  }
+  },
+  "stand": "2026-11-10T00:00:00.000Z"
 }

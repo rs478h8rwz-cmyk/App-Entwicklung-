@@ -165,7 +165,7 @@ const IP = {
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -361,7 +361,9 @@ const overlap = (a1, b1, a2, b2) => { const s = Math.max(toMin(a1), toMin(a2)), 
 const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun'], ['sonder', 'Sonderurlaub', 'star']];
 const typeName = t => (DAY_TYPES.find(x => x[0] === t) || DAY_TYPES[0])[1];
 let FIRMA = { betriebsurlaub: [] };   // aus firma.json (für alle)
-const buList = () => (FIRMA.betriebsurlaub || []).map(x => ({ ...x, firm: true })).concat((S.bu || []).map(x => ({ ...x, firm: false })));
+/* Betriebsurlaub für alle: Firmenvorgabe (firma.json) – außer das Büro hat danach eine neuere Liste geschickt bzw. auf diesem Gerät geändert */
+const firmBu = () => (S.buFirm && S.buFirm.list && (!FIRMA.stand || S.buFirm.at >= FIRMA.stand) ? S.buFirm.list : FIRMA.betriebsurlaub || []);
+const buList = () => firmBu().map(x => ({ ...x, firm: true })).concat((S.bu || []).map(x => ({ ...x, firm: false })));
 const betriebOf = iso => buList().find(x => x.von && x.bis && iso >= x.von && iso <= x.bis) || null;
 let DAYS = {};   // iso → { iso, type, segs:[{site,von,bis}], pauses:[{von,bis}], note, geo:[] }
 const dayOf = iso => {
@@ -661,7 +663,7 @@ function viewUrlaub() {
   const blocks = []; list.forEach(d => { const l = blocks[blocks.length - 1]; if (l && workDaysIn(addDays(l.bis, 1), addDays(d.iso, -1)).length === 0) { l.bis = d.iso; l.n += sollOf(d.iso) > 0 ? dayFactor(d.iso) : 0; } else blocks.push({ von: d.iso, bis: d.iso, n: sollOf(d.iso) > 0 ? dayFactor(d.iso) : 0 }); });
   const reqs = (UI.requests || []).slice().reverse().slice(0, 8);
   return `<section class="pt-6 sm:pt-10"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Urlaub</h1>
-    ${buList().filter(b => b.bis >= today).length ? `<div class="card p-4 mt-5 flex flex-wrap items-center gap-3" style="background:rgb(229,154,92,.12)"><span style="color:#C7792F">${ic('cal', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">${buList().filter(b => b.bis >= today).map(b => `<div><b>${esc(b.name || 'Betriebsurlaub')}</b>: ${deDate(b.von)} – ${deDate(b.bis)} · ${(() => { const l = workDaysIn(b.von, b.bis), ys = [...new Set(l.map(i => i.slice(0, 4)))]; return ys.length > 1 ? ys.map(y2 => { const n = vacDays(l.filter(i => i.startsWith(y2))); return `${fmtDays(n)} ${n === 1 ? 'Tag' : 'Tage'} ${y2}`; }).join(' + ') : `${fmtDays(vacDays(l))} Urlaubstage`; })()}${b.abzug === false ? ' (zählt nicht vom Urlaub)' : ''}</div>`).join('')}</div></div>` : ''}
+    ${buList().filter(b => b.bis >= today).length ? `<div class="card p-4 mt-5 flex flex-wrap items-center gap-3" style="background:rgb(229,154,92,.12)"><span style="color:#C7792F">${ic('cal', 20)}</span><a href="#/einstellungen/bu" class="text-[13px] text-p font-semibold order-last">Ansehen / ändern →</a><div class="flex-1 min-w-[200px] text-[14px]">${buList().filter(b => b.bis >= today).map(b => `<div><b>${esc(b.name || 'Betriebsurlaub')}</b>: ${deDate(b.von)} – ${deDate(b.bis)} · ${(() => { const l = workDaysIn(b.von, b.bis), ys = [...new Set(l.map(i => i.slice(0, 4)))]; return ys.length > 1 ? ys.map(y2 => { const n = vacDays(l.filter(i => i.startsWith(y2))); return `${fmtDays(n)} ${n === 1 ? 'Tag' : 'Tage'} ${y2}`; }).join(' + ') : `${fmtDays(vacDays(l))} Urlaubstage`; })()}${b.abzug === false ? ' (zählt nicht vom Urlaub)' : ''}</div>`).join('')}</div></div>` : ''}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi(`Anspruch ${y}`, `${fmtDays(v.total)} Tage`)}${kpi('Genommen', `${fmtDays(v.taken)} Tage`)}${kpi('Geplant', `${fmtDays(v.planned)} Tage${v.betrieb ? ` <span class="text-[12px] text-ink3 font-normal">davon ${fmtDays(v.betrieb)} Betriebsurl.</span>` : ''}`)}<div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Resturlaub</div><div class="text-[26px] font-semibold mt-1 text-p">${fmtDays(v.left)} Tage</div></div></div>
     ${v.ent.why || v.sonder ? `<p class="hint">${v.ent.why ? esc(v.ent.why) + (v.ent.manual ? ' · angepasst auf ' + v.ent.days + ' Tage' : '') : ''}${v.ent.why && v.sonder ? ' · ' : ''}${v.sonder ? `Sonderurlaub ${y}: ${v.sonder} ${v.sonder === 1 ? 'Tag' : 'Tage'} (wird nicht vom Urlaub abgezogen)` : ''}</p>` : ''}
     <button class="btn-g mt-2" data-a="konto-edit">${ic('edit', 15)}Urlaub / Überstunden einpflegen (Admin)</button>
@@ -679,8 +681,8 @@ function viewUrlaub() {
 }
 
 /* ---------- Einstellungen ---------- */
-const SET_TABS = [['person', 'Ich & Empfänger', 'users'], ['zeiten', 'Arbeitszeiten', 'clock'], ['konten', 'Konten', 'cal'], ['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['admin', 'Admin', 'gear'], ['daten', 'Daten', 'download']];
-const LOCKED_TABS = ['zeiten', 'konten'];
+const SET_TABS = [['person', 'Ich & Empfänger', 'users'], ['zeiten', 'Arbeitszeiten', 'clock'], ['konten', 'Konten', 'cal'], ['bu', 'Betriebsurlaub', 'palm'], ['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['admin', 'Admin', 'gear'], ['daten', 'Daten', 'download']];
+const LOCKED_TABS = ['zeiten', 'konten', 'bu'];
 const sIn = (path, label, ph = '', type = 'text', dis = false) => { const v = path.split('.').reduce((o, k) => (o || {})[k], S); return `<label class="block"><span class="lbl">${label}</span><input class="inp" data-s="${path}" type="${type}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" ${type === 'number' ? 'inputmode="decimal"' : ''} ${dis ? 'disabled' : ''}></label>`; };
 function setBody() {
   const ro = LOCKED_TABS.includes(UI.tab) && !canEdit();
@@ -702,12 +704,7 @@ function setBody() {
       <div class="mt-4"><span class="lbl">Berechnung im Eintrittsjahr</span><div class="seg">${[['anteilig', 'Anteilig (1/12 je Monat)'], ['gesetz', 'Gesetzlich (BUrlG)']].map(([k, l]) => `<button class="${(S.vacation.rule || 'anteilig') === k ? 'on' : ''}" data-a="vac-rule" data-v="${k}" ${ro ? 'disabled' : ''}>${l}</button>`).join('')}</div></div>
       <div class="grid grid-cols-2 gap-4 mt-4"><label class="block"><span class="lbl">Anspruch ${tNow().getFullYear()} (automatisch: ${v.ent.auto} Tage)</span><input class="inp" data-vman type="number" inputmode="decimal" value="${v.ent.manual ? esc(v.ent.days) : ''}" placeholder="automatisch" ${ro ? 'disabled' : ''}></label>${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div>
       ${v.ent.why ? `<p class="hint">${esc(v.ent.why)}${v.ent.manual ? ' · von Hand angepasst' : ''}</p>` : ''}<p class="hint">Genommen: ${fmtDays(v.taken)} · Geplant: ${fmtDays(v.planned)} · Übrig: ${fmtDays(v.left)} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)${v.sonder ? ` · Sonderurlaub: ${v.sonder} ${v.sonder === 1 ? 'Tag' : 'Tage'} (zählt nicht zum Urlaub)` : ''}</p>
-      <h3 class="font-semibold mt-7 mb-3">Betriebsurlaub</h3>
-      <div class="space-y-1.5">${(FIRMA.betriebsurlaub || []).map(b => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span><span class="text-[12px] text-ink3">für alle (Firmenvorgabe)</span></div>`).join('')}
-      ${(S.bu || []).map((b, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}${b.abzug === false ? ' · zählt nicht' : ''}</span>${ro ? '' : `<button class="text-ink3 hover:text-ember" data-a="bu-del" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button>`}</div>`).join('')}</div>
-      ${ro ? '' : `<div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.3fr] gap-2 mt-3"><input type="date" class="inp" id="bu-von"><input type="date" class="inp" id="bu-bis"><input class="inp col-span-2 sm:col-span-1" id="bu-name" placeholder="Name, z. B. Brückentage" value="Betriebsurlaub"></div>
-      <label class="flex items-center gap-2 text-[14px] text-ink2 mt-2"><input type="checkbox" id="bu-abzug" checked>vom Urlaubsanspruch abziehen</label><button class="btn-s mt-2" data-a="bu-add">${ic('plus', 16)}Betriebsurlaub hinzufügen</button>`}
-      <p class="hint">Firmenvorgaben kommen automatisch mit jedem App-Update auf alle Handys. Zusätzliche Zeiträume hier gelten nur auf diesem Gerät.</p>
+      <h3 class="font-semibold mt-7 mb-2">Betriebsurlaub</h3><a href="#/einstellungen/bu" class="kpi flex items-center gap-3 text-[14px]"><span style="color:#C7792F">${ic('cal', 17)}</span><span class="flex-1">${firmBu().map(b => `${esc(b.name || 'Betriebsurlaub')}: ${deDate(b.von)} – ${deDate(b.bis)}`).join(' · ') || 'Kein Betriebsurlaub eingetragen'}</span><span class="text-p font-semibold">Ändern →</span></a>
       <h3 class="font-semibold mt-7 mb-3">Überstundenkonto</h3><div class="grid grid-cols-2 gap-4">${sIn('balance.from', 'Zählt ab', '', 'date', ro)}<label class="block"><span class="lbl">Startwert Überstunden (Std:Min, z. B. 12:30)</span><input class="inp" data-bal value="${esc(hm(S.balance.min || 0))}" ${ro ? 'disabled' : ''}></label></div><p class="hint">Aktuell: <b>${overTxt(balance())}</b>${account().minus ? ` · Minusstunden: ${hm(account().minus)}` : ''}. Fehlende Stunden werden zuerst von den Überstunden abgezogen, der Rest als Minusstunden ausgewiesen.</p>
       <button class="btn-p mt-4" data-a="konto-edit">${ic('edit', 16)}Bestand einpflegen</button>
       ${(S.kontoLog || []).length ? `<h3 class="font-semibold mt-7 mb-2">Änderungsprotokoll</h3><div class="space-y-1">${S.kontoLog.slice().reverse().slice(0, 15).map(l => `<div class="text-[12px] text-ink3"><b class="text-ink2">${new Date(l.at).toLocaleString('de-DE')}</b> · ${esc(l.what)}</div>`).join('')}</div>` : ''}`; }
@@ -1329,7 +1326,7 @@ async function importUpdate(file) {
     if (!(await verifyUpd(f.payload, f.sig))) throw new Error('Unterschrift ungültig – die Datei stammt nicht vom Büro oder wurde verändert');
     const u = JSON.parse(f.payload), done = S.updApplied || [];
     if (done.includes(u.id)) return toast('Diese Aktualisierung ist schon eingespielt.', 'warn');
-    if (S.person.name && normName(u.to.name) !== normName(S.person.name)) return toast(`Diese Aktualisierung ist für ${u.to.name} – nicht für ${S.person.name}.`, 'err', 5000);
+    if (u.to.name !== '*' && S.person.name && normName(u.to.name) !== normName(S.person.name)) return toast(`Diese Aktualisierung ist für ${u.to.name} – nicht für ${S.person.name}.`, 'err', 5000);
     const list = u.ops.map(o => `<li>${esc(opText(o))}</li>`).join('');
     modal(`<h3 class="text-[20px] font-semibold pr-8">Aktualisierung vom Büro</h3><p class="text-ink3 text-[13px] mt-1">von ${esc(u.by || 'Büro')} · ${new Date(u.created).toLocaleString('de-DE')}</p>
       ${u.note ? `<div class="kpi mt-4 text-[14px]">${esc(u.note)}</div>` : ''}<ul class="list-disc pl-5 mt-4 space-y-1 text-[14px]">${list}</ul>
@@ -1339,7 +1336,7 @@ async function importUpdate(file) {
 }
 async function applyUpdate(u) {
   const who = `Büro (${u.by || 'Admin'})`, at = tNow().toISOString();
-  if (!S.person.name && u.to.name) S.person.name = u.to.name;
+  if (!S.person.name && u.to.name && u.to.name !== '*') S.person.name = u.to.name;
   for (const o of u.ops) {
     if (o.t === 'vac') { S.vacation = { ...S.vacation, perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year, rule: o.rule || S.vacation.rule || 'anteilig', manual: o.manual || null }; if (o.start !== undefined) S.person.start = o.start; }
     if (o.t === 'bal') S.balance = { from: o.from, min: +o.min };
@@ -1522,6 +1519,50 @@ document.addEventListener('click', async e => {
   S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: `${a.dataset.k === '12-24' ? 'Heiligabend' : 'Silvester'}: ${{ halb: 'halber Tag', voll: 'ganzer Tag', frei: 'frei' }[a.dataset.v]}` });
   saveSettings(); rerender();
 });
+
+/* ---------- Reiter „Betriebsurlaub“: für alle anpassbar, vom Büro an alle verteilbar ---------- */
+function buBody(ro) {
+  const L = firmBu(), y = tNow().getFullYear(), cnt = b => { const l = workDaysIn(b.von, b.bis), ys = [...new Set(l.map(i => i.slice(0, 4)))]; return ys.map(y2 => { const n = vacDays(l.filter(i => i.startsWith(y2))); return `${fmtDays(n)} ${n === 1 ? 'Tag' : 'Tage'} ${y2}`; }).join(' + ') || '0 Tage'; };
+  const src = S.buFirm && L === S.buFirm.list ? `Stand ${new Date(S.buFirm.at).toLocaleDateString('de-DE')}${S.buFirm.by ? ' · vom Büro (' + esc(S.buFirm.by) + ')' : ''}` : 'Firmenvorgabe aus dem App-Update';
+  return `${ro ? `<div class="rounded-[var(--rb)] bg-raised p-3 mb-5 flex flex-wrap items-center gap-3 text-[14px]"><span class="text-ink3">${ic('alert', 17)}</span><span class="flex-1">Nur mit Admin-Passwort änderbar.</span><button class="btn-s !h-9" data-a="unlock">Freischalten</button></div>` : ''}
+    <p class="text-ink3 text-[14px] mb-4">Gilt für alle Mitarbeiter. Die Tage werden vom Urlaubsanspruch abgezogen (Wochenenden und Feiertage nicht, Heiligabend/Silvester je nach Einstellung halb). ${src}.</p>
+    <div class="space-y-2">${L.map((b, i) => ro ? `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2.5 text-[14px]"><span style="color:#C7792F">${ic('cal', 16)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span><span class="text-[13px] text-ink2">${b.abzug === false ? 'zählt nicht vom Urlaub' : cnt(b)}</span></div>`
+      : `<div class="rounded-[var(--rb)] bg-raised p-3"><div class="grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1fr_auto] gap-2 items-center"><input class="inp col-span-2 sm:col-span-1" data-buf="${i}" data-k="name" value="${esc(b.name || '')}" placeholder="Name"><input type="date" class="inp" data-buf="${i}" data-k="von" value="${esc(b.von)}"><input type="date" class="inp" data-buf="${i}" data-k="bis" value="${esc(b.bis)}"><button class="btn-g !h-10 col-span-2 sm:col-span-1 hover:!text-ember" data-a="buf-del" data-i="${i}">${ic('trash', 15)}Entfernen</button></div>
+        <div class="flex flex-wrap items-center gap-3 mt-2 text-[13px]"><label class="flex items-center gap-2 text-ink2"><input type="checkbox" data-buf="${i}" data-k="abzug" ${b.abzug === false ? '' : 'checked'}>vom Urlaub abziehen</label><span class="text-ink3">${b.abzug === false ? '' : cnt(b)}</span></div></div>`).join('') || '<div class="kpi text-[14px] text-ink3">Kein Betriebsurlaub eingetragen.</div>'}</div>
+    ${ro ? '' : `<button class="btn-s mt-3" data-a="buf-add">${ic('plus', 16)}Zeitraum hinzufügen</button>`}
+    ${(S.bu || []).length ? `<h3 class="font-semibold mt-7 mb-2">Nur auf diesem Gerät</h3><div class="space-y-1.5">${S.bu.map((b, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span>${ro ? '' : `<button class="text-ink3 hover:text-ember" data-a="bu-del" data-i="${i}">${ic('trash', 15)}</button>`}</div>`).join('')}</div>` : ''}
+    ${DEVICE.admin ? `<div class="rounded-[var(--r)] border border-line p-4 mt-7"><h3 class="font-semibold">An alle Mitarbeiter verteilen</h3><p class="text-ink3 text-[14px] mt-1 mb-3">Erstellt eine Aktualisierung für alle – z. B. in die WhatsApp-Gruppe schicken. Jeder spielt sie unter Einstellungen → Daten → „Aktualisierung vom Büro einspielen“ ein.</p><button class="btn-p" data-a="buf-send">${ic('send', 16)}Betriebsurlaub an alle senden</button></div>` : `<p class="hint mt-5">Änderungen hier gelten nur auf diesem Handy. Für alle Mitarbeiter: auf einem Admin-Gerät ändern und „An alle senden“.</p>`}`;
+}
+const _setBodyBu = setBody;
+setBody = function () { if (UI.tab === 'bu') return buBody(!canEdit()); return _setBodyBu(); };
+function buEdit(fn) { const list = clone(firmBu()); fn(list); S.buFirm = { at: tNow().toISOString(), by: S.person.name || '', list }; saveSettings(); }
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-a="buf-add"],[data-a="buf-del"],[data-a="buf-send"]'); if (!a) return;
+  if (a.dataset.a === 'buf-send') {
+    if (!(await ensureSignKey())) return;
+    const u = { id: uid('u'), created: tNow().toISOString(), by: S.person.name || 'Büro', to: { name: '*', nr: '' }, ops: [{ t: 'bu', list: firmBu(), at: tNow().toISOString() }], note: '' };
+    const payload = JSON.stringify(u), sig = bytesB64(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, SIGN_KEY, new TextEncoder().encode(payload)));
+    shareFile(new Blob([JSON.stringify({ app: 'fruehauf-stempel-update', payload, sig })], { type: 'application/json' }), `Stempeluhr_Betriebsurlaub_${isoToday()}.json`, 'Hallo zusammen, hier der aktuelle Betriebsurlaub für die Stempeluhr. Datei speichern, dann in der App: Einstellungen → Daten → „Aktualisierung vom Büro einspielen“.', 'Betriebsurlaub für alle erstellt');
+    return;
+  }
+  if (!(await needEdit())) return;
+  if (a.dataset.a === 'buf-add') { const y = tNow().getFullYear(); buEdit(l => l.push({ name: 'Betriebsurlaub', von: `${y}-12-24`, bis: `${y + 1}-01-01`, abzug: true })); }
+  if (a.dataset.a === 'buf-del') { if (!(await confirmDlg('Zeitraum entfernen?', 'Der Betriebsurlaub wird gelöscht – die Tage werden wieder normale Arbeitstage.', 'Entfernen', true))) return; buEdit(l => l.splice(+a.dataset.i, 1)); }
+  rerender();
+});
+document.addEventListener('change', async e => {
+  const el = e.target; if (!el.dataset || el.dataset.buf === undefined) return;
+  if (!canEdit()) return rerender();
+  const i = +el.dataset.buf, k = el.dataset.k, v = el.type === 'checkbox' ? el.checked : el.value;
+  if ((k === 'von' || k === 'bis') && !v) return rerender();
+  buEdit(l => { if (!l[i]) return; l[i][k] = v; if (l[i].bis < l[i].von) l[i].bis = l[i].von; });
+  rerender();
+});
+/* Aktualisierung „Betriebsurlaub für alle“ */
+const _opTextBu = opText;
+opText = function (o) { if (o.t === 'bu') return 'Betriebsurlaub für alle: ' + (o.list.map(b => `${b.name || 'Betriebsurlaub'} ${deDate(b.von)} – ${deDate(b.bis)}${b.abzug === false ? ' (zählt nicht)' : ''}`).join(', ') || 'keiner'); return _opTextBu(o); };
+const _applyUpdateBu = applyUpdate;
+applyUpdate = async function (u) { for (const o of u.ops) if (o.t === 'bu') S.buFirm = { at: o.at || u.created, by: u.by || '', list: o.list }; return _applyUpdateBu(u); };
 </script>
 </body>
 </html>
