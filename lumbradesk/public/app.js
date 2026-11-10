@@ -78,7 +78,7 @@ function viewUsers() {
       <td><div class="row"><button class="btn s sm" data-a="maillink" data-id="${u.id}">${u.mustChange ? 'Einladung erneut senden' : 'Link: neues Passwort'}</button><button class="btn g sm" data-a="reset" data-id="${u.id}">Einmal-Passwort</button>${u.id === ST.user.id ? '' : `<button class="btn g sm ${u.active ? 'danger' : ''}" data-a="active" data-id="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? 'Sperren' : 'Entsperren'}</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>`;
 }
-const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen', kunde_zugewiesen: 'Kunde zugewiesen', kunde_geloescht: 'Kunde gelöscht', kunde_angelegt: 'Kunde angelegt', einladung_gesendet: 'Einladung per E-Mail gesendet', link_gesendet: 'Passwort-Link per E-Mail gesendet', passwort_vergessen: 'Passwort vergessen (Link angefordert)', passwort_per_link: 'Passwort per Link festgelegt', mail_einstellungen: 'E-Mail-Einstellungen geändert' };
+const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen', kunde_zugewiesen: 'Kunde zugewiesen', kunde_geloescht: 'Kunde gelöscht', kunde_angelegt: 'Kunde angelegt', sicherung: 'Sicherung erstellt', sicherung_geladen: 'Sicherung heruntergeladen', sicherung_zurueck: 'Sicherung zurückgespielt', einladung_gesendet: 'Einladung per E-Mail gesendet', link_gesendet: 'Passwort-Link per E-Mail gesendet', passwort_vergessen: 'Passwort vergessen (Link angefordert)', passwort_per_link: 'Passwort per Link festgelegt', mail_einstellungen: 'E-Mail-Einstellungen geändert' };
 function viewAudit() {
   return `<section class="hero"><h1>Protokoll</h1><p class="muted">Die letzten 200 Vorgänge – wer hat wann was gemacht.</p></section>
     <div class="card scroll"><table><thead><tr><th>Zeit</th><th>Wer</th><th>Vorgang</th><th>Details</th><th class="hide-sm">IP</th></tr></thead><tbody>
@@ -91,7 +91,20 @@ function viewSystem() {
     <div class="card"><h2>Update einspielen</h2><p class="muted">Die Update-Datei (lumbradesk-update.zip) hier auswählen – sie wird direkt auf dem Server eingespielt. Zugangsdaten, Benutzer und Daten bleiben erhalten.</p>
       <form id="f-update" class="row" style="margin-top:12px"><input type="file" name="zip" accept=".zip,application/zip" required style="height:auto;padding:10px;max-width:420px"><button class="btn" type="submit">Update einspielen</button></form>
       ${y.zip === false ? '<p class="note err">Auf dem Server fehlt die ZIP-Unterstützung.</p>' : ''}<p class="muted" style="font-size:13px">Max. Dateigröße laut Server: ${esc(y.maxUpload || '–')}</p><div id="upd-msg"></div></div>
+    ${backupCard()}
     ${mailCard()}`;
+}
+const mb = n => (n / 1048576 >= 1 ? (n / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+const utc = s => new Date(String(s).replace(' ', 'T') + 'Z');
+function backupCard() {
+  const b = ST.bk || {}, st = b.status || {}, list = b.list || [], age = st.last ? (Date.now() - utc(st.last)) / 36e5 : 999;
+  return `<div class="card sec"><h2>Datensicherung</h2><p class="muted">Jede Nacht eine komplette Sicherung (Benutzer, Kunden, Firmen-Einstellungen, Angebote, Fotos) – die letzten ${b.keep || 14} bleiben auf dem Server. Zugangsdaten sind nicht enthalten.</p>
+    <p class="note ${age < 30 ? 'ok' : 'err'}">${st.last ? `Letzte Sicherung: <b>${utc(st.last).toLocaleString('de-DE')}</b> · ${mb(st.size || 0)} · ${st.files || 0} Dateien · ${esc(st.why || '')}` : 'Noch keine Sicherung vorhanden.'}${age >= 30 && st.last ? ' – älter als ein Tag, bitte Cronjob prüfen.' : ''}</p>
+    <div class="row"><button class="btn" data-a="bk-now">Jetzt sichern</button></div>
+    ${list.length ? `<div class="scroll" style="margin-top:14px"><table><thead><tr><th>Sicherung</th><th>Größe</th><th></th></tr></thead><tbody>${list.map(x => `<tr><td>${utc(x.at).toLocaleString('de-DE')}</td><td class="muted">${mb(x.size)}</td><td><div class="row"><a class="btn s sm" href="api/?r=backup-dl&f=${encodeURIComponent(x.name)}">Herunterladen</a><button class="btn g sm danger" data-a="bk-restore" data-v="${esc(x.name)}">Zurückspielen</button></div></td></tr>`).join('')}</tbody></table></div>` : ''}
+    <details style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Nächtliche Sicherung bei IONOS einrichten (einmalig)</summary>
+      <ol style="font-size:14px;line-height:1.6;margin:10px 0 0;padding-left:20px"><li>mein.ionos.de → Hosting → <b>Cronjobs</b> → „Verwalten“ → <b>Cronjob anlegen</b>.</li><li>Typ <b>PHP-Skript</b>, PHP-Version: die höchste 8.x.</li><li>Skript: <b>/lumbradesk/private/cron-backup.php</b></li><li>Ausführung: <b>täglich</b>, z. B. um 3:00 Uhr → Speichern.</li></ol>
+      <p class="muted" style="font-size:13px">Ohne Cronjob sichert LumbraDesk trotzdem einmal am Tag, sobald jemand die App öffnet.</p></details></div>`;
 }
 function mailCard() {
   const m = ST.mail || {};
@@ -121,7 +134,7 @@ async function route() {
   try {
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
-    if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); }
+    if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); }
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
   $('#app').innerHTML = shell(ST.view === 'users' ? viewUsers() : ST.view === 'audit' ? viewAudit() : ST.view === 'system' ? viewSystem() : viewHome());
 }
@@ -177,6 +190,11 @@ document.addEventListener('click', async e => {
     if (a.dataset.a === 'maillink') {
       const u = ST.users.find(x => x.id === +a.dataset.id); if (!confirm(`${u.name} bekommt eine E-Mail an ${u.email} mit einem Link zum Passwort festlegen. Senden?`)) return;
       await api('user-update', { id: u.id, mailLink: true }); toast(`E-Mail an ${u.email} gesendet.`);
+    }
+    if (a.dataset.a === 'bk-now') { a.disabled = true; a.textContent = 'Sichert …'; const j = await api('backup-now', {}); toast(`Gesichert: ${mb(j.size)}, ${j.files} Dateien.`); ST.bk = await api('backups'); return route(); }
+    if (a.dataset.a === 'bk-restore') {
+      if (!confirm(`Sicherung ${a.dataset.v} zurückspielen?\n\nAlle Benutzer, Kunden und Firmen-Einstellungen werden auf diesen Stand gesetzt. Der aktuelle Stand wird vorher automatisch gesichert.`)) return;
+      a.disabled = true; const j = await api('backup-restore', { name: a.dataset.v }); alert(`Zurückgespielt: ${j.rows} Einträge, ${j.files} Dateien.\nDer vorherige Stand liegt als ${j.before} in der Liste.`); return load();
     }
     if (a.dataset.a === 'mailtest') { const j = await api('mailtest', {}); toast(`Test-E-Mail an ${j.to} gesendet.`); }
     if (a.dataset.a === 'active') { await api('user-update', { id: +a.dataset.id, active: a.dataset.v === '1' }); await route(); toast(a.dataset.v === '1' ? 'Benutzer entsperrt.' : 'Benutzer gesperrt.'); }

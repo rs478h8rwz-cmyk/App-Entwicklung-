@@ -20,6 +20,7 @@ try {
     case 'GET me': {
       $u = current_user();
       if (!$u) json_out(['user' => null]);
+      try { require_once LD_PRIV_DIR . '/backup-lib.php'; backup_if_due(); } catch (Throwable $e) {}
       $apps = array_values(array_filter(cfg('apps') ?: [], fn($a) => in_array($u['role'], $a['roles'] ?? [], true)));
       json_out(['user' => user_out($u), 'apps' => $u['must_change'] ? [] : $apps, 'roles' => ROLES]);
     }
@@ -305,6 +306,30 @@ try {
       header('Cache-Control: private, max-age=31536000, immutable'); header('X-Content-Type-Options: nosniff');
       if (!empty($m['name'])) header('X-File-Name: ' . rawurlencode($m['name']));
       readfile($f . '.bin'); exit;
+    }
+
+    /* ---------- Datensicherung (nur Admin) ---------- */
+    case 'GET backups': {
+      require_role(['admin']); require_once LD_PRIV_DIR . '/backup-lib.php';
+      json_out(['status' => backup_status(), 'list' => backup_list(), 'keep' => BACKUP_KEEP]);
+    }
+    case 'POST backup-now': {
+      $me = require_role(['admin']); require_once LD_PRIV_DIR . '/backup-lib.php';
+      try { $st = run_backup('von ' . $me['name']); } catch (Throwable $e) { fail($e->getMessage(), 500); }
+      audit((int)$me['id'], 'sicherung', $st['name']); json_out(['ok' => true] + $st);
+    }
+    case 'GET backup-dl': {
+      $me = require_role(['admin']); require_once LD_PRIV_DIR . '/backup-lib.php'; $f = (string)($_GET['f'] ?? '');
+      if (!preg_match('/^lumbradesk-[0-9-]+\.zip$/', $f) || !is_file(backup_dir() . '/' . $f)) fail('Sicherung nicht gefunden', 404);
+      audit((int)$me['id'], 'sicherung_geladen', $f);
+      header('Content-Type: application/zip'); header('Content-Disposition: attachment; filename="' . $f . '"'); header('Content-Length: ' . filesize(backup_dir() . '/' . $f));
+      readfile(backup_dir() . '/' . $f); exit;
+    }
+    case 'POST backup-restore': {
+      $me = require_role(['admin']); require_once LD_PRIV_DIR . '/backup-lib.php'; $f = (string)(body()['name'] ?? '');
+      try { $pre = run_backup('vor dem Zurückspielen'); $r = restore_backup($f); } catch (Throwable $e) { fail($e->getMessage(), 500); }
+      audit((int)$me['id'], 'sicherung_zurueck', $f . ' (vorher gesichert: ' . $pre['name'] . ')');
+      json_out(['ok' => true, 'before' => $pre['name']] + $r);
     }
 
     /* ---------- System: Update hochladen (nur Admin) ---------- */
