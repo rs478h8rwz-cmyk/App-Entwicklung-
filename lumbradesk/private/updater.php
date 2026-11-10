@@ -9,7 +9,7 @@ function ld_apply_update(string $zipPath, string $base): array {
   if ($z->open($zipPath) !== true) throw new RuntimeException('Die Datei ist keine gültige ZIP.');
   $names = []; for ($i = 0; $i < $z->numFiles; $i++) $names[] = $z->getNameIndex($i);
   if (!in_array('public/index.html', $names, true) || !in_array('private/bootstrap.php', $names, true)) { $z->close(); throw new RuntimeException('Das ist kein LumbraDesk-Update (public/ und private/ fehlen).'); }
-  $skip = ['private/config.php', 'private/setup_token.php'];
+  $skip = ['private/config.php', 'private/setup_token.php', 'private/mail.php'];
   $n = 0;
   foreach ($names as $i => $nm) {
     if (str_contains($nm, '..') || str_starts_with($nm, '/') || str_contains($nm, '\\')) continue;

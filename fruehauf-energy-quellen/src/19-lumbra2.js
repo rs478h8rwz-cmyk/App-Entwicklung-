@@ -52,6 +52,21 @@ async function ldpRemoveLocal(id) {
   try { PROJECTS = PROJECTS.filter(x => x.id !== id); ARCHIVED = ARCHIVED.filter(x => x.id !== id); await DB.del('projects', id); } finally { LDP.quiet = false; }
   delete LDP.vers[id]; delete LDP.meta[id]; LDP.dirty.delete(id); LDP.del.delete(id);
 }
+/* Papierkorb auf dem Gerät: entfernte Kunden 30 Tage aufheben */
+const ldpName = id => { const p = ldpFind(id); return p ? (p.customer.name || 'Neuer Kunde') : 'Kunde'; };
+async function ldpTrash(id, st) {
+  const p = ldpFind(id);
+  if (p) { const t = (await DB.get('kv', 'ldtrash').catch(() => null)) || []; t.unshift({ at: Date.now(), why: st.state, by: st.by || st.owner || '', p: clone(p) }); await _dbPutP('kv', t.filter(x => Date.now() - x.at < 30 * 864e5).slice(0, 100), 'ldtrash'); }
+  console.warn('LumbraDesk: Kunde lokal entfernt', id, st);
+  await ldpRemoveLocal(id);
+}
+async function ldpRestore(i) {
+  const t = (await DB.get('kv', 'ldtrash').catch(() => null)) || [], x = t[i]; if (!x) return;
+  const p = deepMerge(newProject(x.p.type || 'wp'), clone(x.p)); p.id = uid('p'); p.updated = Date.now();   // als neuer Kunde wiederherstellen
+  PROJECTS.push(p); await DB.put('projects', clone(p)); t.splice(i, 1); await _dbPutP('kv', t, 'ldtrash');
+  toast(`„${p.customer.name || 'Kunde'}“ wiederhergestellt.`); render();
+}
+
 /* fehlende Dateien eines Kunden laden (im Hintergrund) */
 async function ldpFetchFiles(p) {
   let got = 0;
@@ -78,7 +93,7 @@ async function ldpUploadFiles(p) {
 async function ldpSync(opts = {}) {
   if (typeof LD === 'undefined' || !LD.on || LDP.syncing || !navigator.onLine) return;
   if (!['admin', 'buero', 'vertrieb'].includes((LD.user || {}).role)) return;
-  LDP.syncing = true; LDP.err = ''; let changed = 0, removed = 0, pushed = 0;
+  LDP.syncing = true; LDP.err = ''; let changed = 0, removed = 0, pushed = 0, reupload = false; const removedTxt = [];
   try {
     await ldpLoad();
     /* noch nie abgeglichene Kunden dieses Geräts hochladen */
@@ -100,7 +115,7 @@ async function ldpSync(opts = {}) {
         if ((+p.updated || 0) >= (+(r.j.data || {}).updated || 0)) r = await ldpPost('pput', { id, data: p, force: true });
         else { await ldpApply(r.j, r.j.data); LDP.dirty.delete(id); changed++; continue; }
       }
-      if (r.status === 409 && r.j && r.j.deleted) { await ldpRemoveLocal(id); removed++; continue; }
+      if (r.status === 409 && r.j && r.j.deleted) { await ldpTrash(id, { state: 'deleted' }); removed++; removedTxt.push(`„${ldpName(id)}“ war auf dem Server schon gelöscht – liegt im Papierkorb`); continue; }
       if (r.status === 403) { LDP.dirty.delete(id); continue; }
       if (!r.ok) throw new Error((r.j && r.j.error) || 'Fehler ' + r.status);
       LDP.vers[id] = r.j.v; LDP.dirty.delete(id); pushed++;
@@ -109,9 +124,15 @@ async function ldpSync(opts = {}) {
     const lr = await fetch('../api/?r=plist', { credentials: 'same-origin', cache: 'no-store' }); const L = await lr.json().catch(() => null);
     if (!lr.ok || !L) throw new Error((L && L.error) || 'Kundenliste nicht abrufbar');
     LDP.me = L.me; LDP.all = L.all; const srv = {}; L.projects.forEach(m => { srv[m.id] = m; });
-    for (const p of ldpAll()) {
-      if (srv[p.id] || LDP.dirty.has(p.id)) continue;
-      if (LDP.vers[p.id]) { await ldpRemoveLocal(p.id); removed++; }   // woanders gelöscht oder nicht mehr sichtbar
+    /* Kunden, die in der Liste fehlen: erst beim Server nachfragen – entfernt wird nur bei „gelöscht“ oder „anderem zugewiesen“ */
+    const gone = ldpAll().filter(p => !srv[p.id] && !LDP.dirty.has(p.id) && LDP.vers[p.id]).map(p => p.id);
+    if (gone.length) {
+      const c = await ldpPost('pcheck', { ids: gone }); if (!c.ok) throw new Error('Prüfung nicht möglich');
+      for (const id of gone) {
+        const st = (c.j.states || {})[id] || { state: 'missing' };
+        if (st.state === 'deleted' || st.state === 'hidden') { await ldpTrash(id, st); removed++; removedTxt.push(st.state === 'deleted' ? `„${ldpName(id)}“ wurde von ${st.by || 'jemandem'} gelöscht` : `„${ldpName(id)}“ ist jetzt bei ${st.owner || 'einem Kollegen'}`); }
+        else if (st.state === 'missing') { delete LDP.vers[id]; LDP.dirty.add(id); reupload = true; }   // nicht auf dem Server: wieder hochladen statt löschen
+      }
     }
     const need = L.projects.filter(m => !LDP.dirty.has(m.id) && (!ldpFind(m.id) || (LDP.vers[m.id] || 0) < m.v)).map(m => m.id);
     L.projects.forEach(m => { LDP.meta[m.id] = m; });
@@ -119,11 +140,12 @@ async function ldpSync(opts = {}) {
       const r = await ldpPost('pget', { ids: need.slice(i, i + 40) }); if (!r.ok) throw new Error('Kunden nicht abrufbar');
       for (const x of r.j.projects) { const { data, ...meta } = x; await ldpApply(meta, data); changed++; }
     }
-    LDP.last = Date.now(); ldpSave();
+    LDP.last = Date.now(); ldpSave(); if (reupload) ldpSoon();
     if (changed || removed || pushed) {
       const editing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
       if (!editing && !$('#roof-ed') && !$('#modal').innerHTML.trim()) render(); else LDP.renderLater = true;
-      if (changed || removed) toast(`Kunden abgeglichen${changed ? ` · ${changed} aktualisiert` : ''}${removed ? ` · ${removed} entfernt` : ''}.`);
+      if (removedTxt.length) toast(removedTxt.slice(0, 2).join(' · ') + (removedTxt.length > 2 ? ` · und ${removedTxt.length - 2} weitere` : '') + ' (Papierkorb unter Einstellungen → Datensicherung).', 'info', 7000);
+      else if (changed) toast(`Kunden abgeglichen · ${changed} aktualisiert.`);
       /* Fotos und Angebote der geänderten Kunden nachladen */
       (async () => { let got = 0; for (const id of need) { const p = ldpFind(id); if (p) got += await ldpFetchFiles(p); } if (got) { await loadFiles([...new Set(need.flatMap(id => [...ldpFileIds(ldpFind(id) || {})]))]); if (!$('#roof-ed') && !$('#modal').innerHTML.trim()) render(); } })();
     } else if (opts.manual) toast('Alles abgeglichen.');
@@ -167,8 +189,15 @@ function ldpStatusHTML() {
 function ldpStatusPaint() { const el = document.getElementById('ldp-status'); if (el) el.outerHTML = ldpStatusHTML(); }
 const _setDatenLDP = SET.daten;
 SET.daten = () => (typeof LD !== 'undefined' && LD.on ? sCard('users', 'Kunden zentral (LumbraDesk)', LDP.all ? 'Alle Kunden der Firma liegen auf dem Server und sind auf jedem Gerät gleich.' : 'Deine Kunden liegen auf dem Server und sind auf jedem deiner Geräte gleich.',
-  `<div class="text-[14px]">${ldpStatusHTML()}</div><div class="flex flex-wrap gap-2 mt-3"><button class="btn-s" data-a="ldp-sync">${ic('refresh', 16)}Jetzt abgleichen</button></div><p class="hint">Ohne Internet wird auf dem Gerät gespeichert und später automatisch nachgereicht.</p>`) : '') + _setDatenLDP();
-document.addEventListener('click', e => { if (e.target.closest('[data-a="ldp-sync"]')) ldpSync({ manual: true }); });
+  `<div class="text-[14px]">${ldpStatusHTML()}</div><div class="flex flex-wrap gap-2 mt-3"><button class="btn-s" data-a="ldp-sync">${ic('refresh', 16)}Jetzt abgleichen</button><button class="btn-g" data-a="ldp-trash">${ic('trash', 16)}Papierkorb</button></div><div id="ldp-trash"></div><p class="hint">Ohne Internet wird auf dem Gerät gespeichert und später automatisch nachgereicht. Vom Abgleich entfernte Kunden liegen 30 Tage im Papierkorb.</p>`) : '') + _setDatenLDP();
+document.addEventListener('click', async e => {
+  if (e.target.closest('[data-a="ldp-sync"]')) ldpSync({ manual: true });
+  if (e.target.closest('[data-a="ldp-trash"]')) {
+    const t = (await DB.get('kv', 'ldtrash').catch(() => null)) || [], el = document.getElementById('ldp-trash'); if (!el) return;
+    el.innerHTML = t.length ? `<div class="mt-3 space-y-2">${t.map((x, i) => `<div class="flex flex-wrap items-center gap-2 rounded-lg bg-raised px-3 py-2 text-[13px]"><b class="flex-1 min-w-[140px]">${esc(x.p.customer.name || 'Neuer Kunde')}</b><span class="text-ink3">${new Date(x.at).toLocaleString('de-DE')} · ${x.why === 'deleted' ? 'gelöscht' + (x.by ? ' von ' + esc(x.by) : '') : 'zugewiesen an ' + esc(x.by || 'Kollegen')}</span><button class="btn-s !h-8 !px-3 text-[12px]" data-a="ldp-restore" data-i="${i}">Wiederherstellen</button></div>`).join('')}</div>` : '<p class="text-[13px] text-ink3 mt-3">Der Papierkorb ist leer.</p>';
+  }
+  const r = e.target.closest('[data-a="ldp-restore"]'); if (r) ldpRestore(+r.dataset.i);
+});
 
 /* ---------- Start ---------- */
 async function ldpInit() {

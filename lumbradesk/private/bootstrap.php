@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '1.2';
+const LD_VERSION = '1.4';
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
 function cfg(?string $key = null) {
@@ -151,4 +151,82 @@ function project_meta(array $p): array {
   $n = user_names();
   return ['id' => $p['id'], 'v' => (int)$p['version'], 'owner' => (int)$p['owner_id'], 'ownerName' => $n[(int)$p['owner_id']] ?? '', 'by' => (int)$p['created_by'], 'byName' => $n[(int)$p['created_by']] ?? '',
     'assignedBy' => $p['assigned_by'] ? (int)$p['assigned_by'] : null, 'assignedByName' => $p['assigned_by'] ? ($n[(int)$p['assigned_by']] ?? '') : '', 'assignedAt' => $p['assigned_at'], 'upd' => $p['updated_at'], 'updBy' => $n[(int)($p['updated_by'] ?? 0)] ?? ''];
+}
+
+/* ---------- E-Mail (IONOS-Postfach, SMTP) ---------- */
+function mail_cfg(): array {
+  $f = __DIR__ . '/mail.php'; $c = is_file($f) ? (require $f) : [];
+  return array_merge(['from' => '', 'name' => 'LumbraDesk', 'host' => 'smtp.ionos.de', 'port' => 587, 'enc' => 'tls', 'user' => '', 'pass' => '', 'base' => ''], is_array($c) ? $c : []);
+}
+function mail_save(array $c): void {
+  $f = __DIR__ . '/mail.php';
+  file_put_contents($f, "<?php\n/* LumbraDesk – Postfach (unter System eingetragen). Nie weitergeben. */\nreturn " . var_export($c, true) . ";\n", LOCK_EX); @chmod($f, 0600);
+}
+function base_url(): string {
+  $b = rtrim((string)mail_cfg()['base'], '/');
+  return $b !== '' ? $b : 'https://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'lumbradesk.de'));
+}
+/* kleine SMTP-Verbindung (STARTTLS 587, SSL 465) – ohne Zusatzbibliothek */
+function smtp_send(array $c, string $to, string $subject, string $text, string $html): void {
+  $host = ($c['enc'] === 'ssl' ? 'ssl://' : '') . $c['host'];
+  $s = @stream_socket_client($host . ':' . (int)$c['port'], $errno, $err, 15);
+  if (!$s) throw new RuntimeException("Keine Verbindung zum Mailserver ($err)");
+  stream_set_timeout($s, 20);
+  $read = function () use ($s) { $r = ''; while (($l = fgets($s, 515)) !== false) { $r .= $l; if (strlen($l) < 4 || $l[3] === ' ') break; } return $r; };
+  $cmd = function (string $c, array $ok) use ($s, $read) { if ($c !== '') fwrite($s, $c . "\r\n"); $r = $read(); if (!in_array((int)substr($r, 0, 3), $ok, true)) throw new RuntimeException('Mailserver: ' . trim(preg_replace('/\s+/', ' ', $r))); return $r; };
+  $cmd('', [220]); $ehlo = 'EHLO ' . (parse_url(base_url(), PHP_URL_HOST) ?: 'localhost'); $cmd($ehlo, [250]);
+  if ($c['enc'] === 'tls') { $cmd('STARTTLS', [220]); if (!stream_socket_enable_crypto($s, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) throw new RuntimeException('TLS fehlgeschlagen'); $cmd($ehlo, [250]); }
+  if ($c['user'] !== '') { $cmd('AUTH LOGIN', [334]); $cmd(base64_encode($c['user']), [334]); $cmd(base64_encode($c['pass']), [235]); }
+  $cmd('MAIL FROM:<' . $c['from'] . '>', [250]); $cmd('RCPT TO:<' . $to . '>', [250, 251]); $cmd('DATA', [354]);
+  $msg = mail_message($c, $to, $subject, $text, $html);
+  fwrite($s, preg_replace('/^\./m', '..', $msg) . "\r\n.\r\n"); $cmd('', [250]); $cmd('QUIT', [221]); fclose($s);
+}
+function mail_message(array $c, string $to, string $subject, string $text, string $html): string {
+  $b = 'ld' . bin2hex(random_bytes(8)); $enc = fn($s) => '=?UTF-8?B?' . base64_encode($s) . '?=';
+  return implode("\r\n", ['Date: ' . date('r'), 'From: ' . $enc($c['name'] ?: 'LumbraDesk') . ' <' . $c['from'] . '>', 'To: <' . $to . '>', 'Subject: ' . $enc($subject),
+    'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (substr(strrchr($c['from'], '@'), 1) ?: 'lumbradesk.de') . '>', 'MIME-Version: 1.0', 'Content-Type: multipart/alternative; boundary="' . $b . '"', '',
+    '--' . $b, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', chunk_split(base64_encode($text)),
+    '--' . $b, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', chunk_split(base64_encode($html)), '--' . $b . '--', '']);
+}
+function send_mail(string $to, string $subject, string $text, string $html): void {
+  $c = mail_cfg();
+  if ($c['from'] === '') throw new RuntimeException('Absender-Adresse fehlt (System → E-Mail).');
+  if ($c['pass'] !== '' || $c['enc'] === 'none') { smtp_send($c, $to, $subject, $text, $html); return; }
+  /* ohne SMTP-Passwort: PHP-Mailfunktion von IONOS */
+  $m = mail_message($c, $to, $subject, $text, $html); [$head, $body] = explode("\r\n\r\n", $m, 2);
+  $head = preg_replace('/^(To|Subject): .*\r\n/m', '', $head . "\r\n");
+  if (!@mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, rtrim($head), '-f' . $c['from'])) throw new RuntimeException('E-Mail konnte nicht versendet werden (PHP-Mail). Bitte unter System das Postfach-Passwort eintragen.');
+}
+/* E-Mail im LumbraDesk-Stil */
+function mail_tpl(string $hello, string $intro, string $btn, string $url, string $outro): array {
+  $h = fn($s) => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+  $html = '<!doctype html><html><body style="margin:0;background:#F4F6F8;font-family:Arial,Helvetica,sans-serif;color:#0F1B26"><div style="max-width:520px;margin:0 auto;padding:28px 16px">'
+    . '<div style="font-size:20px;font-weight:bold;margin-bottom:18px">LumbraDesk <span style="color:#6B7884;font-weight:normal;font-size:14px">· Frühauf Solar</span></div>'
+    . '<div style="background:#fff;border:1px solid #E3E8EE;border-radius:14px;padding:24px"><p style="font-size:16px;margin:0 0 12px">' . $h($hello) . '</p><p style="font-size:15px;line-height:1.5;margin:0 0 20px">' . $h($intro) . '</p>'
+    . '<a href="' . $h($url) . '" style="display:inline-block;background:#0E7C66;color:#fff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:9px">' . $h($btn) . '</a>'
+    . '<p style="font-size:13px;color:#6B7884;line-height:1.5;margin:20px 0 0">' . $h($outro) . '<br>Falls der Knopf nicht geht: <a href="' . $h($url) . '" style="color:#0E7C66;word-break:break-all">' . $h($url) . '</a></p></div></div></body></html>';
+  return [$hello . "\n\n" . $intro . "\n\n" . $btn . ': ' . $url . "\n\n" . $outro . "\n", $html];
+}
+/* ---------- Einmal-Links (Einladung, Passwort vergessen) ---------- */
+function tokens_table(): void {
+  static $d = false; if ($d) return; $d = true;
+  db()->exec("CREATE TABLE IF NOT EXISTS user_tokens (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id INT UNSIGNED NOT NULL, token_hash CHAR(64) NOT NULL UNIQUE, purpose VARCHAR(10) NOT NULL, expires_at DATETIME NOT NULL, used_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+function make_token(int $uid, string $purpose, int $hours): string {
+  tokens_table(); $t = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+  db()->prepare('DELETE FROM user_tokens WHERE user_id = ? AND used_at IS NULL')->execute([$uid]);
+  db()->prepare('INSERT INTO user_tokens (user_id, token_hash, purpose, expires_at) VALUES (?, ?, ?, UTC_TIMESTAMP() + INTERVAL ? HOUR)')->execute([$uid, hash('sha256', $t), $purpose, $hours]);
+  return $t;
+}
+function find_token(string $t): ?array {
+  if (!preg_match('/^[A-Za-z0-9_-]{30,60}$/', $t)) return null; tokens_table();
+  $st = db()->prepare('SELECT t.*, u.name, u.email, u.active FROM user_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ? AND t.used_at IS NULL AND t.expires_at > UTC_TIMESTAMP()');
+  $st->execute([hash('sha256', $t)]); $r = $st->fetch(); return $r && $r['active'] ? $r : null;
+}
+function send_invite(array $u, bool $reset = false): void {
+  $t = make_token((int)$u['id'], $reset ? 'reset' : 'invite', $reset ? 2 : 72); $url = base_url() . '/?setpw=' . $t; $first = explode(' ', trim($u['name']))[0];
+  [$text, $html] = $reset
+    ? mail_tpl("Hallo $first,", 'du hast ein neues Passwort für LumbraDesk angefordert. Über den Knopf legst du es fest.', 'Neues Passwort festlegen', $url, 'Der Link gilt 2 Stunden. Wenn du das nicht angefordert hast, ignoriere diese E-Mail einfach – dein Passwort bleibt unverändert.')
+    : mail_tpl("Hallo $first,", 'für dich wurde ein Zugang zu LumbraDesk von Frühauf Solar angelegt. Über den Knopf legst du dein eigenes Passwort fest – danach kannst du dich mit deiner E-Mail-Adresse anmelden.', 'Passwort festlegen', $url, 'Der Link gilt 3 Tage und kann nur einmal benutzt werden.');
+  send_mail($u['email'], $reset ? 'LumbraDesk: neues Passwort festlegen' : 'Dein Zugang zu LumbraDesk', $text, $html);
 }

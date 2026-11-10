@@ -77,7 +77,12 @@ try {
       $st = db()->prepare('SELECT id FROM users WHERE email = ?'); $st->execute([$email]); if ($st->fetch()) fail('Diese E-Mail-Adresse gibt es schon.');
       $tmp = temp_password();
       db()->prepare('INSERT INTO users (email, name, role, pw_hash, must_change) VALUES (?, ?, ?, ?, 1)')->execute([$email, $name, $role, password_hash($tmp, PASSWORD_DEFAULT)]);
+      $nu = ['id' => (int)db()->lastInsertId(), 'email' => $email, 'name' => $name];
       audit((int)$me['id'], 'benutzer_angelegt', "$name <$email> als " . ROLES[$role]);
+      if (!empty($b['invite'])) {
+        try { send_invite($nu); audit((int)$me['id'], 'einladung_gesendet', $email); json_out(['ok' => true, 'invited' => true]); }
+        catch (Throwable $e) { json_out(['ok' => true, 'tempPassword' => $tmp, 'mailError' => $e->getMessage()]); }
+      }
       json_out(['ok' => true, 'tempPassword' => $tmp]);
     }
     case 'POST user-update': {
@@ -93,7 +98,10 @@ try {
         if ($id === (int)$me['id']) fail('Das eigene Konto kann man nicht sperren.');
         db()->prepare('UPDATE users SET active = ? WHERE id = ?')->execute([$b['active'] ? 1 : 0, $id]); audit((int)$me['id'], $b['active'] ? 'benutzer_aktiviert' : 'benutzer_gesperrt', $u['email']);
       }
-      if (!empty($b['resetPassword'])) {
+      if (!empty($b['mailLink'])) {
+        try { send_invite($u, !$u['must_change']); audit((int)$me['id'], 'link_gesendet', $u['email']); $out['mailed'] = true; } catch (Throwable $e) { fail('E-Mail nicht gesendet: ' . $e->getMessage(), 502); }
+      }
+            if (!empty($b['resetPassword'])) {
         $tmp = temp_password();
         db()->prepare('UPDATE users SET pw_hash = ?, must_change = 1 WHERE id = ?')->execute([password_hash($tmp, PASSWORD_DEFAULT), $id]);
         db()->prepare('DELETE FROM login_attempts WHERE email = ?')->execute([$u['email']]);
@@ -105,6 +113,57 @@ try {
       require_role(['admin']);
       $rows = db()->query('SELECT a.at, a.action, a.detail, a.ip, u.name FROM audit_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.id DESC LIMIT 200')->fetchAll();
       json_out(['entries' => $rows]);
+    }
+
+    /* ---------- Passwort per E-Mail-Link (ohne Anmeldung) ---------- */
+    case 'POST forgot': {
+      $email = mb_strtolower(trim((string)(body()['email'] ?? '')));
+      if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $st = db()->prepare('SELECT COUNT(*) FROM login_attempts WHERE (email = ? OR ip = ?) AND at > UTC_TIMESTAMP() - INTERVAL 1 HOUR'); $st->execute(['reset:' . $email, client_ip()]);
+        if ((int)$st->fetchColumn() < 5) {
+          db()->prepare('INSERT INTO login_attempts (email, ip) VALUES (?, ?)')->execute(['reset:' . $email, client_ip()]);
+          $st = db()->prepare('SELECT id, email, name FROM users WHERE email = ? AND active = 1'); $st->execute([$email]); $u = $st->fetch();
+          if ($u) { try { send_invite($u, true); audit((int)$u['id'], 'passwort_vergessen', $email); } catch (Throwable $e) { error_log('LumbraDesk Mail: ' . $e->getMessage()); } }
+        }
+      }
+      json_out(['ok' => true]);   // immer gleiche Antwort – verrät nicht, ob es die Adresse gibt
+    }
+    case 'GET tokeninfo': {
+      $t = find_token((string)($_GET['t'] ?? '')); if (!$t) fail('Der Link ist abgelaufen oder wurde schon benutzt.', 404);
+      json_out(['name' => $t['name'], 'email' => $t['email'], 'purpose' => $t['purpose']]);
+    }
+    case 'POST setpw': {
+      $b = body(); $t = find_token((string)($b['token'] ?? '')); if (!$t) fail('Der Link ist abgelaufen oder wurde schon benutzt.', 404);
+      $pw = (string)($b['password'] ?? ''); if ($e = pw_ok($pw)) fail($e);
+      db()->prepare('UPDATE users SET pw_hash = ?, must_change = 0 WHERE id = ?')->execute([password_hash($pw, PASSWORD_DEFAULT), $t['user_id']]);
+      db()->prepare('UPDATE user_tokens SET used_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$t['id']]);
+      db()->prepare('DELETE FROM login_attempts WHERE email = ?')->execute([$t['email']]);
+      audit((int)$t['user_id'], 'passwort_per_link', $t['email']);
+      json_out(['ok' => true, 'email' => $t['email']]);
+    }
+    /* ---------- E-Mail-Einstellungen (nur Admin) ---------- */
+    case 'GET mailcfg': {
+      require_role(['admin']); $c = mail_cfg();
+      json_out(['from' => $c['from'], 'name' => $c['name'], 'host' => $c['host'], 'port' => (int)$c['port'], 'enc' => $c['enc'], 'user' => $c['user'], 'hasPass' => $c['pass'] !== '', 'base' => base_url()]);
+    }
+    case 'POST mailcfg': {
+      $me = require_role(['admin']); $b = body(); $c = mail_cfg();
+      foreach (['from', 'name', 'host', 'user'] as $k) if (isset($b[$k])) $c[$k] = trim((string)$b[$k]);
+      if (isset($b['port'])) $c['port'] = max(1, (int)$b['port']);
+      if (isset($b['enc']) && in_array($b['enc'], ['tls', 'ssl', 'none'], true)) $c['enc'] = $b['enc'];
+      if (isset($b['pass']) && $b['pass'] !== '') $c['pass'] = (string)$b['pass'];
+      if (!empty($b['clearPass'])) $c['pass'] = '';
+      if ($c['from'] !== '' && !filter_var($c['from'], FILTER_VALIDATE_EMAIL)) fail('Bitte eine gültige Absender-Adresse eingeben.');
+      $c['base'] = 'https://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string)($_SERVER['HTTP_HOST'] ?? ''));
+      if (($_SERVER['HTTPS'] ?? '') !== 'on' && !cfg('cookie_secure')) $c['base'] = 'http://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string)($_SERVER['HTTP_HOST'] ?? ''));
+      mail_save($c); audit((int)$me['id'], 'mail_einstellungen', $c['from']);
+      json_out(['ok' => true]);
+    }
+    case 'POST mailtest': {
+      $me = require_role(['admin']);
+      [$text, $html] = mail_tpl('Hallo ' . explode(' ', $me['name'])[0] . ',', 'das ist eine Test-E-Mail von LumbraDesk. Wenn du sie liest, funktioniert der Versand.', 'LumbraDesk öffnen', base_url() . '/', 'Einladungen und „Passwort vergessen“ kommen ab jetzt von dieser Adresse.');
+      try { send_mail($me['email'], 'LumbraDesk: Test-E-Mail', $text, $html); } catch (Throwable $e) { fail($e->getMessage(), 502); }
+      json_out(['ok' => true, 'to' => $me['email']]);
     }
 
     /* ---------- Firmen-Einstellungen (Wirtschaftlichkeits-App) ---------- */
@@ -187,7 +246,7 @@ try {
       $st = $pdo->prepare('SELECT * FROM projects WHERE id = ? FOR UPDATE'); $st->execute([$id]); $p = $st->fetch() ?: null;
       if (!$p) {
         $pdo->prepare('INSERT INTO projects (id, owner_id, created_by, name, data, version, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, 1, UTC_TIMESTAMP(), ?)')->execute([$id, $u['id'], $u['id'], $name, $json, $u['id']]);
-        $pdo->commit(); json_out(['v' => 1, 'created' => true]);
+        $pdo->commit(); audit((int)$u['id'], 'kunde_angelegt', $name ?: $id); json_out(['v' => 1, 'created' => true]);
       }
       if (!can_see_project($u, $p)) { $pdo->rollBack(); fail('Keine Berechtigung für diesen Kunden', 403); }
       if ($p['deleted']) { $pdo->rollBack(); json_out(['error' => 'Kunde wurde gelöscht', 'deleted' => true], 409); }
@@ -195,6 +254,18 @@ try {
       $v = (int)$p['version'] + 1;
       $pdo->prepare('UPDATE projects SET data = ?, name = ?, version = ?, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?')->execute([$json, $name, $v, $u['id'], $id]);
       $pdo->commit(); json_out(['v' => $v]);
+    }
+    case 'POST pcheck': {
+      /* Warum fehlt ein Kunde in der Liste? Nur bei „gelöscht“ oder „anderem zugewiesen“ darf das Gerät ihn entfernen */
+      $u = require_role(['admin', 'buero', 'vertrieb']); $out = []; $n = user_names();
+      foreach (array_slice((array)(body()['ids'] ?? []), 0, 500) as $id) {
+        if (!is_string($id) || !valid_id($id)) continue; $p = project_row($id);
+        if (!$p) $out[$id] = ['state' => 'missing'];
+        elseif ($p['deleted']) $out[$id] = ['state' => 'deleted', 'by' => $n[(int)($p['updated_by'] ?? 0)] ?? ''];
+        elseif (!can_see_project($u, $p)) $out[$id] = ['state' => 'hidden', 'owner' => $n[(int)$p['owner_id']] ?? ''];
+        else $out[$id] = ['state' => 'visible'];
+      }
+      json_out(['states' => $out]);
     }
     case 'POST pdel': {
       $u = require_role(['admin', 'buero', 'vertrieb']); $id = (string)(body()['id'] ?? ''); if (!valid_id($id)) fail('Ungültig', 400);
