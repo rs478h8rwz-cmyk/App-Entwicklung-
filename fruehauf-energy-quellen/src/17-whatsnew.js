@@ -13,6 +13,12 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.26', date: '2026-11-10', items: [
+    ['house', 'Stringplan', 'Neues Werkzeug „Strings“: Module der Reihe nach antippen – die App zieht die Stringlinie vom ersten zum nächsten Modul, nummeriert sie und zeigt kWp je String. Auch über mehrere Dachflächen, und im PDF-Bild der Belegung.'],
+    ['house', 'Optimierer setzen', 'Werkzeug „Optimierer“: Modul antippen setzt oder entfernt einen Optimierer – sichtbar am Modul, gezählt in der Fußzeile und im PDF.'],
+    ['house', 'Alle Dachflächen anklickbar', 'Module und Flächen anderer Dachflächen im selben Foto lassen sich direkt antippen – die App wechselt automatisch zur richtigen Fläche.'],
+    ['house', 'Sanfterer Magnet, klarere Bedienung', 'Der Magnet zieht nur noch bis 15 cm an Nachbarmodule – frei platzierte Module bleiben beweglich. Jedes Werkzeug zeigt nur seine Knöpfe und eine kurze Anleitung, oben im Bild steht, was ein Tipp gerade bewirkt.']
+  ] },
   { version: '2.25', date: '2026-11-10', items: [
     ['house', 'Module per Doppeltipp setzen', 'Ein Modul entsteht nur noch per Doppelklick bzw. Doppeltipp – ein einfacher Tipp verschiebt das Bild oder hebt die Auswahl auf. So entstehen keine Module aus Versehen.'],
     ['house', 'Raster schnell korrigieren', 'Wurden Mulden als Pfannen gezählt, einfach eine Alternative wie ½ oder ⅔ der Zahl antippen oder mit −1 / +1 feinjustieren – das Raster rastet jedes Mal neu auf die Pfannenkanten ein.']

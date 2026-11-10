@@ -4267,7 +4267,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261110111445';
+const APP_VERSION = '20261110112527';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4684,6 +4684,12 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.26', date: '2026-11-10', items: [
+    ['house', 'Stringplan', 'Neues Werkzeug „Strings“: Module der Reihe nach antippen – die App zieht die Stringlinie vom ersten zum nächsten Modul, nummeriert sie und zeigt kWp je String. Auch über mehrere Dachflächen, und im PDF-Bild der Belegung.'],
+    ['house', 'Optimierer setzen', 'Werkzeug „Optimierer“: Modul antippen setzt oder entfernt einen Optimierer – sichtbar am Modul, gezählt in der Fußzeile und im PDF.'],
+    ['house', 'Alle Dachflächen anklickbar', 'Module und Flächen anderer Dachflächen im selben Foto lassen sich direkt antippen – die App wechselt automatisch zur richtigen Fläche.'],
+    ['house', 'Sanfterer Magnet, klarere Bedienung', 'Der Magnet zieht nur noch bis 15 cm an Nachbarmodule – frei platzierte Module bleiben beweglich. Jedes Werkzeug zeigt nur seine Knöpfe und eine kurze Anleitung, oben im Bild steht, was ein Tipp gerade bewirkt.']
+  ] },
   { version: '2.25', date: '2026-11-10', items: [
     ['house', 'Module per Doppeltipp setzen', 'Ein Modul entsteht nur noch per Doppelklick bzw. Doppeltipp – ein einfacher Tipp verschiebt das Bild oder hebt die Auswahl auf. So entstehen keine Module aus Versehen.'],
     ['house', 'Raster schnell korrigieren', 'Wurden Mulden als Pfannen gezählt, einfach eine Alternative wie ½ oder ⅔ der Zahl antippen oder mit −1 / +1 feinjustieren – das Raster rastet jedes Mal neu auf die Pfannenkanten ein.']
@@ -6366,6 +6372,7 @@ function roofRender() {
   <div class="flex-1 min-h-0 flex flex-col md:flex-row">
     <div id="roof-stage" class="relative flex-1 min-h-[320px] bg-black/40 touch-none select-none overflow-hidden"><canvas id="roof-cv" class="absolute inset-0 w-full h-full block"></canvas>
       <div id="roof-tip" class="absolute left-3 bottom-3 right-36 text-[12px] text-white/80 pointer-events-none"></div>
+      <div id="roof-badge" class="absolute left-1/2 -translate-x-1/2 top-3 pointer-events-none hidden rounded-full px-4 py-2 text-[13.5px] font-semibold text-white shadow-lg" style="background:rgba(12,20,28,.82);backdrop-filter:blur(6px)"></div>
       <div id="roof-pad" class="absolute left-3 bottom-9 hidden flex-col items-center gap-1 select-none"><div class="relative w-[96px] h-[96px] rounded-full border-2 border-white/70 bg-black/45 backdrop-blur-sm touch-none" id="roof-pad-ring" title="Feinjustieren"><div id="roof-pad-knob" class="absolute w-9 h-9 rounded-full bg-white/90 shadow" style="left:30px;top:30px"></div><span class="absolute inset-0 grid place-items-center text-[10px] text-white/70 pointer-events-none" style="padding-top:62px">fein</span></div><div class="text-[11px] text-white/80" id="roof-pad-lbl"></div></div>
       <div class="absolute right-3 bottom-3 flex gap-1.5"><button class="btn-s !h-9 !w-9 !px-0 text-[18px]" data-r="zoom" data-v="out" title="Verkleinern">−</button><button class="btn-s !h-9 !w-9 !px-0 text-[18px]" data-r="zoom" data-v="in" title="Vergrößern">+</button><button class="btn-s !h-9 !px-2.5 text-[12px]" data-r="zoom" data-v="fit">Einpassen</button></div></div>
     <div id="roof-panel" class="md:w-[340px] shrink-0 border-t md:border-t-0 md:border-l border-line overflow-y-auto max-h-[42vh] md:max-h-none p-4 space-y-4">${roofPanel(p, f, g)}</div>
@@ -6378,7 +6385,7 @@ function roofFoot(p, f) {
   const tot = p.roof.faces.reduce((a, x) => [a[0] + x.mods.length, a[1] + faceKwp(x)], [0, 0]);
   return `<div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 border-t border-line text-[14px]" style="padding-bottom:max(10px,env(safe-area-inset-bottom))">
     ${RS.step !== 'photo' ? `<button class="btn-s !h-10 !px-3 text-[13px]" data-r="prev">${ic('arrowL', 15)}Zurück</button>` : ''}
-    <span><span class="text-ink3">${esc(f.name)}:</span> <b>${f.mods.length} Module</b> · <b>${num(faceKwp(f), 2)} kWp</b></span>
+    <span><span class="text-ink3">${esc(f.name)}:</span> <b>${f.mods.length} Module</b> · <b>${num(faceKwp(f), 2)} kWp</b></span>${(() => { const ns = (p.roof.strings || []).filter(s => s.mods.length).length, no = p.roof.faces.reduce((a, o) => a + o.mods.filter(m => m.opt).length, 0); return ns || no ? `<span class="text-ink3">${ns ? `${ns} String${ns > 1 ? 's' : ''}` : ''}${ns && no ? ' · ' : ''}${no ? `${no} Optimierer` : ''}</span>` : ''; })()}
     ${p.roof.faces.length > 1 ? `<span><span class="text-ink3">Gesamt:</span> <b class="text-p">${tot[0]} Module · ${num(tot[1], 2)} kWp</b></span>` : ''}
     ${RS.step === 'mod' && roofMods().length ? `<select class="inp appearance-none !h-10 !w-auto !py-0 text-[13px] max-w-[240px]" data-rf="prodId" title="PV-Modul">${roofMods().map(x => `<option value="${x.id}" ${x.id === roofProd(f).id ? 'selected' : ''}>${esc(x.name)} · ${num(x.power)} Wp</option>`).join('')}</select>` : ''}
     ${RS.step === 'mod' ? `<span class="flex gap-1.5"><button class="btn-s !h-10 !px-3 text-[13px]" data-r="copy" ${RS.sel.size ? '' : 'disabled'}>${ic('copy', 15)}Kopieren</button><button class="btn-s !h-10 !px-3 text-[13px]" data-r="paste" ${RS.clip && RS.clip.length ? '' : 'disabled'}>${ic('plus', 15)}Einfügen</button></span>` : ''}
@@ -6422,15 +6429,16 @@ function roofPanel(p, f, g) {
       <div><span class="lbl">Ansicht</span><div class="seg w-full">${[['flat', 'Entzerrt'], ['photo', 'Wie auf dem Foto']].map(([k, l]) => `<button class="flex-1 ${(RS.look || 'flat') === k ? 'on' : ''}" data-r="look" data-v="${k}">${l}</button>`).join('')}</div></div>
       <div class="grid grid-cols-2 gap-2"><div><span class="lbl">Ausrichtung</span><div class="seg">${[['p', 'Hochkant'], ['l', 'Quer']].map(([k, l]) => `<button class="${f.orient === k ? 'on' : ''}" data-r="orient" data-v="${k}">${l}</button>`).join('')}</div></div>
         <div><span class="lbl">Magnet</span><div class="seg">${[[true, 'An'], [false, 'Aus']].map(([k, l]) => `<button class="${RS.magnet === k ? 'on' : ''}" data-r="magnet" data-v="${k}">${l}</button>`).join('')}</div></div></div>
-      <div><span class="lbl">Werkzeug</span><div class="seg w-full">${[['add', 'Hinzufügen'], ['select', 'Auswählen']].map(([k, l]) => `<button class="flex-1 ${RS.mode === k ? 'on' : ''}" data-r="mode" data-v="${k}">${l}</button>`).join('')}</div>
-        <label class="flex items-center gap-2 mt-2 text-[13px]"><input type="checkbox" data-r="multi" ${RS.multi ? 'checked' : ''}> Mehrfachauswahl (Antippen fügt hinzu)</label></div>
-      <div class="grid grid-cols-2 gap-2">
+      <div><span class="lbl">Werkzeug</span><div class="seg w-full">${[['add', 'Setzen', 'plus'], ['select', 'Auswählen', 'grid'], ['string', 'Strings', 'bolt'], ['opt', 'Optimierer', 'sparkle']].map(([k, l, i]) => `<button class="flex-1 !px-1 !h-auto py-1.5 flex-col gap-0.5 text-[12px] ${RS.mode === k ? 'on' : ''}" data-r="mode" data-v="${k}">${ic(i, 16)}${l}</button>`).join('')}</div>${RS.mode === 'string' ? roofStrPanel(roofP()) : RS.mode === 'opt' ? roofOptPanel(roofP(), f) : ''}
+        <div class="mt-2 flex gap-2 items-start rounded-lg px-3 py-2 text-[13px] leading-snug" style="background:rgb(var(--p-rgb)/.10)"><span class="text-p shrink-0 mt-[1px]">${ic('info', 15)}</span><span>${ROOF_HOW[RS.mode] || ''}</span></div>
+        ${RS.mode === 'select' ? `<label class="flex items-center gap-2 mt-2 text-[13px]"><input type="checkbox" data-r="multi" ${RS.multi ? 'checked' : ''}> Mehrfachauswahl (Antippen fügt hinzu)</label>` : ''}</div>
+      ${RS.mode === 'string' || RS.mode === 'opt' ? '' : `<div class="grid grid-cols-2 gap-2">
         <button class="btn-s !h-10 text-[13px]" data-r="fill">${ic('grid', 15)}Fläche füllen</button><button class="btn-s !h-10 text-[13px]" data-r="all">Alle auswählen</button>
         <button class="btn-s !h-10 text-[13px]" data-r="rotate" ${RS.sel.size ? '' : 'disabled'}>${ic('refresh', 15)}Drehen</button><button class="btn-s !h-10 text-[13px]" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 15)}Löschen${RS.sel.size ? ` (${RS.sel.size})` : ''}</button>
         <button class="btn-s !h-10 text-[13px]" data-r="copy" ${RS.sel.size ? '' : 'disabled'}>${ic('copy', 15)}Kopieren</button><button class="btn-s !h-10 text-[13px]" data-r="paste" ${RS.clip && RS.clip.length ? '' : 'disabled'}>${ic('plus', 15)}Einfügen${RS.clip && RS.clip.length ? ` (${RS.clip.length})` : ''}</button>
         <button class="btn-g !h-10 text-[13px]" data-r="undo" ${RS.hist.length ? '' : 'disabled'}>${ic('arrowL', 15)}Rückgängig</button><button class="btn-g !h-10 text-[13px]" data-r="none" ${RS.sel.size ? '' : 'disabled'}>Auswahl aufheben</button>
       </div>
-      <p class="hint">Hinzufügen: auf die Fläche tippen. Auswählen: Module antippen oder einen Rahmen ziehen, dann gemeinsam verschieben. Am PC: Entf löscht, R dreht, Strg+A wählt alle.</p>
+      <p class="hint">Am PC: Entf löscht, R dreht, Strg+A wählt alle.</p>`}
       <div><span class="lbl">Randabstände</span><div class="grid grid-cols-3 gap-2"><label><span class="text-[11px] text-ink3">First</span>${roofIn('mTop', 'cm')}</label><label><span class="text-[11px] text-ink3">Rinne</span>${roofIn('mBot', 'cm')}</label><label><span class="text-[11px] text-ink3">Seiten</span>${roofIn('mSide', 'cm')}</label></div></div>
       <div class="text-[12px] text-ink3 rounded-lg bg-raised p-3">${roofDims(g)}</div>`;
   }
@@ -6522,11 +6530,14 @@ async function roofDraw() {
     const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
     x.fillStyle = gl; poly(); x.fill();
     if (st === 'over') { x.fillStyle = 'rgba(229,72,77,.55)'; poly(); x.fill(); }
-    x.strokeStyle = RS.sel.has(i) ? P : 'rgba(0,0,0,.85)'; x.lineWidth = RS.sel.has(i) ? 3 : 0.7; poly(); x.stroke();
+    const fw = Math.max(0.8, Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) * 0.022); x.lineJoin = 'round';
+    x.strokeStyle = '#0B0D10'; x.lineWidth = fw; poly(); x.stroke();
+    if (RS.sel.has(i)) { x.strokeStyle = P; x.lineWidth = Math.max(3, fw * 0.8); poly(); x.stroke(); }
   });
+  { const p = roofP(), map = V.kind === 'photo' ? roofImgMap(f, (ix, iy) => [V.ox + ix * V.k, V.oy + iy * V.k]) : (o, X, Y) => (o === f ? M(X, Y) : null); roofStrLayer(x, p, map, roofStrSize(f, map), true); }
   if (RS.drag && RS.drag.lasso) { const [a, b, c, d] = RS.drag.lasso; x.save(); x.setLineDash([5, 4]); x.strokeStyle = P; x.fillStyle = `rgba(${pc},.12)`; x.lineWidth = 1.5; x.fillRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.strokeRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.restore(); }
   const wEl = $('#roof-warn'); if (wEl) wEl.innerHTML = [warn[0] ? `<span style="color:#E5484D">${warn[0]} überlappen</span>` : ''].filter(Boolean).join(' · ');
-  if (tip) tip.textContent = (RS.mode === 'add' ? 'Doppelt tippen bzw. doppelklicken, um ein Modul zu setzen.' : 'Module antippen oder Rahmen ziehen – dann verschieben.') + ' Zoomen: zwei Finger bzw. Mausrad; verschieben: zwei Finger bzw. Leertaste + ziehen.';
+  if (tip) tip.textContent = (RS.mode === 'add' ? 'Doppelt tippen bzw. doppelklicken, um ein Modul zu setzen.' : RS.mode === 'string' ? 'Module der Reihe nach antippen – der String läuft vom ersten zum nächsten Modul.' : RS.mode === 'opt' ? 'Module antippen, um einen Optimierer zu setzen oder zu entfernen.' : 'Module antippen oder Rahmen ziehen – dann verschieben.') + ' Zoomen: zwei Finger bzw. Mausrad; verschieben: zwei Finger bzw. Leertaste + ziehen.';
 }
 function roofLoupe(x, img, [sx, sy], f, V, cw) {
   const R = 70, Z = 3, left = sx > cw / 2, cx = left ? R + 16 : cw - R - 16, cy = R + 16;
@@ -6583,6 +6594,8 @@ function roofDown(e) {
   const g = faceGeom(f), [X, Y] = roofS2P(V, g, sx, sy);
   const inside = ([m]) => { const b = modBox(f, m); return X >= b.x0 && X <= b.x1 && Y >= b.y0 && Y <= b.y1; }, all = f.mods.map((m, i) => [m, i]).reverse();
   const hit = all.find(e2 => RS.sel.has(e2[1]) && inside(e2)) || all.find(inside);   // ausgewählte Module haben Vorrang
+  if (RS.mode === 'string' || RS.mode === 'opt') return roofStrTap(sx, sy, hit ? hit[1] : -1);
+  if (!hit && V.kind === 'photo') { const o = roofHitOther(sx, sy); if (o) { roofSwitchFace(o.fi); RS.sel = new Set([o.idx]); roofSoft(); return; } }   // Modul einer anderen Dachfläche: dorthin wechseln
   if (hit) {
     const i = hit[1], wasSel = RS.sel.has(i), multi = RS.multi || e.shiftKey || e.ctrlKey || e.metaKey;
     if (multi) RS.sel.add(i); else if (!wasSel) RS.sel = new Set([i]);
@@ -6598,6 +6611,10 @@ function roofDown(e) {
       RS.drag = { pan: true, lx: sx, ly: sy }; return;
     }
     RS.lastTap = null;
+    if (V.kind === 'photo' && !inPoly(g.poly, [X, Y])) {   // Doppeltipp auf einer anderen Dachfläche: dort setzen
+      const o = roofFaceAt(sx, sy); if (o) { const ix = (sx - V.ox) / V.k, iy = (sy - V.oy) / V.k; roofSwitchFace(o.fi); const nf = roofF(), ng = faceGeom(nf), [X2, Y2] = ng.fromImg(ix, iy), [w2, h2] = modWH(nf, nf.orient);
+        roofHist(); nf.mods.push({ x: X2 - w2 / 2, y: Y2 - h2 / 2, o: nf.orient }); RS.sel = new Set([nf.mods.length - 1]); if (RS.magnet) roofSnap(nf, ng, RS.sel); roofSave(); roofSoft(); return; }
+    }
     const [w, h] = modWH(f, f.orient), m = { x: X - w / 2, y: Y - h / 2, o: f.orient };
     roofHist(); f.mods.push(m); RS.sel = new Set([f.mods.length - 1]);
     if (RS.magnet) roofSnap(f, g, RS.sel);
@@ -6641,7 +6658,7 @@ function roofSnap(f, g, sel) {
   if (!sel.size || !g) return;
   if (roofLattice(f, sel)) return;
   const bs = [...sel].map(i => modBox(f, f.mods[i])), G = { x0: Math.min(...bs.map(b => b.x0)), y0: Math.min(...bs.map(b => b.y0)), x1: Math.max(...bs.map(b => b.x1)), y1: Math.max(...bs.map(b => b.y1)) };
-  const others = f.mods.filter((m, i) => !sel.has(i)).map(m => modBox(f, m)), T = 0.3;
+  const others = f.mods.filter((m, i) => !sel.has(i)).map(m => modBox(f, m)), T = ROOF_MAG;
   const ins = g.inset, yTop = Math.max(ins[1][1], ins[2][1]), yBot = Math.min(ins[0][1], ins[3][1]);
   const cx = [], cy = [];
   for (const o of others) {
@@ -6879,12 +6896,13 @@ async function roofSnapshot(f) {
     const cc = m.o === 'l' ? [q[1], q[2], q[3], q[0]] : q, iw2 = src.width, ih2 = src.height;
     roofTri(x, src, [[0, 0], [iw2, 0], [iw2, ih2]], [cc[0], cc[1], cc[2]]); roofTri(x, src, [[0, 0], [iw2, ih2], [0, ih2]], [cc[0], cc[2], cc[3]]);
     const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
-    x.fillStyle = gl; x.beginPath(); q.forEach((pt, j) => (j ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); x.fill(); x.strokeStyle = 'rgba(0,0,0,.85)'; x.lineWidth = 0.8; x.stroke();
+    x.fillStyle = gl; x.beginPath(); q.forEach((pt, j) => (j ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); x.fill(); x.strokeStyle = '#0B0D10'; x.lineJoin = 'round'; x.lineWidth = Math.max(0.8, Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) * 0.022); x.stroke();
   }
+  { const pp = PROJECTS.find(q => q.roof && q.roof.faces && q.roof.faces.includes(f)); if (pp) { const map = (o, X, Y) => { if (o !== f) return null; const [a, bb] = g.toImg(X, Y); return [(a - cx0) * k, (bb - cy0) * k]; }; roofStrLayer(x, pp, map, roofStrSize(f, map), false); } }
   /* Beschriftung unten */
   const n = f.mods.length, kw = faceKwp(f), h = Math.round(c.height * 0.06);
   x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, c.height - h, c.width, h); x.fillStyle = '#fff'; x.font = `600 ${Math.round(h * 0.45)}px system-ui, sans-serif`; x.textBaseline = 'middle';
-  x.fillText(`${f.name}: ${n} Module · ${num(kw, 2)} kWp · ${pr.name}`, Math.round(h * 0.4), c.height - h / 2);
+  const nOpt = f.mods.filter(m => m.opt).length; x.fillText(`${f.name}: ${n} Module · ${num(kw, 2)} kWp · ${pr.name}${nOpt ? ` · ${nOpt} Optimierer` : ''}`, Math.round(h * 0.4), c.height - h / 2);
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86)); return putFile(blob, 'belegung.jpg');
 }
 async function roofSaveSnaps(p) {
@@ -6910,6 +6928,7 @@ function roofSnapCard(p) {
 }
 
 /* Raster-Magnet: verschobene Gruppe auf das Raster (Modulmaß + 1,5 cm Fuge) des nächsten Nachbarmoduls setzen */
+const ROOF_MAG = 0.15;   // Magnet: zieht nur bis 15 cm
 function roofLattice(f, sel) {
   const ids = [...sel], m0 = f.mods[ids[0]]; if (!m0) return false;
   const others = f.mods.map((m, i) => [m, i]).filter(([m, i]) => !sel.has(i) && m.o === m0.o);
@@ -6917,14 +6936,16 @@ function roofLattice(f, sel) {
   const [w, h] = modWH(f, m0.o), cw = w + ROOF_GAP, ch = h + ROOF_GAP;
   const c0 = [m0.x + w / 2, m0.y + h / 2];
   const [a] = others.map(([m]) => [m, Math.hypot(m.x + w / 2 - c0[0], m.y + h / 2 - c0[1])]).sort((p, q) => p[1] - q[1])[0];
-  if (Math.hypot(a.x - m0.x, a.y - m0.y) > Math.max(cw, ch) * 4) return false;      // nur in der Nähe anderer Module
+  /* nur wenn ein Nachbarmodul wirklich nah ist (kleine Lücke) – frei platzierte Module bleiben frei beweglich */
+  const b0 = modBox(f, m0), gap = o => { const q = modBox(f, o); return Math.hypot(Math.max(0, q.x0 - b0.x1, b0.x0 - q.x1), Math.max(0, q.y0 - b0.y1, b0.y0 - q.y1)); };
+  if (!others.some(([m]) => gap(m) < ROOF_MAG)) return false;
   const dx = Math.round((m0.x - a.x) / cw) * cw + a.x - m0.x, dy = Math.round((m0.y - a.y) / ch) * ch + a.y - m0.y;
   const boxes = ids.map(i => modBox(f, f.mods[i])), rest = f.mods.filter((m, i) => !sel.has(i)).map(m => modBox(f, m));
   const hits = (ox, oy) => boxes.some(b => rest.some(o => b.x0 + ox < o.x1 - 1e-4 && b.x1 + ox > o.x0 + 1e-4 && b.y0 + oy < o.y1 - 1e-4 && b.y1 + oy > o.y0 + 1e-4));
   /* bevorzugt der nächste freie Rasterplatz */
   const cand = [[dx, dy]]; for (const sx of [0, cw, -cw]) for (const sy of [0, ch, -ch]) if (sx || sy) cand.push([dx + sx, dy + sy]);
   cand.sort((p, q) => Math.hypot(...p) - Math.hypot(...q));
-  const lim = Math.max(cw, ch) * 0.6;
+  const lim = ROOF_MAG;
   const ok = cand.find(([ox, oy]) => Math.hypot(ox, oy) <= lim && !hits(ox, oy)); if (!ok) return false;
   for (const i of ids) { f.mods[i].x += ok[0]; f.mods[i].y += ok[1]; }
   return true;
@@ -6952,7 +6973,7 @@ function roofPaste(f, g) {
   const tries = []; for (let k = 1; k <= 8; k++) tries.push([W * k, 0], [0, H * k], [-W * k, 0], [0, -H * k]);
   const found = tries.find(([dx, dy]) => free(dx, dy)), off = found || [0.4, 0.4];
   roofHist(); const start = f.mods.length;
-  cl.forEach(m => f.mods.push({ ...m, x: m.x + off[0], y: m.y + off[1] }));
+  cl.forEach(m => f.mods.push({ ...m, id: uid('m'), x: m.x + off[0], y: m.y + off[1] }));
   RS.sel = new Set(cl.map((m, j) => start + j)); RS.mode = 'select'; roofSave();
   toast(found ? `${cl.length} Modul${cl.length > 1 ? 'e' : ''} eingefügt – zum Platzieren verschieben.` : 'Kein freier Platz daneben – eingefügt leicht versetzt über der Vorlage. Bitte an die gewünschte Stelle schieben.');
 }
@@ -7258,6 +7279,124 @@ document.addEventListener('click', e => {
   if (a.dataset.r === 'ncand') return roofSetCount('nx', +a.dataset.v);
   const k = a.dataset.k; roofSetCount(k, (+f[k] || 0) + (+a.dataset.d));
 });
+
+/* =========================================================
+   Stringplan und Optimierer
+   Strings laufen über Modul-Kennungen (auch über mehrere Dachflächen).
+   ========================================================= */
+const STR_COLS = ['#FF9F1C', '#2EC4FF', '#FF4D6D', '#3DDC97', '#B983FF', '#FFD60A', '#FF7AE0', '#9CFF57'];
+const roofStrs = p => (p.roof.strings = p.roof.strings || []);
+function roofIds(p) { const seen = new Set(); p.roof.faces.forEach(o => o.mods.forEach(m => { if (!m.id || seen.has(m.id)) m.id = uid('m'); seen.add(m.id); })); }
+function roofModRef(p, r) { const o = p.roof.faces.find(x => x.id === r.f); const m = o && o.mods.find(x => x.id === r.m); return m ? { o, m } : null; }
+function roofCleanStrs(p) { roofStrs(p).forEach(s => { s.mods = s.mods.filter(r => roofModRef(p, r)); }); }
+/* Abbildung Dachebene → Bildschirm für alle Dachflächen im selben Foto */
+function roofImgMap(f, toS) {
+  const G = new Map();
+  return (o, X, Y) => { if (o.photo !== f.photo) return null; if (!G.has(o)) G.set(o, faceGeom(o)); const g = G.get(o); if (!g || g.bad) return null; const [ix, iy] = g.toImg(X, Y); return toS(ix, iy); };
+}
+function roofStrSize(f, map) { const [mw] = modWH(f, 'p'), a = map(f, 0, 0), b = map(f, mw, 0); return a && b ? Math.max(3, Math.min(16, Math.hypot(b[0] - a[0], b[1] - a[1]) * 0.13)) : 6; }
+function roofStrLayer(x, p, map, z, live) {
+  if (!p) return; roofCleanStrs(p);
+  x.save(); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round'; x.lineCap = 'round';
+  /* Optimierer: kleines Kästchen unten im Modul */
+  p.roof.faces.forEach(o => o.mods.forEach(m => {
+    if (!m.opt) return; const b = modBox(o, m), cx = (b.x0 + b.x1) / 2, cy = b.y0 + (b.y1 - b.y0) * 0.82, c = map(o, cx, cy), r = map(o, cx + (b.x1 - b.x0) * 0.2, cy); if (!c || !r) return;
+    const w = Math.max(5, Math.hypot(r[0] - c[0], r[1] - c[1])), h = w * 0.55;
+    x.fillStyle = '#20262E'; x.strokeStyle = '#3DDC97'; x.lineWidth = Math.max(1, w * 0.08); x.beginPath(); x.roundRect ? x.roundRect(c[0] - w / 2, c[1] - h / 2, w, h, h * 0.25) : x.rect(c[0] - w / 2, c[1] - h / 2, w, h); x.fill(); x.stroke();
+    if (w >= 16) { x.fillStyle = '#3DDC97'; x.font = `700 ${(h * 0.62).toFixed(1)}px system-ui, sans-serif`; x.fillText('OPT', c[0], c[1] + 0.5); }
+  }));
+  /* Strings: Linie von Modul zu Modul, nummerierte Punkte, Name am Anfang */
+  roofStrs(p).forEach((s, si) => {
+    const col = STR_COLS[s.c % STR_COLS.length], cur = live && RS && RS.mode === 'string' && RS.str === s.id;
+    const pts = s.mods.map(r => { const q = roofModRef(p, r); if (!q) return null; const b = modBox(q.o, q.m); return map(q.o, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2); });
+    for (const [lw, st] of [[z * 0.5 + 3, 'rgba(0,0,0,.6)'], [z * 0.32 + 1.5, col]]) { x.strokeStyle = st; x.lineWidth = lw; x.beginPath(); let on = false; pts.forEach(pt => { if (!pt) { on = false; return; } if (on) x.lineTo(...pt); else { x.moveTo(...pt); on = true; } }); x.stroke(); }
+    const rr = Math.max(5, z * 0.6);
+    pts.forEach((pt, k) => { if (!pt) return; x.beginPath(); x.arc(pt[0], pt[1], rr, 0, 7); x.fillStyle = col; x.fill(); x.strokeStyle = '#fff'; x.lineWidth = Math.max(1.2, rr * 0.18); x.stroke(); if (rr >= 7) { x.fillStyle = '#111'; x.font = `800 ${(rr * 1.05).toFixed(1)}px system-ui, sans-serif`; x.fillText(String(k + 1), pt[0], pt[1] + 0.5); } });
+    const f0 = pts.find(Boolean);
+    if (f0) { const t = `String ${si + 1}`, fs = Math.max(10, rr * 1.2); x.font = `800 ${fs.toFixed(1)}px system-ui, sans-serif`; const tw = x.measureText(t).width + fs; x.fillStyle = col; x.beginPath(); x.roundRect ? x.roundRect(f0[0] - tw / 2, f0[1] - rr - fs * 1.9, tw, fs * 1.5, fs * 0.75) : x.rect(f0[0] - tw / 2, f0[1] - rr - fs * 1.9, tw, fs * 1.5); x.fill(); x.fillStyle = '#111'; x.fillText(t, f0[0], f0[1] - rr - fs * 1.15); }
+    if (cur) { const l = [...pts].reverse().find(Boolean); if (l) { const k = 1 + 0.25 * Math.sin(performance.now() / 160); x.beginPath(); x.arc(l[0], l[1], rr * 1.7 * k, 0, 7); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(); if (!RS.strRaf) RS.strRaf = requestAnimationFrame(() => { RS.strRaf = 0; if (RS && RS.mode === 'string') roofDraw(); }); } }
+  });
+  x.restore();
+}
+/* Welche Dachfläche bzw. welches Modul liegt unter dem Finger (Fotoansicht, alle Flächen im selben Foto) */
+function roofHitOther(sx, sy) {
+  const p = roofP(), f = roofF(), V = RS.view; if (!V || V.kind !== 'photo') return null;
+  const ix = (sx - V.ox) / V.k, iy = (sy - V.oy) / V.k;
+  for (let fi = 0; fi < p.roof.faces.length; fi++) {
+    const o = p.roof.faces[fi]; if (o === f || o.photo !== f.photo) continue; const g = faceGeom(o); if (!g || g.bad) continue;
+    for (let i = o.mods.length - 1; i >= 0; i--) { const b = modBox(o, o.mods[i]), q = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]].map(([X, Y]) => g.toImg(X, Y)); if (inPoly(q, [ix, iy])) return { fi, idx: i }; }
+  }
+  return null;
+}
+function roofFaceAt(sx, sy) {
+  const p = roofP(), f = roofF(), V = RS.view; if (!V || V.kind !== 'photo') return null;
+  const ix = (sx - V.ox) / V.k, iy = (sy - V.oy) / V.k;
+  for (let fi = 0; fi < p.roof.faces.length; fi++) { const o = p.roof.faces[fi]; if (o === f || o.photo !== f.photo || !o.corners) continue; const g = faceGeom(o); if (!g || g.bad) continue; if (inPoly(o.corners.map(([u, v]) => [u * o.iw, v * o.ih]), [ix, iy])) return { fi }; }
+  return null;
+}
+/* Dachfläche wechseln, ohne dass das Bild springt */
+function roofSwitchFace(fi) {
+  if (!RS || fi === RS.fi) return;
+  const cv = $('#roof-cv'), old = RS.view, p = roofP(), nf = p.roof.faces[fi], ng = faceGeom(nf);
+  RS.fi = fi; RS.sel = new Set(); RS.hist = []; RS.warp = null; RS.lastTap = null;
+  if (old && old.kind === 'photo' && cv && ng && !ng.bad) { const V0 = roofView0(cv, nf, ng, true); if (V0 && V0.kind === 'photo') { const cw = cv.clientWidth, ch = cv.clientHeight, z = old.k / V0.k; RS.zm = { ...(RS.zm || {}), z, x: old.ox - cw / 2 - (V0.ox - cw / 2) * z, y: old.oy - ch / 2 - (V0.oy - ch / 2) * z }; } }
+}
+/* Tippen im Modus Strings / Optimierer */
+function roofStrTap(sx, sy, idx) {
+  const p = roofP(); let fi = RS.fi;
+  if (idx < 0) { const o = roofHitOther(sx, sy); if (o) { fi = o.fi; idx = o.idx; } }
+  if (idx < 0) { RS.drag = { pan: true, lx: sx, ly: sy }; return; }
+  roofIds(p); const face = p.roof.faces[fi], m = face.mods[idx];
+  if (RS.mode === 'opt') m.opt = !m.opt;
+  else {
+    const strs = roofStrs(p); let S = strs.find(s => s.id === RS.str);
+    if (!S) { const used = new Set(strs.map(s => s.c)); let c = 0; while (used.has(c)) c++; S = { id: uid('st'), c, mods: [] }; strs.push(S); RS.str = S.id; }
+    const ref = { f: face.id, m: m.id }, same = r => r.f === ref.f && r.m === ref.m, k = S.mods.findIndex(same);
+    if (k >= 0 && k === S.mods.length - 1) S.mods.pop();
+    else if (k >= 0) { toast(`Dieses Modul ist schon Nr. ${k + 1} in diesem String.`); return; }
+    else { strs.forEach(s => { if (s !== S) s.mods = s.mods.filter(r => !same(r)); }); S.mods.push(ref); }
+  }
+  if (fi !== RS.fi) roofSwitchFace(fi);
+  roofSave(); roofSoft();
+}
+function roofStrPanel(p) {
+  if (!p) return ''; roofCleanStrs(p); const strs = roofStrs(p);
+  const wp = s => s.mods.reduce((a, r) => { const q = roofModRef(p, r); return a + (q ? nz(roofProd(q.o).power) : 0); }, 0);
+  return `<div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px]"><div class="font-semibold">Stringplan</div><div class="text-[12px] text-ink3 mt-0.5 leading-snug">Ein String darf auch über mehrere Dachflächen laufen (Ansicht „Wie auf dem Foto“).</div>
+    <div class="space-y-1.5 mt-2">${strs.map((s, i) => `<div class="flex items-center gap-2 rounded-lg px-2 py-1.5 ${RS.str === s.id ? 'bg-bg ring-1 ring-p' : ''}"><span class="w-3 h-3 rounded-full shrink-0" style="background:${STR_COLS[s.c % STR_COLS.length]}"></span><button type="button" class="flex-1 text-left" data-r="strsel" data-v="${s.id}"><b>String ${i + 1}</b> <span class="text-ink3">· ${s.mods.length} Module · ${num(wp(s) / 1000, 2)} kWp</span></button><button type="button" class="text-ink3 hover:text-ink px-1" data-r="strdel" data-v="${s.id}" title="String löschen">${ic('trash', 14)}</button></div>`).join('') || '<div class="text-[12px] text-ink3">Noch kein String – einfach das erste Modul antippen.</div>'}</div>
+    <button type="button" class="btn-s w-full !h-9 mt-2 text-[13px]" data-r="strnew">${ic('plus', 15)}Neuer String</button></div>`;
+}
+function roofOptPanel(p, f) {
+  if (!p) return ''; const all = p.roof.faces.reduce((a, o) => a + o.mods.filter(m => m.opt).length, 0), here = f.mods.filter(m => m.opt).length;
+  return `<div class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px]"><div class="font-semibold">Optimierer</div><div class="text-[12px] text-ink3 mt-0.5">Modul antippen = Optimierer setzen bzw. entfernen.</div>
+    <div class="mt-2"><b>${here}</b> auf ${esc(f.name)}${p.roof.faces.length > 1 ? ` · <b>${all}</b> gesamt` : ''}</div>
+    <div class="grid grid-cols-2 gap-2 mt-2"><button type="button" class="btn-s !h-9 text-[13px]" data-r="optall">Alle auf dieser Fläche</button><button type="button" class="btn-g !h-9 text-[13px]" data-r="optnone">Alle entfernen</button></div></div>`;
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('#roof-ed [data-r="strnew"],#roof-ed [data-r="strsel"],#roof-ed [data-r="strdel"],#roof-ed [data-r="optall"],#roof-ed [data-r="optnone"]'); if (!a || !RS) return;
+  e.preventDefault(); const p = roofP(), f = roofF(), r = a.dataset.r, strs = roofStrs(p);
+  if (r === 'strnew') { const used = new Set(strs.map(s => s.c)); let c = 0; while (used.has(c)) c++; const S = { id: uid('st'), c, mods: [] }; strs.push(S); RS.str = S.id; RS.mode = 'string'; }
+  if (r === 'strsel') RS.str = a.dataset.v;
+  if (r === 'strdel') { p.roof.strings = strs.filter(s => s.id !== a.dataset.v); if (RS.str === a.dataset.v) RS.str = null; }
+  if (r === 'optall') f.mods.forEach(m => { m.opt = true; });
+  if (r === 'optnone') f.mods.forEach(m => { delete m.opt; });
+  roofSave(); roofSoft();
+});
+
+/* Kurze Anleitung je Werkzeug (Seitenleiste und Schild im Bild) */
+const ROOF_HOW = {
+  add: 'Doppelt tippen bzw. doppelklicken = Modul setzen. Ziehen = Bild verschieben. Module anderer Dachflächen antippen = dorthin wechseln.',
+  select: 'Modul antippen = auswählen. Rahmen ziehen = mehrere auswählen. Ausgewählte Module ziehen = verschieben.',
+  string: 'Module der Reihe nach antippen: 1 → 2 → 3 … Das letzte nochmal antippen = zurück. „Neuer String“ für den nächsten.',
+  opt: 'Modul antippen = Optimierer setzen, nochmal antippen = entfernen.'
+};
+const ROOF_BADGE = { add: 'Setzen: doppelt tippen', select: 'Auswählen: antippen oder Rahmen ziehen', string: 'Strings: Module der Reihe nach antippen', opt: 'Optimierer: Modul antippen' };
+const _roofDraw226 = roofDraw;
+roofDraw = async function () {
+  const r = await _roofDraw226.apply(this, arguments);
+  const b = $('#roof-badge'); if (b && RS) { const on = RS.step === 'mod'; b.classList.toggle('hidden', !on); if (on) { let t = ROOF_BADGE[RS.mode] || ''; if (RS.mode === 'string') { const p = roofP(), i = roofStrs(p).findIndex(s => s.id === RS.str); t = i >= 0 ? `String ${i + 1}: nächstes Modul antippen` : 'Strings: erstes Modul antippen'; } if (b.textContent !== t) b.textContent = t; } }
+  return r;
+};
 /* Startanimation: Haus → Photovoltaik → Speicher → Wärmepumpe → E-Auto → Zoom → Logo → Zoom → App */
 const SPLASH = { ready: false, done: false, skip: false };
 const splashCfg = () => Object.assign({ on: true, logo: 'company', file: '' }, S.design.splash || {});
@@ -7426,7 +7565,7 @@ const TUT_STEPS = [
   ['quick', 'Schnellauslegung Wärmepumpe', 'Die App fragt, ob Sie die Wärmepumpe schnell auslegen möchten. Sie geben ein paar Eckdaten ein und bekommen Heizlast und eine passende Wärmepumpe vorgeschlagen.', ['Wohnfläche, Baujahr, Verbrauch und Dämmung eintragen – oder die Heizlast direkt.', 'Rechts erscheint die Empfehlung → „Übernehmen“.', 'Später jederzeit in der Kundenübersicht: „Schnellauslegung anpassen“.']],
   ['upload', 'Angebot hochladen', 'Ziehen Sie das Angebot als PDF hinein oder machen Sie ein Foto davon. Die App liest Kunde, Preise, Anlagendaten, Garantien und Produkte automatisch aus.', ['Auf die gestrichelte Fläche tippen und das Angebot wählen.', 'Erkannte Werte kurz prüfen – sie sind mit „aus Angebot“ markiert.', 'Erkannte Produkte aus Ihrer Datenbank werden automatisch übernommen.']],
   ['data', 'Daten prüfen und ergänzen', 'Oben sehen Sie, wo Sie gerade sind: Angebot → Kunde → Daten → Ergebnis. Fehlt etwas, tragen Sie es einfach ein. Kleine Schilder zeigen, woher ein Wert stammt.', ['Grün „aus Angebot“, blau „Schnellauslegung“ oder „Modulplan“.', 'PLZ eintippen – der Ort wird automatisch ergänzt.', 'Rote Warnung = Werte passen nicht zusammen. Bitte auswählen, welcher Wert stimmt.', 'Mit „Weiter“ zum nächsten Schritt.']],
-  ['roof', 'Modulbelegung (Dach planen)', 'Fotografieren Sie das Dach (oder nehmen Sie ein Drohnenbild) und legen Sie die Module direkt aufs Foto. So sieht der Kunde, wie seine Anlage aussieht.', ['In der Kundenübersicht „Modulbelegung“ antippen.', 'Foto wählen, Dachecken antippen, dann „Automatisch zählen und scannen“ – die oberste Reihe und linke Spalte werden zur Kontrolle nummeriert.', 'Modul setzen: doppelt tippen bzw. doppelklicken. Rot markierte Module überlappen sich – etwas verschieben.', '„Übernehmen“ – im PDF zählen trotzdem nur die Produkte aus dem Angebot.']],
+  ['roof', 'Modulbelegung (Dach planen)', 'Fotografieren Sie das Dach (oder nehmen Sie ein Drohnenbild) und legen Sie die Module direkt aufs Foto. So sieht der Kunde, wie seine Anlage aussieht.', ['In der Kundenübersicht „Modulbelegung“ antippen.', 'Foto wählen, Dachecken antippen, dann „Automatisch zählen und scannen“ – die oberste Reihe und linke Spalte werden zur Kontrolle nummeriert.', 'Modul setzen: doppelt tippen bzw. doppelklicken. Rot markierte Module überlappen sich – etwas verschieben.', 'Werkzeug „Strings“: Module der Reihe nach antippen. „Optimierer“: Modul antippen.', '„Übernehmen“ – im PDF zählen trotzdem nur die Produkte aus dem Angebot.']],
   ['funding', 'Förderung', 'Bei der Wärmepumpe rechnet die App die BEG-Förderung automatisch aus. Wichtig sind Wohneinheiten, selbst bewohnte Wohneinheiten und das Einkommen.', ['Anzahl Wohneinheiten eintragen.', '„Davon selbst bewohnt“ wählen – Klima- und Einkommensbonus gibt es nur dafür.', 'Einkommen auswählen – der Fördersatz rechts aktualisiert sich sofort.']],
   ['result', 'Ergebnis zeigen', 'Jetzt sehen Sie Ersparnis, Amortisation und Förderung auf einen Blick. Ideal, um es dem Kunden direkt auf dem Tablet zu zeigen.', ['Oben „Übersicht“ oder „Dokument-Vorschau“ wählen.', 'Mit dem Monatsregler einen Tag im Winter oder Sommer zeigen.', '„Hochpushen“ zeigt das optimistische Szenario.']],
   ['pdf', 'PDF erstellen', 'Wählen Sie das Layout: die komplette PDF mit allen Details oder die kurze Vertriebs-PDF. Dann „PDF erstellen“ – fertig zum Senden.', ['Im Ergebnis rechts „Layout“ wählen: Komplett oder Vertrieb.', '„PDF erstellen“ antippen und den Sonderrabatt kurz prüfen.', 'Danach per E-Mail senden oder speichern.']],
