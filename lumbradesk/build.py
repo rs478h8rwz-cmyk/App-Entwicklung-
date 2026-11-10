@@ -73,5 +73,6 @@ with zipfile.ZipFile(u, 'w', zipfile.ZIP_DEFLATED) as f:
     for dp, dn, fn in os.walk(APP):
         for n in fn:
             if n in ('setup_token.php', 'config.php'): continue
+            if os.path.relpath(dp, APP).replace(os.sep, '/').startswith('public/rechner/vendor'): continue   # Bibliotheken ändern sich nicht – liegen schon auf dem Server
             full = os.path.join(dp, n); f.write(full, os.path.relpath(full, APP))
 print('UPDATE OK →', os.path.relpath(u, ROOT))

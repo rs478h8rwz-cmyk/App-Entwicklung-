@@ -145,7 +145,8 @@ document.addEventListener('submit', async e => {
       await api('password', { old: d.old, new: d.new }); toast('Passwort gespeichert.'); f.reset(); return load();
     }
     if (f.id === 'f-update') {
-      const fd = new FormData(f), res = await fetch('api/?r=system-update', { method: 'POST', credentials: 'same-origin', headers: { 'X-Lumbra': '1' }, body: fd });
+      const fd = new FormData(f); let res;
+      try { res = await fetch('api/?r=system-update', { method: 'POST', credentials: 'same-origin', headers: { 'X-Lumbra': '1' }, body: fd }); } catch (e2) { throw new Error('Verbindung beim Hochladen abgebrochen – bitte WLAN prüfen und erneut versuchen.'); }
       const j = await res.json().catch(() => ({})); if (!res.ok) throw new Error(j.error || 'Fehler ' + res.status);
       $('#upd-msg').innerHTML = `<p class="note ok">Update eingespielt (${j.files} Dateien). Bitte die Seite neu laden.</p>`; f.reset(); return;
     }
