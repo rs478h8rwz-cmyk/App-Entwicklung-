@@ -64,3 +64,14 @@ with zipfile.ZipFile(z, 'w', zipfile.ZIP_DEFLATED) as f:
             full = os.path.join(dp, n); f.write(full, os.path.relpath(full, WEB))
 shutil.copy(os.path.join(SP, 'entpacken.php'), os.path.join(ROOT, 'entpacken.php'))
 print('LUMBRADESK OK →', os.path.relpath(z, ROOT), '+ entpacken.php')
+
+# Update-Paket für bestehende Installationen (Aufbau lumbradesk/public + lumbradesk/private):
+# ohne Zugangsdaten und ohne Einrichtungs-Schlüssel – im Ordner „lumbradesk“ entpacken und überschreiben
+u = os.path.join(ROOT, 'lumbradesk-update.zip')
+if os.path.exists(u): os.remove(u)
+with zipfile.ZipFile(u, 'w', zipfile.ZIP_DEFLATED) as f:
+    for dp, dn, fn in os.walk(APP):
+        for n in fn:
+            if n in ('setup_token.php', 'config.php'): continue
+            full = os.path.join(dp, n); f.write(full, os.path.relpath(full, APP))
+print('UPDATE OK →', os.path.relpath(u, ROOT))

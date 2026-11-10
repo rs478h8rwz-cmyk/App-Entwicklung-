@@ -107,6 +107,57 @@ try {
       json_out(['entries' => $rows]);
     }
 
+    /* ---------- Firmen-Einstellungen (Wirtschaftlichkeits-App) ---------- */
+    case 'GET cfg-meta': {
+      require_user(); $c = cfg_row();
+      json_out(['version' => (int)($c['version'] ?? 0), 'at' => $c['updated_at'] ?? null, 'by' => $c['updated_by'] ?? '']);
+    }
+    case 'GET cfg': {
+      require_user(); $c = cfg_row();
+      if (!$c) json_out(['version' => 0]);
+      $d = json_decode($c['data'], true) ?: [];
+      json_out(['version' => (int)$c['version'], 'at' => $c['updated_at'], 'by' => $c['updated_by'], 'settings' => $d['settings'] ?? null, 'products' => $d['products'] ?? [], 'files' => $d['files'] ?? []]);
+    }
+    case 'GET cfg-file': {
+      require_user(); $id = (string)($_GET['id'] ?? '');
+      if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('Ungültige Datei', 400);
+      $f = files_dir() . '/' . $id; if (!is_file($f . '.bin')) fail('Datei nicht gefunden', 404);
+      $m = json_decode((string)@file_get_contents($f . '.json'), true) ?: [];
+      header('Content-Type: ' . (preg_match('#^[\w.+-]+/[\w.+-]+$#', $m['type'] ?? '') ? $m['type'] : 'application/octet-stream'));
+      header('Cache-Control: private, max-age=31536000, immutable');
+      header('X-Content-Type-Options: nosniff');
+      if (!empty($m['name'])) header('X-File-Name: ' . rawurlencode($m['name']));
+      readfile($f . '.bin'); exit;
+    }
+    case 'POST cfg-file': {
+      require_role(['admin']); $id = (string)($_SERVER['HTTP_X_FILE_ID'] ?? '');
+      if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('Ungültige Datei', 400);
+      $f = files_dir() . '/' . $id;
+      if (is_file($f . '.bin')) json_out(['ok' => true, 'existed' => true]);
+      $raw = file_get_contents('php://input') ?: '';
+      if ($raw === '' || strlen($raw) > 20 * 1024 * 1024) fail('Datei leer oder zu groß (max. 20 MB)', 400);
+      $type = strtolower(trim(explode(';', (string)($_SERVER['CONTENT_TYPE'] ?? ''))[0]));
+      file_put_contents($f . '.bin', $raw, LOCK_EX);
+      file_put_contents($f . '.json', json_encode(['type' => $type, 'name' => mb_substr(rawurldecode((string)($_SERVER['HTTP_X_FILE_NAME'] ?? '')), 0, 200), 'size' => strlen($raw)]), LOCK_EX);
+      json_out(['ok' => true]);
+    }
+    case 'POST cfg': {
+      $me = require_role(['admin']); $b = body();
+      if (!is_array($b['settings'] ?? null) || !is_array($b['products'] ?? null)) fail('Ungültige Einstellungen', 400);
+      $files = array_values(array_filter((array)($b['files'] ?? []), fn($x) => is_string($x) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $x)));
+      $missing = array_values(array_filter($files, fn($x) => !is_file(files_dir() . '/' . $x . '.bin')));
+      if ($missing) json_out(['error' => 'Bilder fehlen auf dem Server', 'missing' => $missing], 409);
+      cfg_row(); $pdo = db(); $pdo->beginTransaction();
+      $c = $pdo->query('SELECT version, updated_by, updated_at FROM company_config WHERE id = 1 FOR UPDATE')->fetch() ?: null;
+      $cur = (int)($c['version'] ?? 0);
+      if (empty($b['force']) && isset($b['base']) && (int)$b['base'] !== $cur) { $pdo->rollBack(); json_out(['error' => 'Inzwischen hat ' . ($c['updated_by'] ?: 'jemand') . ' die Firmen-Einstellungen geändert.', 'conflict' => true, 'version' => $cur, 'by' => $c['updated_by'] ?? '', 'at' => $c['updated_at'] ?? null], 409); }
+      $data = json_encode(['settings' => $b['settings'], 'products' => $b['products'], 'files' => $files], JSON_UNESCAPED_UNICODE);
+      $pdo->prepare('INSERT INTO company_config (id, version, data, updated_at, updated_by) VALUES (1, ?, ?, UTC_TIMESTAMP(), ?) ON DUPLICATE KEY UPDATE version = VALUES(version), data = VALUES(data), updated_at = VALUES(updated_at), updated_by = VALUES(updated_by)')->execute([$cur + 1, $data, $me['name']]);
+      $pdo->commit();
+      audit((int)$me['id'], 'firmeneinstellungen', 'Version ' . ($cur + 1) . ' · ' . count($b['products']) . ' Produkte · ' . count($files) . ' Bilder');
+      json_out(['ok' => true, 'version' => $cur + 1]);
+    }
+
     default: fail('Unbekannte Aktion', 404);
   }
 } catch (PDOException $e) {

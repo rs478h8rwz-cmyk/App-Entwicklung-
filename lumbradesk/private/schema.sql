@@ -32,3 +32,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
   at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX (at), INDEX (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Firmen-Einstellungen der Wirtschaftlichkeits-App (Design, Produkte, Förderung, Texte …) – für alle Geräte
+CREATE TABLE IF NOT EXISTS company_config (
+  id          TINYINT UNSIGNED PRIMARY KEY,
+  version     INT UNSIGNED NOT NULL DEFAULT 0,
+  data        LONGTEXT NOT NULL,
+  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by  VARCHAR(120) NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

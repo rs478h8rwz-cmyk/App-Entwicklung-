@@ -110,3 +110,18 @@ function temp_password(): string {
 function user_out(array $u): array {
   return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'role' => $u['role'], 'roleName' => ROLES[$u['role']] ?? $u['role'], 'mustChange' => (bool)$u['must_change'], 'active' => (bool)($u['active'] ?? 1), 'lastLogin' => $u['last_login'] ?? null];
 }
+
+/* Firmen-Einstellungen: Zeile lesen (Tabelle bei älteren Installationen bei Bedarf anlegen) */
+function cfg_row(): ?array {
+  try { $r = db()->query('SELECT version, data, updated_at, updated_by FROM company_config WHERE id = 1')->fetch(); return $r ?: null; }
+  catch (PDOException $e) {
+    db()->exec("CREATE TABLE IF NOT EXISTS company_config (id TINYINT UNSIGNED PRIMARY KEY, version INT UNSIGNED NOT NULL DEFAULT 0, data LONGTEXT NOT NULL, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_by VARCHAR(120) NOT NULL DEFAULT '') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    return null;
+  }
+}
+/* Bilder der Firmen-Einstellungen (Logo, Deckblatt, Produktbilder …) – im gesperrten Ordner private/files */
+function files_dir(): string {
+  $d = __DIR__ . '/files';
+  if (!is_dir($d)) { @mkdir($d, 0700, true); @file_put_contents($d . '/.htaccess', "Require all denied\n"); }
+  return $d;
+}
