@@ -359,7 +359,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; });
   try { FIRMA = await (await fetch('firma.json?t=' + Date.now(), { cache: 'no-store' })).json(); DB.put('kv', FIRMA, 'firma'); } catch (e) { FIRMA = (await DB.get('kv', 'firma')) || FIRMA; }
   await checkGeoPerm();
-  applyTheme(); route();
+  applyTheme(); route(); APP_READY = true;
   if (S.pin) pinCheck();
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && UI.route === 'home') rerender(); });

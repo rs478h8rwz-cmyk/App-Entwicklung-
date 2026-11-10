@@ -309,6 +309,27 @@ try {
       readfile($f . '.bin'); exit;
     }
 
+    /* ---------- Stempeluhr zentral ---------- */
+    case 'POST st-sync': {
+      $u = require_user(); require_once LD_PRIV_DIR . '/stempel-lib.php';
+      json_out(['me' => user_out($u), 'office' => sees_all($u)] + st_sync($u, body()));
+    }
+    case 'POST st-ack': {
+      $u = require_user(); require_once LD_PRIV_DIR . '/stempel-lib.php';
+      st_ack($u, (array)(body()['ids'] ?? [])); json_out(['ok' => true]);
+    }
+    case 'GET st-staff': {
+      require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/stempel-lib.php';
+      json_out(['staff' => st_staff()]);
+    }
+    case 'POST st-ops': {
+      $me = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/stempel-lib.php'; $b = body();
+      $to = ($b['to'] ?? '') === '*' ? '*' : (int)($b['to'] ?? 0);
+      $id = st_send_ops($me, $to, (array)($b['ops'] ?? []), (string)($b['note'] ?? ''));
+      audit((int)$me['id'], 'stempel_aenderung', ($to === '*' ? 'alle' : (user_names()[$to] ?? '')) . ': ' . count((array)$b['ops']) . ' Änderung(en)');
+      json_out(['ok' => true, 'id' => $id]);
+    }
+
     /* ---------- CRM: Kunden-Übersicht, Verlauf, Wiedervorlagen ---------- */
     case 'GET crm': {
       $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
