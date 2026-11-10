@@ -7,6 +7,11 @@ const IC = {
   abnahme: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
   stempel: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  audit: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+  system: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  next: '<path d="M9 6l6 6-6 6"/>',
+  key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2M16 7l3 3M18 5l3 3"/>',
   out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'
 };
 const ic = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[n] || ''}</svg>`;
@@ -54,42 +59,45 @@ function viewNewPw(err = '') {
 }
 function shell(inner) {
   const nav = [['home', 'Start']].concat(ST.user.role === 'admin' ? [['users', 'Benutzer'], ['audit', 'Protokoll'], ['system', 'System']] : []);
+  const links = nav.map(([k, l]) => `<a href="#/${k}" class="navl ${ST.view === k ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`).join('');
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
-    <nav>${nav.map(([k, l]) => `<a href="#/${k}" class="navl ${ST.view === k ? 'on' : ''}">${l}</a>`).join('')}<button class="btn g sm" data-a="logout" title="Abmelden">${ic('out', 18)}<span class="hide-sm">Abmelden</span></button></nav></div></header>
-    <main class="wrap">${inner}</main>`;
+    ${nav.length > 1 ? `<nav class="side">${links}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
+    <main class="wrap ${nav.length > 1 ? 'has-tabs' : ''}">${inner}</main>${nav.length > 1 ? `<nav class="tabs">${links}</nav>` : ''}`;
 }
 function viewHome() {
   const h = new Date().getHours(), gr = h < 11 ? 'Guten Morgen' : h < 18 ? 'Hallo' : 'Guten Abend';
   return `<section class="hero"><h1>${gr}, ${esc(ST.user.name.split(' ')[0])}.</h1><p class="muted">Deine Apps – gleiche Bedienung wie gewohnt.</p></section>
-    <div class="grid">${ST.apps.map(a => `<a class="card tile ${a.url ? '' : 'off'}" href="${esc(a.url || '#')}"><div class="ic">${ic(a.key)}</div><b>${esc(a.name)}</b><span class="muted">${esc(a.text)}</span>${a.url ? '' : '<div style="margin-top:8px"><span class="badge">folgt</span></div>'}</a>`).join('') || '<p class="muted">Für deine Rolle sind noch keine Apps freigeschaltet.</p>'}</div>
-    <div class="sec card"><h2>Mein Konto</h2><p class="muted">${esc(ST.user.email)} · ${esc(ST.user.roleName)}</p>
-      <form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn s" type="submit" style="margin-top:12px">Passwort ändern</button></div></form></div>`;
+    <div class="grid">${ST.apps.map(a => `<a class="card tile ${a.url ? '' : 'off'}" href="${esc(a.url || '#')}"><div class="ic">${ic(a.key)}</div><div class="tx"><b>${esc(a.name)}</b><span class="muted">${esc(a.text)}</span>${a.url ? '' : '<div style="margin-top:8px"><span class="badge">folgt</span></div>'}</div><span class="go">${ic('next', 18)}</span></a>`).join('') || '<p class="muted">Für deine Rolle sind noch keine Apps freigeschaltet.</p>'}</div>
+    <div class="sec card acct"><div class="who"><span class="av">${esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(ST.user.name)}</b><span class="muted">${esc(ST.user.email)} · ${esc(ST.user.roleName)}</span></div></div>
+      <details class="pwbox"><summary>${ic('key', 18)}<span>Passwort ändern</span>${ic('next', 16)}</summary>
+      <form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn s" type="submit" style="margin-top:12px">Passwort ändern</button></div></form></details>
+      <button class="btn g out-m" data-a="logout">${ic('out', 18)}Abmelden</button></div>`;
 }
 function roleSel(name, cur) { return `<select name="${name}">${Object.entries(ST.roles).map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`; }
 function viewUsers() {
   return `<section class="hero"><h1>Benutzer</h1><p class="muted">Neue Mitarbeiter anlegen, Rollen vergeben, Zugänge sperren oder Passwörter zurücksetzen.</p></section>
-    <div class="card"><h2>Neuer Benutzer</h2><form id="f-user" class="form-grid"><label>Name<input name="name" required></label><label>E-Mail<input name="email" type="email" required></label><label>Rolle${roleSel('role', 'monteur')}</label><div><button class="btn" type="submit" style="margin-top:12px">Anlegen</button></div>
-      <label style="grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:14px"><input type="checkbox" name="invite" value="1" checked style="width:auto;height:auto;margin:0">Einladung per E-Mail senden (Link zum Passwort festlegen)</label></form>
+    <div class="card"><h2>Neuer Benutzer</h2><form id="f-user" class="form-grid"><label>Name<input name="name" required></label><label>E-Mail<input name="email" type="email" required></label><label>Rolle${roleSel('role', 'monteur')}</label><div class="subm"><button class="btn" type="submit" style="margin-top:12px">Anlegen</button></div>
+      <label class="inv" style="grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:14px"><input type="checkbox" name="invite" value="1" checked style="width:auto;height:auto;margin:0">Einladung per E-Mail senden (Link zum Passwort festlegen)</label></form>
       <p class="muted" style="font-size:13px">Admin: alles inkl. Benutzer · Büro: alle Kunden und Mitarbeiterdaten · Vertrieb: Berechnungen und eigene Kunden · Monteur: Stempeluhr, Abnahme, Service.</p><div id="tmp"></div></div>
-    <div class="card sec scroll"><table><thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th class="hide-sm">Zuletzt angemeldet</th><th></th></tr></thead><tbody>
-    ${ST.users.map(u => `<tr><td><b>${esc(u.name)}</b>${u.active ? '' : ' <span class="badge r">gesperrt</span>'}${u.mustChange ? ' <span class="badge">Erst-Anmeldung offen</span>' : ''}</td><td>${esc(u.email)}</td>
-      <td><select data-role="${u.id}" ${u.id === ST.user.id ? 'disabled' : ''}>${Object.entries(ST.roles).map(([k, l]) => `<option value="${k}" ${k === u.role ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td>
-      <td class="hide-sm muted">${u.lastLogin ? new Date(u.lastLogin.replace(' ', 'T') + 'Z').toLocaleString('de-DE') : '–'}</td>
+    <div class="card sec"><table class="mt"><thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Zuletzt angemeldet</th><th></th></tr></thead><tbody>
+    ${ST.users.map(u => `<tr><td><b>${esc(u.name)}</b>${u.active ? '' : ' <span class="badge r">gesperrt</span>'}${u.mustChange ? ' <span class="badge">Erst-Anmeldung offen</span>' : ''}</td><td class="muted em">${esc(u.email)}</td>
+      <td data-l="Rolle"><select data-role="${u.id}" ${u.id === ST.user.id ? 'disabled' : ''}>${Object.entries(ST.roles).map(([k, l]) => `<option value="${k}" ${k === u.role ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td>
+      <td class="muted" data-l="Zuletzt angemeldet">${u.lastLogin ? new Date(u.lastLogin.replace(' ', 'T') + 'Z').toLocaleString('de-DE') : '–'}</td>
       <td><div class="row"><button class="btn s sm" data-a="maillink" data-id="${u.id}">${u.mustChange ? 'Einladung erneut senden' : 'Link: neues Passwort'}</button><button class="btn g sm" data-a="reset" data-id="${u.id}">Einmal-Passwort</button>${u.id === ST.user.id ? '' : `<button class="btn g sm ${u.active ? 'danger' : ''}" data-a="active" data-id="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? 'Sperren' : 'Entsperren'}</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>`;
 }
 const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen', kunde_zugewiesen: 'Kunde zugewiesen', kunde_geloescht: 'Kunde gelöscht', kunde_angelegt: 'Kunde angelegt', sicherung: 'Sicherung erstellt', sicherung_geladen: 'Sicherung heruntergeladen', sicherung_zurueck: 'Sicherung zurückgespielt', einladung_gesendet: 'Einladung per E-Mail gesendet', link_gesendet: 'Passwort-Link per E-Mail gesendet', passwort_vergessen: 'Passwort vergessen (Link angefordert)', passwort_per_link: 'Passwort per Link festgelegt', mail_einstellungen: 'E-Mail-Einstellungen geändert' };
 function viewAudit() {
   return `<section class="hero"><h1>Protokoll</h1><p class="muted">Die letzten 200 Vorgänge – wer hat wann was gemacht.</p></section>
-    <div class="card scroll"><table><thead><tr><th>Zeit</th><th>Wer</th><th>Vorgang</th><th>Details</th><th class="hide-sm">IP</th></tr></thead><tbody>
-    ${ST.audit.map(a => `<tr><td class="muted">${new Date(a.at.replace(' ', 'T') + 'Z').toLocaleString('de-DE')}</td><td>${esc(a.name || '–')}</td><td>${esc(ACT[a.action] || a.action)}</td><td>${esc(a.detail)}</td><td class="hide-sm muted">${esc(a.ip)}</td></tr>`).join('')}</tbody></table></div>`;
+    <div class="card"><table class="mt audit"><thead><tr><th>Zeit</th><th>Wer</th><th>Vorgang</th><th>Details</th><th class="hide-sm">IP</th></tr></thead><tbody>
+    ${ST.audit.map(a => `<tr><td class="muted t">${new Date(a.at.replace(' ', 'T') + 'Z').toLocaleString('de-DE')}</td><td class="w">${esc(a.name || '–')}</td><td class="v">${esc(ACT[a.action] || a.action)}</td><td class="d">${esc(a.detail)}</td><td class="hide-sm muted">${esc(a.ip)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function viewSystem() {
   const y = ST.sys || {};
   return `<section class="hero"><h1>System</h1><p class="muted">LumbraDesk ${esc(y.version || '')} · PHP ${esc(y.php || '')}</p></section>
     <div class="card"><h2>Update einspielen</h2><p class="muted">Die Update-Datei (lumbradesk-update.zip) hier auswählen – sie wird direkt auf dem Server eingespielt. Zugangsdaten, Benutzer und Daten bleiben erhalten.</p>
-      <form id="f-update" class="row" style="margin-top:12px"><input type="file" name="zip" accept=".zip,application/zip" required style="height:auto;padding:10px;max-width:420px"><button class="btn" type="submit">Update einspielen</button></form>
+      <form id="f-update" class="row" style="margin-top:12px"><input type="file" name="zip" accept=".zip,application/zip" required style="height:auto;padding:10px;max-width:420px;flex:1 1 220px"><button class="btn" type="submit">Update einspielen</button></form>
       ${y.zip === false ? '<p class="note err">Auf dem Server fehlt die ZIP-Unterstützung.</p>' : ''}<p class="muted" style="font-size:13px">Max. Dateigröße laut Server: ${esc(y.maxUpload || '–')}</p><div id="upd-msg"></div></div>
     ${backupCard()}
     ${mailCard()}`;
@@ -101,7 +109,7 @@ function backupCard() {
   return `<div class="card sec"><h2>Datensicherung</h2><p class="muted">Jede Nacht eine komplette Sicherung (Benutzer, Kunden, Firmen-Einstellungen, Angebote, Fotos) – die letzten ${b.keep || 14} bleiben auf dem Server. Zugangsdaten sind nicht enthalten.</p>
     <p class="note ${age < 30 ? 'ok' : 'err'}">${st.last ? `Letzte Sicherung: <b>${utc(st.last).toLocaleString('de-DE')}</b> · ${mb(st.size || 0)} · ${st.files || 0} Dateien · ${esc(st.why || '')}` : 'Noch keine Sicherung vorhanden.'}${age >= 30 && st.last ? ' – älter als ein Tag, bitte Cronjob prüfen.' : ''}</p>
     <div class="row"><button class="btn" data-a="bk-now">Jetzt sichern</button></div>
-    ${list.length ? `<div class="scroll" style="margin-top:14px"><table><thead><tr><th>Sicherung</th><th>Größe</th><th></th></tr></thead><tbody>${list.map(x => `<tr><td>${utc(x.at).toLocaleString('de-DE')}</td><td class="muted">${mb(x.size)}</td><td><div class="row"><a class="btn s sm" href="api/?r=backup-dl&f=${encodeURIComponent(x.name)}">Herunterladen</a><button class="btn g sm danger" data-a="bk-restore" data-v="${esc(x.name)}">Zurückspielen</button></div></td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${list.length ? `<div style="margin-top:14px"><table class="mt"><thead><tr><th>Sicherung</th><th>Größe</th><th></th></tr></thead><tbody>${list.map(x => `<tr><td>${utc(x.at).toLocaleString('de-DE')}</td><td class="muted">${mb(x.size)}</td><td><div class="row"><a class="btn s sm" href="api/?r=backup-dl&f=${encodeURIComponent(x.name)}">Herunterladen</a><button class="btn g sm danger" data-a="bk-restore" data-v="${esc(x.name)}">Zurückspielen</button></div></td></tr>`).join('')}</tbody></table></div>` : ''}
     <details style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Nächtliche Sicherung bei IONOS einrichten (einmalig)</summary>
       <ol style="font-size:14px;line-height:1.6;margin:10px 0 0;padding-left:20px"><li>mein.ionos.de → Hosting → <b>Cronjobs</b> → „Verwalten“ → <b>Cronjob anlegen</b>.</li><li>Typ <b>PHP-Skript</b>, PHP-Version: die höchste 8.x.</li><li>Skript: <b>/lumbradesk/private/cron-backup.php</b></li><li>Ausführung: <b>täglich</b>, z. B. um 3:00 Uhr → Speichern.</li></ol>
       <p class="muted" style="font-size:13px">Ohne Cronjob sichert LumbraDesk trotzdem einmal am Tag, sobald jemand die App öffnet.</p></details></div>`;
