@@ -20,7 +20,7 @@ const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'A
 const span = (a, b) => { const x = toMin(a), y = toMin(b); if (x === null || y === null) return 0; let m = y - x; if (m < 0) m += 1440; return m; };
 const overlap = (a1, b1, a2, b2) => { const s = Math.max(toMin(a1), toMin(a2)), e = Math.min(toMin(b1), toMin(b2)); return Math.max(0, e - s); };
 
-const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun']];
+const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun'], ['sonder', 'Sonderurlaub', 'star']];
 const typeName = t => (DAY_TYPES.find(x => x[0] === t) || DAY_TYPES[0])[1];
 let FIRMA = { betriebsurlaub: [] };   // aus firma.json (für alle)
 const buList = () => (FIRMA.betriebsurlaub || []).map(x => ({ ...x, firm: true })).concat((S.bu || []).map(x => ({ ...x, firm: false })));
@@ -104,6 +104,25 @@ function account(upTo = mondayOf(isoToday())) {
 const balance = () => account().over;
 /* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
 const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (isWorkday(i)) l.push(i); return l; };
+/* Urlaubsanspruch eines Jahres aus dem Eintrittsdatum
+   anteilig: 1/12 je vollem Beschäftigungsmonat im Eintrittsjahr (ab ½ Tag aufgerundet)
+   gesetzlich (BUrlG): Eintritt bis 1.7. = voller Anspruch, danach anteilig
+   Ein von Hand eingetragener Wert für das Jahr hat immer Vorrang. */
+function vacAuto(year, V = S.vacation, start = S.person.start) {
+  const per = +V.perYear || 0; if (!start) return { days: per, months: 12, why: '' };
+  const [sy, sm, sd] = start.split('-').map(Number);
+  if (year < sy) return { days: 0, months: 0, why: `Eintritt erst am ${deDate(start)}` };
+  if (year > sy) return { days: per, months: 12, why: '' };
+  const months = sd === 1 ? 13 - sm : 12 - sm;
+  if (V.rule === 'gesetz' && (sm < 7 || (sm === 7 && sd === 1))) return { days: per, months, why: `Eintritt ${deDate(start)} – voller Anspruch (Wartezeit bis Jahresende erfüllt)` };
+  const raw = per * months / 12, days = raw % 1 >= 0.5 ? Math.ceil(raw) : Math.floor(raw);
+  return { days, months, why: `Eintritt ${deDate(start)}: ${months} volle Monate × ${num(per)}/12 = ${num(raw, raw % 1 ? 2 : 0)} → ${days} Tage` };
+}
+function vacEntitle(year = tNow().getFullYear()) {
+  const a = vacAuto(year), m = S.vacation.manual;
+  if (m && +m.year === +year && m.days !== '' && m.days !== null && isFinite(+m.days)) return { ...a, auto: a.days, days: +m.days, manual: true };
+  return { ...a, auto: a.days, manual: false };
+}
 function vacation(year = tNow().getFullYear()) {
   let taken = 0, planned = 0, betrieb = 0; const today = isoToday();
   for (let iso = `${year}-01-01`; iso <= `${year}-12-31`; iso = addDays(iso, 1)) {
@@ -112,7 +131,8 @@ function vacation(year = tNow().getFullYear()) {
     if (iso <= today) taken++; else planned++;
   }
   if (+S.vacation.year === +year) taken += +S.vacation.takenBefore || 0;
-  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, betrieb, used, total, left: total - used };
+  let sonder = 0; for (const d of Object.values(DAYS)) if (d.type === 'sonder' && d.iso.startsWith(year + '-') && isWorkday(d.iso)) sonder++;
+  const ent = vacEntitle(year), total = ent.days + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, betrieb, used, total, left: total - used, sonder, ent };
 }
 async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }
 function rememberSite(name) { const n = (name || '').trim(); if (!n) return; S.sites = [n].concat((S.sites || []).filter(x => x !== n)).slice(0, 40); saveSettings(); }

@@ -4,7 +4,7 @@
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -58,7 +58,7 @@ const DB = {
 const DEFAULTS = {
   company: { name: 'Frühauf Solar', street: '', city: '', phone: '', email: '', logo: 'logo.png' },
   design: { mode: 'system', primary: '#0E7C66', secondary: '#F5A524', radius: 14, fontBody: 'Geist', fontHead: 'Instrument Serif' },
-  person: { name: '', nr: '' },
+  person: { name: '', nr: '', start: '' },   // start: Eintrittsdatum
   recipient: { name: 'Jule', phone: '' },
   state: 'NW',
   /* Sollzeiten je Wochentag (0 = Sonntag) */
@@ -66,7 +66,7 @@ const DEFAULTS = {
   minPause: 30,            // wird immer abgezogen – längere Pausen werden voll abgezogen
   pauseOnlyOver6: false,   // optional: Mindestpause erst ab 6 Std. Arbeit
   sites: [],               // zuletzt genutzte Baustellen (Vorschläge)
-  vacation: { perYear: 30, carry: 0, takenBefore: 0, year: 0 },   // takenBefore: vor App-Nutzung genommene Tage im Jahr „year“
+  vacation: { perYear: 30, carry: 0, takenBefore: 0, year: 0, rule: 'anteilig', manual: null },   // manual: { year, days } – Anspruch von Hand   // takenBefore: vor App-Nutzung genommene Tage im Jahr „year“
   kontoLog: [],
   balance: { from: '', min: 0 },   // Überstundenkonto: Startdatum und Startwert (Minuten)
   gps: true,               // Standort beim Stempeln (Pflicht)

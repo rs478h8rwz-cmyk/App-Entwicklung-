@@ -207,7 +207,7 @@ document.addEventListener('change', async e => {
   }
   if (el.dataset.hour !== undefined) { if (!canEdit()) return rerender(); const h = S.hours[el.dataset.hour]; h[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; if (h.on && !h.von) { h.von = '07:30'; h.bis = '16:30'; } saveSettings(); return rerender(); }
   if (el.dataset.bal !== undefined) { if (!canEdit()) return rerender(); const m = /^\s*([−-])?\s*(\d+)(?::(\d{1,2}))?\s*$/.exec(el.value); if (!m) { toast('Bitte als Std:Min eingeben, z. B. 12:30', 'warn'); return; } S.balance.min = (m[1] ? -1 : 1) * (+m[2] * 60 + (+m[3] || 0)); saveSettings(); return rerender(); }
-  if (el.dataset.s && (el.tagName === 'SELECT' || ['minPause', 'vacation.perYear', 'vacation.carry', 'balance.from'].includes(el.dataset.s))) { if (LOCKED_TABS.includes(UI.tab) && !canEdit()) return rerender(); return rerender(); }
+  if (el.dataset.s && (el.tagName === 'SELECT' || ['minPause', 'vacation.perYear', 'vacation.carry', 'balance.from', 'person.start'].includes(el.dataset.s))) { if (LOCKED_TABS.includes(UI.tab) && !canEdit()) return rerender(); return rerender(); }
   if (el.matches('[data-logo]') && el.files && el.files[0]) { const im = await shrinkImage(el.files[0], 700, 0.92, 'image/png'); S.company.logo = im.data; saveSettings(); render(); toast('Logo gespeichert.'); return; }
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });

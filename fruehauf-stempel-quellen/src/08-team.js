@@ -10,7 +10,8 @@
    ========================================================= */
 /* Öffentlicher Prüfschlüssel und der mit dem Admin-Passwort verschlüsselte Signaturschlüssel (kein Klartext-Passwort im Code) */
 const UPD_KEY = {"pub":{"kty":"EC","crv":"P-256","x":"GfRI2SrMeUAiop8Ky0zDUFqOY2O80YNc5ZyggeSJS2k","y":"xvD8q0z-apOnVmUiSYym32fj0YBlK3UR8QnpMKQNVJk"},"enc":{"salt":"a516bfdb02fd1949f0b412a27b672e96","iv":"5e1490b37849e74b0d8917b5","ct":"CjHJJXNKpi15w0cuSnWJN1UyCpp/sTIOQiMz+gJ4kkIvpxSyUycN3WgZ7uDfuIiPEokZrZqWnNUb8lD/laprzWoGc2UKbgUKdnjwrCgGQmAWD2pKfELgQSDtVN1iIVFY+OWAzluVLj64Wxe/v2OSkia1F++POcksP6hN9epHEwrIXLIq9S/QaKXiGl+9RMyqa5rEMjCEOEKtHA==","iter":150000}};
-const TYPE_DE = { urlaub: 'Urlaub', krank: 'Krank', frei: 'Ausgleich (frei)', work: 'Arbeitstag' };
+const TYPE_DE = { urlaub: 'Urlaub', krank: 'Krank', frei: 'Ausgleich (frei)', sonder: 'Sonderurlaub', work: 'Arbeitstag' };
+const OFF_TYPES = ['urlaub', 'krank', 'frei', 'sonder'];
 const hexBytes = h => new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
 const b64Bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const bytesB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
@@ -61,7 +62,7 @@ function sendBackupToOffice() {
 
 /* ---------- Mitarbeiter: Aktualisierung vom Büro einspielen ---------- */
 function opText(o) {
-  if (o.t === 'vac') return `Urlaubskonto: ${o.perYear} Tage/Jahr, Rest Vorjahr ${o.carry}, schon genommen ${o.year}: ${o.takenBefore}`;
+  if (o.t === 'vac') return `Urlaubskonto: ${o.perYear} Tage/Jahr${o.start ? `, Eintritt ${deDate(o.start)}` : ''}${o.rule === 'gesetz' ? ' (gesetzlich)' : ''}${o.manual ? `, Anspruch ${o.manual.year}: ${o.manual.days} Tage` : ''}, Rest Vorjahr ${o.carry}, schon genommen ${o.year}: ${o.takenBefore}`;
   if (o.t === 'bal') return `Überstunden-Bestand ${hm(o.min)} ab ${deDate(o.from)}`;
   if (o.t === 'days') return `${deDate(o.von)}${o.bis !== o.von ? ' – ' + deDate(o.bis) : ''}: ${TYPE_DE[o.type] || o.type}`;
   return '';
@@ -86,12 +87,12 @@ async function applyUpdate(u) {
   const who = `Büro (${u.by || 'Admin'})`, at = tNow().toISOString();
   if (!S.person.name && u.to.name) S.person.name = u.to.name;
   for (const o of u.ops) {
-    if (o.t === 'vac') S.vacation = { ...S.vacation, perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year };
+    if (o.t === 'vac') { S.vacation = { ...S.vacation, perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year, rule: o.rule || S.vacation.rule || 'anteilig', manual: o.manual || null }; if (o.start !== undefined) S.person.start = o.start; }
     if (o.t === 'bal') S.balance = { from: o.from, min: +o.min };
     if (o.t === 'days') {
       for (let iso = o.von; iso <= o.bis; iso = addDays(iso, 1)) {
         const cur = DAYS[iso];
-        if (o.type === 'work') { if (!cur || !['urlaub', 'krank', 'frei'].includes(cur.type)) continue; }
+        if (o.type === 'work') { if (!cur || !OFF_TYPES.includes(cur.type)) continue; }
         else if (!isWorkday(iso)) continue;
         const d = clone(dayOf(iso)), from = d.type; if (from === o.type) continue;
         d.type = o.type; if (o.type !== 'urlaub') d.betrieb = '';
@@ -127,12 +128,12 @@ async function importStaffBackup(file) {
 }
 function applyToCopy(st, o) {
   st.settings = st.settings || clone(DEFAULTS);
-  if (o.t === 'vac') st.settings.vacation = { ...(st.settings.vacation || {}), perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year };
+  if (o.t === 'vac') { st.settings.vacation = { ...(st.settings.vacation || {}), perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year, rule: o.rule || 'anteilig', manual: o.manual || null }; if (o.start !== undefined) st.settings.person = { ...(st.settings.person || {}), start: o.start }; }
   if (o.t === 'bal') st.settings.balance = { from: o.from, min: +o.min };
   if (o.t === 'days') withStaff(st, () => {
     for (let iso = o.von; iso <= o.bis; iso = addDays(iso, 1)) {
       const cur = DAYS[iso];
-      if (o.type === 'work') { if (cur && ['urlaub', 'krank', 'frei'].includes(cur.type)) { cur.type = 'work'; } continue; }
+      if (o.type === 'work') { if (cur && OFF_TYPES.includes(cur.type)) { cur.type = 'work'; } continue; }
       if (!isWorkday(iso)) continue; const d = clone(dayOf(iso)); d.type = o.type; DAYS[iso] = d;
     }
     st.days = DAYS;
@@ -154,19 +155,20 @@ function teamBody() {
 }
 function staffEditor(k) {
   const st = STAFF[k], s = staffStats(st), v = (st.settings || {}).vacation || DEFAULTS.vacation, b = (st.settings || {}).balance || DEFAULTS.balance, y = tNow().getFullYear();
-  const days = withStaff(st, () => Object.values(DAYS).filter(d => ['urlaub', 'krank', 'frei'].includes(d.type) && d.iso >= `${y}-01-01`).sort((a, c) => a.iso.localeCompare(c.iso)));
+  const days = withStaff(st, () => Object.values(DAYS).filter(d => OFF_TYPES.includes(d.type) && d.iso >= `${y}-01-01`).sort((a, c) => a.iso.localeCompare(c.iso)));
   /* zusammenhängende Zeiträume gleicher Art */
   const runs = []; days.forEach(d => { const r = runs[runs.length - 1]; if (r && r.type === d.type && withStaff(st, () => workDaysIn(addDays(r.bis, 1), addDays(d.iso, -1)).length === 0)) r.bis = d.iso; else runs.push({ type: d.type, von: d.iso, bis: d.iso }); });
   return `<div class="mt-6 rounded-[var(--r)] border border-line p-4 sm:p-5">
     <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9" data-a="tm-dl" data-v="${esc(k)}">${ic('download', 15)}Sicherung herunterladen</button><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, s.v.total + ' Tage')}${kpi('Genommen', s.v.taken + ' Tage')}${kpi('Geplant', s.v.planned + ' Tage')}${kpi('Rest', s.v.left + ' Tage')}</div>
     <h4 class="font-semibold mt-6 mb-2">Urlaub / Krank / Ausgleich eintragen</h4>
-    <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
-    <div class="space-y-1 mt-3">${runs.map(r => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-1.5 text-[13px]"><span class="badge ${r.type === 'krank' ? 'bg-tred text-red-ink' : 'bg-tyel text-yel-ink'}">${TYPE_DE[r.type]}</span><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''}</span><button class="text-ink3 hover:text-ink" data-a="tm-undo-run" data-v="${esc(k)}" data-von="${r.von}" data-bis="${r.bis}" title="Wieder Arbeitstage">${ic('x', 15)}</button></div>`).join('') || '<div class="text-[13px] text-ink3">Keine Einträge in diesem Jahr.</div>'}</div>
+    <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="sonder">Sonderurlaub</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
+    <div class="space-y-1 mt-3">${runs.map(r => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-1.5 text-[13px]"><span class="badge ${r.type === 'krank' ? 'bg-tred text-red-ink' : r.type === 'sonder' ? 'text-[#7C3AED] bg-[rgba(139,92,246,.16)]' : 'bg-tyel text-yel-ink'}">${TYPE_DE[r.type]}</span><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''}</span><button class="text-ink3 hover:text-ink" data-a="tm-undo-run" data-v="${esc(k)}" data-von="${r.von}" data-bis="${r.bis}" title="Wieder Arbeitstage">${ic('x', 15)}</button></div>`).join('') || '<div class="text-[13px] text-ink3">Keine Einträge in diesem Jahr.</div>'}</div>
     <h4 class="font-semibold mt-6 mb-2">Konten</h4>
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label><span class="lbl">Urlaubstage/Jahr</span><input class="inp" id="tm-per" inputmode="numeric" value="${esc(v.perYear)}"></label><label><span class="lbl">Rest Vorjahr</span><input class="inp" id="tm-carry" inputmode="numeric" value="${esc(v.carry)}"></label><label><span class="lbl">Schon genommen ${y}</span><input class="inp" id="tm-taken" inputmode="numeric" value="${esc(+v.year === y ? v.takenBefore : 0)}"></label>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label><span class="lbl">Eintrittsdatum</span><input type="date" class="inp" id="tm-start" value="${esc(((st.settings || {}).person || {}).start || '')}"></label><label><span class="lbl">Berechnung Eintrittsjahr</span><select class="inp" id="tm-rule"><option value="anteilig" ${(v.rule || 'anteilig') === 'anteilig' ? 'selected' : ''}>Anteilig (1/12 je Monat)</option><option value="gesetz" ${v.rule === 'gesetz' ? 'selected' : ''}>Gesetzlich (BUrlG)</option></select></label><label><span class="lbl">Anspruch ${y} (auto ${s.v.ent.auto})</span><input class="inp" id="tm-man" inputmode="numeric" value="${s.v.ent.manual ? esc(s.v.ent.days) : ''}" placeholder="leer = automatisch"></label>
+      <label><span class="lbl">Urlaubstage/Jahr</span><input class="inp" id="tm-per" inputmode="numeric" value="${esc(v.perYear)}"></label><label><span class="lbl">Rest Vorjahr</span><input class="inp" id="tm-carry" inputmode="numeric" value="${esc(v.carry)}"></label><label><span class="lbl">Schon genommen ${y}</span><input class="inp" id="tm-taken" inputmode="numeric" value="${esc(+v.year === y ? v.takenBefore : 0)}"></label>
       <label><span class="lbl">Überstunden zählen ab</span><input type="date" class="inp" id="tm-from" value="${esc(b.from)}"></label><label><span class="lbl">Startwert (Std:Min)</span><input class="inp" id="tm-over" value="${esc(hm(b.min || 0))}"></label><div class="flex items-end"><button class="btn-s w-full" data-a="tm-konto" data-v="${esc(k)}">Konten übernehmen</button></div></div>
-    <p class="hint">Aktuell: Überstunden ${hm(s.over)}${s.minus ? ` · Minusstunden ${hm(s.minus)}` : ''}</p>
+    <p class="hint">${s.v.ent.why ? esc(s.v.ent.why) + ' · ' : ''}Aktuell: Überstunden ${hm(s.over)}${s.minus ? ` · Minusstunden ${hm(s.minus)}` : ''}${s.v.sonder ? ` · Sonderurlaub ${s.v.sonder} ${s.v.sonder === 1 ? 'Tag' : 'Tage'}` : ''}</p>
     <h4 class="font-semibold mt-6 mb-2">Offene Änderungen ${(st.pending || []).length ? `(${st.pending.length})` : ''}</h4>
     ${(st.pending || []).length ? `<ul class="list-disc pl-5 space-y-1 text-[14px]">${st.pending.map(o => `<li>${esc(opText(o))}</li>`).join('')}</ul>
       <label class="block mt-3"><span class="lbl">Nachricht an ${esc(st.name.split(' ')[0])} (optional)</span><input class="inp" id="tm-note" placeholder="z. B. Urlaub wie besprochen eingetragen"></label>
@@ -190,8 +192,11 @@ async function staffAction(a) {
   }
   if (act === 'tm-konto') {
     const m = /^\s*(\d+)(?::(\d{1,2}))?\s*$/.exec($('#tm-over').value); if (!m) return toast('Überstunden bitte als Std:Min, z. B. 12:30', 'warn');
-    const y = tNow().getFullYear(), ops = [{ t: 'vac', perYear: +$('#tm-per').value || 0, carry: +$('#tm-carry').value || 0, takenBefore: +$('#tm-taken').value || 0, year: y }, { t: 'bal', from: $('#tm-from').value ? mondayOf($('#tm-from').value) : mondayOf(isoToday()), min: +m[1] * 60 + (+m[2] || 0) }];
-    st.pending = (st.pending || []).filter(o => o.t !== 'vac' && o.t !== 'bal').concat(ops); ops.forEach(o => applyToCopy(st, o));
+    const y = tNow().getFullYear(), man = $('#tm-man').value.trim(), ops = [{ t: 'vac', perYear: +$('#tm-per').value || 0, carry: +$('#tm-carry').value || 0, takenBefore: +$('#tm-taken').value || 0, year: y, start: $('#tm-start').value || '', rule: $('#tm-rule').value, manual: man !== '' && isFinite(+man) ? { year: y, days: +man } : null }, { t: 'bal', from: $('#tm-from').value ? mondayOf($('#tm-from').value) : mondayOf(isoToday()), min: +m[1] * 60 + (+m[2] || 0) }];
+    /* Überstunden nur mitschicken, wenn sie hier wirklich geändert wurden – sonst bleibt der Stand des Mitarbeiters */
+    const ob = (st.settings || {}).balance || {}, nb = ops[1], balChanged = +nb.min !== (+ob.min || 0) || ($('#tm-from').value && nb.from !== ob.from);
+    if (!balChanged) ops.pop();
+    st.pending = (st.pending || []).filter(o => o.t !== 'vac' && (balChanged ? o.t !== 'bal' : true)).concat(ops); ops.forEach(o => applyToCopy(st, o));
     toast('Konten vorgemerkt – jetzt „Aktualisierung senden“.');
   }
   if (act === 'tm-clear') { if (!(await confirmDlg('Änderungen verwerfen?', 'Die offenen Änderungen werden nicht gesendet. Die gespeicherte Kopie bleibt wie zuletzt geändert – zum Zurücksetzen die Sicherung neu öffnen.', 'Verwerfen', true))) return; st.pending = []; }
@@ -240,3 +245,17 @@ document.addEventListener('change', e => {
   if (el.matches && el.matches('[data-upd-file]') && el.files && el.files[0]) { importUpdate(el.files[0]); el.value = ''; }
 });
 loadStaff().then(() => { if (UI.tab === 'team' && typeof render === 'function') render(); });
+
+/* Konten-Reiter: Berechnungsart und von Hand angepasster Anspruch */
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-a="vac-rule"]'); if (!a) return;
+  if (!(await needEdit())) return; S.vacation.rule = a.dataset.v; S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: 'Urlaubsberechnung: ' + (a.dataset.v === 'gesetz' ? 'gesetzlich' : 'anteilig') }); saveSettings(); rerender();
+});
+document.addEventListener('change', e => {
+  const el = e.target; if (!el.matches || !el.matches('[data-vman]')) return;
+  if (!canEdit()) return rerender();
+  const y = tNow().getFullYear(), v = el.value.trim();
+  S.vacation.manual = v === '' ? null : { year: y, days: +v };
+  S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: v === '' ? `Urlaubsanspruch ${y}: wieder automatisch` : `Urlaubsanspruch ${y} von Hand: ${v} Tage` });
+  saveSettings(); rerender();
+});

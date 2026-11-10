@@ -155,6 +155,7 @@ const IP = {
   send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
   chevL: '<path d="m15 18-6-6 6-6"/>',
   chevR: '<path d="m9 18 6-6-6-6"/>',
+  star: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
   palm: '<path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/><path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/><path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35"/><path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>',
   heartp: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
 };
@@ -164,7 +165,7 @@ const IP = {
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -218,7 +219,7 @@ const DB = {
 const DEFAULTS = {
   company: { name: 'Frühauf Solar', street: '', city: '', phone: '', email: '', logo: 'logo.png' },
   design: { mode: 'system', primary: '#0E7C66', secondary: '#F5A524', radius: 14, fontBody: 'Geist', fontHead: 'Instrument Serif' },
-  person: { name: '', nr: '' },
+  person: { name: '', nr: '', start: '' },   // start: Eintrittsdatum
   recipient: { name: 'Jule', phone: '' },
   state: 'NW',
   /* Sollzeiten je Wochentag (0 = Sonntag) */
@@ -226,7 +227,7 @@ const DEFAULTS = {
   minPause: 30,            // wird immer abgezogen – längere Pausen werden voll abgezogen
   pauseOnlyOver6: false,   // optional: Mindestpause erst ab 6 Std. Arbeit
   sites: [],               // zuletzt genutzte Baustellen (Vorschläge)
-  vacation: { perYear: 30, carry: 0, takenBefore: 0, year: 0 },   // takenBefore: vor App-Nutzung genommene Tage im Jahr „year“
+  vacation: { perYear: 30, carry: 0, takenBefore: 0, year: 0, rule: 'anteilig', manual: null },   // manual: { year, days } – Anspruch von Hand   // takenBefore: vor App-Nutzung genommene Tage im Jahr „year“
   kontoLog: [],
   balance: { from: '', min: 0 },   // Überstundenkonto: Startdatum und Startwert (Minuten)
   gps: true,               // Standort beim Stempeln (Pflicht)
@@ -356,7 +357,7 @@ const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'A
 const span = (a, b) => { const x = toMin(a), y = toMin(b); if (x === null || y === null) return 0; let m = y - x; if (m < 0) m += 1440; return m; };
 const overlap = (a1, b1, a2, b2) => { const s = Math.max(toMin(a1), toMin(a2)), e = Math.min(toMin(b1), toMin(b2)); return Math.max(0, e - s); };
 
-const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun']];
+const DAY_TYPES = [['work', 'Arbeit', 'clock'], ['urlaub', 'Urlaub', 'palm'], ['krank', 'Krank', 'heartp'], ['feiertag', 'Feiertag', 'cal'], ['frei', 'Frei / Ausgleich', 'sun'], ['sonder', 'Sonderurlaub', 'star']];
 const typeName = t => (DAY_TYPES.find(x => x[0] === t) || DAY_TYPES[0])[1];
 let FIRMA = { betriebsurlaub: [] };   // aus firma.json (für alle)
 const buList = () => (FIRMA.betriebsurlaub || []).map(x => ({ ...x, firm: true })).concat((S.bu || []).map(x => ({ ...x, firm: false })));
@@ -440,6 +441,25 @@ function account(upTo = mondayOf(isoToday())) {
 const balance = () => account().over;
 /* Arbeitstage eines Zeitraums (ohne Wochenende, Feiertage und freie Tage) */
 const workDaysIn = (von, bis) => { const l = []; if (!von || !bis || bis < von) return l; for (let i = von; i <= bis; i = addDays(i, 1)) if (isWorkday(i)) l.push(i); return l; };
+/* Urlaubsanspruch eines Jahres aus dem Eintrittsdatum
+   anteilig: 1/12 je vollem Beschäftigungsmonat im Eintrittsjahr (ab ½ Tag aufgerundet)
+   gesetzlich (BUrlG): Eintritt bis 1.7. = voller Anspruch, danach anteilig
+   Ein von Hand eingetragener Wert für das Jahr hat immer Vorrang. */
+function vacAuto(year, V = S.vacation, start = S.person.start) {
+  const per = +V.perYear || 0; if (!start) return { days: per, months: 12, why: '' };
+  const [sy, sm, sd] = start.split('-').map(Number);
+  if (year < sy) return { days: 0, months: 0, why: `Eintritt erst am ${deDate(start)}` };
+  if (year > sy) return { days: per, months: 12, why: '' };
+  const months = sd === 1 ? 13 - sm : 12 - sm;
+  if (V.rule === 'gesetz' && (sm < 7 || (sm === 7 && sd === 1))) return { days: per, months, why: `Eintritt ${deDate(start)} – voller Anspruch (Wartezeit bis Jahresende erfüllt)` };
+  const raw = per * months / 12, days = raw % 1 >= 0.5 ? Math.ceil(raw) : Math.floor(raw);
+  return { days, months, why: `Eintritt ${deDate(start)}: ${months} volle Monate × ${num(per)}/12 = ${num(raw, raw % 1 ? 2 : 0)} → ${days} Tage` };
+}
+function vacEntitle(year = tNow().getFullYear()) {
+  const a = vacAuto(year), m = S.vacation.manual;
+  if (m && +m.year === +year && m.days !== '' && m.days !== null && isFinite(+m.days)) return { ...a, auto: a.days, days: +m.days, manual: true };
+  return { ...a, auto: a.days, manual: false };
+}
 function vacation(year = tNow().getFullYear()) {
   let taken = 0, planned = 0, betrieb = 0; const today = isoToday();
   for (let iso = `${year}-01-01`; iso <= `${year}-12-31`; iso = addDays(iso, 1)) {
@@ -448,7 +468,8 @@ function vacation(year = tNow().getFullYear()) {
     if (iso <= today) taken++; else planned++;
   }
   if (+S.vacation.year === +year) taken += +S.vacation.takenBefore || 0;
-  const total = (+S.vacation.perYear || 0) + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, betrieb, used, total, left: total - used };
+  let sonder = 0; for (const d of Object.values(DAYS)) if (d.type === 'sonder' && d.iso.startsWith(year + '-') && isWorkday(d.iso)) sonder++;
+  const ent = vacEntitle(year), total = ent.days + (+S.vacation.carry || 0), used = taken + planned; return { taken, planned, betrieb, used, total, left: total - used, sonder, ent };
 }
 async function saveDay(d) { d.updated = Date.now(); DAYS[d.iso] = d; await DB.put('days', clone(d)); }
 function rememberSite(name) { const n = (name || '').trim(); if (!n) return; S.sites = [n].concat((S.sites || []).filter(x => x !== n)).slice(0, 40); saveSettings(); }
@@ -611,6 +632,7 @@ function calendar() {
     else if (d.type === 'krank') { bg = 'var(--t-red)'; tag = 'K'; }
     else if (hol || d.type === 'feiertag') { bg = 'rgba(59,130,246,.16)'; tag = 'F'; }
     else if (d.type === 'frei') { bg = 'var(--raised)'; tag = 'A'; }
+    else if (d.type === 'sonder') { bg = 'rgba(139,92,246,.18)'; tag = 'S'; }
     else if ((d.segs || []).length) { tag = '•'; fg = 'color:rgb(var(--p-rgb))'; }
     const we = wd === 0 || wd === 6;
     return `<div class="aspect-square rounded-[10px] p-1 sm:p-1.5 flex flex-col text-[12px] sm:text-[13px] ${iso === today ? 'ring-2 ring-p' : ''} ${we && !bg ? 'opacity-45' : ''}" style="background:${bg || (we ? 'transparent' : 'var(--field)')}" title="${esc(hol || d.betrieb || typeName(d.type))}"><span class="font-medium">${+iso.slice(8)}</span><span class="mt-auto text-[10px] sm:text-[11px] font-semibold" style="${fg}">${tag}</span></div>`;
@@ -632,6 +654,7 @@ function viewUrlaub() {
   return `<section class="pt-6 sm:pt-10"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Urlaub</h1>
     ${buList().filter(b => b.bis >= today).length ? `<div class="card p-4 mt-5 flex flex-wrap items-center gap-3" style="background:rgb(229,154,92,.12)"><span style="color:#C7792F">${ic('cal', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">${buList().filter(b => b.bis >= today).map(b => `<div><b>${esc(b.name || 'Betriebsurlaub')}</b>: ${deDate(b.von)} – ${deDate(b.bis)} · ${workDaysIn(b.von, b.bis).length} Arbeitstage${b.abzug === false ? ' (zählt nicht vom Urlaub)' : ''}</div>`).join('')}</div></div>` : ''}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi(`Anspruch ${y}`, `${v.total} Tage`)}${kpi('Genommen', `${v.taken} Tage`)}${kpi('Geplant', `${v.planned} Tage${v.betrieb ? ` <span class="text-[12px] text-ink3 font-normal">davon ${v.betrieb} Betriebsurl.</span>` : ''}`)}<div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Resturlaub</div><div class="text-[26px] font-semibold mt-1 text-p">${v.left} Tage</div></div></div>
+    ${v.ent.why || v.sonder ? `<p class="hint">${v.ent.why ? esc(v.ent.why) + (v.ent.manual ? ' · angepasst auf ' + v.ent.days + ' Tage' : '') : ''}${v.ent.why && v.sonder ? ' · ' : ''}${v.sonder ? `Sonderurlaub ${y}: ${v.sonder} ${v.sonder === 1 ? 'Tag' : 'Tage'} (wird nicht vom Urlaub abgezogen)` : ''}</p>` : ''}
     <button class="btn-g mt-2" data-a="konto-edit">${ic('edit', 15)}Urlaub / Überstunden einpflegen (Admin)</button>
     <div class="grid lg:grid-cols-2 gap-4 mt-4">
       <div class="card p-5 sm:p-6"><h2 class="sec-t mb-1">Urlaub eintragen oder einreichen</h2><p class="text-ink3 text-[14px] mb-5">Wochenenden und Feiertage werden nicht mitgezählt.</p>
@@ -664,7 +687,10 @@ function setBody() {
       <div class="kpi mt-3 flex justify-between text-[14px]"><span>Wochen-Soll</span><b>${hm(weekTarget())} Std.</b></div>
       <p class="hint">Pause = Mindestpause in Minuten, die an diesem Tag immer abgezogen wird (längere Pausen voll).</p><div class="grid sm:grid-cols-2 gap-4 mt-6"><div class="kpi"><div class="text-[12px] text-ink3">Feiertage nach Firmensitz</div><div class="text-[15px] font-semibold mt-1">${esc((STATES.find(x => x[0] === firmState()) || ['', firmState()])[1])}</div><div class="text-[12px] text-ink3 mt-0.5">${esc(FIRMA.firmensitz ? `${FIRMA.firmensitz.name}, ${FIRMA.firmensitz.ort}` : '')}</div></div></div>
       <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-4"><input type="checkbox" data-a="over6" ${S.pauseOnlyOver6 ? 'checked' : ''} ${ro ? 'disabled' : ''}>Mindestpause nur bei mehr als 6 Std. Arbeit abziehen</label>`;
-    case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${tNow().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('vacation.perYear', 'Urlaubstage pro Jahr', '30', 'number', ro)}${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div><p class="hint">Genommen: ${v.taken} · Geplant: ${v.planned} · Übrig: ${v.left} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)</p>
+    case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${tNow().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('person.start', 'Eintrittsdatum (hier angefangen am)', '', 'date', ro)}${sIn('vacation.perYear', 'Urlaubstage pro Jahr (laut Vertrag)', '30', 'number', ro)}</div>
+      <div class="mt-4"><span class="lbl">Berechnung im Eintrittsjahr</span><div class="seg">${[['anteilig', 'Anteilig (1/12 je Monat)'], ['gesetz', 'Gesetzlich (BUrlG)']].map(([k, l]) => `<button class="${(S.vacation.rule || 'anteilig') === k ? 'on' : ''}" data-a="vac-rule" data-v="${k}" ${ro ? 'disabled' : ''}>${l}</button>`).join('')}</div></div>
+      <div class="grid grid-cols-2 gap-4 mt-4"><label class="block"><span class="lbl">Anspruch ${tNow().getFullYear()} (automatisch: ${v.ent.auto} Tage)</span><input class="inp" data-vman type="number" inputmode="decimal" value="${v.ent.manual ? esc(v.ent.days) : ''}" placeholder="automatisch" ${ro ? 'disabled' : ''}></label>${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div>
+      ${v.ent.why ? `<p class="hint">${esc(v.ent.why)}${v.ent.manual ? ' · von Hand angepasst' : ''}</p>` : ''}<p class="hint">Genommen: ${v.taken} · Geplant: ${v.planned} · Übrig: ${v.left} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)${v.sonder ? ` · Sonderurlaub: ${v.sonder} ${v.sonder === 1 ? 'Tag' : 'Tage'} (zählt nicht zum Urlaub)` : ''}</p>
       <h3 class="font-semibold mt-7 mb-3">Betriebsurlaub</h3>
       <div class="space-y-1.5">${(FIRMA.betriebsurlaub || []).map(b => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span><span class="text-[12px] text-ink3">für alle (Firmenvorgabe)</span></div>`).join('')}
       ${(S.bu || []).map((b, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}${b.abzug === false ? ' · zählt nicht' : ''}</span>${ro ? '' : `<button class="text-ink3 hover:text-ember" data-a="bu-del" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button>`}</div>`).join('')}</div>
@@ -926,7 +952,7 @@ document.addEventListener('change', async e => {
   }
   if (el.dataset.hour !== undefined) { if (!canEdit()) return rerender(); const h = S.hours[el.dataset.hour]; h[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; if (h.on && !h.von) { h.von = '07:30'; h.bis = '16:30'; } saveSettings(); return rerender(); }
   if (el.dataset.bal !== undefined) { if (!canEdit()) return rerender(); const m = /^\s*([−-])?\s*(\d+)(?::(\d{1,2}))?\s*$/.exec(el.value); if (!m) { toast('Bitte als Std:Min eingeben, z. B. 12:30', 'warn'); return; } S.balance.min = (m[1] ? -1 : 1) * (+m[2] * 60 + (+m[3] || 0)); saveSettings(); return rerender(); }
-  if (el.dataset.s && (el.tagName === 'SELECT' || ['minPause', 'vacation.perYear', 'vacation.carry', 'balance.from'].includes(el.dataset.s))) { if (LOCKED_TABS.includes(UI.tab) && !canEdit()) return rerender(); return rerender(); }
+  if (el.dataset.s && (el.tagName === 'SELECT' || ['minPause', 'vacation.perYear', 'vacation.carry', 'balance.from', 'person.start'].includes(el.dataset.s))) { if (LOCKED_TABS.includes(UI.tab) && !canEdit()) return rerender(); return rerender(); }
   if (el.matches('[data-logo]') && el.files && el.files[0]) { const im = await shrinkImage(el.files[0], 700, 0.92, 'image/png'); S.company.logo = im.data; saveSettings(); render(); toast('Logo gespeichert.'); return; }
   if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
@@ -1227,7 +1253,8 @@ async function buildVacationPdf(v) {
    ========================================================= */
 /* Öffentlicher Prüfschlüssel und der mit dem Admin-Passwort verschlüsselte Signaturschlüssel (kein Klartext-Passwort im Code) */
 const UPD_KEY = {"pub":{"kty":"EC","crv":"P-256","x":"GfRI2SrMeUAiop8Ky0zDUFqOY2O80YNc5ZyggeSJS2k","y":"xvD8q0z-apOnVmUiSYym32fj0YBlK3UR8QnpMKQNVJk"},"enc":{"salt":"a516bfdb02fd1949f0b412a27b672e96","iv":"5e1490b37849e74b0d8917b5","ct":"CjHJJXNKpi15w0cuSnWJN1UyCpp/sTIOQiMz+gJ4kkIvpxSyUycN3WgZ7uDfuIiPEokZrZqWnNUb8lD/laprzWoGc2UKbgUKdnjwrCgGQmAWD2pKfELgQSDtVN1iIVFY+OWAzluVLj64Wxe/v2OSkia1F++POcksP6hN9epHEwrIXLIq9S/QaKXiGl+9RMyqa5rEMjCEOEKtHA==","iter":150000}};
-const TYPE_DE = { urlaub: 'Urlaub', krank: 'Krank', frei: 'Ausgleich (frei)', work: 'Arbeitstag' };
+const TYPE_DE = { urlaub: 'Urlaub', krank: 'Krank', frei: 'Ausgleich (frei)', sonder: 'Sonderurlaub', work: 'Arbeitstag' };
+const OFF_TYPES = ['urlaub', 'krank', 'frei', 'sonder'];
 const hexBytes = h => new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
 const b64Bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const bytesB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
@@ -1278,7 +1305,7 @@ function sendBackupToOffice() {
 
 /* ---------- Mitarbeiter: Aktualisierung vom Büro einspielen ---------- */
 function opText(o) {
-  if (o.t === 'vac') return `Urlaubskonto: ${o.perYear} Tage/Jahr, Rest Vorjahr ${o.carry}, schon genommen ${o.year}: ${o.takenBefore}`;
+  if (o.t === 'vac') return `Urlaubskonto: ${o.perYear} Tage/Jahr${o.start ? `, Eintritt ${deDate(o.start)}` : ''}${o.rule === 'gesetz' ? ' (gesetzlich)' : ''}${o.manual ? `, Anspruch ${o.manual.year}: ${o.manual.days} Tage` : ''}, Rest Vorjahr ${o.carry}, schon genommen ${o.year}: ${o.takenBefore}`;
   if (o.t === 'bal') return `Überstunden-Bestand ${hm(o.min)} ab ${deDate(o.from)}`;
   if (o.t === 'days') return `${deDate(o.von)}${o.bis !== o.von ? ' – ' + deDate(o.bis) : ''}: ${TYPE_DE[o.type] || o.type}`;
   return '';
@@ -1303,12 +1330,12 @@ async function applyUpdate(u) {
   const who = `Büro (${u.by || 'Admin'})`, at = tNow().toISOString();
   if (!S.person.name && u.to.name) S.person.name = u.to.name;
   for (const o of u.ops) {
-    if (o.t === 'vac') S.vacation = { ...S.vacation, perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year };
+    if (o.t === 'vac') { S.vacation = { ...S.vacation, perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year, rule: o.rule || S.vacation.rule || 'anteilig', manual: o.manual || null }; if (o.start !== undefined) S.person.start = o.start; }
     if (o.t === 'bal') S.balance = { from: o.from, min: +o.min };
     if (o.t === 'days') {
       for (let iso = o.von; iso <= o.bis; iso = addDays(iso, 1)) {
         const cur = DAYS[iso];
-        if (o.type === 'work') { if (!cur || !['urlaub', 'krank', 'frei'].includes(cur.type)) continue; }
+        if (o.type === 'work') { if (!cur || !OFF_TYPES.includes(cur.type)) continue; }
         else if (!isWorkday(iso)) continue;
         const d = clone(dayOf(iso)), from = d.type; if (from === o.type) continue;
         d.type = o.type; if (o.type !== 'urlaub') d.betrieb = '';
@@ -1344,12 +1371,12 @@ async function importStaffBackup(file) {
 }
 function applyToCopy(st, o) {
   st.settings = st.settings || clone(DEFAULTS);
-  if (o.t === 'vac') st.settings.vacation = { ...(st.settings.vacation || {}), perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year };
+  if (o.t === 'vac') { st.settings.vacation = { ...(st.settings.vacation || {}), perYear: +o.perYear, carry: +o.carry, takenBefore: +o.takenBefore, year: +o.year, rule: o.rule || 'anteilig', manual: o.manual || null }; if (o.start !== undefined) st.settings.person = { ...(st.settings.person || {}), start: o.start }; }
   if (o.t === 'bal') st.settings.balance = { from: o.from, min: +o.min };
   if (o.t === 'days') withStaff(st, () => {
     for (let iso = o.von; iso <= o.bis; iso = addDays(iso, 1)) {
       const cur = DAYS[iso];
-      if (o.type === 'work') { if (cur && ['urlaub', 'krank', 'frei'].includes(cur.type)) { cur.type = 'work'; } continue; }
+      if (o.type === 'work') { if (cur && OFF_TYPES.includes(cur.type)) { cur.type = 'work'; } continue; }
       if (!isWorkday(iso)) continue; const d = clone(dayOf(iso)); d.type = o.type; DAYS[iso] = d;
     }
     st.days = DAYS;
@@ -1371,19 +1398,20 @@ function teamBody() {
 }
 function staffEditor(k) {
   const st = STAFF[k], s = staffStats(st), v = (st.settings || {}).vacation || DEFAULTS.vacation, b = (st.settings || {}).balance || DEFAULTS.balance, y = tNow().getFullYear();
-  const days = withStaff(st, () => Object.values(DAYS).filter(d => ['urlaub', 'krank', 'frei'].includes(d.type) && d.iso >= `${y}-01-01`).sort((a, c) => a.iso.localeCompare(c.iso)));
+  const days = withStaff(st, () => Object.values(DAYS).filter(d => OFF_TYPES.includes(d.type) && d.iso >= `${y}-01-01`).sort((a, c) => a.iso.localeCompare(c.iso)));
   /* zusammenhängende Zeiträume gleicher Art */
   const runs = []; days.forEach(d => { const r = runs[runs.length - 1]; if (r && r.type === d.type && withStaff(st, () => workDaysIn(addDays(r.bis, 1), addDays(d.iso, -1)).length === 0)) r.bis = d.iso; else runs.push({ type: d.type, von: d.iso, bis: d.iso }); });
   return `<div class="mt-6 rounded-[var(--r)] border border-line p-4 sm:p-5">
     <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9" data-a="tm-dl" data-v="${esc(k)}">${ic('download', 15)}Sicherung herunterladen</button><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, s.v.total + ' Tage')}${kpi('Genommen', s.v.taken + ' Tage')}${kpi('Geplant', s.v.planned + ' Tage')}${kpi('Rest', s.v.left + ' Tage')}</div>
     <h4 class="font-semibold mt-6 mb-2">Urlaub / Krank / Ausgleich eintragen</h4>
-    <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
-    <div class="space-y-1 mt-3">${runs.map(r => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-1.5 text-[13px]"><span class="badge ${r.type === 'krank' ? 'bg-tred text-red-ink' : 'bg-tyel text-yel-ink'}">${TYPE_DE[r.type]}</span><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''}</span><button class="text-ink3 hover:text-ink" data-a="tm-undo-run" data-v="${esc(k)}" data-von="${r.von}" data-bis="${r.bis}" title="Wieder Arbeitstage">${ic('x', 15)}</button></div>`).join('') || '<div class="text-[13px] text-ink3">Keine Einträge in diesem Jahr.</div>'}</div>
+    <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="sonder">Sonderurlaub</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
+    <div class="space-y-1 mt-3">${runs.map(r => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-1.5 text-[13px]"><span class="badge ${r.type === 'krank' ? 'bg-tred text-red-ink' : r.type === 'sonder' ? 'text-[#7C3AED] bg-[rgba(139,92,246,.16)]' : 'bg-tyel text-yel-ink'}">${TYPE_DE[r.type]}</span><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''}</span><button class="text-ink3 hover:text-ink" data-a="tm-undo-run" data-v="${esc(k)}" data-von="${r.von}" data-bis="${r.bis}" title="Wieder Arbeitstage">${ic('x', 15)}</button></div>`).join('') || '<div class="text-[13px] text-ink3">Keine Einträge in diesem Jahr.</div>'}</div>
     <h4 class="font-semibold mt-6 mb-2">Konten</h4>
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label><span class="lbl">Urlaubstage/Jahr</span><input class="inp" id="tm-per" inputmode="numeric" value="${esc(v.perYear)}"></label><label><span class="lbl">Rest Vorjahr</span><input class="inp" id="tm-carry" inputmode="numeric" value="${esc(v.carry)}"></label><label><span class="lbl">Schon genommen ${y}</span><input class="inp" id="tm-taken" inputmode="numeric" value="${esc(+v.year === y ? v.takenBefore : 0)}"></label>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2"><label><span class="lbl">Eintrittsdatum</span><input type="date" class="inp" id="tm-start" value="${esc(((st.settings || {}).person || {}).start || '')}"></label><label><span class="lbl">Berechnung Eintrittsjahr</span><select class="inp" id="tm-rule"><option value="anteilig" ${(v.rule || 'anteilig') === 'anteilig' ? 'selected' : ''}>Anteilig (1/12 je Monat)</option><option value="gesetz" ${v.rule === 'gesetz' ? 'selected' : ''}>Gesetzlich (BUrlG)</option></select></label><label><span class="lbl">Anspruch ${y} (auto ${s.v.ent.auto})</span><input class="inp" id="tm-man" inputmode="numeric" value="${s.v.ent.manual ? esc(s.v.ent.days) : ''}" placeholder="leer = automatisch"></label>
+      <label><span class="lbl">Urlaubstage/Jahr</span><input class="inp" id="tm-per" inputmode="numeric" value="${esc(v.perYear)}"></label><label><span class="lbl">Rest Vorjahr</span><input class="inp" id="tm-carry" inputmode="numeric" value="${esc(v.carry)}"></label><label><span class="lbl">Schon genommen ${y}</span><input class="inp" id="tm-taken" inputmode="numeric" value="${esc(+v.year === y ? v.takenBefore : 0)}"></label>
       <label><span class="lbl">Überstunden zählen ab</span><input type="date" class="inp" id="tm-from" value="${esc(b.from)}"></label><label><span class="lbl">Startwert (Std:Min)</span><input class="inp" id="tm-over" value="${esc(hm(b.min || 0))}"></label><div class="flex items-end"><button class="btn-s w-full" data-a="tm-konto" data-v="${esc(k)}">Konten übernehmen</button></div></div>
-    <p class="hint">Aktuell: Überstunden ${hm(s.over)}${s.minus ? ` · Minusstunden ${hm(s.minus)}` : ''}</p>
+    <p class="hint">${s.v.ent.why ? esc(s.v.ent.why) + ' · ' : ''}Aktuell: Überstunden ${hm(s.over)}${s.minus ? ` · Minusstunden ${hm(s.minus)}` : ''}${s.v.sonder ? ` · Sonderurlaub ${s.v.sonder} ${s.v.sonder === 1 ? 'Tag' : 'Tage'}` : ''}</p>
     <h4 class="font-semibold mt-6 mb-2">Offene Änderungen ${(st.pending || []).length ? `(${st.pending.length})` : ''}</h4>
     ${(st.pending || []).length ? `<ul class="list-disc pl-5 space-y-1 text-[14px]">${st.pending.map(o => `<li>${esc(opText(o))}</li>`).join('')}</ul>
       <label class="block mt-3"><span class="lbl">Nachricht an ${esc(st.name.split(' ')[0])} (optional)</span><input class="inp" id="tm-note" placeholder="z. B. Urlaub wie besprochen eingetragen"></label>
@@ -1407,8 +1435,11 @@ async function staffAction(a) {
   }
   if (act === 'tm-konto') {
     const m = /^\s*(\d+)(?::(\d{1,2}))?\s*$/.exec($('#tm-over').value); if (!m) return toast('Überstunden bitte als Std:Min, z. B. 12:30', 'warn');
-    const y = tNow().getFullYear(), ops = [{ t: 'vac', perYear: +$('#tm-per').value || 0, carry: +$('#tm-carry').value || 0, takenBefore: +$('#tm-taken').value || 0, year: y }, { t: 'bal', from: $('#tm-from').value ? mondayOf($('#tm-from').value) : mondayOf(isoToday()), min: +m[1] * 60 + (+m[2] || 0) }];
-    st.pending = (st.pending || []).filter(o => o.t !== 'vac' && o.t !== 'bal').concat(ops); ops.forEach(o => applyToCopy(st, o));
+    const y = tNow().getFullYear(), man = $('#tm-man').value.trim(), ops = [{ t: 'vac', perYear: +$('#tm-per').value || 0, carry: +$('#tm-carry').value || 0, takenBefore: +$('#tm-taken').value || 0, year: y, start: $('#tm-start').value || '', rule: $('#tm-rule').value, manual: man !== '' && isFinite(+man) ? { year: y, days: +man } : null }, { t: 'bal', from: $('#tm-from').value ? mondayOf($('#tm-from').value) : mondayOf(isoToday()), min: +m[1] * 60 + (+m[2] || 0) }];
+    /* Überstunden nur mitschicken, wenn sie hier wirklich geändert wurden – sonst bleibt der Stand des Mitarbeiters */
+    const ob = (st.settings || {}).balance || {}, nb = ops[1], balChanged = +nb.min !== (+ob.min || 0) || ($('#tm-from').value && nb.from !== ob.from);
+    if (!balChanged) ops.pop();
+    st.pending = (st.pending || []).filter(o => o.t !== 'vac' && (balChanged ? o.t !== 'bal' : true)).concat(ops); ops.forEach(o => applyToCopy(st, o));
     toast('Konten vorgemerkt – jetzt „Aktualisierung senden“.');
   }
   if (act === 'tm-clear') { if (!(await confirmDlg('Änderungen verwerfen?', 'Die offenen Änderungen werden nicht gesendet. Die gespeicherte Kopie bleibt wie zuletzt geändert – zum Zurücksetzen die Sicherung neu öffnen.', 'Verwerfen', true))) return; st.pending = []; }
@@ -1457,6 +1488,20 @@ document.addEventListener('change', e => {
   if (el.matches && el.matches('[data-upd-file]') && el.files && el.files[0]) { importUpdate(el.files[0]); el.value = ''; }
 });
 loadStaff().then(() => { if (UI.tab === 'team' && typeof render === 'function') render(); });
+
+/* Konten-Reiter: Berechnungsart und von Hand angepasster Anspruch */
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-a="vac-rule"]'); if (!a) return;
+  if (!(await needEdit())) return; S.vacation.rule = a.dataset.v; S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: 'Urlaubsberechnung: ' + (a.dataset.v === 'gesetz' ? 'gesetzlich' : 'anteilig') }); saveSettings(); rerender();
+});
+document.addEventListener('change', e => {
+  const el = e.target; if (!el.matches || !el.matches('[data-vman]')) return;
+  if (!canEdit()) return rerender();
+  const y = tNow().getFullYear(), v = el.value.trim();
+  S.vacation.manual = v === '' ? null : { year: y, days: +v };
+  S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: v === '' ? `Urlaubsanspruch ${y}: wieder automatisch` : `Urlaubsanspruch ${y} von Hand: ${v} Tage` });
+  saveSettings(); rerender();
+});
 </script>
 </body>
 </html>
