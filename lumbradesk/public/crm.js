@@ -127,6 +127,7 @@ function viewKunde() {
           ${taskForm(c.id)}
           ${done.length ? `<details class="done-l"><summary>${done.length} erledigt</summary><div class="tlist">${done.map(taskRow).join('')}</div></details>` : ''}</div>
         ${typeof protCard === 'function' ? protCard() : ''}
+        ${hoursCard()}
       </div>
       <div class="kcol">
         <div class="card"><h2>Verlauf</h2>
@@ -158,6 +159,14 @@ function taskForm(pid) {
     <div class="row"><label class="inl">Fällig am<input name="due" type="date" value="${plusDays(3)}" required></label><label class="inl">Für${teamSel('assignee', ST.user.id)}</label><button class="btn" type="submit">${ic('plus', 18)}Wiedervorlage</button></div></form>`;
 }
 
+function hoursCard() {
+  const h = ST.hrs; if (!h) return '<div id="k-hrs"></div>';
+  const t = m => Math.floor(m / 60) + ':' + String(Math.round(m % 60)).padStart(2, '0');
+  return `<div class="card sec" id="k-hrs"><h2>Stunden auf der Baustelle</h2>${h.total ? `<p style="margin:10px 0 4px"><b class="kv" style="font-size:34px">${t(h.total)}</b> <span class="muted">Std.${h.from ? ` · ${deDay(h.from)}${h.to !== h.from ? ' – ' + deDay(h.to) : ''}` : ''}</span></p>
+    <div class="tlist">${h.people.map(p => `<div class="task" style="padding:8px 0"><div class="tb">${esc(p.name)}</div><b>${t(p.min)} Std.</b></div>`).join('')}</div>
+    <p class="muted small" style="margin:8px 0 0">Aus der Stempeluhr – Baustellen: ${h.sites.map(esc).join(', ')}.</p>` : `<p class="muted">Noch keine Stunden. In der Stempeluhr als Baustelle „${esc(h.key)}${ST.cd && ST.cd.customer.city ? ', ' + esc(ST.cd.customer.city) : ''}“ wählen – laufende Aufträge stehen dort als Vorschlag.</p>`}</div>`;
+}
+
 /* ---------- Aufgaben ---------- */
 function viewAufgaben() {
   const T = ST.tasks || [], t0 = today(), t1 = plusDays(1), wk = plusDays(7), open = T.filter(t => !t.done);
@@ -187,7 +196,7 @@ function homeDash() {
         ${D.stages.find(s => s.key === 'verloren').n ? `<p class="muted small" style="margin:10px 0 0">Verloren: ${D.stages.find(s => s.key === 'verloren').n}</p>` : ''}</div>
       ${homeDue()}
     </div>
-    ${D.all && D.team.length ? `<div class="card sec"><h2>Team</h2><table class="mt team"><thead><tr><th>Berater</th><th>Aktive Kunden</th><th>Angebote offen</th><th>Aufträge ${esc(mName)}</th><th>Aktivitäten 7 Tage</th><th>Überfällig</th></tr></thead><tbody>
+    ${D.all && D.team.length ? `<div class="card sec"><div class="row" style="justify-content:space-between"><h2>Team</h2><a class="btn g sm" href="stempel/#/einstellungen/auswertung">Stunden-Auswertung ${ic('next', 16)}</a></div><table class="mt team"><thead><tr><th>Berater</th><th>Aktive Kunden</th><th>Angebote offen</th><th>Aufträge ${esc(mName)}</th><th>Aktivitäten 7 Tage</th><th>Überfällig</th></tr></thead><tbody>
       ${D.team.map(t => `<tr><td class="tn"><b>${esc(t.name)}</b></td><td data-l="Aktive Kunden">${t.active}</td><td data-l="Angebote offen">${t.offers ? euro(t.offers) : '–'}</td><td data-l="Aufträge">${t.won}</td><td data-l="Aktivitäten 7 Tage">${t.acts}</td><td data-l="Überfällig" class="${t.overdue ? 'od' : ''}">${t.overdue}</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${D.recent.length ? `<div class="card sec"><h2>Letzte Aktivitäten</h2><div class="tl">${D.recent.map(e => `<a class="ev lnk ${['notiz', 'anruf', 'termin', 'email'].includes(e.kind) ? '' : 'auto'}" href="#/kunde/${esc(e.project)}"><span class="evi">${ic(e.kind, 16)}</span><div class="evb"><div class="evh"><b>${esc(e.projectName)}</b><span class="muted small">${KIND_L[e.kind] || e.kind} · ${esc(ago(e.at))} · ${esc(e.userName)}</span></div><div class="evt">${esc(e.text.length > 140 ? e.text.slice(0, 140) + ' …' : e.text)}</div></div></a>`).join('')}</div></div>` : ''}`;
 }
@@ -203,13 +212,13 @@ function homeDue() {
 }
 /* Handy: „Mehr“ für die Admin-Seiten */
 function viewMehr() {
-  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Logbuch', 'Wer hat wann was gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="#/${k}"><span class="evi">${ic(k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
+  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Logbuch', 'Wer hat wann was gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
 }
 
 /* ---------- Laden ---------- */
 async function crmLoad(view, arg) {
   if (view === 'kunden' || view === 'aufgaben') { const j = await api('crm'); ST.crm = j.customers; ST.crmAll = j.all; ST.team = j.team; }
-  if (view === 'kunde') { ST.cd = null; try { const [d, t] = await Promise.all([api('crm-p&id=' + encodeURIComponent(arg)), ST.team ? null : api('tasks')]); ST.cd = d; if (t) ST.team = t.team; } catch (e) { if (e.status === 401) throw e; toast(e.message); } }
+  if (view === 'kunde') { ST.hrs = null; api('st-sites&p=' + encodeURIComponent(arg)).then(h => { ST.hrs = h; const el = $('#k-hrs'); if (el && ST.view === 'kunde') el.outerHTML = hoursCard(); }).catch(() => {}); ST.cd = null; try { const [d, t] = await Promise.all([api('crm-p&id=' + encodeURIComponent(arg)), ST.team ? null : api('tasks')]); ST.cd = d; if (t) ST.team = t.team; } catch (e) { if (e.status === 401) throw e; toast(e.message); } }
   if (view === 'home') { try { ST.dash = await api('dash'); } catch (e) { if (e.status === 401) throw e; ST.dash = null; } }
   if (view === 'aufgaben' || view === 'home') { const j = await api('tasks&scope=' + (view === 'home' ? 'meine' : CR.tscope)); ST.tasks = j.tasks; ST.tasksAll = j.all; ST.remind = j.remind; ST.team = j.team; }
 }

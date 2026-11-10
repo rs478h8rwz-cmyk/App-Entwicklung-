@@ -86,3 +86,27 @@ function st_send_ops(array $me, $to, array $ops, string $note): int {
   db()->prepare('INSERT INTO stempel_ops (user_id, ops, note, by_id) VALUES (?, ?, ?, ?)')->execute([$to === '*' ? null : (int)$to, json_encode($ops, JSON_UNESCAPED_UNICODE), mb_substr($note, 0, 500), $me['id']]);
   return (int)db()->lastInsertId();
 }
+
+/* Stunden auf der Baustelle eines Kunden: Baustellen-Namen aus der Stempeluhr, die zum Kunden passen
+   (Nachname bzw. Name ohne Anrede; bei mehreren Wörtern zusätzlich der Ort). */
+function st_customer_hours(string $pid): array {
+  st_tables(); require_once __DIR__ . '/crm-lib.php'; crm_tables();
+  $st = db()->prepare('SELECT ' . CRM_FIELDS . ' FROM projects p WHERE p.id = ? AND p.deleted = 0'); $st->execute([$pid]); $r = $st->fetch(); if (!$r) fail('Kunde nicht gefunden', 404);
+  $c = crm_row_out($r); $low = fn($s) => mb_strtolower(trim((string)$s));
+  $rest = trim(preg_replace('/^(familie|herr|frau|firma|eheleute)\s+/iu', '', $c['name'])); $rest = trim(preg_replace('/\s*\(.*\)$/u', '', $rest));
+  $words = preg_split('/\s+/u', $rest); $last = $low(end($words)); $full = $low($rest); $city = $low($c['city']);
+  if (mb_strlen($last) < 3) return ['total' => 0, 'people' => [], 'sites' => [], 'from' => null, 'to' => null, 'key' => $rest];
+  $match = function (string $site) use ($low, $full, $last, $city, $words) { $s = $low($site); if ($full !== '' && str_contains($s, $full)) return true; if (count($words) === 1) return str_contains($s, $last); return str_contains($s, $last) && $city !== '' && str_contains($s, $city); };
+  $q = db()->prepare("SELECT user_id, iso, data FROM stempel_days WHERE deleted = 0 AND data LIKE ?"); $q->execute(['%' . $last . '%']);
+  $n = user_names(); $people = []; $sites = []; $total = 0; $from = null; $to = null;
+  foreach ($q->fetchAll() as $row) {
+    $d = json_decode($row['data'], true); if (!$d || empty($d['_sites'])) continue;
+    foreach ($d['_sites'] as $x) {
+      if (!$match((string)($x['site'] ?? ''))) continue; $m = (int)($x['min'] ?? 0); if ($m <= 0) continue;
+      $total += $m; $uid = (int)$row['user_id']; $people[$uid] = ($people[$uid] ?? 0) + $m; $sites[$x['site']] = true;
+      $from = $from === null || $row['iso'] < $from ? $row['iso'] : $from; $to = $to === null || $row['iso'] > $to ? $row['iso'] : $to;
+    }
+  }
+  arsort($people);
+  return ['total' => $total, 'people' => array_map(fn($u, $m) => ['name' => $n[$u] ?? '', 'min' => $m], array_keys($people), $people), 'sites' => array_keys($sites), 'from' => $from, 'to' => $to, 'key' => $rest];
+}

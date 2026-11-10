@@ -343,6 +343,11 @@ try {
       $u = require_user(); require_once LD_PRIV_DIR . '/stempel-lib.php';
       json_out(['me' => user_out($u), 'office' => sees_all($u)] + st_sync($u, body()));
     }
+    case 'GET st-sites': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/stempel-lib.php'; $pid = (string)($_GET['p'] ?? '');
+      $p = valid_id($pid) ? project_row($pid) : null; if (!can_see_project($u, $p)) fail('Keine Berechtigung', 403);
+      json_out(st_customer_hours($pid));
+    }
     case 'POST st-ack': {
       $u = require_user(); require_once LD_PRIV_DIR . '/stempel-lib.php';
       st_ack($u, (array)(body()['ids'] ?? [])); json_out(['ok' => true]);

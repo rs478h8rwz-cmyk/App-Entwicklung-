@@ -6,8 +6,8 @@
    - Büro/Admin (LumbraDesk-Rolle) sehen unter „Mitarbeiter“ alle Kollegen und schicken Änderungen direkt.
    ========================================================= */
 const LDS = { on: false, me: null, office: false, dirty: new Set(), setDirty: false, since: 0, last: 0, err: '', busy: false, timer: null, device: '', staffAt: 0 };
-async function ldsState() { const s = (await DB.get('kv', 'ld-sync')) || {}; LDS.since = s.since || 0; LDS.device = s.device || uid('d'); LDS.dirty = new Set(s.dirty || []); LDS.setDirty = !!s.setDirty; LDS.init = !!s.init; LDS.setUpd = s.setUpd || 0; LDS.info = !!s.info; }
-const ldsSave = () => DB.put('kv', { since: LDS.since, device: LDS.device, dirty: [...LDS.dirty], setDirty: LDS.setDirty, init: LDS.init, setUpd: LDS.setUpd, info: LDS.info }, 'ld-sync');
+async function ldsState() { const s = (await DB.get('kv', 'ld-sync')) || {}; LDS.since = s.since || 0; LDS.device = s.device || uid('d'); LDS.dirty = new Set(s.dirty || []); LDS.setDirty = !!s.setDirty; LDS.init = !!s.init; LDS.setUpd = s.setUpd || 0; LDS.info = !!s.info; LDS.v21 = !!s.v21; }
+const ldsSave = () => DB.put('kv', { since: LDS.since, device: LDS.device, dirty: [...LDS.dirty], setDirty: LDS.setDirty, init: LDS.init, setUpd: LDS.setUpd, info: LDS.info, v21: LDS.v21 || !LDS.init }, 'ld-sync');
 const ldsSoon = (ms = 3000) => { if (!LDS.on) return; clearTimeout(LDS.timer); LDS.timer = setTimeout(ldsSync, ms); };
 
 /* Änderungen mitschreiben (Tage, Einstellungen) */
@@ -31,9 +31,10 @@ async function ldsApi(r, body) {
 async function ldsSync() {
   if (!LDS.on || LDS.busy || !navigator.onLine) return; LDS.busy = true; clearTimeout(LDS.timer);
   try {
+    if (LDS.init && !LDS.v21) { Object.keys(DAYS).forEach(i => LDS.dirty.add(i)); LDS.v21 = true; }   // einmalig: alle Tage mit Baustellen-Stunden neu schicken
     const fresh = !LDS.init;   // erstes Mal auf diesem Gerät: alles schicken und alles holen
     const isos = fresh ? Object.keys(DAYS) : [...LDS.dirty];
-    const days = isos.map(i => DAYS[i] ? clone(DAYS[i]) : { iso: i, _deleted: true, updated: Date.now() });
+    const days = isos.map(i => { if (!DAYS[i]) return { iso: i, _deleted: true, updated: Date.now() }; const d = clone(DAYS[i]); try { const c = calcDay(DAYS[i]); d._sites = c.sites; d._netto = c.netto; } catch (e) {} return d; });
     const sendSet = LDS.setDirty || fresh, noLocal = !Object.keys(DAYS).length && !S.person.start;
     const set = clone(S); delete set.admin; delete set.pin;
     const j = await ldsApi('st-sync', { device: LDS.device, version: APP_VERSION, since: fresh ? 0 : LDS.since, days, settings: sendSet && !(fresh && noLocal) ? set : undefined, settingsUpd: LDS.setUpd || Date.now(), wantSettings: fresh && noLocal });
@@ -55,7 +56,7 @@ async function ldsSync() {
     /* Änderungen vom Büro übernehmen */
     if ((j.ops || []).length) await ldsApplyOps(j.ops);
     if (changed && typeof rerender === 'function') rerender();
-    if (fresh && changed) toast(`Vom Server geholt: ${(j.days || []).length} Tage.`);
+    if (fresh && (j.days || []).length) toast(`Vom Server geholt: ${j.days.length} Tage.`);
     if (!LDS.info) ldsInfo();
   } catch (e) { LDS.err = e.status === 401 ? 'Bitte in LumbraDesk neu anmelden.' : 'Abgleich gerade nicht möglich – wird nachgeholt.'; }
   finally { LDS.busy = false; ldsStatusPaint(); if (LDS.dirty.size || LDS.setDirty) ldsSoon(30000); }
@@ -150,6 +151,20 @@ document.addEventListener('click', async e => {
   } catch (err) { toast('Senden nicht möglich: ' + err.message, 'err', 5000); }
 }, true);
 
+/* Baustellen-Vorschläge: laufende Aufträge aus LumbraDesk (Name, Ort) – so passen die Stunden später zum Kunden */
+LDS.sites = [];
+async function ldsCustomerSites() {
+  try { const j = await ldsApi('ab-customers'); LDS.sites = j.customers.filter(c => ['auftrag', 'montage'].includes(c.stage)).map(c => c.name.replace(/^(Familie|Herr|Frau|Firma|Eheleute)\s+/i, '') + (c.city ? ', ' + c.city : '')); await DB.put('kv', LDS.sites, 'ld-sites'); }
+  catch (e) { LDS.sites = (await DB.get('kv', 'ld-sites')) || []; }
+  ldsSitesPaint();
+}
+function ldsSitesPaint() {
+  const dl = $('#dl-sites'); if (!dl || !LDS.sites.length) return;
+  const have = new Set([...dl.options].map(o => o.value)); LDS.sites.forEach(n => { if (!have.has(n)) { const o = document.createElement('option'); o.value = n; o.label = 'Auftrag'; dl.appendChild(o); } });
+}
+const _renderLds = render;
+render = function () { _renderLds(); if (LDS.on) ldsSitesPaint(); };
+
 /* Start: nur unter LumbraDesk */
 (async function ldsStart() {
   if (!/\/stempel\/(index\.html)?$/.test(location.pathname)) return;
@@ -159,8 +174,9 @@ document.addEventListener('click', async e => {
     await ldsState(); LDS.on = true; LDS.me = j.user; LDS.office = ['admin', 'buero'].includes(j.user.role);
     if (LDS.office) DEVICE.admin = true;   // Büro/Admin in LumbraDesk: wie ein Admin-Gerät (nur solange angemeldet, nicht gespeichert)
     await ldsSync();
-    if (LDS.office) { try { await ldsLoadStaff(true); if (UI.tab === 'team') rerender(); } catch (e) {} }
-    setInterval(() => { ldsSync(); if (LDS.office && UI.tab === 'team' && UI.route !== 'home') ldsLoadStaff().then(() => rerender()).catch(() => {}); }, 60000);
+    if (LDS.office) { try { await ldsLoadStaff(true); if (typeof awEnable === 'function') awEnable(); if (UI.tab === 'team' || UI.tab === 'auswertung') rerender(); } catch (e) {} }
+    ldsCustomerSites();
+    setInterval(() => { ldsSync(); if (LDS.office && (UI.tab === 'team' || UI.tab === 'auswertung') && UI.route === 'settings') ldsLoadStaff().then(() => rerender()).catch(() => {}); }, 60000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ldsSync(); });
     window.addEventListener('online', () => ldsSync());
     if (typeof render === 'function') render();

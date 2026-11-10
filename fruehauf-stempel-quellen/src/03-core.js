@@ -4,7 +4,7 @@
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
