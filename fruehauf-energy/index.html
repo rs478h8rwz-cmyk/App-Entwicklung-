@@ -4267,7 +4267,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261110103638';
+const APP_VERSION = '20261110104703';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4684,6 +4684,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.24', date: '2026-11-10', items: [
+    ['house', 'Dachpfannen scannen', '„Automatisch zählen und scannen“: Wie bei einem QR-Code-Scanner fährt eine Laserlinie über das Dach, die App sucht die sichtbaren Pfannenkanten und legt das gelbe Raster genau darauf.'],
+    ['house', 'Pfannen nummeriert zur Kontrolle', 'Danach werden die oberste Reihe (1, 2, 3 …) und die linke Spalte nach unten durchnummeriert – oben steht die Gesamtzahl. Beim Module-Belegen ist alles wieder weg.']
+  ] },
   { version: '2.23', date: '2026-11-10', items: [
     ['fireworks', 'Neujahrs-Feuerwerk', 'Beim ersten Öffnen im neuen Jahr gibt es ein Feuerwerk über den ganzen Bildschirm und einen Neujahrsgruß. Ein- und ausschalten oder vorab ansehen: Einstellungen → Ansicht & Tutorial.'],
     ['house', 'Halloween noch gruseliger', 'Zu Halloween steht jetzt eine finstere Gestalt neben dem Haus, und ab und zu taucht ein Gruselgesicht mit Krallenhand am Fenster auf.'],
@@ -6399,7 +6403,8 @@ function roofPanel(p, f, g) {
       <p class="hint">Typische Werte – bitte prüfen. Änderungen werden für diesen Pfannentyp gespeichert.</p>
       <p class="hint" style="color:#C7792F">Kontrolle: Das gelbe Raster muss genau auf den Pfannenkanten liegen. Wenn nicht – Ecken oder Anzahl korrigieren. Tipp: Foto nicht mit 0,5×-Weitwinkel aufnehmen.</p>
       <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl flex items-center justify-between">Pfannen waagerecht<span class="flex gap-1"><button type="button" class="chip !h-6 !px-2 text-[11px]" data-r="nxdiv">÷2</button><button type="button" class="chip !h-6 !px-2 text-[11px]" data-r="nxmul">×2</button></span></span>${roofIn('nx', 'Stk')}</label><label><span class="lbl">Reihen senkrecht</span>${roofIn('ny', 'Stk')}</label></div>
-      <button class="btn-s w-full mt-2" data-r="autocount">${ic('sparkle', 16)}Automatisch zählen</button>
+      <button class="btn-s w-full mt-2" data-r="autocount">${ic('sparkle', 16)}Automatisch zählen und scannen</button>
+      <button class="btn-g w-full mt-1" data-r="numtiles">${ic('grid', 16)}${RS.num ? 'Nummern ausblenden' : 'Pfannen nummerieren (Kontrolle)'}</button>
       <p class="hint">Jedes gelbe Kästchen muss <b>genau eine</b> Pfanne sein. Liegen zwei Pfannen in einem Kästchen, ist die Anzahl zu klein (doppelte Zahl eintragen).</p>`}
       <div class="mt-3"><span class="lbl">Randabstände</span><div class="grid grid-cols-3 gap-2"><label><span class="text-[11px] text-ink3">First</span>${roofIn('mTop', 'cm')}</label><label><span class="text-[11px] text-ink3">Rinne</span>${roofIn('mBot', 'cm')}</label><label><span class="text-[11px] text-ink3">Seiten</span>${roofIn('mSide', 'cm')}</label></div></div>
       <div id="roof-dims" class="mt-3 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px]">${roofDims(g)}</div>
@@ -6474,12 +6479,14 @@ async function roofDraw() {
       /* Kontrollraster: so viele Linien wie gezählte Pfannen/Reihen – müssen auf den echten Pfannenkanten liegen */
       const nx = f.refMode === 'len' ? 0 : Math.min(80, Math.round(+f.nx || 0)), ny = f.refMode === 'len' ? 0 : Math.min(60, Math.round(+f.ny || 0));
       if (nx > 1 || ny > 1) {
-        const Hq = sqToQuad(f.ref.map(([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k])); x.save(); x.strokeStyle = 'rgba(255,240,140,.85)'; x.lineWidth = 1; x.beginPath();
-        for (let i = 1; i < nx; i++) { x.moveTo(...hApply(Hq, i / nx, 0)); x.lineTo(...hApply(Hq, i / nx, 1)); }
-        for (let j = 1; j < ny; j++) { x.moveTo(...hApply(Hq, 0, j / ny)); x.lineTo(...hApply(Hq, 1, j / ny)); }
+        const Hq = sqToQuad(f.ref.map(([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k])), [LX, LY] = roofGridLines(f, nx, ny);
+        x.save(); x.strokeStyle = 'rgba(255,240,140,.85)'; x.lineWidth = 1; x.beginPath();
+        for (const u of LX) if (u > 0.002 && u < 0.998) { x.moveTo(...hApply(Hq, u, 0)); x.lineTo(...hApply(Hq, u, 1)); }
+        for (const v of LY) if (v > 0.002 && v < 0.998) { x.moveTo(...hApply(Hq, 0, v)); x.lineTo(...hApply(Hq, 1, v)); }
         x.stroke(); x.restore();
+        if (RS.num) roofNumbers(x, Hq, LX, LY);
       }
-      quad(f.ref, 'rgb(229,154,92)', [8, 5], ['↖', '↗', '↘', '↙']);
+      if (!(RS.num && performance.now() - RS.num.t0 < 2650 && !matchMedia('(prefers-reduced-motion: reduce)').matches)) quad(f.ref, 'rgb(229,154,92)', [8, 5], ['↖', '↗', '↘', '↙']);
     }
     if (RS.act) { const q = f[RS.act[0]]; if (q && q[RS.act[1]]) { const [a, b] = S(q[RS.act[1]]); x.beginPath(); x.arc(a, b, 19, 0, 7); x.strokeStyle = '#fff'; x.lineWidth = 2.5; x.setLineDash([4, 3]); x.stroke(); x.setLineDash([]); } }
     if (RS.drag && RS.drag.loupe) roofLoupe(x, img, S(RS.drag.loupe), f, V, cw);
@@ -6664,7 +6671,7 @@ document.addEventListener('click', async e => {
     a.dataset.v = nx;
   }
   if ((r === 'step' || r === 'next') && (a.dataset.v === 'mod' || (r === 'next' && RS.step === 'ref')) && !p.roof.modAsked && roofMods().length && g && !g.bad) { return roofModDialog(p, () => { RS.step = 'mod'; roofRender(); }); }
-  if (r === 'step' || r === 'next' || r === 'prev') { const v = a.dataset.v; roofZoomReset(); RS.act = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
+  if (r === 'step' || r === 'next' || r === 'prev') { const v = a.dataset.v; roofZoomReset(); RS.act = null; RS.num = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
   if (r === 'face') { roofZoomReset(); RS.fi = +v; RS.sel = new Set(); RS.hist = []; RS.warp = null; const nf = roofF(); RS.step = !nf.photo ? 'photo' : faceGeom(nf) ? 'mod' : 'corners'; return roofRender(); }
   if (r === 'face-add' || r === 'face-add-photo') {
     const nf = roofNewFace(p.roof.faces.length + 1), same = r === 'face-add' && f.photo;
@@ -7107,6 +7114,116 @@ document.addEventListener('change', e => {
   roofDraw();
   toast(`Raster angepasst: ${num(+b.n)} → ${num(n)} ${b.k === 'w' ? 'Pfannen waagerecht' : 'Reihen senkrecht'}. Bitte prüfen, ob es auf den Pfannenkanten liegt.`);
 });
+
+/* ---------- Pfannenkanten erkennen, Scan-Animation und Nummerierung zur Kontrolle ---------- */
+/* Linien des Kontrollrasters (0…1 im Referenzrechteck): erkannte Kanten, solange Anzahl und Rechteck unverändert sind */
+function roofGridLines(f, nx, ny) {
+  const G = f.grid, ok = G && G.nx === nx && G.ny === ny && G.ref === JSON.stringify(f.ref);
+  const uni = n => Array.from({ length: n + 1 }, (_, i) => i / Math.max(1, n));
+  const edge = (L, n) => { const a = [0, ...L.filter(u => u > 0.002 && u < 0.998), 1].sort((p, q) => p - q), min = 0.3 / Math.max(1, n); return a.filter((u, i) => i === 0 || u - a[i - 1] > min || u === 1); };
+  return [nx > 1 ? (ok ? edge(G.xs, nx) : uni(nx)) : [0, 1], ny > 1 ? (ok ? edge(G.ys, ny) : uni(ny)) : [0, 1]];
+}
+/* Kanten in einem Profil: Raster mit Periode p so verschieben, dass es auf den stärksten Kanten liegt, dann jede Linie einzeln nachjustieren */
+function roofEdgeLines(prof, n) {
+  const N = prof.length, p = N / n; if (!(p >= 3)) return null;
+  const sm = new Float32Array(N); for (let i = 0; i < N; i++) { let s = 0, c = 0; for (let k = Math.max(0, i - 1); k <= Math.min(N - 1, i + 1); k++) { s += prof[k]; c++; } sm[i] = s / c; }
+  let bf = 0, bs = -1;
+  for (let ph = 0; ph < p; ph += 0.5) { let s = 0; for (let t = ph; t < N; t += p) s += sm[Math.min(N - 1, Math.round(t))]; if (s > bs) { bs = s; bf = ph; } }
+  const out = [], r = Math.max(1, Math.round(p * 0.22));
+  for (let t = bf; t < N; t += p) { const c = Math.round(t); let bi = c, bv = -1; for (let k = Math.max(0, c - r); k <= Math.min(N - 1, c + r); k++) if (sm[k] > bv) { bv = sm[k]; bi = k; } out.push(bi); }
+  const L = [...new Set(out)].sort((a, b) => a - b), gaps = L.slice(1).map((v, i) => v - L[i]).filter(g => g > p * 0.5).sort((a, b) => a - b);
+  const med = gaps.length ? gaps[gaps.length >> 1] : p;
+  return { lines: L.map(v => v / N), n: Math.max(1, Math.round(N / med)) };
+}
+/* Profile der Kantenstärke im entzerrten Referenzbereich (senkrechte Kanten je Spalte, waagerechte je Zeile) */
+async function roofEdgeProfiles(f) {
+  const img = await roofImg(f.photo); if (!img || !f.ref) return null;
+  const sc = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight)), sw = Math.round(img.naturalWidth * sc), sh = Math.round(img.naturalHeight * sc);
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, sw, sh);
+  const d = x.getImageData(0, 0, sw, sh).data, P = f.ref.map(([u, v]) => [u * sw, v * sh]), H = sqToQuad(P), Ln = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const W = Math.round(Math.max(Ln(P[0], P[1]), Ln(P[3], P[2]))), Hh = Math.round(Math.max(Ln(P[0], P[3]), Ln(P[1], P[2])));
+  if (W < 40 || Hh < 40) return null;
+  const G = new Float32Array(W * Hh);
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) { const [px, py] = hApply(H, (i + 0.5) / W, (j + 0.5) / Hh), xi = Math.min(sw - 1, Math.max(0, px | 0)), yi = Math.min(sh - 1, Math.max(0, py | 0)), k = (yi * sw + xi) * 4; G[j * W + i] = d[k] * 0.3 + d[k + 1] * 0.59 + d[k + 2] * 0.11; }
+  const col = new Float32Array(W), row = new Float32Array(Hh);
+  for (let j = 1; j < Hh - 1; j++) for (let i = 1; i < W - 1; i++) { const o = j * W + i; col[i] += Math.abs(G[o + 1] - G[o - 1]); row[j] += Math.abs(G[o + W] - G[o - W]); }
+  return { col, row };
+}
+/* Nach dem Zählen: Kantenlinien suchen und am Raster speichern */
+async function roofDetectGrid(f) {
+  const nx = Math.round(+f.nx || 0), ny = Math.round(+f.ny || 0); if (!(nx > 1 && ny > 1)) return false;
+  const pr = await roofEdgeProfiles(f); if (!pr) return false;
+  const a = roofEdgeLines(pr.col, nx), b = roofEdgeLines(pr.row, ny); if (!a || !b) return false;
+  /* Anzahl nur übernehmen, wenn sie nah an der gezählten liegt (sonst bleibt der Zählwert) */
+  const fx = Math.abs(a.n - nx) <= Math.max(1, nx * 0.12) ? a.n : nx, fy = Math.abs(b.n - ny) <= Math.max(1, ny * 0.12) ? b.n : ny;
+  f.nx = fx; f.ny = fy;
+  f.grid = { nx: Math.min(80, fx), ny: Math.min(60, fy), xs: a.lines, ys: b.lines, ref: JSON.stringify(f.ref) };
+  return true;
+}
+/* Nummern 1 … n in jede Pfanne, Reihe für Reihe – mit Scan-Animation */
+function roofNumbers(x, Hq, LX, LY) {
+  const A = RS.num, now = performance.now(), calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const tScan = calm ? 0 : 2600, tCount = calm ? 0 : 1600, e = now - A.t0;
+  if (e < tScan) {
+    /* Scanner wie bei einem QR-Code-Leser: leuchtende Eckwinkel, Laserlinie fährt runter und wieder hoch */
+    const s = e / tScan, y = 0.5 - 0.5 * Math.cos(2 * Math.PI * s), dir = s < 0.5 ? 1 : -1, poly = (v0, v1) => { x.beginPath(); [[0, v0], [1, v0], [1, v1], [0, v1]].map(([u, v]) => hApply(Hq, u, v)).forEach((pt, i) => (i ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); };
+    x.save();
+    poly(0, 1); x.fillStyle = 'rgba(5,10,20,.32)'; x.fill();
+    const tr = 0.12; for (let k = 0; k < 8; k++) { const a0 = y - dir * tr * (k + 1) / 8, a1 = y - dir * tr * k / 8, v0 = Math.max(0, Math.min(1, Math.min(a0, a1))), v1 = Math.max(0, Math.min(1, Math.max(a0, a1))); if (v1 <= v0) continue; poly(v0, v1); x.fillStyle = `rgba(60,255,170,${(0.26 * (1 - k / 8)).toFixed(3)})`; x.fill(); }
+    const a = hApply(Hq, 0, y), b = hApply(Hq, 1, y);
+    x.shadowColor = 'rgba(60,255,170,1)'; x.shadowBlur = 24; x.strokeStyle = 'rgba(190,255,225,1)'; x.lineWidth = 3; x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke();
+    x.shadowBlur = 10; x.fillStyle = '#E8FFF4';
+    for (const u of LX) for (const v of LY) { const d = (y - v) * dir; if (d >= 0 && d < 0.06) { const pt = hApply(Hq, u, v); x.globalAlpha = 1 - d / 0.06; x.beginPath(); x.arc(pt[0], pt[1], 2.6 * (1 - d / 0.06) + 0.6, 0, 7); x.fill(); } }
+    x.globalAlpha = 1;
+    /* Eckwinkel, leicht pulsierend */
+    const pl = 1 + 0.05 * Math.sin(e / 140), C = [[0, 0, 1, 1], [1, 0, -1, 1], [1, 1, -1, -1], [0, 1, 1, -1]], L = 0.13 * pl, o = -0.02 * pl;
+    x.shadowBlur = 16; x.strokeStyle = '#3CFFAA'; x.lineWidth = 4.5; x.lineCap = 'round'; x.lineJoin = 'round';
+    for (const [u, v, su, sv] of C) { const cu = u - su * -o, cv = v - sv * -o; x.beginPath(); x.moveTo(...hApply(Hq, cu + su * L, cv)); x.lineTo(...hApply(Hq, cu, cv)); x.lineTo(...hApply(Hq, cu, cv + sv * L * 1.6)); x.stroke(); }
+    x.shadowBlur = 0; const lab = 'Pfannen werden gescannt …', top = hApply(Hq, 0.5, 0); x.font = '700 14px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; const tw = x.measureText(lab).width + 22; x.fillStyle = 'rgba(12,20,28,.88)'; x.beginPath(); x.roundRect ? x.roundRect(top[0] - tw / 2, top[1] - 46, tw, 26, 13) : x.rect(top[0] - tw / 2, top[1] - 46, tw, 26); x.fill(); x.fillStyle = '#3CFFAA'; x.fillText(lab, top[0], top[1] - 33);
+    x.restore();
+  } else {
+    /* Nur oberste Reihe (Pfannen 1 … n, weiß) und linke Spalte (Reihen 2 … m, gelb) beschriften */
+    /* nur ganze Pfannen nummerieren – angeschnittene Randstücke auslassen */
+    const full = L => { const g = L.slice(1).map((v, i) => v - L[i]), m = g.slice().sort((p, q) => p - q)[g.length >> 1] || 1; return g.map((w, i) => (w >= m * 0.6 ? i : -1)).filter(i => i >= 0); };
+    const fc = full(LX), fr = full(LY), r0 = fr[0] || 0, c0 = fc[0] || 0, labs = [], f0 = roofF(), nC = Math.round(+f0.nx) || fc.length, nR = Math.round(+f0.ny) || fr.length;
+    fc.forEach((i, k) => labs.push([LX[i], LY[r0], LX[i + 1], LY[r0 + 1], String(k + 1), '#ffffff']));
+    fr.slice(1).forEach((j, k) => labs.push([LX[c0], LY[j], LX[c0 + 1], LY[j + 1], String(k + 2), '#FFD166']));
+    const shown = e >= tScan + tCount ? labs.length : Math.ceil(labs.length * (e - tScan) / tCount);
+    x.save(); x.textAlign = 'center'; x.textBaseline = 'middle';
+    for (let k = 0; k < shown; k++) {
+      const [u0, v0, u1, v1, t, col] = labs[k], c = hApply(Hq, (u0 + u1) / 2, (v0 + v1) / 2), w = Math.hypot(...[0, 1].map(q => hApply(Hq, u1, (v0 + v1) / 2)[q] - hApply(Hq, u0, (v0 + v1) / 2)[q])), h = Math.hypot(...[0, 1].map(q => hApply(Hq, (u0 + u1) / 2, v1)[q] - hApply(Hq, (u0 + u1) / 2, v0)[q]));
+      const fs = Math.min(w / (t.length * 0.62 + 0.2), h * 0.7, 22); if (fs < 4.5) continue;
+      x.font = `800 ${fs.toFixed(1)}px system-ui, sans-serif`; x.lineWidth = Math.max(1.5, fs / 4); x.strokeStyle = 'rgba(0,0,0,.8)'; x.strokeText(t, c[0], c[1]); x.fillStyle = k === shown - 1 && shown < labs.length ? '#7DFFE6' : col; x.fillText(t, c[0], c[1]);
+    }
+    const top = hApply(Hq, 0.5, 0), lab = shown === labs.length ? `${num(nC)} Pfannen × ${num(nR)} Reihen = ${num(nC * nR)} Pfannen` : 'Zähle …';
+    x.font = '700 14px system-ui, sans-serif'; const tw = x.measureText(lab).width + 22; x.fillStyle = 'rgba(12,20,28,.88)'; x.beginPath(); x.roundRect ? x.roundRect(top[0] - tw / 2, top[1] - 40, tw, 26, 13) : x.rect(top[0] - tw / 2, top[1] - 40, tw, 26); x.fill(); x.fillStyle = '#7DFFE6'; x.fillText(lab, top[0], top[1] - 27);
+    if (shown === labs.length && !A.small) { A.small = true; const w0 = Math.hypot(...[0, 1].map(q => hApply(Hq, LX[1], 0)[q] - hApply(Hq, LX[0], 0)[q])); if (w0 < 9) toast('Die Nummern sind zum Lesen zu klein – bitte ins Bild hineinzoomen.'); }
+    x.restore();
+  }
+  if (e < tScan + tCount + 50 && !RS.numRaf) RS.numRaf = requestAnimationFrame(() => { RS.numRaf = 0; if (RS && RS.num === A && RS.step === 'ref') roofDraw(); });
+}
+function roofStartNumbers() { if (!RS) return; RS.num = { t0: performance.now() }; roofSoft(); }
+
+/* „Automatisch zählen“: zählen, Kanten suchen, dann scannen und nummerieren */
+const _roofAutoCount224 = roofAutoCount;
+roofAutoCount = async function (f) {
+  const r = await _roofAutoCount224(f); if (!r) return r;
+  const keep = [f.nx, f.ny]; f.nx = r.nx; f.ny = r.ny;
+  try { if (await roofDetectGrid(f)) { r.nx = f.nx; r.ny = f.ny; } } catch (e) {}
+  f.nx = keep[0]; f.ny = keep[1];
+  setTimeout(roofStartNumbers, 60);
+  return r;
+};
+/* Knopf „Pfannen nummerieren“ (ohne neu zu zählen) und Umschalten der Anzeige */
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('[data-r="numtiles"]'); if (!a || !RS) return;
+  e.preventDefault(); const f = roofF();
+  if (RS.num) { RS.num = null; roofSoft(); return; }
+  if (!(+f.nx > 0 && +f.ny > 0)) return toast('Bitte zuerst die Pfannen zählen oder eintragen.', 'warn');
+  a.disabled = true; a.textContent = 'Suche Pfannenkanten …';
+  const g = f.grid; if (!(g && g.nx === Math.round(+f.nx) && g.ny === Math.round(+f.ny) && g.ref === JSON.stringify(f.ref))) { try { await roofDetectGrid(f); } catch (err) {} }
+  roofSave(); roofStartNumbers();
+});
 /* Startanimation: Haus → Photovoltaik → Speicher → Wärmepumpe → E-Auto → Zoom → Logo → Zoom → App */
 const SPLASH = { ready: false, done: false, skip: false };
 const splashCfg = () => Object.assign({ on: true, logo: 'company', file: '' }, S.design.splash || {});
@@ -7275,7 +7392,7 @@ const TUT_STEPS = [
   ['quick', 'Schnellauslegung Wärmepumpe', 'Die App fragt, ob Sie die Wärmepumpe schnell auslegen möchten. Sie geben ein paar Eckdaten ein und bekommen Heizlast und eine passende Wärmepumpe vorgeschlagen.', ['Wohnfläche, Baujahr, Verbrauch und Dämmung eintragen – oder die Heizlast direkt.', 'Rechts erscheint die Empfehlung → „Übernehmen“.', 'Später jederzeit in der Kundenübersicht: „Schnellauslegung anpassen“.']],
   ['upload', 'Angebot hochladen', 'Ziehen Sie das Angebot als PDF hinein oder machen Sie ein Foto davon. Die App liest Kunde, Preise, Anlagendaten, Garantien und Produkte automatisch aus.', ['Auf die gestrichelte Fläche tippen und das Angebot wählen.', 'Erkannte Werte kurz prüfen – sie sind mit „aus Angebot“ markiert.', 'Erkannte Produkte aus Ihrer Datenbank werden automatisch übernommen.']],
   ['data', 'Daten prüfen und ergänzen', 'Oben sehen Sie, wo Sie gerade sind: Angebot → Kunde → Daten → Ergebnis. Fehlt etwas, tragen Sie es einfach ein. Kleine Schilder zeigen, woher ein Wert stammt.', ['Grün „aus Angebot“, blau „Schnellauslegung“ oder „Modulplan“.', 'PLZ eintippen – der Ort wird automatisch ergänzt.', 'Rote Warnung = Werte passen nicht zusammen. Bitte auswählen, welcher Wert stimmt.', 'Mit „Weiter“ zum nächsten Schritt.']],
-  ['roof', 'Modulbelegung (Dach planen)', 'Fotografieren Sie das Dach (oder nehmen Sie ein Drohnenbild) und legen Sie die Module direkt aufs Foto. So sieht der Kunde, wie seine Anlage aussieht.', ['In der Kundenübersicht „Modulbelegung“ antippen.', 'Foto wählen, die Dachecken antippen, Module platzieren.', 'Rot markierte Module überlappen sich – etwas verschieben.', '„Übernehmen“ – im PDF zählen trotzdem nur die Produkte aus dem Angebot.']],
+  ['roof', 'Modulbelegung (Dach planen)', 'Fotografieren Sie das Dach (oder nehmen Sie ein Drohnenbild) und legen Sie die Module direkt aufs Foto. So sieht der Kunde, wie seine Anlage aussieht.', ['In der Kundenübersicht „Modulbelegung“ antippen.', 'Foto wählen, Dachecken antippen, dann „Automatisch zählen und scannen“ – die oberste Reihe und linke Spalte werden zur Kontrolle nummeriert.', 'Rot markierte Module überlappen sich – etwas verschieben.', '„Übernehmen“ – im PDF zählen trotzdem nur die Produkte aus dem Angebot.']],
   ['funding', 'Förderung', 'Bei der Wärmepumpe rechnet die App die BEG-Förderung automatisch aus. Wichtig sind Wohneinheiten, selbst bewohnte Wohneinheiten und das Einkommen.', ['Anzahl Wohneinheiten eintragen.', '„Davon selbst bewohnt“ wählen – Klima- und Einkommensbonus gibt es nur dafür.', 'Einkommen auswählen – der Fördersatz rechts aktualisiert sich sofort.']],
   ['result', 'Ergebnis zeigen', 'Jetzt sehen Sie Ersparnis, Amortisation und Förderung auf einen Blick. Ideal, um es dem Kunden direkt auf dem Tablet zu zeigen.', ['Oben „Übersicht“ oder „Dokument-Vorschau“ wählen.', 'Mit dem Monatsregler einen Tag im Winter oder Sommer zeigen.', '„Hochpushen“ zeigt das optimistische Szenario.']],
   ['pdf', 'PDF erstellen', 'Wählen Sie das Layout: die komplette PDF mit allen Details oder die kurze Vertriebs-PDF. Dann „PDF erstellen“ – fertig zum Senden.', ['Im Ergebnis rechts „Layout“ wählen: Komplett oder Vertrieb.', '„PDF erstellen“ antippen und den Sonderrabatt kurz prüfen.', 'Danach per E-Mail senden oder speichern.']],

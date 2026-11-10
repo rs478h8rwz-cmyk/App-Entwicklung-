@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.24', date: '2026-11-10', items: [
+    ['house', 'Dachpfannen scannen', '„Automatisch zählen und scannen“: Wie bei einem QR-Code-Scanner fährt eine Laserlinie über das Dach, die App sucht die sichtbaren Pfannenkanten und legt das gelbe Raster genau darauf.'],
+    ['house', 'Pfannen nummeriert zur Kontrolle', 'Danach werden die oberste Reihe (1, 2, 3 …) und die linke Spalte nach unten durchnummeriert – oben steht die Gesamtzahl. Beim Module-Belegen ist alles wieder weg.']
+  ] },
   { version: '2.23', date: '2026-11-10', items: [
     ['fireworks', 'Neujahrs-Feuerwerk', 'Beim ersten Öffnen im neuen Jahr gibt es ein Feuerwerk über den ganzen Bildschirm und einen Neujahrsgruß. Ein- und ausschalten oder vorab ansehen: Einstellungen → Ansicht & Tutorial.'],
     ['house', 'Halloween noch gruseliger', 'Zu Halloween steht jetzt eine finstere Gestalt neben dem Haus, und ab und zu taucht ein Gruselgesicht mit Krallenhand am Fenster auf.'],
