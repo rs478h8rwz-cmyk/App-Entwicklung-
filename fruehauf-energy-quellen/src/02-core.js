@@ -342,6 +342,7 @@ function modal(html, opts = {}) {
       ${html}
     </div></div>`;
   root.querySelector('[data-modal-bg]').addEventListener('click', e => { if (e.target.hasAttribute('data-modal-bg')) closeModal(); });
+  if (document.getElementById('roof-ed') && root.firstElementChild) root.firstElementChild.style.zIndex = '90';
 }
 function closeModal() { $('#modal').innerHTML = ''; }
 function confirmDlg(title, text, okLabel = 'Löschen', danger = true) {

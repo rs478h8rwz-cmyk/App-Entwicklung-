@@ -586,6 +586,7 @@ function modal(html, opts = {}) {
       ${html}
     </div></div>`;
   root.querySelector('[data-modal-bg]').addEventListener('click', e => { if (e.target.hasAttribute('data-modal-bg')) closeModal(); });
+  if (document.getElementById('roof-ed') && root.firstElementChild) root.firstElementChild.style.zIndex = '90';
 }
 function closeModal() { $('#modal').innerHTML = ''; }
 function confirmDlg(title, text, okLabel = 'Löschen', danger = true) {
@@ -739,7 +740,7 @@ function newProject(type) {
     status: 'offen', statusDate: today, variants: [], sign: null, signDraft: { place: '' },
     rod: { on: false, name: '', kw: null, months: 5 },
     hh: { cons: c.hhCons, price: c.hhPrice },
-    fund: { stand: currentStand(today).id, eu: false, euMode: 'auto', speed: null, income: 'none', units: 1, eligible: null, other: 0 },
+    fund: { stand: currentStand(today).id, eu: false, euMode: 'auto', speed: null, income: 'none', units: 1, self: '1', eligible: null, other: 0 },
     discount: { on: true, amount: S.discount.amount, until: addDays(today, S.discount.days) },
     scenario: 'real',
     components: [],
@@ -871,16 +872,24 @@ function fundingOf(p) {
   out.cap = st.first + Math.min(Math.max(units - 1, 0), 5) * st.unit2 + Math.max(units - 6, 0) * st.unit7;
   out.eligible = isNum(f.eligible) && f.eligible > 0 ? f.eligible : (p.type === 'pvwp' ? nz(p.offer.grossWP) : grossOf(p));
   out.base = Math.min(out.eligible, out.cap);
-  const parts = [['Grundförderung', st.base]];
-  if (euOf(p) && st.eu > 0) parts.push(['Wertschöpfungsbonus (EU-Wärmepumpe)', st.eu]);
-  out.speedOn = f.speed === null || f.speed === undefined ? speedAuto(p).on : !!f.speed;
-  if (out.speedOn && st.speed > 0) parts.push(['Klimageschwindigkeitsbonus', st.speed]);
-  const inc = { '50': st.inc50, '40': st.inc40, '30': st.inc30 }[f.income];
-  if (inc) parts.push([`Einkommensbonus (bis ${f.income}.000 € zVE)`, inc]);
-  if (st.eff > 0) parts.push(['Effizienzbonus', st.eff]);
-  const sum = parts.reduce((a, b) => a + b[1], 0), max = f.income === '30' ? st.max30 : st.max;
-  out.rate = Math.min(sum, max); out.capped = sum > max; out.max = max; out.parts = parts;
-  out.amount = out.base * out.rate / 100;
+  /* Selbst bewohnte Wohneinheiten: Klimageschwindigkeits- und Einkommensbonus gibt es nur für diese –
+     die förderfähigen Kosten werden dafür gleichmäßig auf alle Wohneinheiten verteilt. */
+  const selfU = f.self === undefined || f.self === null || f.self === '' ? 1 : Math.max(0, Math.min(units, Math.round(+f.self)));
+  out.units = units; out.selfU = selfU;
+  const all = [['Grundförderung', st.base]];
+  if (euOf(p) && st.eu > 0) all.push(['Wertschöpfungsbonus (EU-Wärmepumpe)', st.eu]);
+  if (st.eff > 0) all.push(['Effizienzbonus', st.eff]);
+  const own = [], tag = units > 1 ? ` – nur ${selfU === 1 ? 'selbst bewohnte Wohneinheit' : selfU + ' selbst bewohnte Wohneinheiten'}` : '';
+  out.speedOn = selfU > 0 && (f.speed === null || f.speed === undefined ? speedAuto(p).on : !!f.speed);
+  if (out.speedOn && st.speed > 0) own.push(['Klimageschwindigkeitsbonus' + tag, st.speed]);
+  const inc = selfU > 0 ? { '50': st.inc50, '40': st.inc40, '30': st.inc30 }[f.income] : 0;
+  if (inc) own.push([`Einkommensbonus (bis ${f.income}.000 € zVE)` + tag, inc]);
+  const max = inc && f.income === '30' ? st.max30 : st.max, sAll = all.reduce((a, b) => a + b[1], 0), sOwn = sAll + own.reduce((a, b) => a + b[1], 0);
+  const rAll = Math.min(sAll, st.max), rOwn = Math.min(sOwn, max), shareOwn = out.base * selfU / units;
+  out.rateOwn = rOwn; out.rateAll = rAll; out.shareOwn = shareOwn;
+  out.amount = shareOwn * rOwn / 100 + (out.base - shareOwn) * rAll / 100;
+  out.rate = out.base ? Math.round(out.amount / out.base * 1000) / 10 : rOwn;
+  out.capped = sOwn > max; out.max = max; out.parts = all.concat(own);
   return out;
 }
 
@@ -1486,7 +1495,11 @@ async function handleUpload(p, role, fileList, replaceId) {
     saveProject(p); render();
   }
 }
-function setFrom(p, path, v) { if (v === undefined || v === null || v === '' || (typeof v === 'number' && !isFinite(v))) return false; setPath(p, path, v); p.from[path] = true; return true; }
+/* Modulanzahl/-leistung aus „40 × 500 W + 2 × 430 W“ */
+const modCount = s => String(s || '').split('+').reduce((a, x) => { const m = /(\d+(?:[.,]\d+)?)\s*[×x]/.exec(x); return a + (m ? Math.round(+m[1].replace(',', '.')) : 0); }, 0);
+const modWatt = s => { const m = /[×x]\s*(\d{3})\s*W/.exec(String(s || '')); return m ? +m[1] : 0; };
+function setFrom(p, path, v) { if (v === undefined || v === null || v === '' || (typeof v === 'number' && !isFinite(v))) return false; setPath(p, path, v); p.from[path] = true; if (p.src) delete p.src[path]; return true; }
+function setSrc(p, path, v, label) { setPath(p, path, v); p.from[path] = false; (p.src = p.src || {})[path] = label; }
 function applyRecognition(p, doc, r) {
   if (doc.role !== 'tech') {
     const c = r.customer || {};
@@ -1501,7 +1514,7 @@ function applyRecognition(p, doc, r) {
     setFrom(p, 'offer.date', r.date);
     if (r.advisor) { const m = (S.company.advisors || []).find(a => a.name && (a.name.toLowerCase() === r.advisor.toLowerCase() || a.name.toLowerCase().includes(r.advisor.toLowerCase()) || r.advisor.toLowerCase().includes(a.name.toLowerCase()))); setFrom(p, 'offer.advisor', m ? m.name : r.advisor); p.offer.advisorId = m ? m.id : ''; p.offer.advisorPhone = r.advisorPhone || ''; p.offer.advisorEmail = r.advisorEmail || ''; }
     if (r.date) { p.discount.until = addDays(r.date > isoToday() ? r.date : isoToday(), S.discount.days); }
-    if (hasPV(p)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.bat', r.bat); setFrom(p, 'pv.modules', r.modules); ['modMaker', 'modWarranty', 'batMaker', 'batWarranty', 'invMaker', 'invWarranty'].forEach(k => setFrom(p, 'pv.' + k, r[k])); }
+    if (hasPV(p)) { if (r.kwp) p.offerPv = { kwp: r.kwp, modules: r.modules || '', n: modCount(r.modules), w: modWatt(r.modules) }; if (!(p.roof && p.roof.applied)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.modules', r.modules); } setFrom(p, 'pv.bat', r.bat); ['modMaker', 'modWarranty', 'batMaker', 'batWarranty', 'invMaker', 'invWarranty'].forEach(k => setFrom(p, 'pv.' + k, r[k])); }
   }
   if (hasWP(p)) {
     setFrom(p, 'hp.kw', r.hpKw); setFrom(p, 'hp.model', r.hpModel); setFrom(p, 'hp.warranty', r.hpWarranty); setFrom(p, 'hp.buffer', r.hpBuffer); setFrom(p, 'hp.dhw', r.hpDhw); setFrom(p, 'hp.dims', r.dims); setFrom(p, 'hp.weight', r.weight);
@@ -2120,6 +2133,7 @@ function bset(b, v) {
   if (s.kind === 'p') saveProject(s.obj); else if (s.kind === 'x') saveProducts(); else saveSettings();
 }
 const isFrom = b => b.startsWith('p:') && curProject() && curProject().from[b.slice(2)];
+const srcBadge = b => { const p = b.startsWith('p:') && curProject(); if (!p) return ''; const k = b.slice(2), s = (p.src || {})[k]; if (s) return `<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus ${esc(s)}</span>`; return p.from[k] ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus Angebot</span>' : ''; };
 function inp(b, o = {}) {
   const t = o.t || 's', v = bval(b), empty = v === null || v === undefined || v === '';
   const type = t === 'date' ? 'date' : t === 'email' ? 'email' : t === 'tel' ? 'tel' : 'text';
@@ -2129,12 +2143,12 @@ function inp(b, o = {}) {
   return `<div class="relative"><input class="${cls}" type="${type}" ${im} data-b="${esc(b)}" data-t="${t}" value="${esc(inputFmt(v, t))}" placeholder="${esc(ph)}" autocomplete="off" ${o.attrs || ''}>${o.unit ? `<span class="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-ink4 pointer-events-none">${o.unit}</span>` : ''}</div>`;
 }
 function field(label, b, o = {}) {
-  return `<label class="block ${o.cls || ''}"><span class="lbl flex flex-wrap items-center gap-2">${label}${isFrom(b) ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus Angebot</span>' : ''}</span>${inp(b, o)}${o.hint ? `<div class="hint ${o.hintCls || ''}">${o.hint}</div>` : ''}</label>`;
+  return `<label class="block ${o.cls || ''}"><span class="lbl flex flex-wrap items-center gap-2">${label}${srcBadge(b)}</span>${inp(b, o)}${o.hint ? `<div class="hint ${o.hintCls || ''}">${o.hint}</div>` : ''}</label>`;
 }
 function area(label, b, rows = 3, o = {}) { return `<label class="block ${o.cls || ''}"><span class="lbl">${label}</span><textarea class="inp" rows="${rows}" data-b="${esc(b)}" data-t="s">${esc(bval(b) || '')}</textarea>${o.hint ? `<div class="hint">${o.hint}</div>` : ''}</label>`; }
 function sel(label, b, opts, o = {}) {
   const v = bval(b);
-  return `<label class="block ${o.cls || ''}"><span class="lbl flex items-center gap-2">${label}${isFrom(b) ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus Angebot</span>' : ''}</span><select class="inp appearance-none pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8D9C' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 16px center" data-b="${esc(b)}" data-t="${o.t || 's'}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${String(v) === String(k) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${o.hint ? `<div class="hint">${o.hint}</div>` : ''}</label>`;
+  return `<label class="block ${o.cls || ''}"><span class="lbl flex items-center gap-2">${label}${srcBadge(b)}</span><select class="inp appearance-none pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8D9C' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 16px center" data-b="${esc(b)}" data-t="${o.t || 's'}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${String(v) === String(k) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${o.hint ? `<div class="hint">${o.hint}</div>` : ''}</label>`;
 }
 const tgl = (b, on, extra = '') => `<button type="button" class="tgl ${on ? 'on' : ''}" ${b ? `data-tg="${esc(b)}"` : ''} role="switch" aria-checked="${on}" ${extra}></button>`;
 function toggleRow(label, b, hint = '', o = {}) {
@@ -2475,7 +2489,7 @@ function step3(p, R) {
         ${p.rod && p.rod.on ? `<div class="grid sm:grid-cols-3 gap-4 mt-4">${field('Bezeichnung', 'p:rod.name', { ph: S.calc.rodName })}${field('Leistung', 'p:rod.kw', { t: 'n', unit: 'kW', ph: num(S.calc.rodKw, 1) })}${sel('Sommerbetrieb', 'p:rod.months', [[3, 'Juni bis August'], [4, 'Mai bis August'], [5, 'Mai bis September'], [6, 'Mai bis Oktober']], { t: 'y' })}</div>` : ''}</div>` : ''}</div>`;
   }
   if (hasPV(p)) {
-    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}${typeof roofCard === 'function' ? roofCard(p) : ''}${typeof quickPvOffer === 'function' ? quickPvOffer(p, true) : ''}
+    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}${typeof roofWarnCard === 'function' ? roofWarnCard(p) : ''}${typeof roofCard === 'function' ? roofCard(p) : ''}${typeof quickPvOffer === 'function' ? quickPvOffer(p, true) : ''}
       <div class="grid sm:grid-cols-2 gap-4">${field('Anlagenleistung', 'p:pv.kwp', { t: 'n', unit: 'kWp', hint: p.pv.modules ? esc(p.pv.modules) : '' })}${field('Batteriespeicher', 'p:pv.bat', { t: 'n', unit: 'kWh', ph: '0' })}</div>
       ${det('pv-maker', 'Hersteller & Garantien', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Module (Hersteller / Typ)', 'p:pv.modMaker', { ph: 'z. B. Winaico WST-BKX54' })}${field('Garantie Module', 'p:pv.modWarranty', { ph: 'z. B. 30 Jahre Produkt- und Leistungsgarantie' })}${field('Speicher (Hersteller / Typ)', 'p:pv.batMaker', { ph: 'z. B. EcoFlow Ocean 2' })}${field('Garantie Speicher', 'p:pv.batWarranty', { ph: 'z. B. 15 Jahre Produktgarantie' })}${field('Wechselrichter (Hersteller / Typ)', 'p:pv.invMaker')}${field('Garantie Wechselrichter', 'p:pv.invWarranty')}</div><p class="hint">Wird aus dem Angebot übernommen und erscheint im Kundendokument.</p>`, [p.pv.modMaker, p.pv.batMaker].filter(Boolean).map(esc).join(' · '))}
       ${roofsCard(p, R)}
@@ -2504,10 +2518,12 @@ function fundingCard(p, R) {
     </div>
     <div class="grid sm:grid-cols-2 gap-4 mt-3">
       ${sel('Einkommensbonus', 'p:fund.income', [['none', 'kein Einkommensbonus'], ['50', `bis 50.000 € zVE (+${st.inc50} %)`], ['40', `bis 40.000 € zVE (+${st.inc40} %)`], ['30', `bis 30.000 € zVE (+${st.inc30} %)`]], { hint: 'Mit Kind unter 18 werden 10.000 € vom zu versteuernden Einkommen abgezogen.' })}
-      ${field('Wohneinheiten', 'p:fund.units', { t: 'y' })}
+      ${field('Wohneinheiten', 'p:fund.units', { t: 'y', hint: `Förderfähig max. ${eur(F.cap)} (1. WE ${eur(st.first)}, 2.–6. je ${eur(st.unit2)}, ab 7. je ${eur(st.unit7)})` })}
+      ${sel(F.units > 1 ? 'Davon selbst bewohnt (Eigentümer)' : 'Selbst bewohnt?', 'p:fund.self', F.units > 1 ? Array.from({ length: F.units + 1 }, (_, i) => [String(i), i === 0 ? 'keine – alle vermietet' : `${i} von ${F.units} Wohneinheiten`]) : [['1', 'Ja – Eigentümer wohnt selbst'], ['0', 'Nein – vermietet / nicht selbst genutzt']], { hint: 'Klimageschwindigkeits- und Einkommensbonus gibt es nur für selbst bewohnte Wohneinheiten (anteilig).' })}
       ${field(p.type === 'pvwp' ? 'Förderfähige Kosten (WP-Anteil)' : 'Förderfähige Kosten', 'p:fund.eligible', { t: 'n', unit: '€', ph: num(p.type === 'pvwp' ? nz(p.offer.grossWP) : grossOf(p)), hint: `Leer = ${p.type === 'pvwp' ? 'Bruttopreis des WP-Angebots' : 'Bruttopreis'} · Kappungsgrenze ${eur(F.cap)}` })}
       ${field('Sonstige Zuschüsse', 'p:fund.other', { t: 'n', unit: '€' })}
     </div>
+    ${F.units > 1 || F.selfU === 0 ? `<div class="mt-4 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] space-y-1"><div class="flex justify-between gap-3"><span>${F.selfU ? `Selbst bewohnt (${F.selfU} WE): ${eur(F.shareOwn)} × ${pct(F.rateOwn)}` : 'Kein selbst bewohnter Anteil'}</span><b>${eur(F.shareOwn * F.rateOwn / 100)}</b></div><div class="flex justify-between gap-3"><span>Nicht selbst bewohnt (${F.units - F.selfU} WE): ${eur(F.base - F.shareOwn)} × ${pct(F.rateAll)}</span><b>${eur((F.base - F.shareOwn) * F.rateAll / 100)}</b></div><div class="text-ink3 text-[12px]">Klimageschwindigkeits- und Einkommensbonus nur für selbst bewohnte Wohneinheiten; förderfähige Kosten gleichmäßig je Wohneinheit verteilt.</div></div>` : ''}
     <div class="mt-4 rounded-[calc(var(--r)-4px)] p-4 text-white flex items-center justify-between gap-3" style="background:var(--hl)"><div><div class="text-[12.5px] opacity-90">Fördersatz ${F.capped ? `(gedeckelt auf ${F.max} %)` : ''}</div><div class="text-[24px] font-semibold">${pct(F.rate)}</div></div><div class="text-right"><div class="text-[12.5px] opacity-90">Förderung</div><div class="text-[24px] font-semibold" style="color:var(--hl-num)">${eur(F.amount)}</div></div></div></div>`;
 }
 function prodThumb(pr, s = 44) {
@@ -4228,7 +4244,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261109214356';
+const APP_VERSION = '20261110100427';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4645,6 +4661,12 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.21', date: '2026-11-10', items: [
+    ['house', 'Modulplan und Angebot abgleichen', 'Weichen Modulplan und Angebot voneinander ab (mehr oder weniger Module), erscheint eine rote Warnung – mit Wahl, ob mit Modulplan oder Angebot gerechnet wird. Ein später eingelesenes Angebot überschreibt einen übernommenen Modulplan nicht mehr.'],
+    ['house', 'Welche Module sind geplant?', 'Vor dem Belegen fragt der Modulplan nach dem Modul – das Modul aus dem Angebot ist vorausgewählt.'],
+    ['house', 'Förderung je Wohneinheit', 'Neu: „selbst bewohnt / nicht selbst bewohnt“. Klimageschwindigkeits- und Einkommensbonus werden nur für selbst bewohnte Wohneinheiten gerechnet (anteilig), Grundförderung für alle.'],
+    ['house', 'Verbrauch aus der Schnellauslegung', 'Wärmebedarf und Stromverbrauch der Wärmepumpe pro Jahr werden aus der Schnellauslegung übernommen (gekennzeichnet „aus Schnellauslegung“).']
+  ] },
   { version: '2.20', date: '2026-11-09', items: [
     ['house', 'Art der Berechnung ändern', 'Im Kunden oben auf „WP“, „PV“ oder „PV + WP“ tippen – so wird z. B. aus einem reinen Wärmepumpen-Kunden nachträglich PV + Wärmepumpe. Alle Eingaben bleiben erhalten.']
   ] },
@@ -5719,6 +5741,13 @@ function quickApplyTo(p) {
   p.quick = { v: 2, state: clone(QS), load: Math.round(r.load * 100) / 100, total: Math.round(r.total * 100) / 100, jaz: Math.round(r.jaz * 100) / 100, te: qTe(), date: isoToday() };
   p.quick.prod = pr ? pr.name : ''; p.quick.bv = r.sim ? r.sim.bv : null; p.quick.deck = r.sim ? r.sim.deck : null;
   p.hp.kw = pr ? pr.power : p.quick.total; p.hp.jaz = p.quick.jaz;
+  /* Jahresverbrauch aus der Simulation: Wärmebedarf und Strombedarf der Wärmepumpe (inkl. Heizstab) */
+  const sim = r.sim; if (sim && sim.total > 0) {
+    const el = Math.round(sim.eWP + (sim.isEl ? sim.rod : 0));
+    if (!(p.from && p.from['hp.heat'])) setSrc(p, 'hp.heat', Math.round(sim.total), 'Schnellauslegung');
+    if (!(p.from && p.from['hp.power']) && el > 0) setSrc(p, 'hp.power', el, 'Schnellauslegung');
+    p.quick.heat = Math.round(sim.total); p.quick.power = el;
+  }
 }
 /* Karte im Bereich „Neue Wärmepumpe“ */
 function quickCard(p) {
@@ -5786,7 +5815,7 @@ document.addEventListener('click', async e => {
       toast(`Schnellauslegung übernommen: ${num(np.hp.kw, 1)} kW, JAZ ${num(np.hp.jaz, 2)}.`);
     } else {
       const p = findProject(QPID); if (!p) return; const was = p.type; if (p.type === 'pv') p.type = 'pvwp'; quickApplyTo(p); saveProject(p); closeModal(); render();
-      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}.` + (was === 'pv' ? ' Kunde ist jetzt PV + Wärmepumpe.' : ''));
+      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}${p.quick.power ? `, Stromverbrauch WP ca. ${num(p.quick.power)} kWh/Jahr` : ''}.` + (was === 'pv' ? ' Kunde ist jetzt PV + Wärmepumpe.' : ''), 'ok', 5000);
     }
   }
 });
@@ -6163,6 +6192,7 @@ async function roofOpen(pid) {
   if (!roofOk()) { toast('Der Modulplan braucht einen größeren Bildschirm – bitte am iPad, PC oder aufgeklappten Foldable öffnen.'); return; }
   p.roof = p.roof || { faces: [], saves: [] };
   if (!p.roof.faces.length) p.roof.faces.push(roofNewFace(1));
+  if (!p.roof.modAsked) { const g = roofGuessProd(p); if (g) p.roof.faces.forEach(f => { if (!f.mods.length) f.prodId = g; }); }
   RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', zm: { z: 1, x: 0, y: 0 }, ptrs: new Map(), pinch: null, mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
   document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col" style="height:100dvh"></div>');
   /* Seite fixieren – verhindert auf dem iPad versetzte Tipp-Positionen nach der Tastatur */
@@ -6496,6 +6526,7 @@ document.addEventListener('click', async e => {
     if (RS.step === 'ref') { const gg = faceGeom(f); if (!gg) return toast(f.refMode === 'len' ? 'Bitte Breite und Höhe der Referenz eingeben.' : 'Bitte die Anzahl der Pfannen waagerecht und der Reihen senkrecht eingeben.'); if (gg.bad) return toast('Die Maße wirken unplausibel – bitte Referenz-Rechteck und Anzahl prüfen (gelbes Raster muss auf den Pfannen liegen).'); }
     a.dataset.v = nx;
   }
+  if ((r === 'step' || r === 'next') && (a.dataset.v === 'mod' || (r === 'next' && RS.step === 'ref')) && !p.roof.modAsked && roofMods().length && g && !g.bad) { return roofModDialog(p, () => { RS.step = 'mod'; roofRender(); }); }
   if (r === 'step' || r === 'next' || r === 'prev') { const v = a.dataset.v; roofZoomReset(); RS.act = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
   if (r === 'face') { roofZoomReset(); RS.fi = +v; RS.sel = new Set(); RS.hist = []; RS.warp = null; const nf = roofF(); RS.step = !nf.photo ? 'photo' : faceGeom(nf) ? 'mod' : 'corners'; return roofRender(); }
   if (r === 'face-add' || r === 'face-add-photo') {
@@ -6569,7 +6600,8 @@ async function roofApply(p) {
     try { applyComponents(p); } catch (e) {}
     p.pv.kwp = Math.round(kwp * 1000) / 1000; p.pv.modules = `${n} × ${num(pr0.power)} W`;
   }
-  p.roof.applied = { n, kwp: p.pv.kwp, date: isoToday() };
+  setSrc(p, 'pv.kwp', p.pv.kwp, 'Modulplan'); setSrc(p, 'pv.modules', p.pv.modules, 'Modulplan');
+  p.roof.applied = { n, kwp: p.pv.kwp, w: pr0.power, mod: pr0.name || '', date: isoToday() };
   saveProject(p); await roofSaveSnaps(p); toast(`Übernommen: ${n} Module · ${num(kwp, 2)} kWp – Foto der Belegung beim Kunden hinterlegt.`); roofClose();
 }
 
@@ -6870,6 +6902,56 @@ function roofOthers(x, f, S, k) {
     x.font = '600 12px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = o.name + (o.mods.length ? ` · ${o.mods.length}` : ''), w = x.measureText(t).width + 14;
     x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(cx - w / 2, cy - 11, w, 22); x.fillStyle = '#fff'; x.fillText(t, cx, cy); x.restore();
   });
+}
+
+/* ---------- Vergleich Modulplan ↔ Angebot ---------- */
+function offerPvOf(p) {
+  if (p.offerPv && p.offerPv.kwp) return p.offerPv;
+  if (p.from && p.from['pv.kwp'] && p.pv.kwp) return { kwp: p.pv.kwp, modules: p.pv.modules || '', n: modCount(p.pv.modules), w: modWatt(p.pv.modules) };
+  return null;
+}
+function roofCompare(p) {
+  const a = p.roof && p.roof.applied, o = offerPvOf(p); if (!a || !o) return null;
+  const dn = o.n ? a.n - o.n : 0, dk = Math.round((a.kwp - o.kwp) * 100) / 100;
+  if (!dn && Math.abs(dk) < 0.05) return { ok: true, a, o };
+  return { ok: false, a, o, dn, dk };
+}
+function roofWarnCard(p) {
+  const c = roofCompare(p); if (!c || c.ok) return '';
+  const { a, o, dn, dk } = c, curPlan = Math.abs(+p.pv.kwp - a.kwp) < 0.01;
+  const what = o.n && dn ? `${Math.abs(dn)} Module ${dn > 0 ? 'mehr' : 'weniger'}` : `${num(Math.abs(dk), 2)} kWp ${dk > 0 ? 'mehr' : 'weniger'}`;
+  return `<div class="mb-4 rounded-[calc(var(--r)-4px)] p-4 border-2 border-[#D9482B]" style="background:var(--t-red)">
+    <div class="flex items-center gap-2 font-semibold text-red-ink">${ic('alert', 18)}Modulplan und Angebot passen nicht zusammen – ${what}</div>
+    <div class="grid sm:grid-cols-2 gap-2 mt-3 text-[14px]">
+      <div class="rounded-lg bg-card p-3 ${curPlan ? 'ring-2 ring-p' : ''}"><div class="text-[12px] text-ink3">Modulplan</div><b>${num(a.n)} Module · ${num(a.kwp, 2)} kWp</b><div class="text-[12px] text-ink3">${esc(a.mod || '')}${a.w ? ` · ${num(a.w)} W` : ''}</div></div>
+      <div class="rounded-lg bg-card p-3 ${curPlan ? '' : 'ring-2 ring-p'}"><div class="text-[12px] text-ink3">Angebot</div><b>${o.n ? num(o.n) + ' Module · ' : ''}${num(o.kwp, 2)} kWp</b><div class="text-[12px] text-ink3">${esc(o.modules || '')}</div></div></div>
+    <div class="flex flex-wrap gap-2 mt-3"><button class="btn-s !h-9 text-[13px]" data-a="pv-use" data-v="plan" data-id="${p.id}" ${curPlan ? 'disabled' : ''}>Modulplan verwenden (${num(a.kwp, 2)} kWp)</button><button class="btn-s !h-9 text-[13px]" data-a="pv-use" data-v="offer" data-id="${p.id}" ${curPlan ? '' : 'disabled'}>Angebot verwenden (${num(o.kwp, 2)} kWp)</button>${typeof roofOk === 'function' && roofOk() ? `<button class="btn-g !h-9 text-[13px]" data-a="roof-open" data-id="${p.id}">${ic('grid', 14)}Modulplan anpassen</button>` : ''}</div>
+    <p class="text-[12px] text-ink3 mt-2">Gerechnet wird mit dem markierten Wert.</p></div>`;
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('[data-a="pv-use"]'); if (!a) return;
+  const p = findProject(a.dataset.id), c = p && roofCompare(p); if (!c) return;
+  if (a.dataset.v === 'plan') { setSrc(p, 'pv.kwp', c.a.kwp, 'Modulplan'); setSrc(p, 'pv.modules', `${c.a.n} × ${num(c.a.w)} W`, 'Modulplan'); }
+  else { setFrom(p, 'pv.kwp', c.o.kwp); setFrom(p, 'pv.modules', c.o.modules); }
+  saveProject(p); render(); toast(a.dataset.v === 'plan' ? 'Gerechnet wird mit dem Modulplan.' : 'Gerechnet wird mit dem Angebot.');
+});
+
+/* ---------- „Welche Module sind geplant?“ ---------- */
+function roofGuessProd(p) {
+  const comp = (p.components || []).map(c => PRODUCTS.find(x => x.id === c.id)).find(x => x && x.cat === 'mod' && +x.len > 0);
+  if (comp) return comp.id;
+  const o = offerPvOf(p), txt = `${p.pv.modMaker || ''} ${o ? o.modules : ''}`.toLowerCase(), mods = roofMods();
+  const wm = /(\d{3})\s*(?:w|wp|watt)\b/.exec(String(p.pv.modMaker || '').toLowerCase()), w = (wm && +wm[1]) || (o && o.w) || 0;
+  const mk = x => x.maker && txt.includes(String(x.maker).toLowerCase());
+  const hit = mods.find(x => mk(x) && w && +x.power === w) || mods.find(mk) || (w && mods.find(x => +x.power === w));
+  return (hit || {}).id || '';
+}
+function roofModDialog(p, then) {
+  const mods = roofMods(), cur = (p.roof.modAsked ? (p.roof.faces[0] || {}).prodId : roofGuessProd(p)) || (p.roof.faces[0] || {}).prodId || (mods[0] || {}).id, o = offerPvOf(p);
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Welche Module sind geplant?</h3><p class="text-ink3 text-[14px] mt-1">${o ? `Im Angebot: <b>${esc(o.modules || num(o.kwp, 2) + ' kWp')}</b>${p.pv.modMaker ? ` – ${esc(p.pv.modMaker)}` : ''}` : 'Das Modul bestimmt Größe und Leistung im Plan.'}</p>
+    <div class="space-y-2 mt-5 max-h-[50vh] overflow-y-auto">${mods.length ? mods.map(x => `<label class="flex items-center gap-3 rounded-[var(--rb)] border border-line2 p-3 cursor-pointer has-[:checked]:border-p has-[:checked]:bg-p/10"><input type="radio" name="roof-mod" value="${x.id}" ${x.id === cur ? 'checked' : ''}><span class="flex-1"><b class="text-[14px]">${esc([x.maker, x.name].filter(Boolean).join(' – '))}</b><span class="block text-[12px] text-ink3">${num(x.power)} W · ${num(x.len)} × ${num(x.wid)} mm</span></span></label>`).join('') : '<div class="text-[14px] text-ink3">Noch keine Module mit Maßen unter „Produkte“ angelegt – bis dahin wird ein Standardmodul verwendet.</div>'}</div>
+    <button class="btn-p w-full mt-5" id="roof-mod-ok">${ic('check', 16)}Übernehmen</button>`);
+  $('#roof-mod-ok').onclick = () => { const v = ($('input[name="roof-mod"]:checked') || {}).value; if (v) p.roof.faces.forEach(f => { f.prodId = v; }); p.roof.modAsked = true; saveProject(p); closeModal(); then && then(); };
 }
 /* Startanimation: Haus → Photovoltaik → Speicher → Wärmepumpe → E-Auto → Zoom → Logo → Zoom → App */
 const SPLASH = { ready: false, done: false, skip: false };
@@ -7281,7 +7363,7 @@ document.addEventListener('input', e => {
   if (el.dataset.b) {
     const v = readVal(el); if (v === undefined) return;
     const b = el.dataset.b;
-    if (b.startsWith('p:') && curProject()) delete curProject().from[b.slice(2)];
+    if (b.startsWith('p:') && curProject()) { delete curProject().from[b.slice(2)]; if (curProject().src) delete curProject().src[b.slice(2)]; }
     bset(b, v);
     if (b === 'u:search') { const l = $('#cust-list'); render(); return; }
     if (b.startsWith('s:design.') && !b.startsWith('s:design.cover')) applyTheme();

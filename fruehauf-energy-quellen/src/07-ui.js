@@ -21,6 +21,7 @@ function bset(b, v) {
   if (s.kind === 'p') saveProject(s.obj); else if (s.kind === 'x') saveProducts(); else saveSettings();
 }
 const isFrom = b => b.startsWith('p:') && curProject() && curProject().from[b.slice(2)];
+const srcBadge = b => { const p = b.startsWith('p:') && curProject(); if (!p) return ''; const k = b.slice(2), s = (p.src || {})[k]; if (s) return `<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus ${esc(s)}</span>`; return p.from[k] ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus Angebot</span>' : ''; };
 function inp(b, o = {}) {
   const t = o.t || 's', v = bval(b), empty = v === null || v === undefined || v === '';
   const type = t === 'date' ? 'date' : t === 'email' ? 'email' : t === 'tel' ? 'tel' : 'text';
@@ -30,12 +31,12 @@ function inp(b, o = {}) {
   return `<div class="relative"><input class="${cls}" type="${type}" ${im} data-b="${esc(b)}" data-t="${t}" value="${esc(inputFmt(v, t))}" placeholder="${esc(ph)}" autocomplete="off" ${o.attrs || ''}>${o.unit ? `<span class="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-ink4 pointer-events-none">${o.unit}</span>` : ''}</div>`;
 }
 function field(label, b, o = {}) {
-  return `<label class="block ${o.cls || ''}"><span class="lbl flex flex-wrap items-center gap-2">${label}${isFrom(b) ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus Angebot</span>' : ''}</span>${inp(b, o)}${o.hint ? `<div class="hint ${o.hintCls || ''}">${o.hint}</div>` : ''}</label>`;
+  return `<label class="block ${o.cls || ''}"><span class="lbl flex flex-wrap items-center gap-2">${label}${srcBadge(b)}</span>${inp(b, o)}${o.hint ? `<div class="hint ${o.hintCls || ''}">${o.hint}</div>` : ''}</label>`;
 }
 function area(label, b, rows = 3, o = {}) { return `<label class="block ${o.cls || ''}"><span class="lbl">${label}</span><textarea class="inp" rows="${rows}" data-b="${esc(b)}" data-t="s">${esc(bval(b) || '')}</textarea>${o.hint ? `<div class="hint">${o.hint}</div>` : ''}</label>`; }
 function sel(label, b, opts, o = {}) {
   const v = bval(b);
-  return `<label class="block ${o.cls || ''}"><span class="lbl flex items-center gap-2">${label}${isFrom(b) ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">aus Angebot</span>' : ''}</span><select class="inp appearance-none pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8D9C' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 16px center" data-b="${esc(b)}" data-t="${o.t || 's'}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${String(v) === String(k) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${o.hint ? `<div class="hint">${o.hint}</div>` : ''}</label>`;
+  return `<label class="block ${o.cls || ''}"><span class="lbl flex items-center gap-2">${label}${srcBadge(b)}</span><select class="inp appearance-none pr-10" style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8D9C' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 16px center" data-b="${esc(b)}" data-t="${o.t || 's'}">${opts.map(([k, l]) => `<option value="${esc(k)}" ${String(v) === String(k) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${o.hint ? `<div class="hint">${o.hint}</div>` : ''}</label>`;
 }
 const tgl = (b, on, extra = '') => `<button type="button" class="tgl ${on ? 'on' : ''}" ${b ? `data-tg="${esc(b)}"` : ''} role="switch" aria-checked="${on}" ${extra}></button>`;
 function toggleRow(label, b, hint = '', o = {}) {
@@ -376,7 +377,7 @@ function step3(p, R) {
         ${p.rod && p.rod.on ? `<div class="grid sm:grid-cols-3 gap-4 mt-4">${field('Bezeichnung', 'p:rod.name', { ph: S.calc.rodName })}${field('Leistung', 'p:rod.kw', { t: 'n', unit: 'kW', ph: num(S.calc.rodKw, 1) })}${sel('Sommerbetrieb', 'p:rod.months', [[3, 'Juni bis August'], [4, 'Mai bis August'], [5, 'Mai bis September'], [6, 'Mai bis Oktober']], { t: 'y' })}</div>` : ''}</div>` : ''}</div>`;
   }
   if (hasPV(p)) {
-    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}${typeof roofCard === 'function' ? roofCard(p) : ''}${typeof quickPvOffer === 'function' ? quickPvOffer(p, true) : ''}
+    out += `<div class="card p-5 sm:p-6">${cardHead('sun', 'Photovoltaik')}${typeof roofWarnCard === 'function' ? roofWarnCard(p) : ''}${typeof roofCard === 'function' ? roofCard(p) : ''}${typeof quickPvOffer === 'function' ? quickPvOffer(p, true) : ''}
       <div class="grid sm:grid-cols-2 gap-4">${field('Anlagenleistung', 'p:pv.kwp', { t: 'n', unit: 'kWp', hint: p.pv.modules ? esc(p.pv.modules) : '' })}${field('Batteriespeicher', 'p:pv.bat', { t: 'n', unit: 'kWh', ph: '0' })}</div>
       ${det('pv-maker', 'Hersteller & Garantien', `<div class="grid sm:grid-cols-2 gap-4 pt-1">${field('Module (Hersteller / Typ)', 'p:pv.modMaker', { ph: 'z. B. Winaico WST-BKX54' })}${field('Garantie Module', 'p:pv.modWarranty', { ph: 'z. B. 30 Jahre Produkt- und Leistungsgarantie' })}${field('Speicher (Hersteller / Typ)', 'p:pv.batMaker', { ph: 'z. B. EcoFlow Ocean 2' })}${field('Garantie Speicher', 'p:pv.batWarranty', { ph: 'z. B. 15 Jahre Produktgarantie' })}${field('Wechselrichter (Hersteller / Typ)', 'p:pv.invMaker')}${field('Garantie Wechselrichter', 'p:pv.invWarranty')}</div><p class="hint">Wird aus dem Angebot übernommen und erscheint im Kundendokument.</p>`, [p.pv.modMaker, p.pv.batMaker].filter(Boolean).map(esc).join(' · '))}
       ${roofsCard(p, R)}
@@ -405,10 +406,12 @@ function fundingCard(p, R) {
     </div>
     <div class="grid sm:grid-cols-2 gap-4 mt-3">
       ${sel('Einkommensbonus', 'p:fund.income', [['none', 'kein Einkommensbonus'], ['50', `bis 50.000 € zVE (+${st.inc50} %)`], ['40', `bis 40.000 € zVE (+${st.inc40} %)`], ['30', `bis 30.000 € zVE (+${st.inc30} %)`]], { hint: 'Mit Kind unter 18 werden 10.000 € vom zu versteuernden Einkommen abgezogen.' })}
-      ${field('Wohneinheiten', 'p:fund.units', { t: 'y' })}
+      ${field('Wohneinheiten', 'p:fund.units', { t: 'y', hint: `Förderfähig max. ${eur(F.cap)} (1. WE ${eur(st.first)}, 2.–6. je ${eur(st.unit2)}, ab 7. je ${eur(st.unit7)})` })}
+      ${sel(F.units > 1 ? 'Davon selbst bewohnt (Eigentümer)' : 'Selbst bewohnt?', 'p:fund.self', F.units > 1 ? Array.from({ length: F.units + 1 }, (_, i) => [String(i), i === 0 ? 'keine – alle vermietet' : `${i} von ${F.units} Wohneinheiten`]) : [['1', 'Ja – Eigentümer wohnt selbst'], ['0', 'Nein – vermietet / nicht selbst genutzt']], { hint: 'Klimageschwindigkeits- und Einkommensbonus gibt es nur für selbst bewohnte Wohneinheiten (anteilig).' })}
       ${field(p.type === 'pvwp' ? 'Förderfähige Kosten (WP-Anteil)' : 'Förderfähige Kosten', 'p:fund.eligible', { t: 'n', unit: '€', ph: num(p.type === 'pvwp' ? nz(p.offer.grossWP) : grossOf(p)), hint: `Leer = ${p.type === 'pvwp' ? 'Bruttopreis des WP-Angebots' : 'Bruttopreis'} · Kappungsgrenze ${eur(F.cap)}` })}
       ${field('Sonstige Zuschüsse', 'p:fund.other', { t: 'n', unit: '€' })}
     </div>
+    ${F.units > 1 || F.selfU === 0 ? `<div class="mt-4 rounded-[calc(var(--r)-4px)] bg-raised p-3 text-[13px] space-y-1"><div class="flex justify-between gap-3"><span>${F.selfU ? `Selbst bewohnt (${F.selfU} WE): ${eur(F.shareOwn)} × ${pct(F.rateOwn)}` : 'Kein selbst bewohnter Anteil'}</span><b>${eur(F.shareOwn * F.rateOwn / 100)}</b></div><div class="flex justify-between gap-3"><span>Nicht selbst bewohnt (${F.units - F.selfU} WE): ${eur(F.base - F.shareOwn)} × ${pct(F.rateAll)}</span><b>${eur((F.base - F.shareOwn) * F.rateAll / 100)}</b></div><div class="text-ink3 text-[12px]">Klimageschwindigkeits- und Einkommensbonus nur für selbst bewohnte Wohneinheiten; förderfähige Kosten gleichmäßig je Wohneinheit verteilt.</div></div>` : ''}
     <div class="mt-4 rounded-[calc(var(--r)-4px)] p-4 text-white flex items-center justify-between gap-3" style="background:var(--hl)"><div><div class="text-[12.5px] opacity-90">Fördersatz ${F.capped ? `(gedeckelt auf ${F.max} %)` : ''}</div><div class="text-[24px] font-semibold">${pct(F.rate)}</div></div><div class="text-right"><div class="text-[12.5px] opacity-90">Förderung</div><div class="text-[24px] font-semibold" style="color:var(--hl-num)">${eur(F.amount)}</div></div></div></div>`;
 }
 function prodThumb(pr, s = 44) {

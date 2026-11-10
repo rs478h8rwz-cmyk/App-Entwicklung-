@@ -122,6 +122,7 @@ async function roofOpen(pid) {
   if (!roofOk()) { toast('Der Modulplan braucht einen größeren Bildschirm – bitte am iPad, PC oder aufgeklappten Foldable öffnen.'); return; }
   p.roof = p.roof || { faces: [], saves: [] };
   if (!p.roof.faces.length) p.roof.faces.push(roofNewFace(1));
+  if (!p.roof.modAsked) { const g = roofGuessProd(p); if (g) p.roof.faces.forEach(f => { if (!f.mods.length) f.prodId = g; }); }
   RS = { pid, fi: 0, step: p.roof.faces[0].photo ? (faceGeom(p.roof.faces[0]) ? 'mod' : 'corners') : 'photo', zm: { z: 1, x: 0, y: 0 }, ptrs: new Map(), pinch: null, mode: 'add', look: PERSONAL.roofLook || 'flat', multi: false, magnet: true, sel: new Set(), hist: [], drag: null };
   document.body.insertAdjacentHTML('beforeend', '<div id="roof-ed" class="fixed inset-0 z-[75] bg-bg flex flex-col" style="height:100dvh"></div>');
   /* Seite fixieren – verhindert auf dem iPad versetzte Tipp-Positionen nach der Tastatur */
@@ -455,6 +456,7 @@ document.addEventListener('click', async e => {
     if (RS.step === 'ref') { const gg = faceGeom(f); if (!gg) return toast(f.refMode === 'len' ? 'Bitte Breite und Höhe der Referenz eingeben.' : 'Bitte die Anzahl der Pfannen waagerecht und der Reihen senkrecht eingeben.'); if (gg.bad) return toast('Die Maße wirken unplausibel – bitte Referenz-Rechteck und Anzahl prüfen (gelbes Raster muss auf den Pfannen liegen).'); }
     a.dataset.v = nx;
   }
+  if ((r === 'step' || r === 'next') && (a.dataset.v === 'mod' || (r === 'next' && RS.step === 'ref')) && !p.roof.modAsked && roofMods().length && g && !g.bad) { return roofModDialog(p, () => { RS.step = 'mod'; roofRender(); }); }
   if (r === 'step' || r === 'next' || r === 'prev') { const v = a.dataset.v; roofZoomReset(); RS.act = null; RS.step = v; if (v === 'ref' && !f.ref) { const c = f.corners, l = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]; f.ref = [l(c[1], c[3], 0.12), l(c[2], c[0], 0.12), l(c[3], c[1], 0.12), l(c[0], c[2], 0.12)]; } RS.sel = new Set(); roofSave(); return roofRender(); }
   if (r === 'face') { roofZoomReset(); RS.fi = +v; RS.sel = new Set(); RS.hist = []; RS.warp = null; const nf = roofF(); RS.step = !nf.photo ? 'photo' : faceGeom(nf) ? 'mod' : 'corners'; return roofRender(); }
   if (r === 'face-add' || r === 'face-add-photo') {
@@ -528,7 +530,8 @@ async function roofApply(p) {
     try { applyComponents(p); } catch (e) {}
     p.pv.kwp = Math.round(kwp * 1000) / 1000; p.pv.modules = `${n} × ${num(pr0.power)} W`;
   }
-  p.roof.applied = { n, kwp: p.pv.kwp, date: isoToday() };
+  setSrc(p, 'pv.kwp', p.pv.kwp, 'Modulplan'); setSrc(p, 'pv.modules', p.pv.modules, 'Modulplan');
+  p.roof.applied = { n, kwp: p.pv.kwp, w: pr0.power, mod: pr0.name || '', date: isoToday() };
   saveProject(p); await roofSaveSnaps(p); toast(`Übernommen: ${n} Module · ${num(kwp, 2)} kWp – Foto der Belegung beim Kunden hinterlegt.`); roofClose();
 }
 
@@ -829,4 +832,54 @@ function roofOthers(x, f, S, k) {
     x.font = '600 12px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; const t = o.name + (o.mods.length ? ` · ${o.mods.length}` : ''), w = x.measureText(t).width + 14;
     x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(cx - w / 2, cy - 11, w, 22); x.fillStyle = '#fff'; x.fillText(t, cx, cy); x.restore();
   });
+}
+
+/* ---------- Vergleich Modulplan ↔ Angebot ---------- */
+function offerPvOf(p) {
+  if (p.offerPv && p.offerPv.kwp) return p.offerPv;
+  if (p.from && p.from['pv.kwp'] && p.pv.kwp) return { kwp: p.pv.kwp, modules: p.pv.modules || '', n: modCount(p.pv.modules), w: modWatt(p.pv.modules) };
+  return null;
+}
+function roofCompare(p) {
+  const a = p.roof && p.roof.applied, o = offerPvOf(p); if (!a || !o) return null;
+  const dn = o.n ? a.n - o.n : 0, dk = Math.round((a.kwp - o.kwp) * 100) / 100;
+  if (!dn && Math.abs(dk) < 0.05) return { ok: true, a, o };
+  return { ok: false, a, o, dn, dk };
+}
+function roofWarnCard(p) {
+  const c = roofCompare(p); if (!c || c.ok) return '';
+  const { a, o, dn, dk } = c, curPlan = Math.abs(+p.pv.kwp - a.kwp) < 0.01;
+  const what = o.n && dn ? `${Math.abs(dn)} Module ${dn > 0 ? 'mehr' : 'weniger'}` : `${num(Math.abs(dk), 2)} kWp ${dk > 0 ? 'mehr' : 'weniger'}`;
+  return `<div class="mb-4 rounded-[calc(var(--r)-4px)] p-4 border-2 border-[#D9482B]" style="background:var(--t-red)">
+    <div class="flex items-center gap-2 font-semibold text-red-ink">${ic('alert', 18)}Modulplan und Angebot passen nicht zusammen – ${what}</div>
+    <div class="grid sm:grid-cols-2 gap-2 mt-3 text-[14px]">
+      <div class="rounded-lg bg-card p-3 ${curPlan ? 'ring-2 ring-p' : ''}"><div class="text-[12px] text-ink3">Modulplan</div><b>${num(a.n)} Module · ${num(a.kwp, 2)} kWp</b><div class="text-[12px] text-ink3">${esc(a.mod || '')}${a.w ? ` · ${num(a.w)} W` : ''}</div></div>
+      <div class="rounded-lg bg-card p-3 ${curPlan ? '' : 'ring-2 ring-p'}"><div class="text-[12px] text-ink3">Angebot</div><b>${o.n ? num(o.n) + ' Module · ' : ''}${num(o.kwp, 2)} kWp</b><div class="text-[12px] text-ink3">${esc(o.modules || '')}</div></div></div>
+    <div class="flex flex-wrap gap-2 mt-3"><button class="btn-s !h-9 text-[13px]" data-a="pv-use" data-v="plan" data-id="${p.id}" ${curPlan ? 'disabled' : ''}>Modulplan verwenden (${num(a.kwp, 2)} kWp)</button><button class="btn-s !h-9 text-[13px]" data-a="pv-use" data-v="offer" data-id="${p.id}" ${curPlan ? '' : 'disabled'}>Angebot verwenden (${num(o.kwp, 2)} kWp)</button>${typeof roofOk === 'function' && roofOk() ? `<button class="btn-g !h-9 text-[13px]" data-a="roof-open" data-id="${p.id}">${ic('grid', 14)}Modulplan anpassen</button>` : ''}</div>
+    <p class="text-[12px] text-ink3 mt-2">Gerechnet wird mit dem markierten Wert.</p></div>`;
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('[data-a="pv-use"]'); if (!a) return;
+  const p = findProject(a.dataset.id), c = p && roofCompare(p); if (!c) return;
+  if (a.dataset.v === 'plan') { setSrc(p, 'pv.kwp', c.a.kwp, 'Modulplan'); setSrc(p, 'pv.modules', `${c.a.n} × ${num(c.a.w)} W`, 'Modulplan'); }
+  else { setFrom(p, 'pv.kwp', c.o.kwp); setFrom(p, 'pv.modules', c.o.modules); }
+  saveProject(p); render(); toast(a.dataset.v === 'plan' ? 'Gerechnet wird mit dem Modulplan.' : 'Gerechnet wird mit dem Angebot.');
+});
+
+/* ---------- „Welche Module sind geplant?“ ---------- */
+function roofGuessProd(p) {
+  const comp = (p.components || []).map(c => PRODUCTS.find(x => x.id === c.id)).find(x => x && x.cat === 'mod' && +x.len > 0);
+  if (comp) return comp.id;
+  const o = offerPvOf(p), txt = `${p.pv.modMaker || ''} ${o ? o.modules : ''}`.toLowerCase(), mods = roofMods();
+  const wm = /(\d{3})\s*(?:w|wp|watt)\b/.exec(String(p.pv.modMaker || '').toLowerCase()), w = (wm && +wm[1]) || (o && o.w) || 0;
+  const mk = x => x.maker && txt.includes(String(x.maker).toLowerCase());
+  const hit = mods.find(x => mk(x) && w && +x.power === w) || mods.find(mk) || (w && mods.find(x => +x.power === w));
+  return (hit || {}).id || '';
+}
+function roofModDialog(p, then) {
+  const mods = roofMods(), cur = (p.roof.modAsked ? (p.roof.faces[0] || {}).prodId : roofGuessProd(p)) || (p.roof.faces[0] || {}).prodId || (mods[0] || {}).id, o = offerPvOf(p);
+  modal(`<h3 class="text-[20px] font-semibold pr-8">Welche Module sind geplant?</h3><p class="text-ink3 text-[14px] mt-1">${o ? `Im Angebot: <b>${esc(o.modules || num(o.kwp, 2) + ' kWp')}</b>${p.pv.modMaker ? ` – ${esc(p.pv.modMaker)}` : ''}` : 'Das Modul bestimmt Größe und Leistung im Plan.'}</p>
+    <div class="space-y-2 mt-5 max-h-[50vh] overflow-y-auto">${mods.length ? mods.map(x => `<label class="flex items-center gap-3 rounded-[var(--rb)] border border-line2 p-3 cursor-pointer has-[:checked]:border-p has-[:checked]:bg-p/10"><input type="radio" name="roof-mod" value="${x.id}" ${x.id === cur ? 'checked' : ''}><span class="flex-1"><b class="text-[14px]">${esc([x.maker, x.name].filter(Boolean).join(' – '))}</b><span class="block text-[12px] text-ink3">${num(x.power)} W · ${num(x.len)} × ${num(x.wid)} mm</span></span></label>`).join('') : '<div class="text-[14px] text-ink3">Noch keine Module mit Maßen unter „Produkte“ angelegt – bis dahin wird ein Standardmodul verwendet.</div>'}</div>
+    <button class="btn-p w-full mt-5" id="roof-mod-ok">${ic('check', 16)}Übernehmen</button>`);
+  $('#roof-mod-ok').onclick = () => { const v = ($('input[name="roof-mod"]:checked') || {}).value; if (v) p.roof.faces.forEach(f => { f.prodId = v; }); p.roof.modAsked = true; saveProject(p); closeModal(); then && then(); };
 }

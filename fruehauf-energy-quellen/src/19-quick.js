@@ -203,6 +203,13 @@ function quickApplyTo(p) {
   p.quick = { v: 2, state: clone(QS), load: Math.round(r.load * 100) / 100, total: Math.round(r.total * 100) / 100, jaz: Math.round(r.jaz * 100) / 100, te: qTe(), date: isoToday() };
   p.quick.prod = pr ? pr.name : ''; p.quick.bv = r.sim ? r.sim.bv : null; p.quick.deck = r.sim ? r.sim.deck : null;
   p.hp.kw = pr ? pr.power : p.quick.total; p.hp.jaz = p.quick.jaz;
+  /* Jahresverbrauch aus der Simulation: Wärmebedarf und Strombedarf der Wärmepumpe (inkl. Heizstab) */
+  const sim = r.sim; if (sim && sim.total > 0) {
+    const el = Math.round(sim.eWP + (sim.isEl ? sim.rod : 0));
+    if (!(p.from && p.from['hp.heat'])) setSrc(p, 'hp.heat', Math.round(sim.total), 'Schnellauslegung');
+    if (!(p.from && p.from['hp.power']) && el > 0) setSrc(p, 'hp.power', el, 'Schnellauslegung');
+    p.quick.heat = Math.round(sim.total); p.quick.power = el;
+  }
 }
 /* Karte im Bereich „Neue Wärmepumpe“ */
 function quickCard(p) {
@@ -270,7 +277,7 @@ document.addEventListener('click', async e => {
       toast(`Schnellauslegung übernommen: ${num(np.hp.kw, 1)} kW, JAZ ${num(np.hp.jaz, 2)}.`);
     } else {
       const p = findProject(QPID); if (!p) return; const was = p.type; if (p.type === 'pv') p.type = 'pvwp'; quickApplyTo(p); saveProject(p); closeModal(); render();
-      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}.` + (was === 'pv' ? ' Kunde ist jetzt PV + Wärmepumpe.' : ''));
+      toast(`Übernommen: ${num(p.hp.kw, 1)} kW, JAZ ${num(p.hp.jaz, 2)}${p.quick.power ? `, Stromverbrauch WP ca. ${num(p.quick.power)} kWh/Jahr` : ''}.` + (was === 'pv' ? ' Kunde ist jetzt PV + Wärmepumpe.' : ''), 'ok', 5000);
     }
   }
 });

@@ -141,7 +141,7 @@ function newProject(type) {
     status: 'offen', statusDate: today, variants: [], sign: null, signDraft: { place: '' },
     rod: { on: false, name: '', kw: null, months: 5 },
     hh: { cons: c.hhCons, price: c.hhPrice },
-    fund: { stand: currentStand(today).id, eu: false, euMode: 'auto', speed: null, income: 'none', units: 1, eligible: null, other: 0 },
+    fund: { stand: currentStand(today).id, eu: false, euMode: 'auto', speed: null, income: 'none', units: 1, self: '1', eligible: null, other: 0 },
     discount: { on: true, amount: S.discount.amount, until: addDays(today, S.discount.days) },
     scenario: 'real',
     components: [],

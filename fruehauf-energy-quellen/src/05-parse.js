@@ -441,7 +441,11 @@ async function handleUpload(p, role, fileList, replaceId) {
     saveProject(p); render();
   }
 }
-function setFrom(p, path, v) { if (v === undefined || v === null || v === '' || (typeof v === 'number' && !isFinite(v))) return false; setPath(p, path, v); p.from[path] = true; return true; }
+/* Modulanzahl/-leistung aus „40 × 500 W + 2 × 430 W“ */
+const modCount = s => String(s || '').split('+').reduce((a, x) => { const m = /(\d+(?:[.,]\d+)?)\s*[×x]/.exec(x); return a + (m ? Math.round(+m[1].replace(',', '.')) : 0); }, 0);
+const modWatt = s => { const m = /[×x]\s*(\d{3})\s*W/.exec(String(s || '')); return m ? +m[1] : 0; };
+function setFrom(p, path, v) { if (v === undefined || v === null || v === '' || (typeof v === 'number' && !isFinite(v))) return false; setPath(p, path, v); p.from[path] = true; if (p.src) delete p.src[path]; return true; }
+function setSrc(p, path, v, label) { setPath(p, path, v); p.from[path] = false; (p.src = p.src || {})[path] = label; }
 function applyRecognition(p, doc, r) {
   if (doc.role !== 'tech') {
     const c = r.customer || {};
@@ -456,7 +460,7 @@ function applyRecognition(p, doc, r) {
     setFrom(p, 'offer.date', r.date);
     if (r.advisor) { const m = (S.company.advisors || []).find(a => a.name && (a.name.toLowerCase() === r.advisor.toLowerCase() || a.name.toLowerCase().includes(r.advisor.toLowerCase()) || r.advisor.toLowerCase().includes(a.name.toLowerCase()))); setFrom(p, 'offer.advisor', m ? m.name : r.advisor); p.offer.advisorId = m ? m.id : ''; p.offer.advisorPhone = r.advisorPhone || ''; p.offer.advisorEmail = r.advisorEmail || ''; }
     if (r.date) { p.discount.until = addDays(r.date > isoToday() ? r.date : isoToday(), S.discount.days); }
-    if (hasPV(p)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.bat', r.bat); setFrom(p, 'pv.modules', r.modules); ['modMaker', 'modWarranty', 'batMaker', 'batWarranty', 'invMaker', 'invWarranty'].forEach(k => setFrom(p, 'pv.' + k, r[k])); }
+    if (hasPV(p)) { if (r.kwp) p.offerPv = { kwp: r.kwp, modules: r.modules || '', n: modCount(r.modules), w: modWatt(r.modules) }; if (!(p.roof && p.roof.applied)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.modules', r.modules); } setFrom(p, 'pv.bat', r.bat); ['modMaker', 'modWarranty', 'batMaker', 'batWarranty', 'invMaker', 'invWarranty'].forEach(k => setFrom(p, 'pv.' + k, r[k])); }
   }
   if (hasWP(p)) {
     setFrom(p, 'hp.kw', r.hpKw); setFrom(p, 'hp.model', r.hpModel); setFrom(p, 'hp.warranty', r.hpWarranty); setFrom(p, 'hp.buffer', r.hpBuffer); setFrom(p, 'hp.dhw', r.hpDhw); setFrom(p, 'hp.dims', r.dims); setFrom(p, 'hp.weight', r.weight);

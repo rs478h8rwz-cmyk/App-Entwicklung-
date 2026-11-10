@@ -53,7 +53,7 @@ document.addEventListener('input', e => {
   if (el.dataset.b) {
     const v = readVal(el); if (v === undefined) return;
     const b = el.dataset.b;
-    if (b.startsWith('p:') && curProject()) delete curProject().from[b.slice(2)];
+    if (b.startsWith('p:') && curProject()) { delete curProject().from[b.slice(2)]; if (curProject().src) delete curProject().src[b.slice(2)]; }
     bset(b, v);
     if (b === 'u:search') { const l = $('#cust-list'); render(); return; }
     if (b.startsWith('s:design.') && !b.startsWith('s:design.cover')) applyTheme();

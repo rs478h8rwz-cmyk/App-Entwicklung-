@@ -13,6 +13,12 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.21', date: '2026-11-10', items: [
+    ['house', 'Modulplan und Angebot abgleichen', 'Weichen Modulplan und Angebot voneinander ab (mehr oder weniger Module), erscheint eine rote Warnung – mit Wahl, ob mit Modulplan oder Angebot gerechnet wird. Ein später eingelesenes Angebot überschreibt einen übernommenen Modulplan nicht mehr.'],
+    ['house', 'Welche Module sind geplant?', 'Vor dem Belegen fragt der Modulplan nach dem Modul – das Modul aus dem Angebot ist vorausgewählt.'],
+    ['house', 'Förderung je Wohneinheit', 'Neu: „selbst bewohnt / nicht selbst bewohnt“. Klimageschwindigkeits- und Einkommensbonus werden nur für selbst bewohnte Wohneinheiten gerechnet (anteilig), Grundförderung für alle.'],
+    ['house', 'Verbrauch aus der Schnellauslegung', 'Wärmebedarf und Stromverbrauch der Wärmepumpe pro Jahr werden aus der Schnellauslegung übernommen (gekennzeichnet „aus Schnellauslegung“).']
+  ] },
   { version: '2.20', date: '2026-11-09', items: [
     ['house', 'Art der Berechnung ändern', 'Im Kunden oben auf „WP“, „PV“ oder „PV + WP“ tippen – so wird z. B. aus einem reinen Wärmepumpen-Kunden nachträglich PV + Wärmepumpe. Alle Eingaben bleiben erhalten.']
   ] },

@@ -36,16 +36,24 @@ function fundingOf(p) {
   out.cap = st.first + Math.min(Math.max(units - 1, 0), 5) * st.unit2 + Math.max(units - 6, 0) * st.unit7;
   out.eligible = isNum(f.eligible) && f.eligible > 0 ? f.eligible : (p.type === 'pvwp' ? nz(p.offer.grossWP) : grossOf(p));
   out.base = Math.min(out.eligible, out.cap);
-  const parts = [['Grundförderung', st.base]];
-  if (euOf(p) && st.eu > 0) parts.push(['Wertschöpfungsbonus (EU-Wärmepumpe)', st.eu]);
-  out.speedOn = f.speed === null || f.speed === undefined ? speedAuto(p).on : !!f.speed;
-  if (out.speedOn && st.speed > 0) parts.push(['Klimageschwindigkeitsbonus', st.speed]);
-  const inc = { '50': st.inc50, '40': st.inc40, '30': st.inc30 }[f.income];
-  if (inc) parts.push([`Einkommensbonus (bis ${f.income}.000 € zVE)`, inc]);
-  if (st.eff > 0) parts.push(['Effizienzbonus', st.eff]);
-  const sum = parts.reduce((a, b) => a + b[1], 0), max = f.income === '30' ? st.max30 : st.max;
-  out.rate = Math.min(sum, max); out.capped = sum > max; out.max = max; out.parts = parts;
-  out.amount = out.base * out.rate / 100;
+  /* Selbst bewohnte Wohneinheiten: Klimageschwindigkeits- und Einkommensbonus gibt es nur für diese –
+     die förderfähigen Kosten werden dafür gleichmäßig auf alle Wohneinheiten verteilt. */
+  const selfU = f.self === undefined || f.self === null || f.self === '' ? 1 : Math.max(0, Math.min(units, Math.round(+f.self)));
+  out.units = units; out.selfU = selfU;
+  const all = [['Grundförderung', st.base]];
+  if (euOf(p) && st.eu > 0) all.push(['Wertschöpfungsbonus (EU-Wärmepumpe)', st.eu]);
+  if (st.eff > 0) all.push(['Effizienzbonus', st.eff]);
+  const own = [], tag = units > 1 ? ` – nur ${selfU === 1 ? 'selbst bewohnte Wohneinheit' : selfU + ' selbst bewohnte Wohneinheiten'}` : '';
+  out.speedOn = selfU > 0 && (f.speed === null || f.speed === undefined ? speedAuto(p).on : !!f.speed);
+  if (out.speedOn && st.speed > 0) own.push(['Klimageschwindigkeitsbonus' + tag, st.speed]);
+  const inc = selfU > 0 ? { '50': st.inc50, '40': st.inc40, '30': st.inc30 }[f.income] : 0;
+  if (inc) own.push([`Einkommensbonus (bis ${f.income}.000 € zVE)` + tag, inc]);
+  const max = inc && f.income === '30' ? st.max30 : st.max, sAll = all.reduce((a, b) => a + b[1], 0), sOwn = sAll + own.reduce((a, b) => a + b[1], 0);
+  const rAll = Math.min(sAll, st.max), rOwn = Math.min(sOwn, max), shareOwn = out.base * selfU / units;
+  out.rateOwn = rOwn; out.rateAll = rAll; out.shareOwn = shareOwn;
+  out.amount = shareOwn * rOwn / 100 + (out.base - shareOwn) * rAll / 100;
+  out.rate = out.base ? Math.round(out.amount / out.base * 1000) / 10 : rOwn;
+  out.capped = sOwn > max; out.max = max; out.parts = all.concat(own);
   return out;
 }
 
