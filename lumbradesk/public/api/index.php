@@ -283,6 +283,7 @@ try {
       $st = db()->prepare("SELECT id, name FROM users WHERE id = ? AND active = 1 AND role IN ('admin','buero','vertrieb')"); $st->execute([$to]); $t = $st->fetch(); if (!$t) fail('Benutzer nicht gefunden', 404);
       db()->prepare('UPDATE projects SET owner_id = ?, assigned_by = ?, assigned_at = UTC_TIMESTAMP(), version = version + 1, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?')->execute([$to, $u['id'], $u['id'], $id]);
       audit((int)$u['id'], 'kunde_zugewiesen', $p['name'] . ' → ' . $t['name']);
+      try { require_once LD_PRIV_DIR . '/crm-lib.php'; crm_add_event($id, (int)$u['id'], 'zuweisung', 'Zugewiesen an ' . $t['name']); } catch (Throwable $e) {}
       json_out(['ok' => true] + project_meta(project_row($id)));
     }
     case 'POST pfile': {
@@ -306,6 +307,86 @@ try {
       header('Cache-Control: private, max-age=31536000, immutable'); header('X-Content-Type-Options: nosniff');
       if (!empty($m['name'])) header('X-File-Name: ' . rawurlencode($m['name']));
       readfile($f . '.bin'); exit;
+    }
+
+    /* ---------- CRM: Kunden-Übersicht, Verlauf, Wiedervorlagen ---------- */
+    case 'GET crm': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
+      $team = db()->query("SELECT id, name FROM users WHERE active = 1 AND role IN ('admin','buero','vertrieb') ORDER BY name")->fetchAll();
+      json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'stages' => STAGES, 'customers' => crm_list($u), 'team' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name']], $team)]);
+    }
+    case 'GET crm-p': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
+      json_out(crm_detail($u, (string)($_GET['id'] ?? '')));
+    }
+    case 'POST crm-stage': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body();
+      $id = (string)($b['id'] ?? ''); $stage = (string)($b['stage'] ?? ''); if (!isset(STAGES[$stage])) fail('Unbekannte Stufe', 400);
+      $r = crm_project($u, $id); $o = crm_row_out($r); $old = $o['stage'];
+      db()->prepare('UPDATE projects SET stage = ?, stage_base = ?, stage_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$stage, $o['derived'], $id]);
+      if ($old !== $stage) crm_add_event($id, (int)$u['id'], 'stufe', STAGES[$old] . ' → ' . STAGES[$stage]);
+      json_out(crm_detail($u, $id));
+    }
+    case 'POST crm-event': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body();
+      $id = (string)($b['id'] ?? ''); $kind = (string)($b['kind'] ?? 'notiz'); $text = trim((string)($b['text'] ?? ''));
+      if (!in_array($kind, ['notiz', 'anruf', 'termin', 'email'], true)) fail('Unbekannte Art', 400);
+      if ($text === '') fail('Bitte einen Text eingeben.', 400);
+      crm_project($u, $id);
+      $at = (string)($b['at'] ?? ''); $at = preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', $at) && strtotime($at . ' UTC') ? gmdate('Y-m-d H:i:s', strtotime($at . ' UTC')) : null;
+      crm_add_event($id, (int)$u['id'], $kind, $text, $at);
+      json_out(crm_detail($u, $id));
+    }
+    case 'POST crm-event-del': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables();
+      $st = db()->prepare('SELECT * FROM crm_events WHERE id = ?'); $st->execute([(int)(body()['id'] ?? 0)]); $e = $st->fetch();
+      if (!$e) fail('Eintrag nicht gefunden', 404);
+      crm_project($u, $e['project_id']);
+      if ((int)$e['user_id'] !== (int)$u['id'] && $u['role'] !== 'admin') fail('Nur eigene Einträge können gelöscht werden.', 403);
+      if (!in_array($e['kind'], ['notiz', 'anruf', 'termin', 'email'], true)) fail('Automatische Einträge bleiben stehen.', 400);
+      db()->prepare('DELETE FROM crm_events WHERE id = ?')->execute([$e['id']]);
+      json_out(crm_detail($u, $e['project_id']));
+    }
+    case 'GET tasks': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
+      $team = db()->query("SELECT id, name FROM users WHERE active = 1 AND role IN ('admin','buero','vertrieb') ORDER BY name")->fetchAll();
+      $rm = db()->prepare('SELECT remind FROM users WHERE id = ?'); $rm->execute([$u['id']]);
+      json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'remind' => (bool)$rm->fetchColumn(), 'tasks' => crm_tasks_for($u, (string)($_GET['scope'] ?? 'meine')), 'team' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name']], $team)]);
+    }
+    case 'POST task': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables(); $b = body();
+      $title = trim((string)($b['title'] ?? '')); $due = crm_date((string)($b['due'] ?? '')); $to = (int)($b['assignee'] ?? $u['id']); $pid = (string)($b['project'] ?? '');
+      if ($title === '') fail('Bitte beschreiben, was zu tun ist.', 400);
+      if (!$due) fail('Bitte ein Datum wählen.', 400);
+      if (!crm_valid_user($to)) fail('Zuständiger nicht gefunden', 400);
+      if ($pid !== '') crm_project($u, $pid); else $pid = null;
+      db()->prepare('INSERT INTO crm_tasks (project_id, title, due, assignee_id, created_by) VALUES (?, ?, ?, ?, ?)')->execute([$pid, mb_substr($title, 0, 300), $due, $to, $u['id']]);
+      if ($pid) crm_add_event($pid, (int)$u['id'], 'aufgabe', 'Wiedervorlage ' . date('d.m.Y', strtotime($due)) . ': ' . $title . ($to !== (int)$u['id'] ? ' (für ' . (user_names()[$to] ?? '') . ')' : ''));
+      json_out(['ok' => true] + ($pid ? crm_detail($u, $pid) : []));
+    }
+    case 'POST task-update': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body();
+      $t = crm_task_row($u, (int)($b['id'] ?? 0)); $pdo = db();
+      if (array_key_exists('done', $b)) {
+        $pdo->prepare('UPDATE crm_tasks SET done_at = ' . ($b['done'] ? 'UTC_TIMESTAMP()' : 'NULL') . ', done_by = ? WHERE id = ?')->execute([$b['done'] ? $u['id'] : null, $t['id']]);
+        if ($b['done'] && $t['project_id']) crm_add_event($t['project_id'], (int)$u['id'], 'aufgabe', 'Erledigt: ' . $t['title']);
+      }
+      if (isset($b['due'])) { $d = crm_date((string)$b['due']); if (!$d) fail('Ungültiges Datum', 400); $pdo->prepare('UPDATE crm_tasks SET due = ? WHERE id = ?')->execute([$d, $t['id']]); }
+      if (isset($b['title']) && trim((string)$b['title']) !== '') $pdo->prepare('UPDATE crm_tasks SET title = ? WHERE id = ?')->execute([mb_substr(trim((string)$b['title']), 0, 300), $t['id']]);
+      if (isset($b['assignee'])) { if (!crm_valid_user((int)$b['assignee'])) fail('Zuständiger nicht gefunden', 400); $pdo->prepare('UPDATE crm_tasks SET assignee_id = ? WHERE id = ?')->execute([(int)$b['assignee'], $t['id']]); }
+      json_out(['ok' => true] + ($t['project_id'] ? crm_detail($u, $t['project_id']) : []));
+    }
+    case 'POST task-del': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
+      $t = crm_task_row($u, (int)(body()['id'] ?? 0));
+      if ((int)$t['created_by'] !== (int)$u['id'] && !sees_all($u)) fail('Nur wer die Aufgabe angelegt hat, kann sie löschen.', 403);
+      db()->prepare('DELETE FROM crm_tasks WHERE id = ?')->execute([$t['id']]);
+      json_out(['ok' => true] + ($t['project_id'] ? crm_detail($u, $t['project_id']) : []));
+    }
+    case 'POST remind': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables();
+      db()->prepare('UPDATE users SET remind = ? WHERE id = ?')->execute([empty(body()['on']) ? 0 : 1, $u['id']]);
+      json_out(['ok' => true]);
     }
 
     /* ---------- Datensicherung (nur Admin) ---------- */

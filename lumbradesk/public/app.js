@@ -1,4 +1,4 @@
-/* LumbraDesk – Anmeldung, Startseite mit den Apps, Benutzerverwaltung (Admin) */
+/* LumbraDesk – Anmeldung, Startseite mit den Apps, Benutzerverwaltung (Admin); CRM-Ansichten in crm.js */
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -11,6 +11,7 @@ const IC = {
   audit: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   system: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   next: '<path d="M9 6l6 6-6 6"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
   key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2M16 7l3 3M18 5l3 3"/>',
   out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'
 };
@@ -19,12 +20,13 @@ const ST = { user: null, apps: [], roles: {}, view: 'home', users: [], audit: []
 
 async function api(r, data) {
   const opt = data === undefined ? { credentials: 'same-origin' } : { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Lumbra': '1' }, body: JSON.stringify(data) };
-  const res = await fetch('api/?r=' + encodeURIComponent(r), opt);
+  const [act, ...qs] = r.split('&');   // „aktion&feld=wert“: Werte kodiert der Aufrufer selbst
+  const res = await fetch('api/?r=' + encodeURIComponent(act) + (qs.length ? '&' + qs.join('&') : ''), opt);
   let j = {}; try { j = await res.json(); } catch (e) {}
   if (!res.ok) { const err = new Error(j.error || 'Fehler ' + res.status); err.status = res.status; throw err; }
   return j;
 }
-function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); }
+function toast(msg) { document.querySelectorAll('.toast').forEach(x => x.remove()); const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); }
 const brand = sub => `<div class="brand"><img src="logo.png" alt=""><div><b>LumbraDesk</b><span>${esc(sub)}</span></div></div>`;
 
 /* ---------- Ansichten ---------- */
@@ -58,16 +60,21 @@ function viewNewPw(err = '') {
     <button class="btn g" data-a="logout" style="width:100%;margin-top:8px">Abmelden</button></div></main>`;
 }
 function shell(inner) {
-  const nav = [['home', 'Start']].concat(ST.user.role === 'admin' ? [['users', 'Benutzer'], ['audit', 'Protokoll'], ['system', 'System']] : []);
-  const links = nav.map(([k, l]) => `<a href="#/${k}" class="navl ${ST.view === k ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`).join('');
+  const crm = typeof isCrm === 'function' && isCrm(), adm = ST.user.role === 'admin';
+  const base = [['home', 'Start']].concat(crm ? [['kunden', 'Kunden'], ['aufgaben', 'Aufgaben']] : []);
+  const nav = base.concat(adm ? [['users', 'Benutzer'], ['audit', 'Protokoll'], ['system', 'System']] : []);
+  const tabs = base.concat(adm ? [['mehr', 'Mehr']] : []);
+  const cur = ST.view === 'kunde' ? 'kunden' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view);
+  const link = ([k, l]) => `<a href="#/${k}" class="navl ${cur === k || (k === 'mehr' && inMehr) ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`;
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
-    ${nav.length > 1 ? `<nav class="side">${links}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
-    <main class="wrap ${nav.length > 1 ? 'has-tabs' : ''}">${inner}</main>${nav.length > 1 ? `<nav class="tabs">${links}</nav>` : ''}`;
+    ${nav.length > 1 ? `<nav class="side">${nav.map(link).join('')}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
+    <main class="wrap ${tabs.length > 1 ? 'has-tabs' : ''}">${inner}</main>${tabs.length > 1 ? `<nav class="tabs">${tabs.map(link).join('')}</nav>` : ''}`;
 }
 function viewHome() {
   const h = new Date().getHours(), gr = h < 11 ? 'Guten Morgen' : h < 18 ? 'Hallo' : 'Guten Abend';
   return `<section class="hero"><h1>${gr}, ${esc(ST.user.name.split(' ')[0])}.</h1><p class="muted">Deine Apps – gleiche Bedienung wie gewohnt.</p></section>
     <div class="grid">${ST.apps.map(a => `<a class="card tile ${a.url ? '' : 'off'}" href="${esc(a.url || '#')}"><div class="ic">${ic(a.key)}</div><div class="tx"><b>${esc(a.name)}</b><span class="muted">${esc(a.text)}</span>${a.url ? '' : '<div style="margin-top:8px"><span class="badge">folgt</span></div>'}</div><span class="go">${ic('next', 18)}</span></a>`).join('') || '<p class="muted">Für deine Rolle sind noch keine Apps freigeschaltet.</p>'}</div>
+    ${typeof homeCrm === 'function' ? homeCrm() : ''}
     <div class="sec card acct"><div class="who"><span class="av">${esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(ST.user.name)}</b><span class="muted">${esc(ST.user.email)} · ${esc(ST.user.roleName)}</span></div></div>
       <details class="pwbox"><summary>${ic('key', 18)}<span>Passwort ändern</span>${ic('next', 16)}</summary>
       <form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn s" type="submit" style="margin-top:12px">Passwort ändern</button></div></form></details>
@@ -135,22 +142,28 @@ async function load() {
   route();
 }
 async function route() {
-  ST.view = (location.hash.replace(/^#\/?/, '') || 'home').split('/')[0];
+  const seq = ST.seq = (ST.seq || 0) + 1;   // nur die neueste Navigation zeichnet (verhindert überschriebene Eingaben)
+  const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/'); ST.view = parts[0]; const arg = decodeURIComponent(parts[1] || '');
   if (!ST.user) return void ($('#app').innerHTML = ST.view === 'vergessen' ? viewForgot() : viewLogin());
   if (ST.user.mustChange) return void ($('#app').innerHTML = viewNewPw());
-  if (ST.user.role !== 'admin' && ST.view !== 'home') ST.view = 'home';
+  const crmViews = ['kunden', 'kunde', 'aufgaben'], admViews = ['users', 'audit', 'system', 'mehr'];
+  if (!(ST.view === 'home' || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin'))) ST.view = 'home';
   try {
+    if (isCrm() && (crmViews.includes(ST.view) || ST.view === 'home')) await crmLoad(ST.view, arg);
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
     if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); }
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
-  $('#app').innerHTML = shell(ST.view === 'users' ? viewUsers() : ST.view === 'audit' ? viewAudit() : ST.view === 'system' ? viewSystem() : viewHome());
+  if (seq !== ST.seq) return;
+  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr };
+  $('#app').innerHTML = shell((V[ST.view] || viewHome)());
 }
 window.addEventListener('hashchange', route);
 
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target, d = Object.fromEntries(new FormData(f)), btn = f.querySelector('button[type=submit]'); if (btn) btn.disabled = true;
   try {
+    if (f.id.startsWith('f-crm')) return await crmSubmit(f, d);
     if (f.id === 'f-login') { await api('login', d); return load(); }
     if (f.id === 'f-forgot') { await api('forgot', d); $('#app').innerHTML = viewForgot('Wenn die Adresse bei uns hinterlegt ist, kommt gleich eine E-Mail mit dem Link. Bitte auch im Spam-Ordner schauen.', true); return; }
     if (f.id === 'f-setpw') {
@@ -190,6 +203,7 @@ function showTemp(name, email, pw) {
 document.addEventListener('click', async e => {
   const a = e.target.closest('[data-a]'); if (!a) return;
   try {
+    if (a.dataset.a.startsWith('crm-')) return await crmClick(a);
     if (a.dataset.a === 'logout') { await api('logout', {}); ST.user = null; location.hash = ''; return route(); }
     if (a.dataset.a === 'reset') {
       const u = ST.users.find(x => x.id === +a.dataset.id); if (!confirm(`Passwort von ${u.name} zurücksetzen? Es wird ein neues Einmal-Passwort erstellt.`)) return;

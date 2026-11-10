@@ -168,7 +168,7 @@ function ldpOwnerUI(p) {
   const m = LDP.meta[p.id];
   if (!m) return `<span class="text-[12px] text-ink3 hidden sm:inline">${ic('refresh', 13)} wird abgeglichen …</span>`;
   const team = LDP.team.length ? LDP.team : [{ id: m.owner, name: m.ownerName }];
-  return `<span class="text-[12px] text-ink3 hidden sm:inline">Zuständig</span><select class="inp !h-9 !w-auto !pr-8 !text-[13px]" data-ldowner="${p.id}" title="Zuständig – Kunden an Kollegen zuweisen">${team.map(u => `<option value="${u.id}" ${u.id === m.owner ? 'selected' : ''}>${esc(u.name)}${u.id === LDP.me ? ' (ich)' : ''}</option>`).join('')}</select>`;
+  return `<span class="text-[12px] text-ink3 hidden sm:inline">Zuständig</span><select class="inp !h-9 !w-auto !pr-8 !text-[13px]" data-ldowner="${p.id}" title="Zuständig – Kunden an Kollegen zuweisen">${team.map(u => `<option value="${u.id}" ${u.id === m.owner ? 'selected' : ''}>${esc(u.name)}${u.id === LDP.me ? ' (ich)' : ''}</option>`).join('')}</select><a class="btn-s !h-9 !px-3 !text-[13px]" href="../#/kunde/${encodeURIComponent(p.id)}" title="Verlauf, Wiedervorlagen und Vertriebs-Stufe in LumbraDesk">${ic('clock', 15)}Verlauf</a>`;
 }
 document.addEventListener('change', async e => {
   const s = e.target.closest && e.target.closest('[data-ldowner]'); if (!s) return;
