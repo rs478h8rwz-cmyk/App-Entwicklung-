@@ -158,6 +158,23 @@ try {
       json_out(['ok' => true, 'version' => $cur + 1]);
     }
 
+    /* ---------- System: Update hochladen (nur Admin) ---------- */
+    case 'GET system': {
+      require_role(['admin']);
+      json_out(['version' => LD_VERSION, 'php' => PHP_VERSION, 'zip' => class_exists('ZipArchive'), 'maxUpload' => ini_get('upload_max_filesize')]);
+    }
+    case 'POST system-update': {
+      $me = require_role(['admin']);
+      require_once __DIR__ . '/../../private/updater.php';
+      $f = $_FILES['zip'] ?? null;
+      if (!$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK) fail('Upload fehlgeschlagen' . (($f['error'] ?? 0) === UPLOAD_ERR_INI_SIZE ? ' – Datei größer als erlaubt (' . ini_get('upload_max_filesize') . ')' : '') . '.', 400);
+      $priv = realpath(__DIR__ . '/../../private'); $base = $priv ? dirname($priv) : '';
+      if (!$base || !is_dir($base . '/public')) fail('Dieses Update-Verfahren passt nur zum Aufbau lumbradesk/public + lumbradesk/private.', 400);
+      try { $r = ld_apply_update($f['tmp_name'], $base); } catch (Throwable $e) { fail($e->getMessage(), 400); }
+      audit((int)$me['id'], 'update', ($f['name'] ?? 'zip') . ' · ' . $r['files'] . ' Dateien');
+      json_out(['ok' => true, 'files' => $r['files']]);
+    }
+
     default: fail('Unbekannte Aktion', 404);
   }
 } catch (PDOException $e) {

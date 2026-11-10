@@ -10,6 +10,9 @@ RewriteRule ^(wetter|pvgis)/(.*)$ proxy.php?svc=$1&path=$2 [QSA,L]
 RewriteRule ^private(/|$) - [F]
 # Versteckte Dateien sperren
 RewriteRule (^|/)\. - [F]
+<FilesMatch "\.(ini|log|sql)$">
+  Require all denied
+</FilesMatch>
 <IfModule mod_headers.c>
   Header always set Strict-Transport-Security "max-age=31536000"
   Header always set X-Content-Type-Options "nosniff"

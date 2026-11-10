@@ -41,7 +41,7 @@ function viewNewPw(err = '') {
     <button class="btn g" data-a="logout" style="width:100%;margin-top:8px">Abmelden</button></div></main>`;
 }
 function shell(inner) {
-  const nav = [['home', 'Start']].concat(ST.user.role === 'admin' ? [['users', 'Benutzer'], ['audit', 'Protokoll']] : []);
+  const nav = [['home', 'Start']].concat(ST.user.role === 'admin' ? [['users', 'Benutzer'], ['audit', 'Protokoll'], ['system', 'System']] : []);
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
     <nav>${nav.map(([k, l]) => `<a href="#/${k}" class="navl ${ST.view === k ? 'on' : ''}">${l}</a>`).join('')}<button class="btn g sm" data-a="logout" title="Abmelden">${ic('out', 18)}<span class="hide-sm">Abmelden</span></button></nav></div></header>
     <main class="wrap">${inner}</main>`;
@@ -65,11 +65,19 @@ function viewUsers() {
       <td><div class="row"><button class="btn s sm" data-a="reset" data-id="${u.id}">Passwort zurücksetzen</button>${u.id === ST.user.id ? '' : `<button class="btn g sm ${u.active ? 'danger' : ''}" data-a="active" data-id="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? 'Sperren' : 'Entsperren'}</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>`;
 }
-const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet' };
+const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen' };
 function viewAudit() {
   return `<section class="hero"><h1>Protokoll</h1><p class="muted">Die letzten 200 Vorgänge – wer hat wann was gemacht.</p></section>
     <div class="card scroll"><table><thead><tr><th>Zeit</th><th>Wer</th><th>Vorgang</th><th>Details</th><th class="hide-sm">IP</th></tr></thead><tbody>
     ${ST.audit.map(a => `<tr><td class="muted">${new Date(a.at.replace(' ', 'T') + 'Z').toLocaleString('de-DE')}</td><td>${esc(a.name || '–')}</td><td>${esc(ACT[a.action] || a.action)}</td><td>${esc(a.detail)}</td><td class="hide-sm muted">${esc(a.ip)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function viewSystem() {
+  const y = ST.sys || {};
+  return `<section class="hero"><h1>System</h1><p class="muted">LumbraDesk ${esc(y.version || '')} · PHP ${esc(y.php || '')}</p></section>
+    <div class="card"><h2>Update einspielen</h2><p class="muted">Die Update-Datei (lumbradesk-update.zip) hier auswählen – sie wird direkt auf dem Server eingespielt. Zugangsdaten, Benutzer und Daten bleiben erhalten.</p>
+      <form id="f-update" class="row" style="margin-top:12px"><input type="file" name="zip" accept=".zip,application/zip" required style="height:auto;padding:10px;max-width:420px"><button class="btn" type="submit">Update einspielen</button></form>
+      ${y.zip === false ? '<p class="note err">Auf dem Server fehlt die ZIP-Unterstützung.</p>' : ''}<p class="muted" style="font-size:13px">Max. Dateigröße laut Server: ${esc(y.maxUpload || '–')}</p><div id="upd-msg"></div></div>`;
 }
 
 /* ---------- Ablauf ---------- */
@@ -86,8 +94,9 @@ async function route() {
   try {
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
+    if (ST.view === 'system') ST.sys = await api('system');
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
-  $('#app').innerHTML = shell(ST.view === 'users' ? viewUsers() : ST.view === 'audit' ? viewAudit() : viewHome());
+  $('#app').innerHTML = shell(ST.view === 'users' ? viewUsers() : ST.view === 'audit' ? viewAudit() : ST.view === 'system' ? viewSystem() : viewHome());
 }
 window.addEventListener('hashchange', route);
 
@@ -98,6 +107,11 @@ document.addEventListener('submit', async e => {
     if (f.id === 'f-pw' || f.id === 'f-pw2') {
       if (d.new !== d.new2) throw new Error('Die beiden neuen Passwörter sind nicht gleich.');
       await api('password', { old: d.old, new: d.new }); toast('Passwort gespeichert.'); f.reset(); return load();
+    }
+    if (f.id === 'f-update') {
+      const fd = new FormData(f), res = await fetch('api/?r=system-update', { method: 'POST', credentials: 'same-origin', headers: { 'X-Lumbra': '1' }, body: fd });
+      const j = await res.json().catch(() => ({})); if (!res.ok) throw new Error(j.error || 'Fehler ' + res.status);
+      $('#upd-msg').innerHTML = `<p class="note ok">Update eingespielt (${j.files} Dateien). Bitte die Seite neu laden.</p>`; f.reset(); return;
     }
     if (f.id === 'f-user') {
       const j = await api('users', d); f.reset(); ST.users = (await api('users')).users; route();
