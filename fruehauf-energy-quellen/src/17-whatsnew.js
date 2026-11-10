@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.25', date: '2026-11-10', items: [
+    ['house', 'Module per Doppeltipp setzen', 'Ein Modul entsteht nur noch per Doppelklick bzw. Doppeltipp – ein einfacher Tipp verschiebt das Bild oder hebt die Auswahl auf. So entstehen keine Module aus Versehen.'],
+    ['house', 'Raster schnell korrigieren', 'Wurden Mulden als Pfannen gezählt, einfach eine Alternative wie ½ oder ⅔ der Zahl antippen oder mit −1 / +1 feinjustieren – das Raster rastet jedes Mal neu auf die Pfannenkanten ein.']
+  ] },
   { version: '2.24', date: '2026-11-10', items: [
     ['house', 'Dachpfannen scannen', '„Automatisch zählen und scannen“: Wie bei einem QR-Code-Scanner fährt eine Laserlinie über das Dach, die App sucht die sichtbaren Pfannenkanten und legt das gelbe Raster genau darauf.'],
     ['house', 'Pfannen nummeriert zur Kontrolle', 'Danach werden die oberste Reihe (1, 2, 3 …) und die linke Spalte nach unten durchnummeriert – oben steht die Gesamtzahl. Beim Module-Belegen ist alles wieder weg.']

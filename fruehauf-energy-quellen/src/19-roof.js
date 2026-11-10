@@ -193,6 +193,9 @@ function roofPanel(p, f, g) {
       <p class="hint" style="color:#C7792F">Kontrolle: Das gelbe Raster muss genau auf den Pfannenkanten liegen. Wenn nicht – Ecken oder Anzahl korrigieren. Tipp: Foto nicht mit 0,5×-Weitwinkel aufnehmen.</p>
       <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="lbl flex items-center justify-between">Pfannen waagerecht<span class="flex gap-1"><button type="button" class="chip !h-6 !px-2 text-[11px]" data-r="nxdiv">÷2</button><button type="button" class="chip !h-6 !px-2 text-[11px]" data-r="nxmul">×2</button></span></span>${roofIn('nx', 'Stk')}</label><label><span class="lbl">Reihen senkrecht</span>${roofIn('ny', 'Stk')}</label></div>
       <button class="btn-s w-full mt-2" data-r="autocount">${ic('sparkle', 16)}Automatisch zählen und scannen</button>
+      ${+f.nx > 1 ? `<div class="mt-2 rounded-[calc(var(--r)-4px)] bg-raised p-3"><div class="text-[13px] font-semibold">Passt das Raster auf die Pfannen?</div><div class="text-[12px] text-ink3 mt-0.5">Sonst andere Anzahl antippen – das Raster rastet neu auf die Kanten ein.</div>
+        <div class="flex flex-wrap gap-1.5 mt-2">${roofCands(+f.scanN || +f.nx).map(n => `<button type="button" class="chip !h-8 !px-3 text-[13px] ${n === Math.round(+f.nx) ? '!border-p !text-ink font-semibold' : ''}" data-r="ncand" data-v="${n}">${n} Pfannen</button>`).join('')}</div>
+        <div class="grid grid-cols-2 gap-2 mt-2">${[['nx', 'Pfannen'], ['ny', 'Reihen']].map(([k, l]) => `<div class="flex items-center gap-1"><button type="button" class="chip !h-8 !w-9 !px-0 justify-center" data-r="nstep" data-k="${k}" data-d="-1">−1</button><span class="flex-1 text-center text-[13px]">${l}</span><button type="button" class="chip !h-8 !w-9 !px-0 justify-center" data-r="nstep" data-k="${k}" data-d="1">+1</button></div>`).join('')}</div></div>` : ''}
       <button class="btn-g w-full mt-1" data-r="numtiles">${ic('grid', 16)}${RS.num ? 'Nummern ausblenden' : 'Pfannen nummerieren (Kontrolle)'}</button>
       <p class="hint">Jedes gelbe Kästchen muss <b>genau eine</b> Pfanne sein. Liegen zwei Pfannen in einem Kästchen, ist die Anzahl zu klein (doppelte Zahl eintragen).</p>`}
       <div class="mt-3"><span class="lbl">Randabstände</span><div class="grid grid-cols-3 gap-2"><label><span class="text-[11px] text-ink3">First</span>${roofIn('mTop', 'cm')}</label><label><span class="text-[11px] text-ink3">Rinne</span>${roofIn('mBot', 'cm')}</label><label><span class="text-[11px] text-ink3">Seiten</span>${roofIn('mSide', 'cm')}</label></div></div>
@@ -308,7 +311,7 @@ async function roofDraw() {
   });
   if (RS.drag && RS.drag.lasso) { const [a, b, c, d] = RS.drag.lasso; x.save(); x.setLineDash([5, 4]); x.strokeStyle = P; x.fillStyle = `rgba(${pc},.12)`; x.lineWidth = 1.5; x.fillRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.strokeRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.restore(); }
   const wEl = $('#roof-warn'); if (wEl) wEl.innerHTML = [warn[0] ? `<span style="color:#E5484D">${warn[0]} überlappen</span>` : ''].filter(Boolean).join(' · ');
-  if (tip) tip.textContent = (RS.mode === 'add' ? 'Auf die Fläche tippen, um ein Modul zu setzen.' : 'Module antippen oder Rahmen ziehen – dann verschieben.') + ' Zoomen: zwei Finger bzw. Mausrad; verschieben: zwei Finger bzw. Leertaste + ziehen.';
+  if (tip) tip.textContent = (RS.mode === 'add' ? 'Doppelt tippen bzw. doppelklicken, um ein Modul zu setzen.' : 'Module antippen oder Rahmen ziehen – dann verschieben.') + ' Zoomen: zwei Finger bzw. Mausrad; verschieben: zwei Finger bzw. Leertaste + ziehen.';
 }
 function roofLoupe(x, img, [sx, sy], f, V, cw) {
   const R = 70, Z = 3, left = sx > cw / 2, cx = left ? R + 16 : cw - R - 16, cy = R + 16;
@@ -370,8 +373,16 @@ function roofDown(e) {
     if (multi) RS.sel.add(i); else if (!wasSel) RS.sel = new Set([i]);
     RS.drag = { move: true, X, Y, sx, sy, hit: i, wasSel, start: [...RS.sel].map(j => [j, f.mods[j].x, f.mods[j].y]), moved: false }; roofRefreshPanel(); roofDraw(); return;
   }
-  if (RS.mode === 'add' && RS.sel.size && !RS.multi) { RS.sel = new Set(); roofRefreshPanel(); roofDraw(); return; }   // erst abwählen, dann setzen
   if (RS.mode === 'add') {
+    /* Modul nur per Doppelklick / Doppeltipp setzen – ein einfacher Tipp wählt ab bzw. verschiebt das Bild */
+    const now = performance.now(), lt = RS.lastTap, dbl = lt && now - lt.t < 420 && Math.hypot(lt.sx - sx, lt.sy - sy) < 28;
+    if (!dbl) {
+      RS.lastTap = { t: now, sx, sy };
+      if (RS.sel.size && !RS.multi) { RS.sel = new Set(); roofRefreshPanel(); roofDraw(); }
+      else if (!RS.dblHint) { RS.dblHint = true; toast('Zum Setzen eines Moduls doppelt tippen bzw. doppelklicken.'); }
+      RS.drag = { pan: true, lx: sx, ly: sy }; return;
+    }
+    RS.lastTap = null;
     const [w, h] = modWH(f, f.orient), m = { x: X - w / 2, y: Y - h / 2, o: f.orient };
     roofHist(); f.mods.push(m); RS.sel = new Set([f.mods.length - 1]);
     if (RS.magnet) roofSnap(f, g, RS.sel);
@@ -817,7 +828,7 @@ document.addEventListener('click', async e => {
 document.addEventListener('click', e => {
   const a = e.target.closest && e.target.closest('[data-r="nxdiv"],[data-r="nxmul"]'); if (!a || !RS) return;
   e.preventDefault(); const f = roofF(), v = +f.nx || 0; if (!v) return;
-  f.nx = a.dataset.r === 'nxdiv' ? Math.max(1, Math.round(v / 2)) : v * 2; roofSave(); roofSoft();
+  roofSetCount('nx', a.dataset.r === 'nxdiv' ? Math.max(1, Math.round(v / 2)) : v * 2);
 });
 
 /* Weitere Dachflächen im selben Foto: Umriss, Name und ihre Module (zur Orientierung, nicht bearbeitbar) */
@@ -939,12 +950,12 @@ async function roofEdgeProfiles(f) {
   return { col, row };
 }
 /* Nach dem Zählen: Kantenlinien suchen und am Raster speichern */
-async function roofDetectGrid(f) {
+async function roofDetectGrid(f, keep) {
   const nx = Math.round(+f.nx || 0), ny = Math.round(+f.ny || 0); if (!(nx > 1 && ny > 1)) return false;
   const pr = await roofEdgeProfiles(f); if (!pr) return false;
   const a = roofEdgeLines(pr.col, nx), b = roofEdgeLines(pr.row, ny); if (!a || !b) return false;
   /* Anzahl nur übernehmen, wenn sie nah an der gezählten liegt (sonst bleibt der Zählwert) */
-  const fx = Math.abs(a.n - nx) <= Math.max(1, nx * 0.12) ? a.n : nx, fy = Math.abs(b.n - ny) <= Math.max(1, ny * 0.12) ? b.n : ny;
+  const fx = keep ? nx : Math.abs(a.n - nx) <= Math.max(1, nx * 0.12) ? a.n : nx, fy = keep ? ny : Math.abs(b.n - ny) <= Math.max(1, ny * 0.12) ? b.n : ny;
   f.nx = fx; f.ny = fy;
   f.grid = { nx: Math.min(80, fx), ny: Math.min(60, fy), xs: a.lines, ys: b.lines, ref: JSON.stringify(f.ref) };
   return true;
@@ -986,7 +997,7 @@ function roofNumbers(x, Hq, LX, LY) {
     }
     const top = hApply(Hq, 0.5, 0), lab = shown === labs.length ? `${num(nC)} Pfannen × ${num(nR)} Reihen = ${num(nC * nR)} Pfannen` : 'Zähle …';
     x.font = '700 14px system-ui, sans-serif'; const tw = x.measureText(lab).width + 22; x.fillStyle = 'rgba(12,20,28,.88)'; x.beginPath(); x.roundRect ? x.roundRect(top[0] - tw / 2, top[1] - 40, tw, 26, 13) : x.rect(top[0] - tw / 2, top[1] - 40, tw, 26); x.fill(); x.fillStyle = '#7DFFE6'; x.fillText(lab, top[0], top[1] - 27);
-    if (shown === labs.length && !A.small) { A.small = true; const w0 = Math.hypot(...[0, 1].map(q => hApply(Hq, LX[1], 0)[q] - hApply(Hq, LX[0], 0)[q])); if (w0 < 9) toast('Die Nummern sind zum Lesen zu klein – bitte ins Bild hineinzoomen.'); }
+    if (shown === labs.length && !A.small && !RS.smallShown) { A.small = true; const w0 = Math.hypot(...[0, 1].map(q => hApply(Hq, LX[1], 0)[q] - hApply(Hq, LX[0], 0)[q])); if (w0 < 9) RS.smallShown = true, toast('Die Nummern sind zum Lesen zu klein – bitte ins Bild hineinzoomen.'); }
     x.restore();
   }
   if (e < tScan + tCount + 50 && !RS.numRaf) RS.numRaf = requestAnimationFrame(() => { RS.numRaf = 0; if (RS && RS.num === A && RS.step === 'ref') roofDraw(); });
@@ -999,6 +1010,7 @@ roofAutoCount = async function (f) {
   const r = await _roofAutoCount224(f); if (!r) return r;
   const keep = [f.nx, f.ny]; f.nx = r.nx; f.ny = r.ny;
   try { if (await roofDetectGrid(f)) { r.nx = f.nx; r.ny = f.ny; } } catch (e) {}
+  f.scanN = r.nx;
   f.nx = keep[0]; f.ny = keep[1];
   setTimeout(roofStartNumbers, 60);
   return r;
@@ -1012,4 +1024,22 @@ document.addEventListener('click', async e => {
   a.disabled = true; a.textContent = 'Suche Pfannenkanten …';
   const g = f.grid; if (!(g && g.nx === Math.round(+f.nx) && g.ny === Math.round(+f.ny) && g.ref === JSON.stringify(f.ref))) { try { await roofDetectGrid(f); } catch (err) {} }
   roofSave(); roofStartNumbers();
+});
+
+/* Alternativen zur gezählten Pfannenzahl: Mulden werden oft als eigene Pfanne erkannt (dann ½, ⅔ oder ¾ der Zahl) */
+function roofCands(n) {
+  n = Math.round(n); const out = new Set([0.5, 2 / 3, 0.75, 1, 4 / 3, 1.5].map(k => Math.round(n * k)).filter(v => v >= 2 && v <= 160));
+  return [...out].sort((a, b) => a - b);
+}
+/* Anzahl setzen, Raster neu auf die Kanten legen, Nummern ohne Animation zeigen */
+async function roofSetCount(k, v) {
+  const f = roofF(); f[k] = Math.max(1, Math.min(k === 'nx' ? 160 : 90, Math.round(v)));
+  try { await roofDetectGrid(f, true); } catch (e) {}
+  roofSave(); if (RS) RS.num = { t0: performance.now() - 1e6 }; roofSoft();
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('[data-r="ncand"],[data-r="nstep"]'); if (!a || !RS) return;
+  e.preventDefault(); const f = roofF();
+  if (a.dataset.r === 'ncand') return roofSetCount('nx', +a.dataset.v);
+  const k = a.dataset.k; roofSetCount(k, (+f[k] || 0) + (+a.dataset.d));
 });
