@@ -13,6 +13,9 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.29', date: '2026-11-10', items: [
+    ['house', 'Kundenname ist Pflicht', 'Wer eine Schnellauslegung oder einen Modulplan für einen neuen Kunden startet, gibt zuerst Anrede und Namen ein – so landet kein „Neuer Kunde“ ohne Namen in der Liste.']
+  ] },
   { version: '2.28', date: '2026-11-10', items: [
     ['house', 'LumbraDesk: Firmen-Einstellungen für alle', 'Unter LumbraDesk lädt jedes Gerät automatisch den aktuellen Firmenstand – Design, Deckblatt, Förderung, Preise, Texte und Produkte mit Bildern. Admins ändern wie gewohnt und tippen „Für alle übernehmen“.']
   ] },

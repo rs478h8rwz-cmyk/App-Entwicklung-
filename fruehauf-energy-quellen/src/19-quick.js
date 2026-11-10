@@ -149,6 +149,7 @@ function quickHTML() {
     </div>`)}
   ${sec(4, 'Ergebnis & Wärmepumpe', `<div id="q-result">${qResultHTML(r)}</div>`)}
   </div>
+  ${QPID ? '' : `<div class="mt-6">${custNameField()}</div>`}
   <div class="flex flex-col sm:flex-row gap-3 mt-6">${QPID
     ? `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-apply">${ic('check', 17)}${(findProject(QPID) || {}).type === 'pv' ? 'Als PV + Wärmepumpe übernehmen' : 'Werte übernehmen'}</button>`
     : `<button class="btn-p w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="wp">${ic('fan', 17)}Als Wärmepumpe anlegen</button><button class="btn-s w-full sm:w-auto sm:flex-1" data-a="quick-create" data-type="pvwp">${ic('sun', 17)}Als PV + Wärmepumpe anlegen</button>`}</div>`;
@@ -273,7 +274,8 @@ document.addEventListener('click', async e => {
     if (!(isNum(QS.load) && QS.load > 0) && QS.calcOpen && isNum(qMethodLoad()) && qMethodLoad() > 0) QS.load = Math.round(qMethodLoad() * 100) / 100;
     if (!isNum(QS.load) || QS.load <= 0) { toast('Bitte eine Heizlast eingeben oder über „Heizlast berechnen“ ermitteln.'); return; }
     if (act === 'quick-create') {
-      const np = newProject(a.dataset.type); if (QS.zip) np.customer.zip = QS.zip; if (QS.city) np.customer.city = QS.city;
+      const cn = custNameTake(); if (!cn) return;
+      const np = newProject(a.dataset.type); np.customer.salutation = cn.salutation; np.customer.name = cn.name; if (QS.zip) np.customer.zip = QS.zip; if (QS.city) np.customer.city = QS.city;
       quickApplyTo(np); PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`);
       toast(`Schnellauslegung übernommen: ${num(np.hp.kw, 1)} kW, JAZ ${num(np.hp.jaz, 2)}.`);
     } else {
@@ -531,3 +533,20 @@ document.addEventListener('click', e => {
   const name = t => (TYPE_OPTS.find(x => x[0] === t) || [, t])[1];
   toast(`Geändert: ${name(was)} → ${name(v)}.${v !== 'wp' && was === 'wp' ? ' Bitte die PV-Angaben (Anlagenleistung, Preis) ergänzen.' : v !== 'pv' && was === 'pv' ? ' Bitte die Wärmepumpen-Angaben ergänzen.' : ''}`, 'ok', 5000);
 });
+
+/* ---------- Pflichtfeld Kundenname (Schnellauslegung und Modulplan für neue Kunden) ---------- */
+const NEWCUST = { sal: 'Familie', name: '' };
+const SALUTS = [['Familie', 'Familie'], ['Herr', 'Herr'], ['Frau', 'Frau'], ['Eheleute', 'Eheleute'], ['Firma', 'Firma']];
+function custNameField() {
+  return `<div class="rounded-[calc(var(--r)-4px)] border border-p/40 p-4" style="background:rgb(var(--p-rgb)/.06)"><div class="font-semibold text-[15px] mb-2">Für welchen Kunden?</div>
+    <div class="grid grid-cols-[130px_1fr] gap-2"><select class="inp" data-nc="sal">${SALUTS.map(([k, l]) => `<option value="${k}" ${NEWCUST.sal === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <input class="inp" data-nc="name" value="${esc(NEWCUST.name)}" placeholder="Name, z. B. Müller" autocomplete="off"></div><div class="hint">Pflichtfeld – damit der Kunde in der Liste wiederzufinden ist.</div></div>`;
+}
+function custNameTake() {
+  const el = $('#modal [data-nc="name"]'), v = ((el && el.value) || NEWCUST.name || '').trim();
+  if (!v) { toast('Bitte zuerst den Namen des Kunden eingeben.', 'err'); if (el) { el.focus(); el.classList.add('!border-[#D9482B]'); } return null; }
+  const r = { salutation: (($('#modal [data-nc="sal"]') || {}).value) || NEWCUST.sal, name: v };
+  NEWCUST.name = ''; NEWCUST.sal = 'Familie'; return r;
+}
+document.addEventListener('input', e => { const el = e.target; if (el.dataset && el.dataset.nc) { NEWCUST[el.dataset.nc] = el.value; el.classList.remove('!border-[#D9482B]'); } });
+document.addEventListener('change', e => { const el = e.target; if (el.dataset && el.dataset.nc) NEWCUST[el.dataset.nc] = el.value; });

@@ -562,7 +562,7 @@ async function roofApply(p) {
 
 /* ---------- Einbindung: Neue Berechnung, PV-Karte, Produkte ---------- */
 function roofStartDialog() {
-  modal(`<h3 class="text-[21px] font-semibold pr-8">Modulplan erstellen</h3><p class="text-ink3 text-[14px] mt-1 mb-5">Wofür ist die Berechnung?</p>
+  modal(`<h3 class="text-[21px] font-semibold pr-8">Modulplan erstellen</h3><div class="mt-4 mb-4">${custNameField()}</div><p class="text-ink3 text-[14px] mb-3">Wofür ist die Berechnung?</p>
   <div class="grid sm:grid-cols-2 gap-3"><button class="card !shadow-none p-4 text-left hover:ring-2 hover:ring-p" data-a="roof-new" data-type="pv"><div class="text-p">${ic('sun', 24)}</div><div class="font-semibold mt-2">Photovoltaik</div></button>
   <button class="card !shadow-none p-4 text-left hover:ring-2 hover:ring-p" data-a="roof-new" data-type="pvwp"><div class="text-p flex">${ic('sun', 22)}${ic('fan', 22)}</div><div class="font-semibold mt-2">PV + Wärmepumpe</div></button></div>`);
 }
@@ -577,7 +577,7 @@ document.addEventListener('click', async e => {
   const a = e.target.closest('[data-a^="roof-"]'); if (!a) return;
   if (a.dataset.a === 'roof-start') { roofStartDialog(); }
   else if (a.dataset.a === 'roof-open') { roofOpen(a.dataset.id); }
-  else if (a.dataset.a === 'roof-new') { const np = newProject(a.dataset.type); PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`); setTimeout(() => roofOpen(np.id), 250); }
+  else if (a.dataset.a === 'roof-new') { const cn = custNameTake(); if (!cn) return; const np = newProject(a.dataset.type); np.customer.salutation = cn.salutation; np.customer.name = cn.name; PROJECTS.push(np); await DB.put('projects', clone(np)); closeModal(); go(`projekt/${np.id}/1`); setTimeout(() => roofOpen(np.id), 250); }
 });
 /* PV-Module brauchen Länge und Breite für den Modulplan */
 {
