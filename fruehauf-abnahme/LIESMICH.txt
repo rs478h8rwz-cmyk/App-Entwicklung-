@@ -1,4 +1,4 @@
-Frühauf – Abnahme & Service (Version 1.2)
+Frühauf – Abnahme & Service (Version 1.3)
 =========================================
 
 Eigenständige Web-App für Monteure: Baustellen-Abnahme und Serviceaufträge

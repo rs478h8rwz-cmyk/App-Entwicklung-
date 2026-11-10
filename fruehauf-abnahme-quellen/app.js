@@ -44,7 +44,7 @@ const IP = {
    Eigenständige App: Baustellen-Abnahme und Serviceeinsätze für DC, AC und SHK.
    Daten bleiben auf dem Gerät (IndexedDB), Protokolle als PDF teilen.
    ========================================================= */
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -520,6 +520,9 @@ function pickDialog(g) {
 }
 
 /* ---------- Assistent ---------- */
+function itemRows(fid, v) {
+  return (v || []).map((x, i) => `<div class="flex items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><b class="mono whitespace-nowrap">${esc(x.q)} ${esc(x.u)}</b><span class="flex-1 min-w-0">${esc(x.n)}</span><button type="button" class="w-9 h-9 -my-1 grid place-items-center text-ink3 hover:text-ember" data-a="item-del" data-f="${fid}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('');
+}
 function fieldHTML(r, f, bad) {
   const a = r.answers, v = a[f.id], err = bad.includes(f.id), lab = f.label ? `<span class="lbl ${f.danger ? '!text-ember !text-[15px] !font-semibold' : ''}">${esc(labOf(f, a))}${f.req ? ' <span class="text-ember">*</span>' : ''}</span>` : '';
   const hint = f.hint ? `<p class="hint">${esc(typeof f.hint === 'function' ? f.hint() : f.hint)}</p>` : '';
@@ -541,8 +544,8 @@ function fieldHTML(r, f, bad) {
     case 'thumbs': return `<div class="thumbs">${ic('thumb', 40, 1.6)}<div class="font-semibold mt-2">Super – alles erledigt.</div></div>`;
     case 'multiday': return `<div>${lab}<div class="flex flex-wrap gap-1.5 mb-2">${(v || []).map((d, i) => `<span class="chip !h-9">${wdOf(d).slice(0, 2)}, ${deDate(d)}<button class="text-ink3 hover:text-ember -mr-1" data-a="day-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('x', 14)}</button></span>`).join('')}</div>
       <div class="flex gap-2"><input type="date" class="inp ${err ? 'inp-req' : ''}" id="day-${f.id}" value="${isoToday()}"><button type="button" class="btn-s shrink-0" data-a="day-add" data-f="${f.id}">${ic('plus', 16)}Tag</button></div><p class="hint">Mehrere Tage nacheinander hinzufügen.</p></div>`;
-    case 'items': return `<div>${lab}<div class="space-y-1.5 mb-2">${(v || []).map((x, i) => `<div class="flex items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><b class="mono">${esc(x.q)} ${esc(x.u)}</b><span class="flex-1 min-w-0">${esc(x.n)}</span><button class="text-ink3 hover:text-ember" data-a="item-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
-      <div class="grid grid-cols-[1fr_80px_86px] sm:grid-cols-[1fr_90px_96px_auto] gap-2"><input class="inp ${err ? 'inp-req' : ''}" id="it-n-${f.id}" placeholder="${esc(f.ph || 'Bezeichnung')}"><input class="inp" id="it-q-${f.id}" inputmode="decimal" value="1"><select class="inp appearance-none" id="it-u-${f.id}">${['Stk', 'm', 'l', 'kg', 'Set', 'Pkg'].map(u => `<option>${u}</option>`).join('')}</select><button type="button" class="btn-s col-span-3 sm:col-span-1" data-a="item-add" data-f="${f.id}">${ic('plus', 16)}Hinzufügen</button></div></div>`;
+    case 'items': return `<div>${lab}<div class="space-y-1.5 mb-2" id="it-list-${f.id}">${itemRows(f.id, v)}</div>
+      <div class="grid grid-cols-[1fr_80px_86px] sm:grid-cols-[1fr_90px_96px_auto] gap-2"><input class="inp ${err ? 'inp-req' : ''}" id="it-n-${f.id}" placeholder="${esc(f.ph || 'Bezeichnung')}" enterkeyhint="enter" autocomplete="off"><input class="inp" id="it-q-${f.id}" inputmode="decimal" enterkeyhint="enter" value="1"><select class="inp appearance-none" id="it-u-${f.id}">${['Stk', 'm', 'l', 'kg', 'Set', 'Pkg'].map(u => `<option>${u}</option>`).join('')}</select><button type="button" class="btn-p col-span-3 sm:col-span-1 !h-12 sm:!h-11" data-a="item-add" data-f="${f.id}">${ic('plus', 16)}Hinzufügen</button></div><p class="hint">Bezeichnung und Menge eintragen, dann „Hinzufügen“ oder Enter – beliebig viele Positionen.</p></div>`;
     case 'heizkoerper': {
       const last = UI.hkLast || {}, sel = (id, list, ph) => `<label class="block"><span class="text-[12px] text-ink3">${ph}</span><select class="inp appearance-none" id="${id}">${list.map(x => `<option ${last[id] === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>`;
       return `<div>${lab}<div class="space-y-1.5 mb-3">${(v || []).map((x, i) => `<div class="flex items-center gap-3 rounded-[var(--rb)] bg-raised px-3 py-2.5 text-[14px]"><b class="mono text-ink3 w-6">${i + 1}.</b><span class="flex-1 min-w-0"><b>${esc(x.raum)}</b> <span class="text-ink2">· ${esc(x.typ)} · ${esc(x.h)} × ${esc(x.l)}</span></span><button class="text-ink3 hover:text-ember" data-a="hk-del" data-f="${f.id}" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('')}</div>
@@ -766,6 +769,30 @@ async function finish() {
   pdfFlow(rec);
 }
 
+/* ---------- Material-/Fittingeliste ----------
+   Hinzufügen reagiert schon beim Berühren (bevor die Tastatur schließt und die Seite springt),
+   per Enter auf der Tastatur und beim „Weiter“ (noch nicht übernommene Eingabe). */
+let ITEM_PD = 0;
+function addItem(f, quiet) {
+  const ni = $('#it-n-' + f), qi = $('#it-q-' + f), ui = $('#it-u-' + f); if (!ni || !CUR) return false;
+  const n = ni.value.trim(); if (!n) { if (!quiet) toast('Bitte zuerst eine Bezeichnung eintragen.', 'warn'); return false; }
+  const l = CUR.answers[f] || []; l.push({ n, q: (qi && qi.value.trim().replace('.', ',')) || '1', u: ui ? ui.value : 'Stk' }); CUR.answers[f] = l;
+  UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft();
+  const box = $('#it-list-' + f); if (box) box.innerHTML = itemRows(f, l);
+  ni.value = ''; ni.classList.remove('inp-req'); if (qi) qi.value = '1';
+  if (!quiet) toast(`„${n}“ hinzugefügt.`);
+  return true;
+}
+function flushItems() { $$('#app input[id^="it-n-"]').forEach(el => { if (el.value.trim()) addItem(el.id.slice(5), true); }); }
+document.addEventListener('pointerdown', e => {
+  const a = e.target.closest && e.target.closest('[data-a="item-add"]'); if (!a) return;
+  e.preventDefault(); ITEM_PD = Date.now(); addItem(a.dataset.f);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.id || !/^it-[nq]-/.test(e.target.id)) return;
+  e.preventDefault(); const f = e.target.id.slice(5); if (addItem(f)) { const ni = $('#it-n-' + f); if (ni) ni.focus(); }
+});
+
 document.addEventListener('click', async e => {
   const a = e.target.closest('[data-a]'); if (!a) return;
   const act = a.dataset.a, f = a.dataset.f;
@@ -777,20 +804,20 @@ document.addEventListener('click', async e => {
     case 'discard': if (await confirmDlg('Entwurf verwerfen?', 'Alle Eingaben dieses Protokolls gehen verloren.', 'Verwerfen', true)) { CUR = null; await saveDraft(true); render(); } break;
     case 'home': go('#/'); break;
     case 'back': if (UI.step === 0) go('#/'); else setStep(UI.step - 1); break;
-    case 'next': if (validateScreen()) setStep(UI.step + 1); break;
+    case 'next': flushItems(); if (validateScreen()) setStep(UI.step + 1); break;
     case 'jump': if (+a.dataset.i <= UI.maxStep) setStep(+a.dataset.i); break;
     case 'goto': setStep(+a.dataset.i); break;
     case 'goto-x': setStep(screens(CUR).findIndex(s => s[0] === a.dataset.k)); break;
-    case 'finish': finish(); break;
+    case 'finish': flushItems(); finish(); break;
     case 'opt': CUR.answers[f] = a.dataset.v; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break;
     case 'chip': { const el = $(`textarea[data-f="${f}"]`), cur = (el ? el.value : CUR.answers[f] || '').trim(), v = a.dataset.v; if (cur.split('\n').includes(v)) return; const nv = cur ? cur + '\n' + v : v; CUR.answers[f] = nv; if (el) { el.value = nv; el.classList.remove('inp-req'); } saveDraft(); break; }
     case 'day-add': { const d = $('#day-' + f).value; if (!d) return; const l = CUR.answers[f] || []; if (!l.includes(d)) l.push(d); l.sort(); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); render(); break; }
     case 'day-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
-    case 'item-add': { const n = $('#it-n-' + f).value.trim(); if (!n) { $('#it-n-' + f).focus(); return; } const l = CUR.answers[f] || []; l.push({ n, q: $('#it-q-' + f).value.trim().replace('.', ',') || '1', u: $('#it-u-' + f).value }); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break; }
+    case 'item-add': if (Date.now() - ITEM_PD < 900) return; addItem(f); break;
     case 'hk-raum': { const el = $('#hk-raum'); if (el) el.value = a.dataset.v; $$('[data-a="hk-raum"]').forEach(b => b.classList.toggle('!border-p', b === a)); break; }
     case 'hk-add': { const raum = $('#hk-raum').value.trim(); if (!raum) { toast('Bitte zuerst den Raum wählen.', 'warn'); return; } const l = CUR.answers[f] || []; l.push({ raum, typ: $('#hk-typ').value, h: $('#hk-h').value, l: $('#hk-l').value }); UI.hkLast = { 'hk-typ': $('#hk-typ').value, 'hk-h': $('#hk-h').value, 'hk-l': $('#hk-l').value }; CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } toast(`${raum} hinzugefügt.`); break; }
     case 'hk-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
-    case 'item-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
+    case 'item-del': { CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); const box = $('#it-list-' + f); if (box) box.innerHTML = itemRows(f, CUR.answers[f]); else render(); break; }
     case 'ein-add': { const l = CUR.answers.einsaetze || (CUR.answers.einsaetze = []); const last = l[l.length - 1]; l.push({ id: uid('e'), datum: last ? last.datum : isoToday(), von: '', bis: '', pause: '' }); saveDraft(); render(); break; }
     case 'ein-del': CUR.answers.einsaetze.splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'photo-del': CUR.photos.splice(+a.dataset.i, 1); saveDraft(); render(); break;

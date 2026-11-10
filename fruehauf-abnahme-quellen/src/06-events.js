@@ -39,6 +39,30 @@ async function finish() {
   pdfFlow(rec);
 }
 
+/* ---------- Material-/Fittingeliste ----------
+   Hinzufügen reagiert schon beim Berühren (bevor die Tastatur schließt und die Seite springt),
+   per Enter auf der Tastatur und beim „Weiter“ (noch nicht übernommene Eingabe). */
+let ITEM_PD = 0;
+function addItem(f, quiet) {
+  const ni = $('#it-n-' + f), qi = $('#it-q-' + f), ui = $('#it-u-' + f); if (!ni || !CUR) return false;
+  const n = ni.value.trim(); if (!n) { if (!quiet) toast('Bitte zuerst eine Bezeichnung eintragen.', 'warn'); return false; }
+  const l = CUR.answers[f] || []; l.push({ n, q: (qi && qi.value.trim().replace('.', ',')) || '1', u: ui ? ui.value : 'Stk' }); CUR.answers[f] = l;
+  UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft();
+  const box = $('#it-list-' + f); if (box) box.innerHTML = itemRows(f, l);
+  ni.value = ''; ni.classList.remove('inp-req'); if (qi) qi.value = '1';
+  if (!quiet) toast(`„${n}“ hinzugefügt.`);
+  return true;
+}
+function flushItems() { $$('#app input[id^="it-n-"]').forEach(el => { if (el.value.trim()) addItem(el.id.slice(5), true); }); }
+document.addEventListener('pointerdown', e => {
+  const a = e.target.closest && e.target.closest('[data-a="item-add"]'); if (!a) return;
+  e.preventDefault(); ITEM_PD = Date.now(); addItem(a.dataset.f);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.id || !/^it-[nq]-/.test(e.target.id)) return;
+  e.preventDefault(); const f = e.target.id.slice(5); if (addItem(f)) { const ni = $('#it-n-' + f); if (ni) ni.focus(); }
+});
+
 document.addEventListener('click', async e => {
   const a = e.target.closest('[data-a]'); if (!a) return;
   const act = a.dataset.a, f = a.dataset.f;
@@ -50,20 +74,20 @@ document.addEventListener('click', async e => {
     case 'discard': if (await confirmDlg('Entwurf verwerfen?', 'Alle Eingaben dieses Protokolls gehen verloren.', 'Verwerfen', true)) { CUR = null; await saveDraft(true); render(); } break;
     case 'home': go('#/'); break;
     case 'back': if (UI.step === 0) go('#/'); else setStep(UI.step - 1); break;
-    case 'next': if (validateScreen()) setStep(UI.step + 1); break;
+    case 'next': flushItems(); if (validateScreen()) setStep(UI.step + 1); break;
     case 'jump': if (+a.dataset.i <= UI.maxStep) setStep(+a.dataset.i); break;
     case 'goto': setStep(+a.dataset.i); break;
     case 'goto-x': setStep(screens(CUR).findIndex(s => s[0] === a.dataset.k)); break;
-    case 'finish': finish(); break;
+    case 'finish': flushItems(); finish(); break;
     case 'opt': CUR.answers[f] = a.dataset.v; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break;
     case 'chip': { const el = $(`textarea[data-f="${f}"]`), cur = (el ? el.value : CUR.answers[f] || '').trim(), v = a.dataset.v; if (cur.split('\n').includes(v)) return; const nv = cur ? cur + '\n' + v : v; CUR.answers[f] = nv; if (el) { el.value = nv; el.classList.remove('inp-req'); } saveDraft(); break; }
     case 'day-add': { const d = $('#day-' + f).value; if (!d) return; const l = CUR.answers[f] || []; if (!l.includes(d)) l.push(d); l.sort(); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); render(); break; }
     case 'day-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
-    case 'item-add': { const n = $('#it-n-' + f).value.trim(); if (!n) { $('#it-n-' + f).focus(); return; } const l = CUR.answers[f] || []; l.push({ n, q: $('#it-q-' + f).value.trim().replace('.', ',') || '1', u: $('#it-u-' + f).value }); CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } break; }
+    case 'item-add': if (Date.now() - ITEM_PD < 900) return; addItem(f); break;
     case 'hk-raum': { const el = $('#hk-raum'); if (el) el.value = a.dataset.v; $$('[data-a="hk-raum"]').forEach(b => b.classList.toggle('!border-p', b === a)); break; }
     case 'hk-add': { const raum = $('#hk-raum').value.trim(); if (!raum) { toast('Bitte zuerst den Raum wählen.', 'warn'); return; } const l = CUR.answers[f] || []; l.push({ raum, typ: $('#hk-typ').value, h: $('#hk-h').value, l: $('#hk-l').value }); UI.hkLast = { 'hk-typ': $('#hk-typ').value, 'hk-h': $('#hk-h').value, 'hk-l': $('#hk-l').value }; CUR.answers[f] = l; UI.bad = (UI.bad || []).filter(x => x !== f); saveDraft(); { const y = window.scrollY; render(); window.scrollTo(0, y); } toast(`${raum} hinzugefügt.`); break; }
     case 'hk-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
-    case 'item-del': CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); render(); break;
+    case 'item-del': { CUR.answers[f].splice(+a.dataset.i, 1); saveDraft(); const box = $('#it-list-' + f); if (box) box.innerHTML = itemRows(f, CUR.answers[f]); else render(); break; }
     case 'ein-add': { const l = CUR.answers.einsaetze || (CUR.answers.einsaetze = []); const last = l[l.length - 1]; l.push({ id: uid('e'), datum: last ? last.datum : isoToday(), von: '', bis: '', pause: '' }); saveDraft(); render(); break; }
     case 'ein-del': CUR.answers.einsaetze.splice(+a.dataset.i, 1); saveDraft(); render(); break;
     case 'photo-del': CUR.photos.splice(+a.dataset.i, 1); saveDraft(); render(); break;
