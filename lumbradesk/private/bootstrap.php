@@ -3,9 +3,16 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '1.8';
+const LD_VERSION = '1.9';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
+
+/* Apps unter dem LumbraDesk-Login (Kacheln auf der Startseite) – wer welche App öffnen darf */
+const LD_APPS = [
+  ['key' => 'calc', 'name' => 'Wirtschaftlichkeit', 'text' => 'Berechnungen, Angebote, Modulplan, Stringplan', 'url' => 'rechner/', 'roles' => ['admin', 'buero', 'vertrieb']],
+  ['key' => 'stempel', 'name' => 'Stempeluhr', 'text' => 'Arbeitszeit, Urlaub, Stundenzettel', 'url' => 'stempel/', 'roles' => ['admin', 'buero', 'vertrieb', 'monteur']],
+  ['key' => 'abnahme', 'name' => 'Abnahme & Service', 'text' => 'Abnahmeprotokolle, Service-Einsätze, Fotos, Unterschrift', 'url' => 'abnahme/', 'roles' => ['admin', 'buero', 'monteur']],
+];
 
 function cfg(?string $key = null) {
   static $c = null;

@@ -6,6 +6,8 @@ RewriteCond %{HTTPS} !=on
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # Wetter und PVGIS für die Wirtschaftlichkeits-App (früher Netlify-Weiterleitung)
 RewriteRule ^(wetter|pvgis)/(.*)$ proxy.php?svc=$1&path=$2 [QSA,L]
+# Stempeluhr und Abnahme nutzen dieselben Bibliotheken wie die Wirtschaftlichkeit
+RewriteRule ^(stempel|abnahme)/vendor/(.*)$ rechner/vendor/$2 [L]
 # Server-Ordner (Zugangsdaten, Sitzungen) nie ausliefern
 RewriteRule ^private(/|$) - [F]
 # Versteckte Dateien sperren

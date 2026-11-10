@@ -18,8 +18,5 @@ return [
   // Abmelden nach so vielen Minuten ohne Aktivität
   'idle_minutes' => 480,
 
-  // Bisherige Apps (Kacheln auf der Startseite), bis sie ins System umgezogen sind
-  'apps' => [
-    ['key' => 'calc', 'name' => 'Wirtschaftlichkeit', 'text' => 'Berechnungen, Angebote, Modulplan, Stringplan', 'url' => 'rechner/', 'roles' => ['admin', 'buero', 'vertrieb']],
-  ],
+  // Die Apps stehen jetzt fest in bootstrap.php (LD_APPS)
 ];

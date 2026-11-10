@@ -21,7 +21,7 @@ try {
       $u = current_user();
       if (!$u) json_out(['user' => null]);
       try { require_once LD_PRIV_DIR . '/backup-lib.php'; backup_if_due(); } catch (Throwable $e) {}
-      $apps = array_values(array_filter(cfg('apps') ?: [], fn($a) => in_array($u['role'], $a['roles'] ?? [], true)));
+      $apps = array_values(array_filter(LD_APPS, fn($a) => in_array($u['role'], $a['roles'], true)));
       json_out(['user' => user_out($u), 'apps' => $u['must_change'] ? [] : $apps, 'roles' => ROLES]);
     }
     case 'POST login': {

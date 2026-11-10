@@ -11,7 +11,8 @@ ROOT = os.path.dirname(SP)
 DIST = os.path.join(SP, 'dist')
 APP = os.path.join(DIST, 'lumbradesk')
 
-subprocess.run(['bash', os.path.join(ROOT, 'fruehauf-energy-quellen', 'build.sh')], check=True)
+for q in ('fruehauf-energy-quellen', 'fruehauf-stempel-quellen', 'fruehauf-abnahme-quellen'):
+    subprocess.run(['bash', os.path.join(ROOT, q, 'build.sh')], check=True, stdout=subprocess.DEVNULL)
 
 if os.path.isdir(DIST): shutil.rmtree(DIST)
 skip = shutil.ignore_patterns('config.php', 'sessions', '.DS_Store')
@@ -40,6 +41,22 @@ open(os.path.join(R, '.htaccess'), 'w').write('''# Wirtschaftlichkeits-App (übe
   AddType application/manifest+json .webmanifest
 </IfModule>
 ''')
+# Stempeluhr und Abnahme: ebenfalls unverändert, mit Login-Schutz. Ihre Bibliotheken sind identisch mit denen
+# der Wirtschaftlichkeit – der Webserver liefert sie aus rechner/vendor/ (Regel in public/.htaccess).
+HT_APP = open(os.path.join(R, '.htaccess')).read()
+for src, dst, perm in (('fruehauf-stempel', 'stempel', 'camera=(self), microphone=(), geolocation=(self), payment=()'),
+                       ('fruehauf-abnahme', 'abnahme', 'camera=(self), microphone=(), geolocation=(), payment=()')):
+    D = os.path.join(APP, 'public', dst)
+    shutil.copytree(os.path.join(ROOT, src), D, ignore=shutil.ignore_patterns('_headers', '_redirects', 'LIESMICH.txt', 'vendor'))
+    vs, vr = os.path.join(ROOT, src, 'vendor'), os.path.join(ROOT, 'fruehauf-energy', 'vendor')
+    for dp, dn, fn in os.walk(vs):
+        for n in fn:
+            a = os.path.join(dp, n); b = os.path.join(vr, os.path.relpath(a, vs))
+            assert os.path.isfile(b) and open(a, 'rb').read() == open(b, 'rb').read(), 'Bibliothek weicht ab: ' + a
+    p2 = os.path.join(D, 'index.html'); t = open(p2, encoding='utf-8').read(); assert '<head>' in t
+    open(p2, 'w', encoding='utf-8').write(t.replace('<head>', '<head>\n<script src="../guard.js"></script>', 1))
+    open(os.path.join(D, '.htaccess'), 'w').write(HT_APP.replace('# Wirtschaftlichkeits-App (übernommen von Netlify)', '# ' + dst + ' (übernommen von Netlify)').replace('camera=(), microphone=(), geolocation=(self), payment=()', perm))
+
 v = os.path.join(R, 'vendor')
 if os.path.isdir(v): open(os.path.join(v, '.htaccess'), 'w').write('<IfModule mod_headers.c>\n  Header set Cache-Control "public, max-age=31536000"\n</IfModule>\n')
 
