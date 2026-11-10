@@ -148,7 +148,7 @@ SET.startseite = () => {
   const FESTS = [
     ['xmas', 'Weihnachten', 'Lichterkette, Kranz an der Tür, Tannenbaum mit Stern', '1.12.–6.1.'],
     ['easter', 'Ostern', 'Bunte Eier im Gras und am Baum, hoppelnder Osterhase', `${esTxt(new Date(es - 14 * 864e5))}–${esTxt(new Date(+es + 864e5))}`],
-    ['halloween', 'Halloween', 'Leuchtende Kürbisse an der Tür, Fledermäuse und ein kleines Gespenst', '20.10.–1.11.']
+    ['halloween', 'Halloween', 'Leuchtende Kürbisse, Fledermäuse, ein Gespenst, eine finstere Gestalt im Hintergrund und ab und zu ein Gruselgesicht am Fenster', '20.10.–1.11.']
   ];
   const xmasCard = sCard('gift', 'Feiertags-Schmuck', 'Das Haus schmückt sich automatisch zur passenden Zeit. Zum Testen einzeln einschalten.',
     FESTS.map(([k, t, d, range], i) => { const cur = PERSONAL[k] || 'auto'; return `<div class="${i ? 'mt-4 pt-4 border-t border-line' : ''}"><div class="flex flex-wrap items-baseline gap-x-2"><span class="text-[14px] font-semibold">${t}</span><span class="text-[12px] text-ink3">${d}</span>${ws[k] ? '<span class="badge bg-p/10 text-p !py-0 !text-[11px]">gerade aktiv</span>' : ''}</div>
@@ -254,19 +254,31 @@ function halloweenDeco(style, dawn) {
   const bat = `<path d="M0 0 C-4 -5 -9 -5 -13 -1 C-10 -1 -9 1 -8 3 C-6 1 -3 1 -2 3 L0 1 L2 3 C3 1 6 1 8 3 C9 1 10 -1 13 -1 C9 -5 4 -5 0 0Z" fill="${dawn ? '#05070C' : '#2B2233'}"/>`;
   const bats = `<g class="hw-bats">${[[0, 60, 0], [-40, 95, -3], [-90, 40, -6], [-20, 120, -8], [-70, 75, -10]].map(([x, y, d]) => `<g style="animation-delay:${d}s"><g transform="translate(${x} ${y}) scale(1.8)"><g class="hw-flap">${bat}</g></g></g>`).join('')}</g>`;
   const ghost = `<g class="hw-ghost"><g transform="translate(112 218) scale(1.5)"><path d="M-10 10 L-10 -4 C-10 -14 10 -14 10 -4 L10 10 L6 7 L3 10 L0 7 L-3 10 L-6 7Z" fill="#F4F6FA" opacity=".92"/><circle cx="-3.5" cy="-3" r="1.6" fill="#1B2230"/><circle cx="3.5" cy="-3" r="1.6" fill="#1B2230"/><ellipse cx="0" cy="2" rx="1.6" ry="2" fill="#1B2230"/></g></g>`;
-  return `<g class="hw">${bats}${ghost}${pumps}</g>`;
+  // Gestalt im Hintergrund: steht still neben dem Haus, nur die Augen glimmen
+  const fig = `<g class="hw-stalker" transform="translate(${style === 'modern' ? 532 : 530} 296) scale(1.1)"><path d="M-9 34 L-8 4 C-8 -4 -6 -8 -4 -10 C-7 -13 -7 -21 0 -22 C7 -21 7 -13 4 -10 C6 -8 8 -4 8 4 L9 34 L3 34 L2 12 L-2 12 L-3 34Z" fill="${dawn ? '#06080D' : '#1A1620'}" opacity=".88"/><g class="hw-eyes" fill="#FF5A3C"><circle cx="-2.2" cy="-15" r=".9"/><circle cx="2.2" cy="-15" r=".9"/></g></g>`;
+  // Gesicht mit Krallenhand, das ab und zu am Fenster erscheint
+  const w = style === 'modern' ? [350, 214, 66, 34] : [358, 248, 52, 40], cid = 'hwWin' + style;
+  const face = `<clipPath id="${cid}"><rect x="${w[0]}" y="${w[1]}" width="${w[2]}" height="${w[3]}" rx="3"/></clipPath><g clip-path="url(#${cid})"><g class="hw-peek"><g transform="translate(${w[0] + w[2] * 0.42} ${w[1] + w[3] * 0.62})"><ellipse cx="0" cy="0" rx="9" ry="12" fill="#3B2F2A"/><path d="M-9 -6 C-6 -14 6 -14 9 -6 L9 -9 C5 -18 -5 -18 -9 -9Z" fill="#171214"/><ellipse cx="-3.4" cy="-2" rx="2" ry="1.4" fill="#FFE27A"/><ellipse cx="3.4" cy="-2" rx="2" ry="1.4" fill="#FFE27A"/><path d="M-4 5 Q0 8 4 5" stroke="#171214" stroke-width="1.2" fill="none"/><g fill="#2A2220">${[-6, -2, 2, 6].map((dx, i) => `<path d="M${14 + dx * 0.6} 10 L${16 + dx} ${-8 - (i % 2) * 3} L${17.5 + dx} ${-8 - (i % 2) * 3} L${17 + dx * 0.6} 10Z"/>`).join('')}<ellipse cx="17" cy="12" rx="6" ry="4"/></g></g></g></g>`;
+  return `<g class="hw">${fig}${bats}${ghost}${face}${pumps}</g>`;
 }
 document.head.insertAdjacentHTML('beforeend', `<style>
+.hw-peek{transform:translateY(46px)}
 @media (prefers-reduced-motion: no-preference) {
   .hero-anim .ea-bunny{transform-box:fill-box;transform-origin:center;animation:eaHop 11s linear infinite}
   .hero-anim .hw-glow{animation:hwFlicker 1.3s ease-in-out infinite alternate}
   .hero-anim .hw-bats>g{animation:hwBat 11s ease-in-out infinite}
   .hero-anim .hw-flap{transform-box:fill-box;transform-origin:center;animation:hwFlap .2s ease-in-out infinite alternate}
   .hero-anim .hw-ghost{transform-box:fill-box;transform-origin:center;animation:hwGhost 9s ease-in-out infinite}
+  .hero-anim .hw-stalker{animation:hwStalk 16s ease-in-out infinite}
+  .hero-anim .hw-eyes{animation:hwEyes 5s linear infinite}
+  .hero-anim .hw-peek{animation:hwPeek 14s ease-in-out infinite}
 }
 @keyframes eaHop{0.0%{transform:translate(0px,0px) scaleX(-1)}5.0%{transform:translate(-18px,-16px) scaleX(-1)}10.0%{transform:translate(-36px,0px) scaleX(-1)}15.0%{transform:translate(-54px,-16px) scaleX(-1)}20.0%{transform:translate(-72px,0px) scaleX(-1)}25.0%{transform:translate(-90px,-16px) scaleX(-1)}30.0%{transform:translate(-108px,0px) scaleX(-1)}35.0%{transform:translate(-126px,-16px) scaleX(-1)}40.0%{transform:translate(-144px,0px) scaleX(-1)}43%{transform:translate(-144px,0) scaleX(1)}45.0%{transform:translate(-144px,0px) scaleX(1)}50.0%{transform:translate(-126px,-16px) scaleX(1)}55.0%{transform:translate(-108px,0px) scaleX(1)}60.0%{transform:translate(-90px,-16px) scaleX(1)}65.0%{transform:translate(-72px,0px) scaleX(1)}70.0%{transform:translate(-54px,-16px) scaleX(1)}75.0%{transform:translate(-36px,0px) scaleX(1)}80.0%{transform:translate(-18px,-16px) scaleX(1)}85.0%{transform:translate(0px,0px) scaleX(1)}100%{transform:translate(0,0) scaleX(1)}}
 @keyframes hwFlicker{0%{opacity:1}40%{opacity:.7}60%{opacity:.95}100%{opacity:.6}}
 @keyframes hwBat{0%{transform:translate(-60px,0)}20%{transform:translate(90px,-34px)}40%{transform:translate(240px,14px)}60%{transform:translate(390px,-38px)}80%{transform:translate(540px,8px)}100%{transform:translate(720px,-22px)}}
+@keyframes hwStalk{0%,30%{opacity:0}40%,85%{opacity:1}95%,100%{opacity:0}}
+@keyframes hwEyes{0%,46%,50%,100%{opacity:1}48%{opacity:0}}
+@keyframes hwPeek{0%,62%{transform:translateY(46px)}68%,80%{transform:translateY(0)}86%,100%{transform:translateY(46px)}}
 @keyframes hwFlap{from{transform:scaleY(1)}to{transform:scaleY(.2)}}
 @keyframes hwGhost{0%{transform:translate(0,0) rotate(0);opacity:.95}20%{transform:translate(36px,-26px) rotate(8deg);opacity:.6}40%{transform:translate(80px,-8px) rotate(-6deg);opacity:.95}60%{transform:translate(56px,18px) rotate(5deg);opacity:.45}80%{transform:translate(18px,8px) rotate(-8deg);opacity:.9}100%{transform:translate(0,0) rotate(0);opacity:.95}}
 </style>`);

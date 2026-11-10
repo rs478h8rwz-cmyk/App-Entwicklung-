@@ -498,7 +498,7 @@ document.addEventListener('input', e => {
   const f = roofF();
   if (el.dataset.rf === 'name') { f.name = el.value; roofSave(); return; }
   if (el.dataset.rf && el.tagName === 'INPUT') { const v = pnum(el.value); f[el.dataset.rf] = isFinite(v) ? v : null; }
-  if (el.dataset.rt) { const t = roofTiles().find(x => x.id === f.tileId); const v = pnum(el.value); if (t && isFinite(v) && v > 0) { t[el.dataset.rt] = v; saveSettings(); } }
+  if (el.dataset.rt) { const t = roofTiles().find(x => x.id === f.tileId); const v = pnum(el.value); if (t && !RS.rtBase) RS.rtBase = { k: el.dataset.rt, old: t[el.dataset.rt], n: el.dataset.rt === 'w' ? f.nx : f.ny }; if (t && isFinite(v) && v > 0) { t[el.dataset.rt] = v; saveSettings(); } }
   roofSave(); const d = $('#roof-dims'); if (d) d.innerHTML = roofDims(faceGeom(f));
   const ok = !!(faceGeom(f) && !faceGeom(f).bad), btn = $('#roof-ed [data-r="step"][data-v="mod"].btn-p'); if (btn) btn.disabled = !ok;
   const chip = $('#roof-ed .chip[data-r="step"][data-v="mod"]'); if (chip) chip.classList.toggle('opacity-40', !ok), chip.classList.toggle('pointer-events-none', !ok);
@@ -884,3 +884,19 @@ function roofModDialog(p, then) {
     <button class="btn-p w-full mt-5" id="roof-mod-ok">${ic('check', 16)}Übernehmen</button>`);
   $('#roof-mod-ok').onclick = () => { const v = ($('input[name="roof-mod"]:checked') || {}).value; if (v) p.roof.faces.forEach(f => { f.prodId = v; }); p.roof.modAsked = true; saveProject(p); closeModal(); then && then(); };
 }
+
+/* Deckmaß geändert: Anzahl Pfannen/Reihen umrechnen, damit das gelbe Raster die neue Pfannengröße zeigt
+   (die Größe des orangen Rechtecks in Metern bleibt gleich) */
+document.addEventListener('change', e => {
+  const el = e.target; if (!RS || !el.dataset || !el.dataset.rt || !el.closest('#roof-ed')) return;
+  const f = roofF(), b = RS.rtBase; RS.rtBase = null;
+  const t = roofTiles().find(x => x.id === f.tileId), v = pnum(el.value);
+  if (!b || !t || !(v > 0) || !(b.old > 0) || !(+b.n > 0) || b.old === v) return;
+  const key = b.k === 'w' ? 'nx' : 'ny', max = b.k === 'w' ? 80 : 60, n = Math.max(1, Math.min(max, Math.round(+b.n * b.old / v)));
+  if (n === +f[key]) return;
+  f[key] = n; roofSave();
+  const inp = $(`#roof-ed input[data-rf="${key}"]`); if (inp) inp.value = n;
+  const d = $('#roof-dims'); if (d) d.innerHTML = roofDims(faceGeom(f));
+  roofDraw();
+  toast(`Raster angepasst: ${num(+b.n)} → ${num(n)} ${b.k === 'w' ? 'Pfannen waagerecht' : 'Reihen senkrecht'}. Bitte prüfen, ob es auf den Pfannenkanten liegt.`);
+});

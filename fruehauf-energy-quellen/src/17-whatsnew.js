@@ -13,6 +13,12 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.23', date: '2026-11-10', items: [
+    ['fireworks', 'Neujahrs-Feuerwerk', 'Beim ersten Öffnen im neuen Jahr gibt es ein Feuerwerk über den ganzen Bildschirm und einen Neujahrsgruß. Ein- und ausschalten oder vorab ansehen: Einstellungen → Ansicht & Tutorial.'],
+    ['house', 'Halloween noch gruseliger', 'Zu Halloween steht jetzt eine finstere Gestalt neben dem Haus, und ab und zu taucht ein Gruselgesicht mit Krallenhand am Fenster auf.'],
+    ['house', 'Modulbelegung: Raster folgt dem Deckmaß', 'Ändern Sie Deckbreite oder Decklänge, rechnet die App die Anzahl der Pfannen um und das gelbe Raster passt sich sofort an.'],
+    ['tutorial', 'Tutorial mit Beispielbildern', 'Die Anleitung erklärt jetzt in 18 Schritten jeden Ablauf – mit Beispielbild, „So geht’s“-Liste und Markierung, wohin man tippt. Wischen blättert weiter. Starten: Einstellungen → Ansicht & Tutorial.']
+  ] },
   { version: '2.22', date: '2026-11-10', items: [
     ['house', 'Nur Produkte aus dem Angebot', 'Die Produktseite im PDF zeigt nur noch die Produkte aus dem Angebot – Modul aus dem Modulplan und empfohlene Wärmepumpe aus der Schnellauslegung erscheinen dort nicht mehr zusätzlich.'],
     ['sign', 'Vertriebs-PDF auch dunkel', 'Die Einstellung Hell / Gemischt / Dunkel für das Kundendokument gilt jetzt auch für das Vertriebs-PDF – Vorschau und PDF ändern sich sofort, auch bei bereits erstellten Kunden.'],
