@@ -43,6 +43,12 @@ open(os.path.join(R, '.htaccess'), 'w').write('''# Wirtschaftlichkeits-App (übe
 v = os.path.join(R, 'vendor')
 if os.path.isdir(v): open(os.path.join(v, '.htaccess'), 'w').write('<IfModule mod_headers.c>\n  Header set Cache-Control "public, max-age=31536000"\n</IfModule>\n')
 
+# Einmaliger Einrichtungs-Schlüssel (wird nach der Einrichtung gelöscht)
+import secrets
+TOKEN = secrets.token_urlsafe(12).replace('-', 'x').replace('_', 'y')
+open(os.path.join(APP, 'private', 'setup_token.php'), 'w').write("<?php return '" + TOKEN + "';\n")
+open(os.path.join(SP, 'dist', 'SCHLUESSEL.txt'), 'w').write(TOKEN + '\n')
+
 # ZIP für den IONOS-Upload
 z = os.path.join(ROOT, 'lumbradesk-ionos.zip')
 if os.path.exists(z): os.remove(z)

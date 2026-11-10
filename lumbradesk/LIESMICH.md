@@ -11,19 +11,16 @@ Notieren: Hostname, Datenbankname, Benutzername. Passwort festlegen und sicher a
 IONOS → Hosting → **Webspace** (Webspace-Explorer) oder per SFTP (z. B. FileZilla).
 Den Ordner `lumbradesk/` aus der ZIP in das Hauptverzeichnis des Webspace hochladen.
 
-## 3. Zugangsdaten eintragen
-In `lumbradesk/private/` die Datei `config.example.php` kopieren nach **`config.php`** und ausfüllen:
-- `db_host`, `db_name`, `db_user`, `db_pass` aus Schritt 1
-- `setup_token`: eine lange, zufällige Zeichenfolge (mind. 16 Zeichen) – nur für die Einrichtung
-
-`config.php` nie per Mail/Chat verschicken.
+## 3. Zugangsdaten
+Nichts von Hand eintragen: Der Einrichtungs-Assistent (Schritt 5) fragt die Datenbank-Daten ab und legt `private/config.php` selbst an.
+Der Einrichtungs-Schlüssel steht in `private/setup_token.php` (wird nach der Einrichtung gelöscht).
 
 ## 4. Domain verbinden
 IONOS → **Domains & SSL** → `lumbradesk.de` (oder Subdomain `app.lumbradesk.de`) → Ziel **Webspace** →
 Verzeichnis **`/lumbradesk/public`**. SSL-Zertifikat aktivieren. PHP-Version (Hosting → PHP) auf **8.2 oder neuer**.
 
 ## 5. Einrichten
-`https://lumbradesk.de/install.php` öffnen → Einrichtungs-Schlüssel, eigener Name, E-Mail, Passwort → **Einrichten**.
+`https://lumbradesk.de/install.php` öffnen → Einrichtungs-Schlüssel, Datenbank-Daten, eigener Name, E-Mail, Passwort → **Einrichten**.
 Danach ist die Seite gesperrt. Anmelden unter `https://lumbradesk.de/`.
 
 ## 6. Mitarbeiter anlegen
