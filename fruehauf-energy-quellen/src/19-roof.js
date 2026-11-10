@@ -309,9 +309,8 @@ async function roofDraw() {
     const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
     x.fillStyle = gl; poly(); x.fill();
     if (st === 'over') { x.fillStyle = 'rgba(229,72,77,.55)'; poly(); x.fill(); }
-    const fw = Math.max(0.8, Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) * 0.022); x.lineJoin = 'round';
-    x.strokeStyle = '#0B0D10'; x.lineWidth = fw; poly(); x.stroke();
-    if (RS.sel.has(i)) { x.strokeStyle = P; x.lineWidth = Math.max(3, fw * 0.8); poly(); x.stroke(); }
+    roofFrame(x, q);
+    if (RS.sel.has(i)) { x.strokeStyle = P; x.lineWidth = 3; poly(); x.stroke(); }
   });
   { const p = roofP(), map = V.kind === 'photo' ? roofImgMap(f, (ix, iy) => [V.ox + ix * V.k, V.oy + iy * V.k]) : (o, X, Y) => (o === f ? M(X, Y) : null); roofStrLayer(x, p, map, roofStrSize(f, map), true); }
   if (RS.drag && RS.drag.lasso) { const [a, b, c, d] = RS.drag.lasso; x.save(); x.setLineDash([5, 4]); x.strokeStyle = P; x.fillStyle = `rgba(${pc},.12)`; x.lineWidth = 1.5; x.fillRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.strokeRect(Math.min(a, c), Math.min(b, d), Math.abs(c - a), Math.abs(d - b)); x.restore(); }
@@ -679,7 +678,7 @@ async function roofSnapshot(f, group) {
       const cc = m.o === 'l' ? [q[1], q[2], q[3], q[0]] : q, iw2 = src.width, ih2 = src.height;
       roofTri(x, src, [[0, 0], [iw2, 0], [iw2, ih2]], [cc[0], cc[1], cc[2]]); roofTri(x, src, [[0, 0], [iw2, ih2], [0, ih2]], [cc[0], cc[2], cc[3]]);
       const gl = x.createLinearGradient(...q[0], ...q[2]); gl.addColorStop(0, 'rgba(255,255,255,.10)'); gl.addColorStop(0.5, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.03)');
-      x.fillStyle = gl; x.beginPath(); q.forEach((pt, j) => (j ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); x.fill(); x.strokeStyle = '#0B0D10'; x.lineJoin = 'round'; x.lineWidth = Math.max(0.8, Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) * 0.022); x.stroke();
+      x.fillStyle = gl; x.beginPath(); q.forEach((pt, j) => (j ? x.lineTo(...pt) : x.moveTo(...pt))); x.closePath(); x.fill(); roofFrame(x, q);
     }
   }
   /* Strings und Optimierer über alle Flächen des Bildes */
@@ -1193,3 +1192,10 @@ roofDraw = async function () {
   const b = $('#roof-badge'); if (b && RS) { const on = RS.step === 'mod'; b.classList.toggle('hidden', !on); if (on) { let t = ROOF_BADGE[RS.mode] || ''; if (RS.mode === 'string') { const p = roofP(), i = roofStrs(p).findIndex(s => s.id === RS.str); t = i >= 0 ? `String ${i + 1}: nächstes Modul antippen` : 'Strings: erstes Modul antippen'; } if (b.textContent !== t) b.textContent = t; } }
   return r;
 };
+
+/* Modulrahmen: dunkler Rahmen nur nach innen (die Lücke zum Nachbarmodul bleibt frei), außen eine feine helle Alu-Kante */
+function roofFrame(x, q) {
+  const fw = Math.max(0.8, Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]) * 0.018), poly = () => { x.beginPath(); q.forEach((p, j) => (j ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); };
+  x.save(); poly(); x.clip(); x.strokeStyle = '#0B0D10'; x.lineJoin = 'round'; x.lineWidth = fw * 2; poly(); x.stroke(); x.restore();
+  x.save(); x.strokeStyle = 'rgba(205,214,224,.55)'; x.lineWidth = Math.max(0.6, fw * 0.35); x.lineJoin = 'round'; poly(); x.stroke(); x.restore();
+}

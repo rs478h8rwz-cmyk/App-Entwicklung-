@@ -14,6 +14,7 @@ const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house:
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
   { version: '2.27', date: '2026-11-10', items: [
+    ['house', 'Lücken zwischen den Modulen sichtbar', 'Die Module haben jetzt einen schmalen dunklen Rahmen mit feiner Alu-Kante – die Abstände zwischen den Modulen sind wieder klar zu sehen, auch beim Hineinzoomen.'],
     ['house', 'Ein Gesamtbild der Belegung', 'Liegen mehrere Dachflächen im selben Foto, entsteht jetzt ein gemeinsames Bild – mit allen Modulen, den kompletten Strings über alle Flächen und allen Optimierern. Bestehende Kunden werden automatisch umgestellt.']
   ] },
   { version: '2.26', date: '2026-11-10', items: [
