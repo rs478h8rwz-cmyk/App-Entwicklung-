@@ -196,8 +196,9 @@ function quickDialog(pid) {
 }
 function quickApplyTo(p) {
   const r = qResult(), pr = r.sim && r.sim.prod;
-  if (pr && pr.id && PRODUCTS.find(x => x.id === pr.id)) {
-    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'wp'; }).concat({ id: pr.id, qty: 1 });
+  const offerWp = (p.components || []).some(c => { const x = PRODUCTS.find(y => y.id === c.id); return x && x.cat === 'wp' && compSrc(p, c) === 'offer'; });
+  if (pr && pr.id && PRODUCTS.find(x => x.id === pr.id) && !offerWp) {
+    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'wp' || compSrc(p, c) === 'manual'; }).concat({ id: pr.id, qty: 1, src: 'quick' });
     try { applyComponents(p); } catch (e) {}
   }
   p.quick = { v: 2, state: clone(QS), load: Math.round(r.load * 100) / 100, total: Math.round(r.total * 100) / 100, jaz: Math.round(r.jaz * 100) / 100, te: qTe(), date: isoToday() };

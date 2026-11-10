@@ -423,10 +423,26 @@ function componentsCard(p) {
   const rows = PRODUCTS.map(pr => { const comp = p.components.find(c => c.id === pr.id); return `<div class="flex items-center gap-3 p-2 rounded-[calc(var(--r)-4px)] ${comp ? 'bg-p/5 ring-1 ring-p/20' : 'bg-bg'}"><input type="checkbox" ${comp ? 'checked' : ''} data-a="comp" data-id="${pr.id}">${prodThumb(pr, 40)}<div class="flex-1 min-w-0"><div class="font-bold text-[14px] truncate">${esc(pr.name)}</div><div class="text-[12px] text-ink3">${esc(CATS[pr.cat][0])}${pr.power ? ' · ' + num(pr.power, pr.power % 1 ? 1 : 0) + ' ' + CATS[pr.cat][1] : ''}</div></div>${comp ? `<input class="inp !h-10 !w-20 text-center" inputmode="numeric" value="${comp.qty}" data-compqty="${pr.id}"><span class="text-[12px] text-ink3">Stk</span>` : ''}</div>`; }).join('');
   return `<div class="card p-5 sm:p-6">${det('comps', `<span class="flex items-center gap-2">${ic('box', 17)}Komponenten fürs Dokument <span class="text-ink4 font-medium">(optional)</span>${p.components.length ? `<span class="badge bg-p/10 text-p">${p.components.length}</span>` : ''}</span>`, `<p class="text-[13px] text-ink3 mb-3">Produkte aus Ihrer Datenbank erscheinen mit Bild im Dokument. kWp, Speicher, Heizleistung und JAZ werden daraus übernommen.</p><div class="space-y-2">${rows}</div>`)}</div>`.replace('mt-4 rounded-[calc(var(--r)-4px)]', 'rounded-[calc(var(--r)-4px)]');
 }
+/* Herkunft eines Produkts: offer (Angebot), roof (Modulplan), quick (Schnellauslegung), manual (von Hand) */
+function offerProdIds(p) { const s = new Set(); (p.docs || []).forEach(d => ((p.rec || {})[d.id] && p.rec[d.id].products || []).forEach(m => { if (m.on !== false) s.add(m.id); })); return s; }
+function compSrc(p, c) {
+  if (c.src) return c.src;
+  const pr = PRODUCTS.find(x => x.id === c.id) || {}, full = [pr.maker, pr.name].filter(Boolean).join(' – ');
+  if (offerProdIds(p).has(c.id)) return 'offer';
+  if (pr.cat === 'wp' && p.quick && p.quick.prod && (p.quick.prod === pr.name || p.quick.prod === full)) return 'quick';
+  if (pr.cat === 'mod' && p.roof && p.roof.applied && (p.roof.applied.mod === pr.name || p.roof.applied.mod === full)) return 'roof';
+  return 'manual';
+}
+/* Gibt es für eine Produktart Produkte aus dem Angebot, zählen nur diese (Modulplan/Schnellauslegung bleiben Planungshilfen) */
+function effComps(p) {
+  const list = (p.components || []).map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id), src: compSrc(p, c) })).filter(x => x.pr);
+  const offerCats = new Set(list.filter(x => x.src === 'offer').map(x => x.pr.cat));
+  return list.filter(x => !(offerCats.has(x.pr.cat) && (x.src === 'roof' || x.src === 'quick'))).map(x => x.c);
+}
 function applyComponents(p) {
   let kwp = 0, bat = 0, wp = null;
-  for (const c of p.components) { const pr = PRODUCTS.find(x => x.id === c.id); if (!pr) continue; if (pr.cat === 'mod') kwp += c.qty * nz(pr.power) / 1000; if (pr.cat === 'bat') bat += c.qty * nz(pr.power); if (pr.cat === 'wp') wp = pr; }
-  if (kwp && hasPV(p)) { p.pv.kwp = Math.round(kwp * 1000) / 1000; const m = p.components.find(c => { const pr = PRODUCTS.find(x => x.id === c.id); return pr && pr.cat === 'mod'; }); if (m) { const pr = PRODUCTS.find(x => x.id === m.id); p.pv.modules = `${m.qty} × ${num(pr.power)} W`; } }
+  for (const c of effComps(p)) { const pr = PRODUCTS.find(x => x.id === c.id); if (!pr) continue; if (pr.cat === 'mod') kwp += c.qty * nz(pr.power) / 1000; if (pr.cat === 'bat') bat += c.qty * nz(pr.power); if (pr.cat === 'wp') wp = pr; }
+  if (kwp && hasPV(p)) { p.pv.kwp = Math.round(kwp * 1000) / 1000; const m = effComps(p).find(c => { const pr = PRODUCTS.find(x => x.id === c.id); return pr && pr.cat === 'mod'; }); if (m) { const pr = PRODUCTS.find(x => x.id === m.id); p.pv.modules = `${m.qty} × ${num(pr.power)} W`; } }
   if (bat && hasPV(p)) p.pv.bat = bat;
   if (wp && hasWP(p)) { if (wp.power) p.hp.kw = wp.power; if (wp.jaz) p.hp.jaz = wp.jaz; if (!p.hp.model) p.hp.model = wp.name; if (wp.dims && !p.hp.dims) p.hp.dims = wp.dims; if (wp.weight && !p.hp.weight) p.hp.weight = wp.weight; }
 }

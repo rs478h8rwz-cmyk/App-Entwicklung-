@@ -109,11 +109,10 @@ applyComponents = function (p) {
 /* ---------- PDF-Seite „Ihre Komponenten“ (beide Layouts) ---------- */
 DOC_TEXT.products = { label: 'Ihre Komponenten', badge: 'Ihre Komponenten', title: 'Ihre *Komponenten* im Überblick', lead: 'Diese Produkte bauen wir für Sie ein – ausgewählt für Qualität, Effizienz und lange Lebensdauer.' };
 PAGE_KEYS.splice(PAGE_KEYS.indexOf('situation') + 1, 0, 'products');
-SALES_KEYS.splice(SALES_KEYS.indexOf('sSystem') + 1, 0, 'products');
-const docComps = p => p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr).sort((a, b) => CAT_ORDER.indexOf(a.pr.cat) - CAT_ORDER.indexOf(b.pr.cat)).slice(0, 6);
-const stageBg = () => { const dk = CUR_LAYOUT !== 'sales' && docDark(), pc = S.design.primary;
+const docComps = p => effComps(p).map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr).sort((a, b) => CAT_ORDER.indexOf(a.pr.cat) - CAT_ORDER.indexOf(b.pr.cat)).slice(0, 6);
+const stageBg = () => { const dk = docDark(), pc = S.design.primary;
   return svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" preserveAspectRatio="none"><defs><radialGradient id="g" cx="50%" cy="58%" r="62%"><stop offset="0" stop-color="${dk ? mix(pc, '#ffffff', 0.25) : '#ffffff'}" stop-opacity="${dk ? 0.22 : 0.95}"/><stop offset="0.55" stop-color="${dk ? pc : mix(pc, '#ffffff', 0.86)}" stop-opacity="${dk ? 0.10 : 0.55}"/><stop offset="1" stop-color="${dk ? '#000000' : mix(pc, '#ffffff', 0.93)}" stop-opacity="0"/></radialGradient><linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0.72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="${dk ? '#000000' : pc}" stop-opacity="${dk ? 0.18 : 0.06}"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/><rect width="400" height="300" fill="url(#f)"/></svg>`); };
-const shadowBg = () => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="24" viewBox="0 0 300 24" preserveAspectRatio="none"><defs><radialGradient id="s" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity="${CUR_LAYOUT !== 'sales' && docDark() ? 0.55 : 0.28}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><ellipse cx="150" cy="12" rx="150" ry="12" fill="url(#s)"/></svg>`);
+const shadowBg = () => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="24" viewBox="0 0 300 24" preserveAspectRatio="none"><defs><radialGradient id="s" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity="${docDark() ? 0.55 : 0.28}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><ellipse cx="150" cy="12" rx="150" ry="12" fill="url(#s)"/></svg>`);
 DOC.products = function (p, R) {
   const sales = CUR_LAYOUT === 'sales', list = docComps(p), many = list.length > 4;
   let b = sales ? sChap('products', p, R) : chap(String(txt('products', 'title')).replace(/\*/g, ''), txt('products', 'lead'));
@@ -144,7 +143,9 @@ applyRecognition = function (p, doc, r) {
   _applyRecognition19(p, doc, r);
   const found = (r.products || []).filter(m => m.on !== false);
   if (!found.length) return;
-  for (const m of found) { const c = p.components.find(x => x.id === m.id); if (c) c.qty = m.qty; else p.components.push({ id: m.id, qty: m.qty }); }
+  const cats = new Set(found.map(m => (PRODUCTS.find(x => x.id === m.id) || {}).cat));
+  p.components = p.components.filter(c => { const pr = PRODUCTS.find(x => x.id === c.id); const s = compSrc(p, c); return !(pr && cats.has(pr.cat) && (s === 'roof' || s === 'quick')); });
+  for (const m of found) { const c = p.components.find(x => x.id === m.id); if (c) { c.qty = m.qty; c.src = 'offer'; } else p.components.push({ id: m.id, qty: m.qty, src: 'offer' }); }
   applyComponents(p);
 };
 const _applyComponents19b = applyComponents;
@@ -161,3 +162,9 @@ applyComponents = function (p) {
   }
 };
 const norm2 = s => String(s || '').trim().toLowerCase();
+
+/* Einmalig beim Laden: wenn Angebots- und Planungsprodukte derselben Art doppelt gezählt wurden, kWp/Speicher neu aus den Angebotsprodukten */
+{ const _la22 = loadAll; loadAll = async function () { await _la22.apply(this, arguments); try { for (const p of PROJECTS) { if (!p.components || !p.components.length || p.fix222) continue; const all = p.components.length, eff = effComps(p).length; p.fix222 = true; if (eff < all && p.from && p.from['pv.kwp']) { applyComponents(p); saveProject(p); } } } catch (e) {} }; }
+
+/* Produktbilder vor dem PDF laden (Vertriebs-PDF zeigt sie auf „Das bauen wir für Sie ein“) */
+{ const _ppr22 = preparePrintRoot; preparePrintRoot = async function () { try { await loadFiles(PRODUCTS.map(x => x.img).filter(Boolean)); } catch (e) {} return _ppr22.apply(this, arguments); }; }

@@ -526,7 +526,8 @@ async function roofApply(p) {
   const pr0 = roofProd(p.roof.faces.find(f => f.mods.length) || p.roof.faces[0]);
   p.pv.modules = `${n} × ${num(pr0.power)} W`;
   if (Object.keys(by).length) {
-    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'mod'; }).concat(Object.entries(by).map(([id, qty]) => ({ id, qty })));
+    const offerMod = (p.components || []).some(c => { const x = PRODUCTS.find(y => y.id === c.id); return x && x.cat === 'mod' && compSrc(p, c) === 'offer'; });
+    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'mod' || compSrc(p, c) === 'offer' || compSrc(p, c) === 'manual'; }).concat(offerMod ? [] : Object.entries(by).map(([id, qty]) => ({ id, qty, src: 'roof' })));
     try { applyComponents(p); } catch (e) {}
     p.pv.kwp = Math.round(kwp * 1000) / 1000; p.pv.modules = `${n} × ${num(pr0.power)} W`;
   }

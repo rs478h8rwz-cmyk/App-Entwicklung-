@@ -13,6 +13,12 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.22', date: '2026-11-10', items: [
+    ['house', 'Nur Produkte aus dem Angebot', 'Die Produktseite im PDF zeigt nur noch die Produkte aus dem Angebot – Modul aus dem Modulplan und empfohlene Wärmepumpe aus der Schnellauslegung erscheinen dort nicht mehr zusätzlich.'],
+    ['sign', 'Vertriebs-PDF auch dunkel', 'Die Einstellung Hell / Gemischt / Dunkel für das Kundendokument gilt jetzt auch für das Vertriebs-PDF – Vorschau und PDF ändern sich sofort, auch bei bereits erstellten Kunden.'],
+    ['sign', 'Produktbilder im Vertriebs-PDF', 'Auf „Das bauen wir für Sie ein“ stehen jetzt die Bilder der Angebotsprodukte. Die zusätzliche Seite „Ihre Komponenten“ entfällt im Vertriebs-PDF – sie war doppelt.'],
+    ['house', 'Anlagenleistung korrekt', 'Behoben: Module aus Modulplan und Angebot wurden zusammengezählt (z. B. 15 × 485 W + 25 × 500 W = 19,775 kWp). Jetzt zählen nur die Angebotsmodule – Abweichungen zeigt die Warnung.']
+  ] },
   { version: '2.21', date: '2026-11-10', items: [
     ['house', 'Modulplan und Angebot abgleichen', 'Weichen Modulplan und Angebot voneinander ab (mehr oder weniger Module), erscheint eine rote Warnung – mit Wahl, ob mit Modulplan oder Angebot gerechnet wird. Ein später eingelesenes Angebot überschreibt einen übernommenen Modulplan nicht mehr.'],
     ['house', 'Welche Module sind geplant?', 'Vor dem Belegen fragt der Modulplan nach dem Modul – das Modul aus dem Angebot ist vorausgewählt.'],

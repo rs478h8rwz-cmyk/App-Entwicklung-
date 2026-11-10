@@ -187,7 +187,9 @@ label{min-width:0}
 .page.sl .sbar{width:10mm;height:1.6mm;border-radius:1mm;background:linear-gradient(90deg,var(--s),var(--p));margin-bottom:2mm}
 .page.sl .sgrad{background:linear-gradient(115deg,var(--p) 0%,var(--sacc) 100%);color:#fff;border-radius:var(--dr)}
 .page.sl .scard{background:var(--tile);border-radius:var(--dr);padding:5mm}
-.page.sl .sbox{background:#fff;border:0.3mm solid var(--line);border-radius:var(--dr)}
+.page.sl{--sw:#fff}
+.page.sl.dk{--sw:#18212B}
+.page.sl .sbox{background:var(--sw);border:0.3mm solid var(--line);border-radius:var(--dr)}
 .page.sl .sic{display:inline-flex;width:8.5mm;height:8.5mm;border-radius:50%;background:#fff;align-items:center;justify-content:center;flex-shrink:0}
 .page.sl .sdisc{background:var(--t-yel);border-radius:var(--dr);padding:5mm 6mm;display:flex;justify-content:space-between;align-items:center;gap:5mm}
 .page.sl table.st{width:100%;border-collapse:separate;border-spacing:0;font-size:8.6pt}
@@ -2535,10 +2537,26 @@ function componentsCard(p) {
   const rows = PRODUCTS.map(pr => { const comp = p.components.find(c => c.id === pr.id); return `<div class="flex items-center gap-3 p-2 rounded-[calc(var(--r)-4px)] ${comp ? 'bg-p/5 ring-1 ring-p/20' : 'bg-bg'}"><input type="checkbox" ${comp ? 'checked' : ''} data-a="comp" data-id="${pr.id}">${prodThumb(pr, 40)}<div class="flex-1 min-w-0"><div class="font-bold text-[14px] truncate">${esc(pr.name)}</div><div class="text-[12px] text-ink3">${esc(CATS[pr.cat][0])}${pr.power ? ' · ' + num(pr.power, pr.power % 1 ? 1 : 0) + ' ' + CATS[pr.cat][1] : ''}</div></div>${comp ? `<input class="inp !h-10 !w-20 text-center" inputmode="numeric" value="${comp.qty}" data-compqty="${pr.id}"><span class="text-[12px] text-ink3">Stk</span>` : ''}</div>`; }).join('');
   return `<div class="card p-5 sm:p-6">${det('comps', `<span class="flex items-center gap-2">${ic('box', 17)}Komponenten fürs Dokument <span class="text-ink4 font-medium">(optional)</span>${p.components.length ? `<span class="badge bg-p/10 text-p">${p.components.length}</span>` : ''}</span>`, `<p class="text-[13px] text-ink3 mb-3">Produkte aus Ihrer Datenbank erscheinen mit Bild im Dokument. kWp, Speicher, Heizleistung und JAZ werden daraus übernommen.</p><div class="space-y-2">${rows}</div>`)}</div>`.replace('mt-4 rounded-[calc(var(--r)-4px)]', 'rounded-[calc(var(--r)-4px)]');
 }
+/* Herkunft eines Produkts: offer (Angebot), roof (Modulplan), quick (Schnellauslegung), manual (von Hand) */
+function offerProdIds(p) { const s = new Set(); (p.docs || []).forEach(d => ((p.rec || {})[d.id] && p.rec[d.id].products || []).forEach(m => { if (m.on !== false) s.add(m.id); })); return s; }
+function compSrc(p, c) {
+  if (c.src) return c.src;
+  const pr = PRODUCTS.find(x => x.id === c.id) || {}, full = [pr.maker, pr.name].filter(Boolean).join(' – ');
+  if (offerProdIds(p).has(c.id)) return 'offer';
+  if (pr.cat === 'wp' && p.quick && p.quick.prod && (p.quick.prod === pr.name || p.quick.prod === full)) return 'quick';
+  if (pr.cat === 'mod' && p.roof && p.roof.applied && (p.roof.applied.mod === pr.name || p.roof.applied.mod === full)) return 'roof';
+  return 'manual';
+}
+/* Gibt es für eine Produktart Produkte aus dem Angebot, zählen nur diese (Modulplan/Schnellauslegung bleiben Planungshilfen) */
+function effComps(p) {
+  const list = (p.components || []).map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id), src: compSrc(p, c) })).filter(x => x.pr);
+  const offerCats = new Set(list.filter(x => x.src === 'offer').map(x => x.pr.cat));
+  return list.filter(x => !(offerCats.has(x.pr.cat) && (x.src === 'roof' || x.src === 'quick'))).map(x => x.c);
+}
 function applyComponents(p) {
   let kwp = 0, bat = 0, wp = null;
-  for (const c of p.components) { const pr = PRODUCTS.find(x => x.id === c.id); if (!pr) continue; if (pr.cat === 'mod') kwp += c.qty * nz(pr.power) / 1000; if (pr.cat === 'bat') bat += c.qty * nz(pr.power); if (pr.cat === 'wp') wp = pr; }
-  if (kwp && hasPV(p)) { p.pv.kwp = Math.round(kwp * 1000) / 1000; const m = p.components.find(c => { const pr = PRODUCTS.find(x => x.id === c.id); return pr && pr.cat === 'mod'; }); if (m) { const pr = PRODUCTS.find(x => x.id === m.id); p.pv.modules = `${m.qty} × ${num(pr.power)} W`; } }
+  for (const c of effComps(p)) { const pr = PRODUCTS.find(x => x.id === c.id); if (!pr) continue; if (pr.cat === 'mod') kwp += c.qty * nz(pr.power) / 1000; if (pr.cat === 'bat') bat += c.qty * nz(pr.power); if (pr.cat === 'wp') wp = pr; }
+  if (kwp && hasPV(p)) { p.pv.kwp = Math.round(kwp * 1000) / 1000; const m = effComps(p).find(c => { const pr = PRODUCTS.find(x => x.id === c.id); return pr && pr.cat === 'mod'; }); if (m) { const pr = PRODUCTS.find(x => x.id === m.id); p.pv.modules = `${m.qty} × ${num(pr.power)} W`; } }
   if (bat && hasPV(p)) p.pv.bat = bat;
   if (wp && hasWP(p)) { if (wp.power) p.hp.kw = wp.power; if (wp.jaz) p.hp.jaz = wp.jaz; if (!p.hp.model) p.hp.model = wp.name; if (wp.dims && !p.hp.dims) p.hp.dims = wp.dims; if (wp.weight && !p.hp.weight) p.hp.weight = wp.weight; }
 }
@@ -2741,7 +2759,8 @@ const withDoc = fn => {
   THEME_CTX = 'doc'; if (pal) Object.assign(S.design, pal);
   try { return fn(); } finally { THEME_CTX = prev; if (pal) Object.assign(S.design, saved); }
 };
-const pageCls = key => (CUR_LAYOUT === 'sales' ? 'page sl' : docDark() || (key === 'cover' && S.design.pdfTheme === 'mixed') ? 'page dk' : 'page');
+const pageDk = key => docDark() || (key === 'cover' && S.design.pdfTheme === 'mixed');
+const pageCls = key => (CUR_LAYOUT === 'sales' ? 'page sl' + (pageDk(key) ? ' dk' : '') : pageDk(key) ? 'page dk' : 'page');
 let CUR_LAYOUT = 'full';
 function buildDocHtml(p, R) { return withDoc(() => { CUR_LAYOUT = layoutOf(p); try { return buildDocHtmlInner(p, R); } finally { CUR_LAYOUT = 'full'; } }); }
 function buildDocHtmlInner(p, R) {
@@ -3125,7 +3144,7 @@ function fitPages(root) {
 /* Hintergrund hinter den Unterschriftsfeldern – Form, Farbe, Stärke einstellbar */
 function sigBoxStyle() {
   const o = { mode: 'auto', color: '#ffffff', alpha: 88, shape: 'round', ...(S.design.sigBox || {}) };
-  const dark = CUR_LAYOUT !== 'sales' && docDark();
+  const dark = docDark();
   if (o.mode === 'off' || (o.mode === 'auto' && !dark)) return '';
   const [r, g, b] = hexToRgb(o.color), lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255, a = Math.max(5, Math.min(100, nz(o.alpha, 88))) / 100;
   const rad = o.shape === 'pill' ? '10mm' : o.shape === 'square' ? '0.6mm' : '2.5mm';
@@ -3315,13 +3334,13 @@ function nextFunding(p, R) {
 /* Kopf- und Fußzeile im Vertriebs-Layout */
 function salesWrap(p, r, n, N, key) {
   const lab = key === 'sBasis' ? 'Rechengrundlagen' : DOC_TEXT[key] ? DOC_TEXT[key].label : r.title;
-  return `<section class="page sl" data-key="${key}" style="${slVars()}"><div class="sh"><div class="lg">${docLogo()}</div><div class="tt">${esc(lab)}<span class="dot"></span><b>${esc(custName(p))}</b></div></div><div class="pb">${r.body}</div><div class="sf"><b>${esc(coName())}</b><span>Seite ${n} / ${N}</span></div></section>`;
+  return `<section class="${pageCls(key)}" data-key="${key}" style="${slVars()}"><div class="sh"><div class="lg">${docLogo()}</div><div class="tt">${esc(lab)}<span class="dot"></span><b>${esc(custName(p))}</b></div></div><div class="pb">${r.body}</div><div class="sf"><b>${esc(coName())}</b><span>Seite ${n} / ${N}</span></div></section>`;
 }
 function salesCover(p, R, n, N) {
   if (S.design.coverStyle === 'image' && fileUrl(S.design.cover.file)) return docCover(p, R, n, N).replace('class="page', `style="${slVars()}" class="page`);
   const I = CI(), a = advisorOf(p), badge = sTxt('sCover', 'badge', p, R), head = sTxt('sCover', 'title', p, R);
   const meta = [I.title && ['Dokument', esc(p.offer.title)], I.offer && p.offer.number && ['Angebot', esc(p.offer.number)], I.created && ['Datum', new Date().toLocaleDateString('de-DE')], I.advisor && a.name && ['Ihr Berater', esc(a.name)]].filter(Boolean);
-  return `<section class="page sl" data-key="cover" style="${slVars()}"><div style="position:absolute;left:0;right:0;top:0;height:128mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, dawn: false, pv: hasPV(p), hp: hasWP(p), car: !!(p.car && p.car.on), bat: hasPV(p) && nz(p.pv.bat) > 0, ...coverHouseOpts(p) }))}" style="width:210mm;height:130mm;display:block">${coverLogoHtml()}</div>
+  return `<section class="${pageCls('cover')}" data-key="cover" style="${slVars()}"><div style="position:absolute;left:0;right:0;top:0;height:128mm;overflow:hidden"><img src="${svgDataUri(houseSVG({ cover: true, dawn: pageDk('cover'), pv: hasPV(p), hp: hasWP(p), car: !!(p.car && p.car.on), bat: hasPV(p) && nz(p.pv.bat) > 0, ...coverHouseOpts(p) }))}" style="width:210mm;height:130mm;display:block">${pageDk('cover') ? '<div style="position:absolute;left:0;right:0;bottom:0;height:18mm;background:linear-gradient(180deg,rgba(11,17,24,0),#0B1118)"></div>' : ''}${coverLogoHtml()}</div>
     <div style="position:absolute;left:16mm;right:16mm;top:140mm">
       ${I.badge && badge ? `<span class="sbadge">${esc(badge)}</span>` : ''}
       ${I.customer ? `<div style="font-size:27pt;font-weight:800;line-height:1.2;margin-top:3mm">${esc(custName(p))}</div>` : ''}
@@ -3343,7 +3362,7 @@ Object.assign(DOC, {
       <div><div style="font-size:9pt;font-weight:600">Heute</div><div style="font-size:24pt;font-weight:700;opacity:.62;margin-top:1mm">${eur(mOld)}</div><div style="font-size:7.8pt;opacity:.8;margin-top:1mm">pro Monat</div></div>
       <div style="font-size:16pt;opacity:.8;text-align:center">→</div>
       <div><div style="font-size:9pt;font-weight:600">Künftig</div><div style="font-size:24pt;font-weight:700;margin-top:1mm">${credit ? '+ ' + eur(-mNew) : eur(mNew)}</div><div style="font-size:7.8pt;opacity:.8;margin-top:1mm">${credit ? 'Gutschrift pro Monat' : 'pro Monat'}</div></div>
-      <div style="background:#fff;color:var(--ink);border-radius:var(--dr);padding:5mm 6mm"><div style="font-size:8.6pt;font-weight:600;color:var(--ink2)">Ihre Ersparnis</div><div style="font-size:26pt;font-weight:800;color:var(--p);line-height:1.25;margin-top:0.5mm">${eur(mSave)}</div><div style="font-size:7.6pt;color:var(--ink3);margin-top:1.2mm">jeden Monat · ${eur(R.saving1)} im Jahr</div></div></div>`;
+      <div style="background:var(--sw);color:var(--ink);border-radius:var(--dr);padding:5mm 6mm"><div style="font-size:8.6pt;font-weight:600;color:var(--ink2)">Ihre Ersparnis</div><div style="font-size:26pt;font-weight:800;color:var(--p);line-height:1.25;margin-top:0.5mm">${eur(mSave)}</div><div style="font-size:7.6pt;color:var(--ink3);margin-top:1.2mm">jeden Monat · ${eur(R.saving1)} im Jahr</div></div></div>`;
     const t = [];
     if (R.W && R.funding > 0) t.push(['gift', eur(R.funding), 'Zuschuss vom Staat', `${pct(R.fund.rate)} Förderung`]);
     if (R.V) t.push(['sun', pct(R.autarky * 100), 'Strom selbst erzeugt', R.W ? 'Ihres Bedarfs inkl. Wärmepumpe' : 'Ihres Strombedarfs']);
@@ -3366,12 +3385,16 @@ Object.assign(DOC, {
     if (R.V && R.bat) items.push(['battery', 'Stromspeicher', pv.batMaker || 'Batteriespeicher', 'Speichert Solarstrom für Abend und Nacht', num(R.bat, 1) + ' kWh', pv.batWarranty ? [cleanWarranty(pv.batWarranty)] : []]);
     if (R.W) items.push(['flame', 'Wärmepumpe', p.hp.model || 'Luft-Wasser-Wärmepumpe', [`Jahresarbeitszahl ${num(R.jaz, 2)}`, p.hp.dims && `Außeneinheit ${p.hp.dims.replace(/\s*x\s*/gi, ' × ')}`, p.hp.weight && `${num(p.hp.weight)} kg`].filter(Boolean).join(' · '), p.hp.kw ? num(p.hp.kw, 1) + ' kW' : '', p.hp.warranty ? [p.hp.warranty] : []]);
     if (R.rod) items.push(['sun', 'Heizstab', R.rodName || 'Heizstab', 'Warmwasser mit überschüssigem Solarstrom', num(R.rodKw, 1) + ' kW']);
+    const effP = (typeof effComps === 'function' ? effComps(p) : []).map(c => PRODUCTS.find(x => x.id === c.id)).filter(Boolean);
+    const catOf = { Photovoltaikanlage: 'mod', Wechselrichter: 'inv', Stromspeicher: 'bat', 'Wärmepumpe': 'wp', Heizstab: 'rod' };
+    const picOf = k => { const pr = effP.find(x => x.cat === catOf[k] && (fileUrl(x.img) || x.imgUrl)); return pr ? fileUrl(pr.img) || pr.imgUrl : ''; };
+    const ico = (i, k, mm, im) => { const u = picOf(k); return u ? `<span style="width:${mm}mm;height:${mm}mm;flex:none;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:2mm;overflow:hidden"><img src="${esc(u)}" style="max-width:${mm - 1.5}mm;max-height:${mm - 1.5}mm;width:auto;height:auto;display:block"></span>` : `<span class="sic" style="width:${im}mm;height:${im}mm">${sImg(i, im / 2.05, S.design.primary)}</span>`; };
     const wn = items.reduce((a, x) => a + (x[5] || []).length, 0), dense = items.length >= 4 || wn > 0; DENSE = dense && R.W && isNum(p.hp.spl);
     const wLine = w => (w && w.length ? `<div style="margin-top:1mm;font-size:7.3pt;line-height:1.35;color:var(--p);font-weight:600">Garantie: ${w.map(esc).join(' · ')}</div>` : '');
     if (items.length >= 5) {
       // viele Komponenten: zweispaltig, Wert rechts oben – passt auf eine Seite
-      b += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2.5mm">${items.map(([i, k, t, u, v, w]) => `<div class="scard" style="padding:3mm 4mm"><div style="display:flex;align-items:center;gap:3mm"><span class="sic" style="width:8.5mm;height:8.5mm">${sImg(i, 4.4, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div></div><div style="font-size:14pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div><div style="font-size:9.6pt;font-weight:700;line-height:1.3;margin-top:1.5mm">${esc(t)}</div><div class="small" style="color:var(--ink2);line-height:1.35">${esc(u)}</div>${wLine(w)}</div>`).join('')}</div>`;
-    } else b += items.map(([i, k, t, u, v, w]) => `<div class="scard" style="display:flex;align-items:center;gap:5mm;padding:${dense ? 2.6 : 4}mm 6mm;margin-bottom:${dense ? 2 : 2.5}mm"><span class="sic" style="width:11mm;height:11mm">${sImg(i, 5.2, S.design.primary)}</span><div style="flex:1;min-width:0"><div class="small">${k}</div><div style="font-size:${dense ? 10.8 : 11.5}pt;font-weight:700;line-height:1.3">${esc(t)}</div><div class="small" style="color:var(--ink2)">${esc(u)}</div>${wLine(w)}</div><div style="font-size:19pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div>`).join('');
+      b += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:2.5mm">${items.map(([i, k, t, u, v, w]) => `<div class="scard" style="padding:3mm 4mm"><div style="display:flex;align-items:center;gap:3mm">${ico(i, k, 14, 8.5)}<div style="flex:1;min-width:0"><div class="small">${k}</div></div><div style="font-size:14pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div><div style="font-size:9.6pt;font-weight:700;line-height:1.3;margin-top:1.5mm">${esc(t)}</div><div class="small" style="color:var(--ink2);line-height:1.35">${esc(u)}</div>${wLine(w)}</div>`).join('')}</div>`;
+    } else b += items.map(([i, k, t, u, v, w]) => `<div class="scard" style="display:flex;align-items:center;gap:5mm;padding:${dense ? 2.6 : 4}mm 6mm;margin-bottom:${dense ? 2 : 2.5}mm">${ico(i, k, dense ? 17 : 20, 11)}<div style="flex:1;min-width:0"><div class="small">${k}</div><div style="font-size:${dense ? 10.8 : 11.5}pt;font-weight:700;line-height:1.3">${esc(t)}</div><div class="small" style="color:var(--ink2)">${esc(u)}</div>${wLine(w)}</div><div style="font-size:19pt;font-weight:800;color:var(--p);white-space:nowrap">${v}</div></div>`).join('');
     const steps = p.type === 'pvwp' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${kwh100(R.yield)} kWh Solarstrom im Jahr – auch bei bewölktem Himmel.`], R.bat ? ['Speichern', 'Was tagsüber übrig ist, lädt den Speicher – für den Abend und die Nacht.'] : ['Selbst nutzen', 'Ihr Haus und Ihre Wärmepumpe nutzen den Solarstrom direkt.'], ['Wärme aus der Luft', `Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser – leise und ohne Brennstofflager.']]
       : p.type === 'pv' ? [['Strom vom Dach', `Ihre Module erzeugen rund ${kwh100(R.yield)} kWh Solarstrom im Jahr.`], ['Selbst nutzen', 'Ihr Haushalt verbraucht den Solarstrom zuerst direkt.'], R.bat ? ['Speichern', 'Überschüsse laden den Speicher – für Abend und Nacht.'] : ['Einspeisen', 'Was übrig ist, fließt gegen Vergütung ins Netz.'], ['Unabhängig', `Rund ${pct(R.autarky * 100)} Ihres Stroms kommen künftig vom eigenen Dach.`]]
       : [['Wärme aus der Luft', 'Die Wärmepumpe holt kostenlose Wärme aus der Außenluft – auch bei Frost.'], ['Verdichten', `Mit wenig Strom wird die Wärme auf Heiztemperatur gebracht. Aus 1 kWh Strom werden rund ${num(R.jaz, 1)} kWh Wärme.`], ['Wohlige Wärme', 'Für Heizkörper oder Fußbodenheizung und für Ihr Warmwasser.'], ['Ohne Öl und Gas', 'Kein Brennstofflager, kein Schornsteinfeger, kein CO₂-Preis.']];
@@ -3387,8 +3410,8 @@ Object.assign(DOC, {
     let rows = '';
     if (p.type === 'pvwp' && !(p.offer.total > 0)) rows += row('Angebot Wärmepumpe', 'brutto inkl. Montage', eur(p.offer.grossWP, 2)) + row('Angebot Photovoltaik', 'brutto inkl. Montage', eur(p.offer.grossPV, 2));
     else rows += row('Angebotspreis', 'brutto inkl. Montage', eur(R.gross, 2));
-    if (R.W) rows += row('Staatliche Förderung (BEG)', `${pct(F.rate)} auf ${eur(F.base)} förderfähige Kosten`, '– ' + eur(R.funding, 2), 'background:#fff', 'color:var(--p)');
-    if (R.other) rows += row('Weitere Zuschüsse', '', '– ' + eur(R.other, 2), 'background:#fff', 'color:var(--p)');
+    if (R.W) rows += row('Staatliche Förderung (BEG)', `${pct(F.rate)} auf ${eur(F.base)} förderfähige Kosten`, '– ' + eur(R.funding, 2), 'background:var(--sw)', 'color:var(--p)');
+    if (R.other) rows += row('Weitere Zuschüsse', '', '– ' + eur(R.other, 2), 'background:var(--sw)', 'color:var(--p)');
     if (R.discount) rows += row(esc(S.discount.text.replace('{datum}', deDate(p.discount.until))), 'gilt nur bei Auftrag bis zu diesem Datum', '– ' + eur(R.discount, 2), 'background:var(--t-yel)', 'color:var(--p)');
     rows += `<div class="sgrad" style="border-radius:0;display:flex;justify-content:space-between;align-items:center;padding:5mm"><div><div style="font-size:10pt;font-weight:700">Ihre Kosten</div><div style="font-size:7.6pt;opacity:.85">${R.W ? 'nach Abzug der Förderung' : R.discount ? 'nach Abzug des Rabatts' : 'brutto'}</div></div><div style="font-size:19pt;font-weight:800">${eur(R.net, 2)}</div></div>`;
     const right = R.W ? `<div class="sgrad" style="padding:6mm"><div style="font-size:8.6pt;opacity:.9">Ihr Fördersatz</div><div style="font-size:30pt;font-weight:800;line-height:1.25;margin-top:1mm">${pct(F.rate)}</div><div style="margin-top:1.5mm;font-size:10pt;font-weight:700;color:${mix(S.design.secondary, '#ffffff', 0.15)}">= ${eur(R.funding)} Zuschuss</div>
@@ -3417,9 +3440,9 @@ Object.assign(DOC, {
     const am = R.amortRise;
     let b = sChap('sLong', p, R, { lead: am !== null ? `Nach rund ${num(am, 1)} Jahren hat sich Ihr neues Energiesystem bezahlt gemacht – danach bleibt jeder gesparte Euro bei Ihnen.` : `Über ${R.N} Jahre sparen Sie insgesamt ${eur(R.total)} Energiekosten.` });
     b += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm">${[['Amortisation', R.amortStatic !== null && R.amortStatic <= R.N * 2 ? yrs(R.amortStatic) : `über ${R.N} Jahre`, 'bei gleichbleibenden Energiepreisen', 0], ['Amortisation', yrs(am), 'mit steigenden Energiepreisen', 1], [`Überschuss nach ${R.N} Jahren`, eur(R.surplus), 'nach Abzug Ihrer Kosten', 0]].map(([k, v, u, g]) => `<div class="${g ? 'sgrad' : 'scard'}" style="padding:5mm"><div style="font-size:8.4pt;font-weight:600;${g ? 'opacity:.9' : 'color:var(--ink2)'}">${k}</div><div style="font-size:19pt;font-weight:800;margin-top:1.5mm">${v}</div><div style="font-size:7.6pt;margin-top:1mm;${g ? 'opacity:.85' : 'color:var(--ink3)'}">${u}</div></div>`).join('')}</div>`;
-    b += `<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">${salesAmortChart(R)}<div class="small" style="margin-top:1mm;font-size:8pt">${legendDot(S.design.primary, 'Mit steigenden Energiepreisen')}${legendDot(S.design.ink || '#0F2A3D', 'Bei gleichbleibenden Energiepreisen', true)}</div></div>`;
+    b += `<div class="sbox" style="margin-top:5mm;padding:5mm 5mm 3mm">${salesAmortChart(R)}<div class="small" style="margin-top:1mm;font-size:8pt">${legendDot(S.design.primary, 'Mit steigenden Energiepreisen')}${legendDot(docDark() ? '#B2BDC9' : S.design.ink || '#0F2A3D', 'Bei gleichbleibenden Energiepreisen', true)}</div></div>`;
     const comps = R.surplus > 0 ? comparisonsOf(R).slice(0, 4) : [];
-    if (comps.length) b += `<h2 style="margin-top:7mm">Davon könnten Sie sich zum Beispiel leisten</h2><div style="display:grid;grid-template-columns:repeat(${comps.length},1fr);gap:4mm">${comps.map(i => `<div style="background:${mix(S.design.secondary, '#ffffff', 0.9)};border-radius:var(--dr);padding:5mm">${sIcon(i.icon, mix(S.design.secondary, '#000000', 0.25))}<div style="font-size:18pt;font-weight:800;margin-top:3mm">${num(Math.floor(i.times))}×</div><div style="font-size:8.8pt;font-weight:700">${esc(i.label)}</div><div class="small">à ${eur(i.price)}</div></div>`).join('')}</div><p class="small" style="margin-top:2.5mm">Grundlage: ${S.comparisons.basis === 'total' ? `Ihre Gesamtersparnis von ${eur(R.total)}` : `Ihr Überschuss nach Abzug Ihrer Kosten von ${eur(R.surplus)}`}.</p>`;
+    if (comps.length) b += `<h2 style="margin-top:7mm">Davon könnten Sie sich zum Beispiel leisten</h2><div style="display:grid;grid-template-columns:repeat(${comps.length},1fr);gap:4mm">${comps.map(i => `<div style="background:${docDark() ? 'var(--t-yel)' : mix(S.design.secondary, '#ffffff', 0.9)};border-radius:var(--dr);padding:5mm">${sIcon(i.icon, docDark() ? S.design.secondary : mix(S.design.secondary, '#000000', 0.25))}<div style="font-size:18pt;font-weight:800;margin-top:3mm">${num(Math.floor(i.times))}×</div><div style="font-size:8.8pt;font-weight:700">${esc(i.label)}</div><div class="small">à ${eur(i.price)}</div></div>`).join('')}</div><p class="small" style="margin-top:2.5mm">Grundlage: ${S.comparisons.basis === 'total' ? `Ihre Gesamtersparnis von ${eur(R.total)}` : `Ihr Überschuss nach Abzug Ihrer Kosten von ${eur(R.surplus)}`}.</p>`;
     b += `<p class="small" style="margin-top:3mm">Alle Annahmen finden Sie unter „Rechengrundlagen“ am Ende des Dokuments.</p>`;
     return { title: 'Ihre Ersparnis', body: b };
   },
@@ -3517,19 +3540,19 @@ function salesMonthChart(R, ys) {
   return s + '</svg>';
 }
 function salesAmortChart(R) {
-  const W = 640, H = 230, L = 52, Rr = 8, T = 16, B = 196, n = R.rows.length;
+  const dk = docDark(), cS = dk ? '#B2BDC9' : '#24364A', W = 640, H = 230, L = 52, Rr = 8, T = 16, B = 196, n = R.rows.length;
   const vals = R.rows.map(r => r.saldo).concat(R.rows.map(r => r.saldoStatic), [-R.invest]);
   const step = Math.max(...vals.map(Math.abs)) > 60000 ? 20000 : 10000;
   const mn = Math.floor(Math.min(...vals, 0) / step) * step, mx = Math.ceil(Math.max(...vals, 0) / step) * step || step, Y = v => T + (B - T) * (mx - v) / (mx - mn);
   const gw = (W - L - Rr) / (n + 1), bw = gw * 0.62, X = i => L + gw * (i + 0.5);
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%">`;
-  for (let v = mn; v <= mx; v += step) s += `<line x1="${L}" x2="${W - Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? '#9AA8B6' : '#E6ECF2'}" ${v ? 'stroke-dasharray="4 4"' : ''}/><text x="${L - 8}" y="${Y(v) + 3.5}" text-anchor="end" font-size="10" fill="#8A97A6">${num(v / 1000)} T€</text>`;
+  for (let v = mn; v <= mx; v += step) s += `<line x1="${L}" x2="${W - Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? '#9AA8B6' : (dk ? 'rgba(255,255,255,.12)' : '#E6ECF2')}" ${v ? 'stroke-dasharray="4 4"' : ''}/><text x="${L - 8}" y="${Y(v) + 3.5}" text-anchor="end" font-size="10" fill="#8A97A6">${num(v / 1000)} T€</text>`;
   const pts = [-R.invest].concat(R.rows.map(r => r.saldo));
-  pts.forEach((v, i) => { const y0 = Y(0), y = Y(v); s += `<rect x="${X(i) - bw / 2}" y="${Math.min(y, y0)}" width="${bw}" height="${Math.max(1, Math.abs(y - y0))}" rx="3" fill="${v < 0 ? '#CBD5E0' : S.design.primary}"/>`; });
+  pts.forEach((v, i) => { const y0 = Y(0), y = Y(v); s += `<rect x="${X(i) - bw / 2}" y="${Math.min(y, y0)}" width="${bw}" height="${Math.max(1, Math.abs(y - y0))}" rx="3" fill="${v < 0 ? (dk ? '#5A6878' : '#CBD5E0') : S.design.primary}"/>`; });
   const st = [-R.invest].concat(R.rows.map(r => r.saldoStatic));
-  s += `<polyline points="${st.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}" fill="none" stroke="#24364A" stroke-width="2" stroke-dasharray="6 5"/>`;
+  s += `<polyline points="${st.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}" fill="none" stroke="${cS}" stroke-width="2" stroke-dasharray="6 5"/>`;
   const mk = (a, lab, col, dy) => { if (a === null || a > n) return ''; const x = X(0) + (X(1) - X(0)) * a; const left = x > W - 170; return `<line x1="${x}" x2="${x}" y1="${T}" y2="${B}" stroke="${col}" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${left ? x - 4 : x + 4}" y="${T + dy}" font-size="10" font-weight="700" fill="${col}" text-anchor="${left ? 'end' : 'start'}">${lab}</text>`; };
-  s += mk(R.amortRise, `steigende Preise ${num(R.amortRise, 1)} J.`, S.design.primary, 2) + mk(R.amortStatic, `gleichbleibende Preise ${num(R.amortStatic, 1)} J.`, '#24364A', 15);
+  s += mk(R.amortRise, `steigende Preise ${num(R.amortRise, 1)} J.`, S.design.primary, 2) + mk(R.amortStatic, `gleichbleibende Preise ${num(R.amortStatic, 1)} J.`, cS, 15);
   [0, 5, 10, 15, 20, 25, 30].filter(t => t <= n).forEach(t => { s += `<text x="${X(t)}" y="${B + 16}" text-anchor="middle" font-size="10" fill="#8A97A6">${t ? 'J. ' + t : 'Start'}</text>`; });
   return s + '</svg>';
 }
@@ -3629,7 +3652,7 @@ const SET = {
     const range = (label, b, min, max, unit) => `<label class="block"><span class="lbl flex justify-between">${label}<span class="text-ink3 num" data-rv="${b}">${num(bval(b))}${unit}</span></span><input type="range" class="w-full" min="${min}" max="${max}" step="1" data-b="${b}" data-t="r" value="${bval(b)}"></label>`;
     const fontOpts = Object.keys(FONTS).map(f => [f, f + (SERIFS.includes(f) ? ' (Serif)' : '')]);
     const presets = THEME_PRESETS.map((t, i) => `<button class="text-left rounded-[calc(var(--r)-4px)] border ${d.primary.toLowerCase() === t.primary.toLowerCase() ? 'border-p ring-4 ring-p/10' : 'border-line'} bg-card p-3 hover:border-p transition-colors" data-a="theme-preset" data-i="${i}"><div class="flex gap-1">${[t.night, t.primary, t.secondary, t.accent].map(c => `<span class="w-5 h-5 rounded-full border border-line2" style="background:${c}"></span>`).join('')}</div><div class="text-[13px] font-medium mt-2">${t.name}</div></button>`).join('');
-    return sCard('eye', 'Erscheinungsbild', 'Dunkel oder hell – für die App und getrennt für das Kundendokument.', `<div class="grid sm:grid-cols-2 gap-6"><div><span class="lbl">Kundendokument</span>${seg('s:design.pdfTheme', [['light', 'Hell'], ['mixed', 'Gemischt'], ['dark', 'Dunkel']])}<div class="hint">Gemischt: dunkles Deckblatt und dunkle Highlights, Inhaltsseiten hell und gut druckbar.</div></div></div>`)
+    return sCard('eye', 'Erscheinungsbild', 'Dunkel oder hell – für die App und getrennt für das Kundendokument.', `<div class="grid sm:grid-cols-2 gap-6"><div><span class="lbl">Kundendokument</span>${seg('s:design.pdfTheme', [['light', 'Hell'], ['mixed', 'Gemischt'], ['dark', 'Dunkel']])}<div class="hint">Gilt für die komplette PDF und das Vertriebs-PDF. Gemischt: dunkles Deckblatt, Inhaltsseiten hell und gut druckbar.</div></div></div>`)
       + sCard('palette', 'Farbwelt', 'Ein Klick setzt alle Farben – danach jede Farbe einzeln anpassbar. App, PDF und Illustrationen färben sich mit.', `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">${presets}</div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">${colorRow('Primärfarbe', 'primary', ['#0E7C66', '#0B6E99', '#1E4C86', '#2E7D32', '#6A3FB5', '#C2401F'])}${colorRow('Sonne / Sekundärfarbe', 'secondary', ['#F5A524', '#F2C230', '#FF8A3D', '#E4572E', '#7CC47F'])}${colorRow('Akzent (Verläufe, Diagramme)', 'accent')}${colorRow('Alte Kosten', 'old')}${colorRow('Schrift (hell)', 'ink')}${colorRow('Hintergrund (hell)', 'bg')}${colorRow('Hintergrund (dunkel)', 'night', ['#0A0E13', '#080D18', '#0B0F0C', '#110D0B', '#0B0B0C'])}</div>`)
       + sCard('pen', 'Schrift und Form', 'Gilt für App und Kundendokument.', `<div class="grid sm:grid-cols-2 gap-4">${sel('Fließtext', 's:design.fontBody', fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0])))}${sel('Überschriften', 's:design.fontHead', fontOpts.filter(f => !MONOS.includes(f[0])))}${sel('Kennzahlen und Beschriftungen', 's:design.fontMono', [...MONOS.map(f => [f, f]), ...fontOpts.filter(f => !SERIFS.includes(f[0]) && !MONOS.includes(f[0]))])}</div>
@@ -4244,7 +4267,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261110100427';
+const APP_VERSION = '20261110101915';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4661,6 +4684,12 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.22', date: '2026-11-10', items: [
+    ['house', 'Nur Produkte aus dem Angebot', 'Die Produktseite im PDF zeigt nur noch die Produkte aus dem Angebot – Modul aus dem Modulplan und empfohlene Wärmepumpe aus der Schnellauslegung erscheinen dort nicht mehr zusätzlich.'],
+    ['sign', 'Vertriebs-PDF auch dunkel', 'Die Einstellung Hell / Gemischt / Dunkel für das Kundendokument gilt jetzt auch für das Vertriebs-PDF – Vorschau und PDF ändern sich sofort, auch bei bereits erstellten Kunden.'],
+    ['sign', 'Produktbilder im Vertriebs-PDF', 'Auf „Das bauen wir für Sie ein“ stehen jetzt die Bilder der Angebotsprodukte. Die zusätzliche Seite „Ihre Komponenten“ entfällt im Vertriebs-PDF – sie war doppelt.'],
+    ['house', 'Anlagenleistung korrekt', 'Behoben: Module aus Modulplan und Angebot wurden zusammengezählt (z. B. 15 × 485 W + 25 × 500 W = 19,775 kWp). Jetzt zählen nur die Angebotsmodule – Abweichungen zeigt die Warnung.']
+  ] },
   { version: '2.21', date: '2026-11-10', items: [
     ['house', 'Modulplan und Angebot abgleichen', 'Weichen Modulplan und Angebot voneinander ab (mehr oder weniger Module), erscheint eine rote Warnung – mit Wahl, ob mit Modulplan oder Angebot gerechnet wird. Ein später eingelesenes Angebot überschreibt einen übernommenen Modulplan nicht mehr.'],
     ['house', 'Welche Module sind geplant?', 'Vor dem Belegen fragt der Modulplan nach dem Modul – das Modul aus dem Angebot ist vorausgewählt.'],
@@ -5484,11 +5513,10 @@ applyComponents = function (p) {
 /* ---------- PDF-Seite „Ihre Komponenten“ (beide Layouts) ---------- */
 DOC_TEXT.products = { label: 'Ihre Komponenten', badge: 'Ihre Komponenten', title: 'Ihre *Komponenten* im Überblick', lead: 'Diese Produkte bauen wir für Sie ein – ausgewählt für Qualität, Effizienz und lange Lebensdauer.' };
 PAGE_KEYS.splice(PAGE_KEYS.indexOf('situation') + 1, 0, 'products');
-SALES_KEYS.splice(SALES_KEYS.indexOf('sSystem') + 1, 0, 'products');
-const docComps = p => p.components.map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr).sort((a, b) => CAT_ORDER.indexOf(a.pr.cat) - CAT_ORDER.indexOf(b.pr.cat)).slice(0, 6);
-const stageBg = () => { const dk = CUR_LAYOUT !== 'sales' && docDark(), pc = S.design.primary;
+const docComps = p => effComps(p).map(c => ({ c, pr: PRODUCTS.find(x => x.id === c.id) })).filter(x => x.pr).sort((a, b) => CAT_ORDER.indexOf(a.pr.cat) - CAT_ORDER.indexOf(b.pr.cat)).slice(0, 6);
+const stageBg = () => { const dk = docDark(), pc = S.design.primary;
   return svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" preserveAspectRatio="none"><defs><radialGradient id="g" cx="50%" cy="58%" r="62%"><stop offset="0" stop-color="${dk ? mix(pc, '#ffffff', 0.25) : '#ffffff'}" stop-opacity="${dk ? 0.22 : 0.95}"/><stop offset="0.55" stop-color="${dk ? pc : mix(pc, '#ffffff', 0.86)}" stop-opacity="${dk ? 0.10 : 0.55}"/><stop offset="1" stop-color="${dk ? '#000000' : mix(pc, '#ffffff', 0.93)}" stop-opacity="0"/></radialGradient><linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0.72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="${dk ? '#000000' : pc}" stop-opacity="${dk ? 0.18 : 0.06}"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/><rect width="400" height="300" fill="url(#f)"/></svg>`); };
-const shadowBg = () => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="24" viewBox="0 0 300 24" preserveAspectRatio="none"><defs><radialGradient id="s" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity="${CUR_LAYOUT !== 'sales' && docDark() ? 0.55 : 0.28}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><ellipse cx="150" cy="12" rx="150" ry="12" fill="url(#s)"/></svg>`);
+const shadowBg = () => svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="24" viewBox="0 0 300 24" preserveAspectRatio="none"><defs><radialGradient id="s" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity="${docDark() ? 0.55 : 0.28}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><ellipse cx="150" cy="12" rx="150" ry="12" fill="url(#s)"/></svg>`);
 DOC.products = function (p, R) {
   const sales = CUR_LAYOUT === 'sales', list = docComps(p), many = list.length > 4;
   let b = sales ? sChap('products', p, R) : chap(String(txt('products', 'title')).replace(/\*/g, ''), txt('products', 'lead'));
@@ -5519,7 +5547,9 @@ applyRecognition = function (p, doc, r) {
   _applyRecognition19(p, doc, r);
   const found = (r.products || []).filter(m => m.on !== false);
   if (!found.length) return;
-  for (const m of found) { const c = p.components.find(x => x.id === m.id); if (c) c.qty = m.qty; else p.components.push({ id: m.id, qty: m.qty }); }
+  const cats = new Set(found.map(m => (PRODUCTS.find(x => x.id === m.id) || {}).cat));
+  p.components = p.components.filter(c => { const pr = PRODUCTS.find(x => x.id === c.id); const s = compSrc(p, c); return !(pr && cats.has(pr.cat) && (s === 'roof' || s === 'quick')); });
+  for (const m of found) { const c = p.components.find(x => x.id === m.id); if (c) { c.qty = m.qty; c.src = 'offer'; } else p.components.push({ id: m.id, qty: m.qty, src: 'offer' }); }
   applyComponents(p);
 };
 const _applyComponents19b = applyComponents;
@@ -5536,6 +5566,12 @@ applyComponents = function (p) {
   }
 };
 const norm2 = s => String(s || '').trim().toLowerCase();
+
+/* Einmalig beim Laden: wenn Angebots- und Planungsprodukte derselben Art doppelt gezählt wurden, kWp/Speicher neu aus den Angebotsprodukten */
+{ const _la22 = loadAll; loadAll = async function () { await _la22.apply(this, arguments); try { for (const p of PROJECTS) { if (!p.components || !p.components.length || p.fix222) continue; const all = p.components.length, eff = effComps(p).length; p.fix222 = true; if (eff < all && p.from && p.from['pv.kwp']) { applyComponents(p); saveProject(p); } } } catch (e) {} }; }
+
+/* Produktbilder vor dem PDF laden (Vertriebs-PDF zeigt sie auf „Das bauen wir für Sie ein“) */
+{ const _ppr22 = preparePrintRoot; preparePrintRoot = async function () { try { await loadFiles(PRODUCTS.map(x => x.img).filter(Boolean)); } catch (e) {} return _ppr22.apply(this, arguments); }; }
 /* Wärmepumpen-Schnellauslegung (überschlägig, ersetzt keine raumweise Heizlastberechnung nach DIN EN 12831).
    Aufbau: Gebäude → Heizlast (direkt oder per Verfahren: Verbrauch, Baujahr, spezifische Heizleistung)
    → Warmwasser & System → empfohlene Geräteleistung und JAZ. „Neue Berechnung“ fragt vorher, ob ausgelegt werden soll. */
@@ -5734,8 +5770,9 @@ function quickDialog(pid) {
 }
 function quickApplyTo(p) {
   const r = qResult(), pr = r.sim && r.sim.prod;
-  if (pr && pr.id && PRODUCTS.find(x => x.id === pr.id)) {
-    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'wp'; }).concat({ id: pr.id, qty: 1 });
+  const offerWp = (p.components || []).some(c => { const x = PRODUCTS.find(y => y.id === c.id); return x && x.cat === 'wp' && compSrc(p, c) === 'offer'; });
+  if (pr && pr.id && PRODUCTS.find(x => x.id === pr.id) && !offerWp) {
+    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'wp' || compSrc(p, c) === 'manual'; }).concat({ id: pr.id, qty: 1, src: 'quick' });
     try { applyComponents(p); } catch (e) {}
   }
   p.quick = { v: 2, state: clone(QS), load: Math.round(r.load * 100) / 100, total: Math.round(r.total * 100) / 100, jaz: Math.round(r.jaz * 100) / 100, te: qTe(), date: isoToday() };
@@ -6596,7 +6633,8 @@ async function roofApply(p) {
   const pr0 = roofProd(p.roof.faces.find(f => f.mods.length) || p.roof.faces[0]);
   p.pv.modules = `${n} × ${num(pr0.power)} W`;
   if (Object.keys(by).length) {
-    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'mod'; }).concat(Object.entries(by).map(([id, qty]) => ({ id, qty })));
+    const offerMod = (p.components || []).some(c => { const x = PRODUCTS.find(y => y.id === c.id); return x && x.cat === 'mod' && compSrc(p, c) === 'offer'; });
+    p.components = (p.components || []).filter(c => { const x = PRODUCTS.find(y => y.id === c.id); return !x || x.cat !== 'mod' || compSrc(p, c) === 'offer' || compSrc(p, c) === 'manual'; }).concat(offerMod ? [] : Object.entries(by).map(([id, qty]) => ({ id, qty, src: 'roof' })));
     try { applyComponents(p); } catch (e) {}
     p.pv.kwp = Math.round(kwp * 1000) / 1000; p.pv.modules = `${n} × ${num(pr0.power)} W`;
   }
@@ -7480,8 +7518,8 @@ document.addEventListener('click', async e => {
     case 'set-price': { const v = +a.dataset.v, role = a.dataset.role; const path = p.type === 'pvwp' ? (role === 'offerPV' ? 'offer.grossPV' : 'offer.grossWP') : 'offer.gross'; setPath(p, path, v); p.from[path] = true; Object.values(p.rec).forEach(r => { if (r.role === role) r.gross = v; }); saveProject(p); toast('Bruttopreis gesetzt: ' + eur2(v)); render(); break; }
     case 'set-jaz': p.hp.jaz = +a.dataset.v; p.from['hp.jaz'] = true; saveProject(p); toast('JAZ übernommen: ' + num(+a.dataset.v, 2)); render(); break;
     case 'recprod-on': { const m = (p.rec[a.dataset.doc].products || []).find(x => x.id === a.dataset.id); m.on = a.checked; saveProject(p); break; }
-    case 'recprod-apply': { let n = 0; p.docs.forEach(d => (p.rec[d.id] && p.rec[d.id].products || []).filter(m => m.on).forEach(m => { const c = p.components.find(x => x.id === m.id); if (c) c.qty = m.qty; else p.components.push({ id: m.id, qty: m.qty }); n++; })); applyComponents(p); saveProject(p); toast(n ? `${n} Produkt(e) übernommen.` : 'Kein Produkt ausgewählt.', n ? 'ok' : 'warn'); render(); break; }
-    case 'comp': { const id = a.dataset.id; if (a.checked) p.components.push({ id, qty: 1 }); else p.components = p.components.filter(c => c.id !== id); applyComponents(p); saveProject(p); render(); break; }
+    case 'recprod-apply': { let n = 0; p.docs.forEach(d => (p.rec[d.id] && p.rec[d.id].products || []).filter(m => m.on).forEach(m => { const c = p.components.find(x => x.id === m.id); if (c) { c.qty = m.qty; c.src = 'offer'; } else p.components.push({ id: m.id, qty: m.qty, src: 'offer' }); n++; })); applyComponents(p); saveProject(p); toast(n ? `${n} Produkt(e) übernommen.` : 'Kein Produkt ausgewählt.', n ? 'ok' : 'warn'); render(); break; }
+    case 'comp': { const id = a.dataset.id; if (a.checked) p.components.push({ id, qty: 1, src: 'manual' }); else p.components = p.components.filter(c => c.id !== id); applyComponents(p); saveProject(p); render(); break; }
     case 'fuel': { const v = a.dataset.v, h = p.heating; if (h.fuel === v) break; if (isNum(h.cons)) h.cons = v === 'oil' ? Math.round(h.cons / 10) : h.cons * 10; h.fuel = v; h.price = v === 'oil' ? S.calc.oilPrice : S.calc.gasPrice; h.maint = v === 'oil' ? S.calc.oilMaint : S.calc.gasMaint; h.base = v === 'oil' ? S.calc.oilBase : S.calc.gasBase; delete p.from['heating.cons']; saveProject(p); render(); break; }
     case 'speed': p.fund.speed = !fundingOf(p).speedOn; saveProject(p); render(); break;
     case 'speed-auto': p.fund.speed = null; saveProject(p); render(); break;

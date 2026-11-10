@@ -98,7 +98,8 @@ const withDoc = fn => {
   THEME_CTX = 'doc'; if (pal) Object.assign(S.design, pal);
   try { return fn(); } finally { THEME_CTX = prev; if (pal) Object.assign(S.design, saved); }
 };
-const pageCls = key => (CUR_LAYOUT === 'sales' ? 'page sl' : docDark() || (key === 'cover' && S.design.pdfTheme === 'mixed') ? 'page dk' : 'page');
+const pageDk = key => docDark() || (key === 'cover' && S.design.pdfTheme === 'mixed');
+const pageCls = key => (CUR_LAYOUT === 'sales' ? 'page sl' + (pageDk(key) ? ' dk' : '') : pageDk(key) ? 'page dk' : 'page');
 let CUR_LAYOUT = 'full';
 function buildDocHtml(p, R) { return withDoc(() => { CUR_LAYOUT = layoutOf(p); try { return buildDocHtmlInner(p, R); } finally { CUR_LAYOUT = 'full'; } }); }
 function buildDocHtmlInner(p, R) {
@@ -482,7 +483,7 @@ function fitPages(root) {
 /* Hintergrund hinter den Unterschriftsfeldern – Form, Farbe, Stärke einstellbar */
 function sigBoxStyle() {
   const o = { mode: 'auto', color: '#ffffff', alpha: 88, shape: 'round', ...(S.design.sigBox || {}) };
-  const dark = CUR_LAYOUT !== 'sales' && docDark();
+  const dark = docDark();
   if (o.mode === 'off' || (o.mode === 'auto' && !dark)) return '';
   const [r, g, b] = hexToRgb(o.color), lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255, a = Math.max(5, Math.min(100, nz(o.alpha, 88))) / 100;
   const rad = o.shape === 'pill' ? '10mm' : o.shape === 'square' ? '0.6mm' : '2.5mm';
