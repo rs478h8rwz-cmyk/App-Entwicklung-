@@ -51,7 +51,7 @@ async function buildPdf(isos, label) {
   /* Summen */
   y += 3; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 24, 2, 2, 'F');
   const vac = vacation(+isos[0].slice(0, 4)), mons = [...new Set(isos.map(mondayOf))], ACC = account(mons[mons.length - 1]), bal = ACC.over, wover = mons.reduce((a, m) => a + weekStat(m).over, 0), wused = mons.reduce((a, m) => a + ((ACC.weeks[m] || {}).used || 0), 0), wminus = mons.reduce((a, m) => a + ((ACC.weeks[m] || {}).minus || 0), 0);
-  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden (über ' + hm(weekTarget()) + ' / Woche)', wover ? '+' + hm(wover) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], [wminus ? 'Minusstunden' : wused ? 'Von Überstunden abgezogen' : 'Urlaub / Krank', wminus ? '-' + hm(wminus) : wused ? '-' + hm(wused) : `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
+  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden (über ' + hm(weekTarget()) + ' / Woche)', wover ? '+' + hm(wover) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], [wminus ? 'Minusstunden' : wused ? 'Von Überstunden abgezogen' : 'Urlaub / Krank', wminus ? '-' + hm(wminus) : wused ? '-' + hm(wused) : `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${fmtDays(vac.left)} Tage`]];
   tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(v.startsWith('+') ? GREEN : v.startsWith('-') && k === 'Minusstunden' ? RED : INK)); doc.text(T(v), cx, cy + 4.6); });
   y += 30;
   /* Baustellen-Summen */
@@ -108,10 +108,10 @@ async function buildVacationPdf(v) {
   const row = (k, val, big) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY); doc.text(T(k), M, y); doc.setFont('helvetica', 'bold'); doc.setFontSize(big ? 15 : 11.5); doc.setTextColor(...INK); doc.text(doc.splitTextToSize(T(val), CW - 62), M + 62, y); y += big ? 11 : 9; doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, y - 5, W - M, y - 5); };
   row('Mitarbeiter', `${S.person.name}${S.person.nr ? ' (Pers.-Nr. ' + S.person.nr + ')' : ''}`);
   row('Zeitraum', `${wdOf(v.von).slice(0, 2)}, ${deDate(v.von)} bis ${wdOf(v.bis).slice(0, 2)}, ${deDate(v.bis)}`, true);
-  row('Urlaubstage', `${v.n} Arbeitstag${v.n === 1 ? '' : 'e'} (ohne Wochenende und Feiertage)`);
-  row('Urlaubsanspruch', `${v.total} Tage`);
-  row('Resturlaub vorher', `${v.leftBefore} Tage`);
-  row('Resturlaub danach', `${v.leftAfter} Tage`);
+  row('Urlaubstage', `${fmtDays(v.n)} Tag${v.n === 1 ? '' : 'e'} (ohne Wochenende und Feiertage${v.n % 1 ? ', 24./31.12. halb' : ''})`);
+  row('Urlaubsanspruch', `${fmtDays(v.total)} Tage`);
+  row('Resturlaub vorher', `${fmtDays(v.leftBefore)} Tage`);
+  row('Resturlaub danach', `${fmtDays(v.leftAfter)} Tage`);
   if (v.note) row('Bemerkung', v.note);
   /* einzelne Tage */
   y += 4; doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.setFillColor(...P); doc.rect(M, y - 3.2, 1.2, 4.6, 'F'); doc.text('Urlaubstage', M + 3.5, y); y += 6;

@@ -145,7 +145,7 @@ document.addEventListener('click', async e => {
     case 'in': case 'pause': case 'out': stamp(act); break;
     case 'geo-retry': { closeModal(); const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else { toast(p.err ? 'Standort noch nicht ermittelbar – bitte draußen erneut versuchen.' : 'Standort freigegeben.', p.err ? 'warn' : 'ok'); rerender(); } break; }
     case 'geo-ask': { if (!S.gpsConsent && !(await consentModal())) return; const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else rerender(); break; }
-    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
+    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${fmtDays(vacation().left - dayFactor(isoToday()))} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
     case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'vac-set': await setVacation(); break;
     case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); tellSick(); break; }
@@ -263,7 +263,7 @@ async function setVacation(silent) {
   if (!days.length) { toast('Im Zeitraum liegen keine Arbeitstage.', 'warn'); return false; }
   if (days.some(i => i < isoToday()) && !(await needEdit())) return false;
   for (const i of days) { const d = clone(dayOf(i)); if (hasData(d) && d.type === 'work' && (d.segs || []).length) continue; if (d.type !== 'urlaub') { logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); if (i >= isoToday()) d.edited = false; d.type = 'urlaub'; if (UI.vNote) d.note = UI.vNote; await saveDay(d); } }
-  if (!silent) { toast(`${days.length} Urlaubstag${days.length > 1 ? 'e' : ''} eingetragen.`); rerender(); }
+  if (!silent) { toast(`${fmtDays(vacDays(days))} Urlaubstag${vacDays(days) === 1 ? '' : 'e'} eingetragen.`); rerender(); }
   return true;
 }
 async function submitVacation() {
@@ -274,12 +274,12 @@ async function submitVacation() {
   modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">Urlaubsantrag wird erstellt …</div></div>`);
   try {
     const left = before.left - days.filter(i => dayOf(i).type !== 'urlaub').length;
-    const blob = await buildVacationPdf({ von, bis, n: days.length, note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
+    const blob = await buildVacationPdf({ von, bis, n: vacDays(days), note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
     const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
     saveBlob(blob, name);
-    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
+    UI.requests = (UI.requests || []).concat({ von, bis, n: vacDays(days), at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
     await setVacation(true);
-    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${days.length} Arbeitstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
+    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${fmtDays(vacDays(days))} Urlaubstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
     render();
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }

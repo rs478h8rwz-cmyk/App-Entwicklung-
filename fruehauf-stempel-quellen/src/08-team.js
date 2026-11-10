@@ -149,7 +149,7 @@ function teamBody() {
   let h = `<p class="text-ink3 text-[14px] mb-4">So geht's: Mitarbeiter schickt seine Sicherung per WhatsApp → hier öffnen → Urlaub, Krankheit oder Konten ändern → „Aktualisierung senden“. Der Mitarbeiter spielt sie unter Einstellungen → Daten ein, fertig.</p>
     <div class="flex flex-wrap gap-2"><label class="btn-p cursor-pointer">${ic('upload', 16)}Sicherung eines Mitarbeiters öffnen<input type="file" accept=".json,application/json" class="hidden" data-staff-file></label><button class="btn-s" data-a="tm-new">${ic('plus', 16)}Ohne Sicherung anlegen</button></div>`;
   if (!list.length) return h + `<div class="kpi mt-5 text-[14px] text-ink3">Noch keine Mitarbeiter gespeichert.</div>`;
-  h += `<div class="grid gap-2 mt-5">${list.map(([k, st]) => { const s = staffStats(st); return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b><span class="text-[13px] text-ink2">Resturlaub <b>${s.v.left}</b> von ${s.v.total}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span><span class="text-[12px] text-ink3">${st.at ? 'Sicherung ' + new Date(st.at).toLocaleDateString('de-DE') : 'ohne Sicherung'}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} offen</span>` : ''}</span></button>`; }).join('')}</div>`;
+  h += `<div class="grid gap-2 mt-5">${list.map(([k, st]) => { const s = staffStats(st); return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b><span class="text-[13px] text-ink2">Resturlaub <b>${fmtDays(s.v.left)}</b> von ${fmtDays(s.v.total)}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span><span class="text-[12px] text-ink3">${st.at ? 'Sicherung ' + new Date(st.at).toLocaleDateString('de-DE') : 'ohne Sicherung'}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} offen</span>` : ''}</span></button>`; }).join('')}</div>`;
   if (sel) h += staffEditor(sel);
   return h;
 }
@@ -160,7 +160,7 @@ function staffEditor(k) {
   const runs = []; days.forEach(d => { const r = runs[runs.length - 1]; if (r && r.type === d.type && withStaff(st, () => workDaysIn(addDays(r.bis, 1), addDays(d.iso, -1)).length === 0)) r.bis = d.iso; else runs.push({ type: d.type, von: d.iso, bis: d.iso }); });
   return `<div class="mt-6 rounded-[var(--r)] border border-line p-4 sm:p-5">
     <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9" data-a="tm-dl" data-v="${esc(k)}">${ic('download', 15)}Sicherung herunterladen</button><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, s.v.total + ' Tage')}${kpi('Genommen', s.v.taken + ' Tage')}${kpi('Geplant', s.v.planned + ' Tage')}${kpi('Rest', s.v.left + ' Tage')}</div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, fmtDays(s.v.total) + ' Tage')}${kpi('Genommen', fmtDays(s.v.taken) + ' Tage')}${kpi('Geplant', fmtDays(s.v.planned) + ' Tage')}${kpi('Rest', fmtDays(s.v.left) + ' Tage')}</div>
     <h4 class="font-semibold mt-6 mb-2">Urlaub / Krank / Ausgleich eintragen</h4>
     <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="sonder">Sonderurlaub</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
     <div class="space-y-1 mt-3">${runs.map(r => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-1.5 text-[13px]"><span class="badge ${r.type === 'krank' ? 'bg-tred text-red-ink' : r.type === 'sonder' ? 'text-[#7C3AED] bg-[rgba(139,92,246,.16)]' : 'bg-tyel text-yel-ink'}">${TYPE_DE[r.type]}</span><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''}</span><button class="text-ink3 hover:text-ink" data-a="tm-undo-run" data-v="${esc(k)}" data-von="${r.von}" data-bis="${r.bis}" title="Wieder Arbeitstage">${ic('x', 15)}</button></div>`).join('') || '<div class="text-[13px] text-ink3">Keine Einträge in diesem Jahr.</div>'}</div>
@@ -257,5 +257,14 @@ document.addEventListener('change', e => {
   const y = tNow().getFullYear(), v = el.value.trim();
   S.vacation.manual = v === '' ? null : { year: y, days: +v };
   S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: v === '' ? `Urlaubsanspruch ${y}: wieder automatisch` : `Urlaubsanspruch ${y} von Hand: ${v} Tage` });
+  saveSettings(); rerender();
+});
+
+/* Heiligabend / Silvester einstellen (Arbeitszeiten, mit Freischaltung) */
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-a="half-day"]'); if (!a) return;
+  if (!(await needEdit())) return;
+  S.halfDays = { ...(S.halfDays || {}), [a.dataset.k]: a.dataset.v };
+  S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: `${a.dataset.k === '12-24' ? 'Heiligabend' : 'Silvester'}: ${{ halb: 'halber Tag', voll: 'ganzer Tag', frei: 'frei' }[a.dataset.v]}` });
   saveSettings(); rerender();
 });

@@ -54,7 +54,7 @@ const IP = {
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
    ========================================================= */
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -122,7 +122,8 @@ const DEFAULTS = {
   gps: true,               // Standort beim Stempeln (Pflicht)
   gpsConsent: '',          // Hinweis zur Standortnutzung bestätigt am
   admin: null,             // eigenes Admin-Passwort (nur als PBKDF2-Hash)
-  bu: []                   // zusätzlicher Betriebsurlaub (vom Admin auf diesem Gerät)
+  bu: [],                  // zusätzlicher Betriebsurlaub (vom Admin auf diesem Gerät)
+  halfDays: { '12-24': 'halb', '12-31': 'halb' }   // halb = ½ Urlaubstag und halbe Sollzeit, voll = normaler Tag, frei = arbeitsfrei
 };
 /* Admin-Passwort für nachträgliche Änderungen – nur als PBKDF2-Hash, nie im Klartext */
 const ADMIN_DEFAULT = {"salt": "98ca4569816c7cf7ab78c9ca05af31d3", "hash": "a10b07b319ad55321647f139e3ab13d26e8f75d2b8949e49870d768843f71394", "iter": 150000};
@@ -265,10 +266,18 @@ const openPause = d => (d.pauses || []).find(p => p.von && !p.bis) || null;
 const dayPause = iso => { const h = S.hours[new Date(iso + 'T12:00').getDay()]; return h && h.pause !== undefined && h.pause !== '' ? +h.pause : +S.minPause || 0; };
 const minPauseFor = (net, iso) => (S.pauseOnlyOver6 && net <= 360 ? 0 : dayPause(iso));
 /* Regelarbeitszeit eines Wochentags (ohne Pause) – auch an Feiertagen (werden gutgeschrieben) */
+/* Anteil eines Tages: Heiligabend/Silvester je nach Einstellung halb, voll oder frei */
+const HALF_DAYS = [['12-24', 'Heiligabend (24.12.)'], ['12-31', 'Silvester (31.12.)']];
+function dayFactor(iso) { const r = (S.halfDays || {})[String(iso).slice(5, 10)]; return r === 'halb' ? 0.5 : r === 'frei' ? 0 : 1; }
+const fmtDays = n => num(n, Math.round(n * 10) % 10 ? 1 : 0);
 function tplSoll(iso) {
   const h = S.hours[new Date(iso + 'T12:00').getDay()]; if (!h || !h.on || !h.von || !h.bis) return 0;
-  const b = span(h.von, h.bis); return Math.max(0, b - minPauseFor(b - dayPause(iso), iso));
+  const b = span(h.von, h.bis), f = dayFactor(iso); if (!f) return 0;
+  const full = Math.max(0, b - minPauseFor(b - dayPause(iso), iso));
+  return f === 1 ? full : Math.round(full * f);
 }
+/* Urlaubstage eines Zeitraums (halbe Tage zählen ½) */
+const vacDays = list => list.reduce((a, i) => a + dayFactor(i), 0);
 const isWorkday = iso => tplSoll(iso) > 0 && !holiday(iso);
 const sollOf = iso => tplSoll(iso);
 /* Wochen-Soll (Summe der Regelzeiten Mo–So, Standard 40:00) */
@@ -353,8 +362,8 @@ function vacation(year = tNow().getFullYear()) {
   let taken = 0, planned = 0, betrieb = 0; const today = isoToday();
   for (let iso = `${year}-01-01`; iso <= `${year}-12-31`; iso = addDays(iso, 1)) {
     if (!isWorkday(iso)) continue; const d = dayOf(iso); if (d.type !== 'urlaub') continue;
-    const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; if (b) betrieb++;
-    if (iso <= today) taken++; else planned++;
+    const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; const f = dayFactor(iso); if (b) betrieb += f;
+    if (iso <= today) taken += f; else planned += f;
   }
   if (+S.vacation.year === +year) taken += +S.vacation.takenBefore || 0;
   let sonder = 0; for (const d of Object.values(DAYS)) if (d.type === 'sonder' && d.iso.startsWith(year + '-') && isWorkday(d.iso)) sonder++;
@@ -457,7 +466,7 @@ function viewHome() {
         <div class="grid grid-cols-2 gap-2">${kpi('Arbeitszeit heute', hm(c.netto + c.credit), 'live-netto')}${kpi('Soll heute', hm(c.soll))}${kpi('Pause (abgezogen)', `${hm(c.abzug)}`, 'live-pause')}${kpi('Pause gestempelt', hm(c.pause))}</div>
         <p class="text-[12px] text-ink3 -mt-2">Heute werden mindestens ${dayPause(iso)} Min. Pause abgezogen – auch ohne gestempelte Pause; längere Pausen voll.</p>
         ${segs ? `<div class="card p-4"><div class="text-[13px] text-ink3 mb-1">Heute</div>${segs}${(d.geo || []).length ? `<div class="grid grid-cols-2 gap-2 mt-3">${d.geo.slice(-2).map(geoTile).join('')}</div>` : ''}</div>` : ''}
-        <div class="grid grid-cols-2 gap-2"><div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[26px] font-semibold mt-1 text-p">${overTxt(bal)}</div>${ACC.minus ? `<div class="text-[12px] text-red-ink mt-1">Minusstunden: ${hm(ACC.minus)}</div>` : ''}</div><a href="#/urlaub" class="kpi block"><div class="text-[12px] text-ink3">Resturlaub ${tNow().getFullYear()}</div><div class="text-[26px] font-semibold mt-1">${vac.left} <span class="text-[13px] text-ink3 font-normal">von ${vac.total} Tagen</span></div></a></div>
+        <div class="grid grid-cols-2 gap-2"><div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[26px] font-semibold mt-1 text-p">${overTxt(bal)}</div>${ACC.minus ? `<div class="text-[12px] text-red-ink mt-1">Minusstunden: ${hm(ACC.minus)}</div>` : ''}</div><a href="#/urlaub" class="kpi block"><div class="text-[12px] text-ink3">Resturlaub ${tNow().getFullYear()}</div><div class="text-[26px] font-semibold mt-1">${fmtDays(vac.left)} <span class="text-[13px] text-ink3 font-normal">von ${fmtDays(vac.total)} Tagen</span></div></a></div>
       </div>
     </div>
     <div class="mt-4">${weekCard(mondayOf(iso), true)}</div>
@@ -538,22 +547,22 @@ function viewUrlaub() {
   const y = tNow().getFullYear(), v = vacation(y), today = isoToday();
   const von = UI.vVon || today, bis = UI.vBis || von, days = workDaysIn(von, bis);
   const list = Object.values(DAYS).filter(d => d.type === 'urlaub' && d.iso.startsWith(y + '-') && !betriebOf(d.iso)).sort((a, b) => a.iso.localeCompare(b.iso));
-  const blocks = []; list.forEach(d => { const l = blocks[blocks.length - 1]; if (l && workDaysIn(addDays(l.bis, 1), addDays(d.iso, -1)).length === 0) { l.bis = d.iso; l.n += sollOf(d.iso) > 0 ? 1 : 0; } else blocks.push({ von: d.iso, bis: d.iso, n: sollOf(d.iso) > 0 ? 1 : 0 }); });
+  const blocks = []; list.forEach(d => { const l = blocks[blocks.length - 1]; if (l && workDaysIn(addDays(l.bis, 1), addDays(d.iso, -1)).length === 0) { l.bis = d.iso; l.n += sollOf(d.iso) > 0 ? dayFactor(d.iso) : 0; } else blocks.push({ von: d.iso, bis: d.iso, n: sollOf(d.iso) > 0 ? dayFactor(d.iso) : 0 }); });
   const reqs = (UI.requests || []).slice().reverse().slice(0, 8);
   return `<section class="pt-6 sm:pt-10"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Urlaub</h1>
-    ${buList().filter(b => b.bis >= today).length ? `<div class="card p-4 mt-5 flex flex-wrap items-center gap-3" style="background:rgb(229,154,92,.12)"><span style="color:#C7792F">${ic('cal', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">${buList().filter(b => b.bis >= today).map(b => `<div><b>${esc(b.name || 'Betriebsurlaub')}</b>: ${deDate(b.von)} – ${deDate(b.bis)} · ${workDaysIn(b.von, b.bis).length} Arbeitstage${b.abzug === false ? ' (zählt nicht vom Urlaub)' : ''}</div>`).join('')}</div></div>` : ''}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi(`Anspruch ${y}`, `${v.total} Tage`)}${kpi('Genommen', `${v.taken} Tage`)}${kpi('Geplant', `${v.planned} Tage${v.betrieb ? ` <span class="text-[12px] text-ink3 font-normal">davon ${v.betrieb} Betriebsurl.</span>` : ''}`)}<div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Resturlaub</div><div class="text-[26px] font-semibold mt-1 text-p">${v.left} Tage</div></div></div>
+    ${buList().filter(b => b.bis >= today).length ? `<div class="card p-4 mt-5 flex flex-wrap items-center gap-3" style="background:rgb(229,154,92,.12)"><span style="color:#C7792F">${ic('cal', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">${buList().filter(b => b.bis >= today).map(b => `<div><b>${esc(b.name || 'Betriebsurlaub')}</b>: ${deDate(b.von)} – ${deDate(b.bis)} · ${(() => { const l = workDaysIn(b.von, b.bis), ys = [...new Set(l.map(i => i.slice(0, 4)))]; return ys.length > 1 ? ys.map(y2 => { const n = vacDays(l.filter(i => i.startsWith(y2))); return `${fmtDays(n)} ${n === 1 ? 'Tag' : 'Tage'} ${y2}`; }).join(' + ') : `${fmtDays(vacDays(l))} Urlaubstage`; })()}${b.abzug === false ? ' (zählt nicht vom Urlaub)' : ''}</div>`).join('')}</div></div>` : ''}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">${kpi(`Anspruch ${y}`, `${fmtDays(v.total)} Tage`)}${kpi('Genommen', `${fmtDays(v.taken)} Tage`)}${kpi('Geplant', `${fmtDays(v.planned)} Tage${v.betrieb ? ` <span class="text-[12px] text-ink3 font-normal">davon ${fmtDays(v.betrieb)} Betriebsurl.</span>` : ''}`)}<div class="kpi" style="background:var(--p-light)"><div class="text-[12px] text-ink3">Resturlaub</div><div class="text-[26px] font-semibold mt-1 text-p">${fmtDays(v.left)} Tage</div></div></div>
     ${v.ent.why || v.sonder ? `<p class="hint">${v.ent.why ? esc(v.ent.why) + (v.ent.manual ? ' · angepasst auf ' + v.ent.days + ' Tage' : '') : ''}${v.ent.why && v.sonder ? ' · ' : ''}${v.sonder ? `Sonderurlaub ${y}: ${v.sonder} ${v.sonder === 1 ? 'Tag' : 'Tage'} (wird nicht vom Urlaub abgezogen)` : ''}</p>` : ''}
     <button class="btn-g mt-2" data-a="konto-edit">${ic('edit', 15)}Urlaub / Überstunden einpflegen (Admin)</button>
     <div class="grid lg:grid-cols-2 gap-4 mt-4">
       <div class="card p-5 sm:p-6"><h2 class="sec-t mb-1">Urlaub eintragen oder einreichen</h2><p class="text-ink3 text-[14px] mb-5">Wochenenden und Feiertage werden nicht mitgezählt.</p>
         <div class="grid grid-cols-2 gap-3"><label class="block"><span class="lbl">Von</span><input type="date" class="inp" data-vac="von" value="${esc(von)}"></label><label class="block"><span class="lbl">Bis</span><input type="date" class="inp" data-vac="bis" value="${esc(bis)}"></label></div>
         <label class="block mt-3"><span class="lbl">Bemerkung (optional)</span><input class="inp" data-vac="note" value="${esc(UI.vNote || '')}" placeholder="z. B. Familienurlaub"></label>
-        <div class="kpi mt-4 flex items-center justify-between"><span class="text-[14px]">${deDate(von)} – ${deDate(bis)}</span><b class="text-[22px]" id="vac-n">${days.length} Arbeitstag${days.length === 1 ? '' : 'e'}</b></div>
-        ${days.length > v.left ? `<p class="text-ember text-[13px] mt-2">Achtung: mehr Tage als Resturlaub (${v.left}).</p>` : ''}
+        <div class="kpi mt-4 flex items-center justify-between"><span class="text-[14px]">${deDate(von)} – ${deDate(bis)}</span><b class="text-[22px]" id="vac-n">${fmtDays(vacDays(days))} Urlaubstag${days.length === 1 ? '' : 'e'}</b></div>
+        ${vacDays(days) > v.left ? `<p class="text-ember text-[13px] mt-2">Achtung: mehr Tage als Resturlaub (${fmtDays(v.left)}).</p>` : ''}
         <div class="grid sm:grid-cols-2 gap-2 mt-4"><button class="btn-p !h-12" data-a="vac-submit">${ic('send', 17)}Urlaub einreichen (PDF an ${esc(S.recipient.name || 'Büro')})</button><button class="btn-s !h-12" data-a="vac-set">${ic('palm', 17)}Direkt eintragen</button></div>
         <p class="hint">„Einreichen“ erstellt einen Urlaubsantrag als PDF, speichert ihn und öffnet Teilen (WhatsApp). „Direkt eintragen“ trägt die Tage in den Kalender ein – vergangene Tage nur mit Admin-Passwort.</p></div>
-      <div class="card p-5 sm:p-6"><h2 class="sec-t mb-3">Eingetragener Urlaub ${y}</h2>${blocks.length ? blocks.map(b => `<div class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px]"><span class="text-yel-ink">${ic('palm', 16)}</span><span class="flex-1">${deDate(b.von)}${b.bis !== b.von ? ' – ' + deDate(b.bis) : ''}</span><b>${b.n} Tag${b.n > 1 ? 'e' : ''}</b><button class="btn-g !h-8 !px-2 hover:!text-ember" data-a="vac-del" data-von="${b.von}" data-bis="${b.bis}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('') : '<div class="text-ink3 text-[14px]">Noch kein Urlaub eingetragen.</div>'}
+      <div class="card p-5 sm:p-6"><h2 class="sec-t mb-3">Eingetragener Urlaub ${y}</h2>${blocks.length ? blocks.map(b => `<div class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px]"><span class="text-yel-ink">${ic('palm', 16)}</span><span class="flex-1">${deDate(b.von)}${b.bis !== b.von ? ' – ' + deDate(b.bis) : ''}</span><b>${fmtDays(b.n)} Tag${b.n === 1 ? '' : 'e'}</b><button class="btn-g !h-8 !px-2 hover:!text-ember" data-a="vac-del" data-von="${b.von}" data-bis="${b.bis}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('') : '<div class="text-ink3 text-[14px]">Noch kein Urlaub eingetragen.</div>'}
         ${reqs.length ? `<h3 class="font-semibold mt-6 mb-2 text-[15px]">Eingereichte Anträge</h3>${reqs.map(r => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[13px]"><span class="flex-1">${deDate(r.von)} – ${deDate(r.bis)} · ${r.n} Tage</span><span class="text-ink3">eingereicht ${deDate(r.at.slice(0, 10))}</span></div>`).join('')}` : ''}</div>
     </div>${calendar()}</section>`;
 }
@@ -575,11 +584,13 @@ function setBody() {
       <div class="grid grid-cols-[70px_1fr_1fr_64px_58px] gap-2 text-[12px] text-ink3 mb-1"><span>Tag</span><span>Beginn</span><span>Ende</span><span>Pause</span><span class="text-right">Soll</span></div><div class="space-y-2">${[1, 2, 3, 4, 5, 6, 0].map(k => { const h = S.hours[k]; return `<div class="grid grid-cols-[70px_1fr_1fr_64px_58px] gap-2 items-center"><label class="flex items-center gap-2 text-[14px]"><input type="checkbox" data-hour="${k}" data-k="on" ${h.on ? 'checked' : ''} ${ro ? 'disabled' : ''}>${WD[k].slice(0, 2)}</label><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="von" value="${esc(h.von)}" ${ro || !h.on ? 'disabled' : ''}><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="bis" value="${esc(h.bis)}" ${ro || !h.on ? 'disabled' : ''}><input class="inp !h-10 !px-2" inputmode="numeric" data-hour="${k}" data-k="pause" value="${esc(h.pause ?? '')}" ${ro || !h.on ? 'disabled' : ''}><span class="text-[13px] text-ink3 mono text-right">${h.on ? hm(tplSoll(k === 0 ? '2026-11-15' : addDays('2026-11-09', k - 1))) : '–'}</span></div>`; }).join('')}</div>
       <div class="kpi mt-3 flex justify-between text-[14px]"><span>Wochen-Soll</span><b>${hm(weekTarget())} Std.</b></div>
       <p class="hint">Pause = Mindestpause in Minuten, die an diesem Tag immer abgezogen wird (längere Pausen voll).</p><div class="grid sm:grid-cols-2 gap-4 mt-6"><div class="kpi"><div class="text-[12px] text-ink3">Feiertage nach Firmensitz</div><div class="text-[15px] font-semibold mt-1">${esc((STATES.find(x => x[0] === firmState()) || ['', firmState()])[1])}</div><div class="text-[12px] text-ink3 mt-0.5">${esc(FIRMA.firmensitz ? `${FIRMA.firmensitz.name}, ${FIRMA.firmensitz.ort}` : '')}</div></div></div>
-      <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-4"><input type="checkbox" data-a="over6" ${S.pauseOnlyOver6 ? 'checked' : ''} ${ro ? 'disabled' : ''}>Mindestpause nur bei mehr als 6 Std. Arbeit abziehen</label>`;
+      <label class="flex items-center gap-2.5 text-[14px] text-ink2 mt-4"><input type="checkbox" data-a="over6" ${S.pauseOnlyOver6 ? 'checked' : ''} ${ro ? 'disabled' : ''}>Mindestpause nur bei mehr als 6 Std. Arbeit abziehen</label>
+      <h3 class="font-semibold mt-7 mb-1">Heiligabend und Silvester</h3><p class="text-ink3 text-[14px] mb-3">Halber Tag = halbe Sollzeit und ½ Urlaubstag (auch im Betriebsurlaub). Frei = arbeitsfrei, zählt nicht als Urlaub.</p>
+      <div class="space-y-2">${HALF_DAYS.map(([k, l]) => `<div class="flex flex-wrap items-center gap-2"><span class="text-[14px] w-44">${l}</span><div class="seg">${[['halb', 'Halber Tag'], ['voll', 'Ganzer Tag'], ['frei', 'Frei']].map(([v, t]) => `<button class="${((S.halfDays || {})[k] || 'voll') === v ? 'on' : ''}" data-a="half-day" data-k="${k}" data-v="${v}" ${ro ? 'disabled' : ''}>${t}</button>`).join('')}</div></div>`).join('')}</div>`;
     case 'konten': { const v = vacation(); return `${lockNote}<h3 class="font-semibold mb-3">Urlaub ${tNow().getFullYear()}</h3><div class="grid grid-cols-2 gap-4">${sIn('person.start', 'Eintrittsdatum (hier angefangen am)', '', 'date', ro)}${sIn('vacation.perYear', 'Urlaubstage pro Jahr (laut Vertrag)', '30', 'number', ro)}</div>
       <div class="mt-4"><span class="lbl">Berechnung im Eintrittsjahr</span><div class="seg">${[['anteilig', 'Anteilig (1/12 je Monat)'], ['gesetz', 'Gesetzlich (BUrlG)']].map(([k, l]) => `<button class="${(S.vacation.rule || 'anteilig') === k ? 'on' : ''}" data-a="vac-rule" data-v="${k}" ${ro ? 'disabled' : ''}>${l}</button>`).join('')}</div></div>
       <div class="grid grid-cols-2 gap-4 mt-4"><label class="block"><span class="lbl">Anspruch ${tNow().getFullYear()} (automatisch: ${v.ent.auto} Tage)</span><input class="inp" data-vman type="number" inputmode="decimal" value="${v.ent.manual ? esc(v.ent.days) : ''}" placeholder="automatisch" ${ro ? 'disabled' : ''}></label>${sIn('vacation.carry', 'Resturlaub Vorjahr', '0', 'number', ro)}</div>
-      ${v.ent.why ? `<p class="hint">${esc(v.ent.why)}${v.ent.manual ? ' · von Hand angepasst' : ''}</p>` : ''}<p class="hint">Genommen: ${v.taken} · Geplant: ${v.planned} · Übrig: ${v.left} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)${v.sonder ? ` · Sonderurlaub: ${v.sonder} ${v.sonder === 1 ? 'Tag' : 'Tage'} (zählt nicht zum Urlaub)` : ''}</p>
+      ${v.ent.why ? `<p class="hint">${esc(v.ent.why)}${v.ent.manual ? ' · von Hand angepasst' : ''}</p>` : ''}<p class="hint">Genommen: ${fmtDays(v.taken)} · Geplant: ${fmtDays(v.planned)} · Übrig: ${fmtDays(v.left)} Tage (nur Arbeitstage, ohne Wochenende und Feiertage)${v.sonder ? ` · Sonderurlaub: ${v.sonder} ${v.sonder === 1 ? 'Tag' : 'Tage'} (zählt nicht zum Urlaub)` : ''}</p>
       <h3 class="font-semibold mt-7 mb-3">Betriebsurlaub</h3>
       <div class="space-y-1.5">${(FIRMA.betriebsurlaub || []).map(b => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span><span class="text-[12px] text-ink3">für alle (Firmenvorgabe)</span></div>`).join('')}
       ${(S.bu || []).map((b, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><span style="color:#C7792F">${ic('cal', 15)}</span><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}${b.abzug === false ? ' · zählt nicht' : ''}</span>${ro ? '' : `<button class="text-ink3 hover:text-ember" data-a="bu-del" data-i="${i}" aria-label="Entfernen">${ic('trash', 15)}</button>`}</div>`).join('')}</div>
@@ -779,7 +790,7 @@ document.addEventListener('click', async e => {
     case 'in': case 'pause': case 'out': stamp(act); break;
     case 'geo-retry': { closeModal(); const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else { toast(p.err ? 'Standort noch nicht ermittelbar – bitte draußen erneut versuchen.' : 'Standort freigegeben.', p.err ? 'warn' : 'ok'); rerender(); } break; }
     case 'geo-ask': { if (!S.gpsConsent && !(await consentModal())) return; const p = await getPos(); if (p.err === 'denied') geoBlockedModal(); else rerender(); break; }
-    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${vacation().left - 1} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
+    case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${fmtDays(vacation().left - dayFactor(isoToday()))} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
     case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'vac-set': await setVacation(); break;
     case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); tellSick(); break; }
@@ -897,7 +908,7 @@ async function setVacation(silent) {
   if (!days.length) { toast('Im Zeitraum liegen keine Arbeitstage.', 'warn'); return false; }
   if (days.some(i => i < isoToday()) && !(await needEdit())) return false;
   for (const i of days) { const d = clone(dayOf(i)); if (hasData(d) && d.type === 'work' && (d.segs || []).length) continue; if (d.type !== 'urlaub') { logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); if (i >= isoToday()) d.edited = false; d.type = 'urlaub'; if (UI.vNote) d.note = UI.vNote; await saveDay(d); } }
-  if (!silent) { toast(`${days.length} Urlaubstag${days.length > 1 ? 'e' : ''} eingetragen.`); rerender(); }
+  if (!silent) { toast(`${fmtDays(vacDays(days))} Urlaubstag${vacDays(days) === 1 ? '' : 'e'} eingetragen.`); rerender(); }
   return true;
 }
 async function submitVacation() {
@@ -908,12 +919,12 @@ async function submitVacation() {
   modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">Urlaubsantrag wird erstellt …</div></div>`);
   try {
     const left = before.left - days.filter(i => dayOf(i).type !== 'urlaub').length;
-    const blob = await buildVacationPdf({ von, bis, n: days.length, note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
+    const blob = await buildVacationPdf({ von, bis, n: vacDays(days), note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
     const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
     saveBlob(blob, name);
-    UI.requests = (UI.requests || []).concat({ von, bis, n: days.length, at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
+    UI.requests = (UI.requests || []).concat({ von, bis, n: vacDays(days), at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
     await setVacation(true);
-    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${days.length} Arbeitstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
+    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${fmtDays(vacDays(days))} Urlaubstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
     render();
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
@@ -1053,7 +1064,7 @@ async function buildPdf(isos, label) {
   /* Summen */
   y += 3; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 24, 2, 2, 'F');
   const vac = vacation(+isos[0].slice(0, 4)), mons = [...new Set(isos.map(mondayOf))], ACC = account(mons[mons.length - 1]), bal = ACC.over, wover = mons.reduce((a, m) => a + weekStat(m).over, 0), wused = mons.reduce((a, m) => a + ((ACC.weeks[m] || {}).used || 0), 0), wminus = mons.reduce((a, m) => a + ((ACC.weeks[m] || {}).minus || 0), 0);
-  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden (über ' + hm(weekTarget()) + ' / Woche)', wover ? '+' + hm(wover) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], [wminus ? 'Minusstunden' : wused ? 'Von Überstunden abgezogen' : 'Urlaub / Krank', wminus ? '-' + hm(wminus) : wused ? '-' + hm(wused) : `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${vac.left} Tage`]];
+  const tiles = [['Arbeitszeit', hm(R.netto + R.credit)], ['Soll', hm(R.soll)], ['Überstunden (über ' + hm(weekTarget()) + ' / Woche)', wover ? '+' + hm(wover) : '0:00'], ['Überstunden gesamt', bal ? '+' + hm(bal) : '0:00'], [wminus ? 'Minusstunden' : wused ? 'Von Überstunden abgezogen' : 'Urlaub / Krank', wminus ? '-' + hm(wminus) : wused ? '-' + hm(wused) : `${R.count('urlaub')} / ${R.count('krank')} Tage`], ['Resturlaub', `${fmtDays(vac.left)} Tage`]];
   tiles.forEach(([k, v], i) => { const cx = M + 5 + (i % 3) * (CW / 3), cy = y + 6 + Math.floor(i / 3) * 10.5; doc.setFontSize(7.4); doc.setTextColor(...GRAY); doc.setFont('helvetica', 'normal'); doc.text(T(k), cx, cy); doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(v.startsWith('+') ? GREEN : v.startsWith('-') && k === 'Minusstunden' ? RED : INK)); doc.text(T(v), cx, cy + 4.6); });
   y += 30;
   /* Baustellen-Summen */
@@ -1110,10 +1121,10 @@ async function buildVacationPdf(v) {
   const row = (k, val, big) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY); doc.text(T(k), M, y); doc.setFont('helvetica', 'bold'); doc.setFontSize(big ? 15 : 11.5); doc.setTextColor(...INK); doc.text(doc.splitTextToSize(T(val), CW - 62), M + 62, y); y += big ? 11 : 9; doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, y - 5, W - M, y - 5); };
   row('Mitarbeiter', `${S.person.name}${S.person.nr ? ' (Pers.-Nr. ' + S.person.nr + ')' : ''}`);
   row('Zeitraum', `${wdOf(v.von).slice(0, 2)}, ${deDate(v.von)} bis ${wdOf(v.bis).slice(0, 2)}, ${deDate(v.bis)}`, true);
-  row('Urlaubstage', `${v.n} Arbeitstag${v.n === 1 ? '' : 'e'} (ohne Wochenende und Feiertage)`);
-  row('Urlaubsanspruch', `${v.total} Tage`);
-  row('Resturlaub vorher', `${v.leftBefore} Tage`);
-  row('Resturlaub danach', `${v.leftAfter} Tage`);
+  row('Urlaubstage', `${fmtDays(v.n)} Tag${v.n === 1 ? '' : 'e'} (ohne Wochenende und Feiertage${v.n % 1 ? ', 24./31.12. halb' : ''})`);
+  row('Urlaubsanspruch', `${fmtDays(v.total)} Tage`);
+  row('Resturlaub vorher', `${fmtDays(v.leftBefore)} Tage`);
+  row('Resturlaub danach', `${fmtDays(v.leftAfter)} Tage`);
   if (v.note) row('Bemerkung', v.note);
   /* einzelne Tage */
   y += 4; doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.setFillColor(...P); doc.rect(M, y - 3.2, 1.2, 4.6, 'F'); doc.text('Urlaubstage', M + 3.5, y); y += 6;
@@ -1281,7 +1292,7 @@ function teamBody() {
   let h = `<p class="text-ink3 text-[14px] mb-4">So geht's: Mitarbeiter schickt seine Sicherung per WhatsApp → hier öffnen → Urlaub, Krankheit oder Konten ändern → „Aktualisierung senden“. Der Mitarbeiter spielt sie unter Einstellungen → Daten ein, fertig.</p>
     <div class="flex flex-wrap gap-2"><label class="btn-p cursor-pointer">${ic('upload', 16)}Sicherung eines Mitarbeiters öffnen<input type="file" accept=".json,application/json" class="hidden" data-staff-file></label><button class="btn-s" data-a="tm-new">${ic('plus', 16)}Ohne Sicherung anlegen</button></div>`;
   if (!list.length) return h + `<div class="kpi mt-5 text-[14px] text-ink3">Noch keine Mitarbeiter gespeichert.</div>`;
-  h += `<div class="grid gap-2 mt-5">${list.map(([k, st]) => { const s = staffStats(st); return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b><span class="text-[13px] text-ink2">Resturlaub <b>${s.v.left}</b> von ${s.v.total}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span><span class="text-[12px] text-ink3">${st.at ? 'Sicherung ' + new Date(st.at).toLocaleDateString('de-DE') : 'ohne Sicherung'}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} offen</span>` : ''}</span></button>`; }).join('')}</div>`;
+  h += `<div class="grid gap-2 mt-5">${list.map(([k, st]) => { const s = staffStats(st); return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b><span class="text-[13px] text-ink2">Resturlaub <b>${fmtDays(s.v.left)}</b> von ${fmtDays(s.v.total)}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span><span class="text-[12px] text-ink3">${st.at ? 'Sicherung ' + new Date(st.at).toLocaleDateString('de-DE') : 'ohne Sicherung'}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} offen</span>` : ''}</span></button>`; }).join('')}</div>`;
   if (sel) h += staffEditor(sel);
   return h;
 }
@@ -1292,7 +1303,7 @@ function staffEditor(k) {
   const runs = []; days.forEach(d => { const r = runs[runs.length - 1]; if (r && r.type === d.type && withStaff(st, () => workDaysIn(addDays(r.bis, 1), addDays(d.iso, -1)).length === 0)) r.bis = d.iso; else runs.push({ type: d.type, von: d.iso, bis: d.iso }); });
   return `<div class="mt-6 rounded-[var(--r)] border border-line p-4 sm:p-5">
     <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9" data-a="tm-dl" data-v="${esc(k)}">${ic('download', 15)}Sicherung herunterladen</button><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, s.v.total + ' Tage')}${kpi('Genommen', s.v.taken + ' Tage')}${kpi('Geplant', s.v.planned + ' Tage')}${kpi('Rest', s.v.left + ' Tage')}</div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, fmtDays(s.v.total) + ' Tage')}${kpi('Genommen', fmtDays(s.v.taken) + ' Tage')}${kpi('Geplant', fmtDays(s.v.planned) + ' Tage')}${kpi('Rest', fmtDays(s.v.left) + ' Tage')}</div>
     <h4 class="font-semibold mt-6 mb-2">Urlaub / Krank / Ausgleich eintragen</h4>
     <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="sonder">Sonderurlaub</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
     <div class="space-y-1 mt-3">${runs.map(r => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-1.5 text-[13px]"><span class="badge ${r.type === 'krank' ? 'bg-tred text-red-ink' : r.type === 'sonder' ? 'text-[#7C3AED] bg-[rgba(139,92,246,.16)]' : 'bg-tyel text-yel-ink'}">${TYPE_DE[r.type]}</span><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''}</span><button class="text-ink3 hover:text-ink" data-a="tm-undo-run" data-v="${esc(k)}" data-von="${r.von}" data-bis="${r.bis}" title="Wieder Arbeitstage">${ic('x', 15)}</button></div>`).join('') || '<div class="text-[13px] text-ink3">Keine Einträge in diesem Jahr.</div>'}</div>
@@ -1389,5 +1400,14 @@ document.addEventListener('change', e => {
   const y = tNow().getFullYear(), v = el.value.trim();
   S.vacation.manual = v === '' ? null : { year: y, days: +v };
   S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: v === '' ? `Urlaubsanspruch ${y}: wieder automatisch` : `Urlaubsanspruch ${y} von Hand: ${v} Tage` });
+  saveSettings(); rerender();
+});
+
+/* Heiligabend / Silvester einstellen (Arbeitszeiten, mit Freischaltung) */
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-a="half-day"]'); if (!a) return;
+  if (!(await needEdit())) return;
+  S.halfDays = { ...(S.halfDays || {}), [a.dataset.k]: a.dataset.v };
+  S.kontoLog = (S.kontoLog || []).concat({ at: tNow().toISOString(), what: `${a.dataset.k === '12-24' ? 'Heiligabend' : 'Silvester'}: ${{ halb: 'halber Tag', voll: 'ganzer Tag', frei: 'frei' }[a.dataset.v]}` });
   saveSettings(); rerender();
 });

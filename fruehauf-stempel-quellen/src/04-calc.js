@@ -39,10 +39,18 @@ const openPause = d => (d.pauses || []).find(p => p.von && !p.bis) || null;
 const dayPause = iso => { const h = S.hours[new Date(iso + 'T12:00').getDay()]; return h && h.pause !== undefined && h.pause !== '' ? +h.pause : +S.minPause || 0; };
 const minPauseFor = (net, iso) => (S.pauseOnlyOver6 && net <= 360 ? 0 : dayPause(iso));
 /* Regelarbeitszeit eines Wochentags (ohne Pause) – auch an Feiertagen (werden gutgeschrieben) */
+/* Anteil eines Tages: Heiligabend/Silvester je nach Einstellung halb, voll oder frei */
+const HALF_DAYS = [['12-24', 'Heiligabend (24.12.)'], ['12-31', 'Silvester (31.12.)']];
+function dayFactor(iso) { const r = (S.halfDays || {})[String(iso).slice(5, 10)]; return r === 'halb' ? 0.5 : r === 'frei' ? 0 : 1; }
+const fmtDays = n => num(n, Math.round(n * 10) % 10 ? 1 : 0);
 function tplSoll(iso) {
   const h = S.hours[new Date(iso + 'T12:00').getDay()]; if (!h || !h.on || !h.von || !h.bis) return 0;
-  const b = span(h.von, h.bis); return Math.max(0, b - minPauseFor(b - dayPause(iso), iso));
+  const b = span(h.von, h.bis), f = dayFactor(iso); if (!f) return 0;
+  const full = Math.max(0, b - minPauseFor(b - dayPause(iso), iso));
+  return f === 1 ? full : Math.round(full * f);
 }
+/* Urlaubstage eines Zeitraums (halbe Tage zählen ½) */
+const vacDays = list => list.reduce((a, i) => a + dayFactor(i), 0);
 const isWorkday = iso => tplSoll(iso) > 0 && !holiday(iso);
 const sollOf = iso => tplSoll(iso);
 /* Wochen-Soll (Summe der Regelzeiten Mo–So, Standard 40:00) */
@@ -127,8 +135,8 @@ function vacation(year = tNow().getFullYear()) {
   let taken = 0, planned = 0, betrieb = 0; const today = isoToday();
   for (let iso = `${year}-01-01`; iso <= `${year}-12-31`; iso = addDays(iso, 1)) {
     if (!isWorkday(iso)) continue; const d = dayOf(iso); if (d.type !== 'urlaub') continue;
-    const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; if (b) betrieb++;
-    if (iso <= today) taken++; else planned++;
+    const b = !DAYS[iso] && betriebOf(iso); if (b && b.abzug === false) continue; const f = dayFactor(iso); if (b) betrieb += f;
+    if (iso <= today) taken += f; else planned += f;
   }
   if (+S.vacation.year === +year) taken += +S.vacation.takenBefore || 0;
   let sonder = 0; for (const d of Object.values(DAYS)) if (d.type === 'sonder' && d.iso.startsWith(year + '-') && isWorkday(d.iso)) sonder++;
