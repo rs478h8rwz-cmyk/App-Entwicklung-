@@ -13,7 +13,7 @@ function ld_apply_update(string $zipPath, string $base): array {
   $n = 0;
   foreach ($names as $i => $nm) {
     if (str_contains($nm, '..') || str_starts_with($nm, '/') || str_contains($nm, '\\')) continue;
-    if (!preg_match('#^(public|private)/#', $nm) || in_array($nm, $skip, true) || preg_match('#^private/(sessions|files|pfiles|backups)/#', $nm)) continue;
+    if (!preg_match('#^(public|private)/#', $nm) || in_array($nm, $skip, true) || preg_match('#^private/(sessions|files|pfiles|aprot|backups)/#', $nm)) continue;
     $dest = $base . '/' . $nm;
     if (str_ends_with($nm, '/')) { if (!is_dir($dest)) @mkdir($dest, 0755, true); continue; }
     if (!is_dir(dirname($dest))) @mkdir(dirname($dest), 0755, true);

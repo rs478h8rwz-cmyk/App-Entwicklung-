@@ -5,6 +5,7 @@ declare(strict_types=1);
 /* private/ liegt neben public/ oder (IONOS, gesperrt) im Webordner */
 require (is_dir(__DIR__ . '/../private') ? __DIR__ . '/../private' : __DIR__ . '/../../private') . '/bootstrap.php';
 
+const AB_ROLES_ALL = ['admin', 'buero', 'vertrieb', 'monteur'];
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
 start_session();
@@ -307,6 +308,34 @@ try {
       header('Cache-Control: private, max-age=31536000, immutable'); header('X-Content-Type-Options: nosniff');
       if (!empty($m['name'])) header('X-File-Name: ' . rawurlencode($m['name']));
       readfile($f . '.bin'); exit;
+    }
+
+    /* ---------- Abnahme & Service zentral ---------- */
+    case 'GET ab-list': {
+      $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/abnahme-lib.php';
+      $pid = (string)($_GET['p'] ?? ''); if ($pid !== '') { $p = valid_id($pid) ? project_row($pid) : null; if (!$p || !(can_see_project($u, $p) || in_array($u['role'], AB_ROLES, true))) fail('Keine Berechtigung', 403); }
+      if ($u['role'] === 'vertrieb' && $pid === '') fail('Keine Berechtigung', 403);
+      json_out(['office' => ab_office($u), 'list' => $pid !== '' ? ab_list(array_merge($u, ['role' => 'admin']), 'all', $pid) : ab_list($u, (string)($_GET['scope'] ?? 'mine'))]);
+    }
+    case 'GET ab-get': {
+      $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/abnahme-lib.php';
+      json_out(ab_get(in_array($u['role'], AB_ROLES, true) ? $u : array_merge($u, ['role' => 'none']), (string)($_GET['id'] ?? '')));
+    }
+    case 'POST ab-put': {
+      $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/abnahme-lib.php'; if (!in_array($u['role'], AB_ROLES, true)) fail('Keine Berechtigung', 403);
+      json_out(ab_put($u, body()));
+    }
+    case 'POST ab-del': {
+      $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/abnahme-lib.php'; if (!in_array($u['role'], AB_ROLES, true)) fail('Keine Berechtigung', 403);
+      ab_del($u, (string)(body()['id'] ?? '')); json_out(['ok' => true]);
+    }
+    case 'POST ab-number': {
+      $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/abnahme-lib.php'; $b = body();
+      json_out(['n' => ab_number((string)($b['key'] ?? ''), (int)($b['local'] ?? 0))]);
+    }
+    case 'GET ab-customers': {
+      $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/abnahme-lib.php';
+      json_out(['customers' => ab_customers()]);
     }
 
     /* ---------- Stempeluhr zentral ---------- */

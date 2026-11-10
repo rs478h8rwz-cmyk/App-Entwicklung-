@@ -4,11 +4,12 @@
    - db/<tabelle>.json  (Tabellenaufbau + alle Zeilen)
    - files/…            (Bilder der Firmen-Einstellungen)
    - pfiles/…           (Angebote, Fotos, Unterschriften der Kunden)
+   - aprot/…            (Abnahme- und Serviceprotokolle mit Fotos)
    Zugangsdaten (config.php, mail.php) sind bewusst NICHT enthalten. */
 declare(strict_types=1);
 
 const BACKUP_KEEP = 14;
-const BACKUP_TABLES = ['users', 'projects', 'company_config', 'audit_log', 'crm_events', 'crm_tasks', 'stempel_people', 'stempel_days', 'stempel_ops', 'stempel_acks'];
+const BACKUP_TABLES = ['users', 'projects', 'company_config', 'audit_log', 'crm_events', 'crm_tasks', 'stempel_people', 'stempel_days', 'stempel_ops', 'stempel_acks', 'abnahme_prots', 'abnahme_numbers'];
 
 function backup_dir(): string {
   $d = __DIR__ . '/backups';
@@ -41,7 +42,7 @@ function run_backup(string $why = 'manuell'): array {
       $data = db()->query("SELECT * FROM `$t`")->fetchAll(); $rows += count($data);
       $z->addFromString("db/$t.json", json_encode(['table' => $t, 'create' => $cr['Create Table'], 'rows' => $data], JSON_UNESCAPED_UNICODE));
     }
-    $nf = backup_add_dir($z, __DIR__ . '/files', 'files') + backup_add_dir($z, __DIR__ . '/pfiles', 'pfiles');
+    $nf = backup_add_dir($z, __DIR__ . '/files', 'files') + backup_add_dir($z, __DIR__ . '/pfiles', 'pfiles') + backup_add_dir($z, __DIR__ . '/aprot', 'aprot');
     $z->addFromString('LIESMICH.txt', "LumbraDesk-Sicherung vom " . gmdate('d.m.Y H:i') . " (UTC)\nZurückspielen: LumbraDesk → System → Datensicherung.\nZugangsdaten (Datenbank, Postfach) sind nicht enthalten.\n");
     if (!$z->close()) throw new RuntimeException('Sicherung konnte nicht geschrieben werden.');
     rename($tmp, $path);
@@ -71,7 +72,7 @@ function restore_backup(string $name): array {
   $nf = 0;
   for ($i = 0; $i < $z->numFiles; $i++) {
     $nm = $z->getNameIndex($i);
-    if (!preg_match('#^(files|pfiles)/[A-Za-z0-9_./-]+$#', $nm) || str_contains($nm, '..')) continue;
+    if (!preg_match('#^(files|pfiles|aprot)/[A-Za-z0-9_./-]+$#', $nm) || str_contains($nm, '..')) continue;
     $dest = __DIR__ . '/' . $nm; if (!is_dir(dirname($dest))) @mkdir(dirname($dest), 0700, true);
     file_put_contents($dest, $z->getFromIndex($i)); $nf++;
   }

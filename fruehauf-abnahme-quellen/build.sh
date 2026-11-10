@@ -4,7 +4,7 @@ set -e
 SP="$(cd "$(dirname "$0")" && pwd)"
 APP="$(cd "$SP/../fruehauf-abnahme" && pwd)"
 cd "$SP/src"
-cat 01-head.html 02-icons.js 03-core.js 04-schemas.js 05-ui.js 06-events.js 07-pdf.js 99-end.html > "$APP/index.html"
+cat 01-head.html 02-icons.js 03-core.js 04-schemas.js 05-ui.js 06-events.js 07-pdf.js 08-lumbra.js 99-end.html > "$APP/index.html"
 python3 - "$SP" "$APP" <<'PY'
 import re,os,json,time,sys
 SP,APP=sys.argv[1],sys.argv[2]

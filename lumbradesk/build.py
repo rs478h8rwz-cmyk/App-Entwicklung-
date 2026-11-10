@@ -15,7 +15,7 @@ for q in ('fruehauf-energy-quellen', 'fruehauf-stempel-quellen', 'fruehauf-abnah
     subprocess.run(['bash', os.path.join(ROOT, q, 'build.sh')], check=True, stdout=subprocess.DEVNULL)
 
 if os.path.isdir(DIST): shutil.rmtree(DIST)
-skip = shutil.ignore_patterns('config.php', 'sessions', '.DS_Store')
+skip = shutil.ignore_patterns('config.php', 'sessions', 'aprot', 'pfiles', 'files', 'backups', '.DS_Store')
 shutil.copytree(os.path.join(SP, 'public'), os.path.join(APP, 'public'), ignore=skip)
 shutil.copytree(os.path.join(SP, 'private'), os.path.join(APP, 'private'), ignore=skip)
 

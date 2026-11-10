@@ -5,6 +5,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const IC = {
   calc: '<path d="M4 3h16v18H4z"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h2M12 18h4"/>',
   abnahme: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
+  protokolle: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
   stempel: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
@@ -27,11 +28,11 @@ async function api(r, data) {
   return j;
 }
 function toast(msg) { document.querySelectorAll('.toast').forEach(x => x.remove()); const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); }
-const brand = sub => `<div class="brand"><img src="logo.png" alt=""><div><b>LumbraDesk</b><span>${esc(sub)}</span></div></div>`;
+const brand = sub => `<div class="brand"><img src="logo.svg" alt="" width="38" height="38"><div><b>LumbraDesk</b><span>${esc(sub)}</span></div></div>`;
 
 /* ---------- Ansichten ---------- */
 function viewLogin(err = '') {
-  return `<main class="auth"><div class="card">${brand('Frühauf Solar')}
+  return `<main class="auth"><div class="card">${brand('Dein Betrieb an einem Ort')}
     <h2 style="margin-top:22px">Anmelden</h2>${err ? `<p class="note err">${esc(err)}</p>` : ''}
     <form id="f-login"><label>E-Mail<input name="email" type="email" autocomplete="username" required autofocus></label>
     <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
@@ -39,13 +40,13 @@ function viewLogin(err = '') {
     <p style="font-size:14px;margin-top:16px;text-align:center"><a href="#/vergessen">Passwort vergessen?</a></p></div></main>`;
 }
 function viewForgot(msg = '', ok = false) {
-  return `<main class="auth"><div class="card">${brand('Frühauf Solar')}
+  return `<main class="auth"><div class="card">${brand('Dein Betrieb an einem Ort')}
     <h2 style="margin-top:22px">Passwort vergessen</h2><p class="muted">Gib deine E-Mail-Adresse ein. Du bekommst einen Link, mit dem du ein neues Passwort festlegst.</p>${msg ? `<p class="note ${ok ? 'ok' : 'err'}">${esc(msg)}</p>` : ''}
     ${ok ? '' : `<form id="f-forgot"><label>E-Mail<input name="email" type="email" autocomplete="username" required autofocus></label><button class="btn" type="submit">Link senden</button></form>`}
     <p style="font-size:14px;margin-top:16px;text-align:center"><a href="#/">Zurück zur Anmeldung</a></p></div></main>`;
 }
 function viewSetPw(info, err = '') {
-  if (!info) return `<main class="auth"><div class="card">${brand('Frühauf Solar')}<p class="note err">${esc(err || 'Der Link ist abgelaufen oder wurde schon benutzt.')}</p><p class="muted">Über „Passwort vergessen?“ kannst du einen neuen Link anfordern.</p><a class="btn" href="./#/vergessen" style="width:100%">Neuen Link anfordern</a></div></main>`;
+  if (!info) return `<main class="auth"><div class="card">${brand('Dein Betrieb an einem Ort')}<p class="note err">${esc(err || 'Der Link ist abgelaufen oder wurde schon benutzt.')}</p><p class="muted">Über „Passwort vergessen?“ kannst du einen neuen Link anfordern.</p><a class="btn" href="./#/vergessen" style="width:100%">Neuen Link anfordern</a></div></main>`;
   return `<main class="auth"><div class="card">${brand('Hallo ' + info.name)}
     <h2 style="margin-top:22px">${info.purpose === 'invite' ? 'Willkommen bei LumbraDesk' : 'Neues Passwort'}</h2><p class="muted">Lege dein Passwort fest (mind. 10 Zeichen, Buchstaben und Zahlen). Anmelden kannst du dich danach mit <b>${esc(info.email)}</b>.</p>${err ? `<p class="note err">${esc(err)}</p>` : ''}
     <form id="f-setpw"><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required autofocus></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><button class="btn" type="submit">Passwort speichern</button></form></div></main>`;
@@ -61,10 +62,11 @@ function viewNewPw(err = '') {
 }
 function shell(inner) {
   const crm = typeof isCrm === 'function' && isCrm(), adm = ST.user.role === 'admin';
-  const base = [['home', 'Start']].concat(crm ? [['kunden', 'Kunden'], ['aufgaben', 'Aufgaben']] : []);
-  const nav = base.concat(adm ? [['users', 'Benutzer'], ['audit', 'Protokoll'], ['system', 'System']] : []);
-  const tabs = base.concat(adm ? [['mehr', 'Mehr']] : []);
-  const cur = ST.view === 'kunde' ? 'kunden' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view);
+  const off = ['admin', 'buero'].includes(ST.user.role);
+  const base = [['home', 'Start']].concat(crm ? [['kunden', 'Kunden'], ['aufgaben', 'Aufgaben']] : []).concat(off ? [['protokolle', 'Protokolle']] : []);
+  const nav = base.concat(adm ? [['users', 'Benutzer'], ['audit', 'Logbuch'], ['system', 'System']] : []);
+  const tabs = (adm ? base.filter(x => x[0] !== 'protokolle') : base).concat(adm ? [['mehr', 'Mehr']] : []);
+  const cur = ST.view === 'kunde' ? 'kunden' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view) || (adm && ST.view === 'protokolle');
   const link = ([k, l]) => `<a href="#/${k}" class="navl ${cur === k || (k === 'mehr' && inMehr) ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`;
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
     ${nav.length > 1 ? `<nav class="side">${nav.map(link).join('')}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
@@ -93,9 +95,9 @@ function viewUsers() {
       <td><div class="row"><button class="btn s sm" data-a="maillink" data-id="${u.id}">${u.mustChange ? 'Einladung erneut senden' : 'Link: neues Passwort'}</button><button class="btn g sm" data-a="reset" data-id="${u.id}">Einmal-Passwort</button>${u.id === ST.user.id ? '' : `<button class="btn g sm ${u.active ? 'danger' : ''}" data-a="active" data-id="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? 'Sperren' : 'Entsperren'}</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>`;
 }
-const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen', kunde_zugewiesen: 'Kunde zugewiesen', kunde_geloescht: 'Kunde gelöscht', kunde_angelegt: 'Kunde angelegt', sicherung: 'Sicherung erstellt', sicherung_geladen: 'Sicherung heruntergeladen', sicherung_zurueck: 'Sicherung zurückgespielt', einladung_gesendet: 'Einladung per E-Mail gesendet', link_gesendet: 'Passwort-Link per E-Mail gesendet', passwort_vergessen: 'Passwort vergessen (Link angefordert)', passwort_per_link: 'Passwort per Link festgelegt', mail_einstellungen: 'E-Mail-Einstellungen geändert', stempel_aenderung: 'Stempeluhr: Änderung ans Handy geschickt' };
+const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen', kunde_zugewiesen: 'Kunde zugewiesen', kunde_geloescht: 'Kunde gelöscht', kunde_angelegt: 'Kunde angelegt', sicherung: 'Sicherung erstellt', sicherung_geladen: 'Sicherung heruntergeladen', sicherung_zurueck: 'Sicherung zurückgespielt', einladung_gesendet: 'Einladung per E-Mail gesendet', link_gesendet: 'Passwort-Link per E-Mail gesendet', passwort_vergessen: 'Passwort vergessen (Link angefordert)', passwort_per_link: 'Passwort per Link festgelegt', mail_einstellungen: 'E-Mail-Einstellungen geändert', stempel_aenderung: 'Stempeluhr: Änderung ans Handy geschickt', protokoll_geloescht: 'Protokoll gelöscht' };
 function viewAudit() {
-  return `<section class="hero"><h1>Protokoll</h1><p class="muted">Die letzten 200 Vorgänge – wer hat wann was gemacht.</p></section>
+  return `<section class="hero"><h1>Logbuch</h1><p class="muted">Die letzten 200 Vorgänge – wer hat wann was gemacht.</p></section>
     <div class="card"><table class="mt audit"><thead><tr><th>Zeit</th><th>Wer</th><th>Vorgang</th><th>Details</th><th class="hide-sm">IP</th></tr></thead><tbody>
     ${ST.audit.map(a => `<tr><td class="muted t">${new Date(a.at.replace(' ', 'T') + 'Z').toLocaleString('de-DE')}</td><td class="w">${esc(a.name || '–')}</td><td class="v">${esc(ACT[a.action] || a.action)}</td><td class="d">${esc(a.detail)}</td><td class="hide-sm muted">${esc(a.ip)}</td></tr>`).join('')}</tbody></table></div>`;
 }
@@ -146,16 +148,17 @@ async function route() {
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/'); ST.view = parts[0]; const arg = decodeURIComponent(parts[1] || '');
   if (!ST.user) return void ($('#app').innerHTML = ST.view === 'vergessen' ? viewForgot() : viewLogin());
   if (ST.user.mustChange) return void ($('#app').innerHTML = viewNewPw());
-  const crmViews = ['kunden', 'kunde', 'aufgaben'], admViews = ['users', 'audit', 'system', 'mehr'];
-  if (!(ST.view === 'home' || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin'))) ST.view = 'home';
+  const crmViews = ['kunden', 'kunde', 'aufgaben'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle'];
+  if (!(ST.view === 'home' || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin') || (offViews.includes(ST.view) && ['admin', 'buero'].includes(ST.user.role)))) ST.view = 'home';
   try {
     if (isCrm() && (crmViews.includes(ST.view) || ST.view === 'home')) await crmLoad(ST.view, arg);
+    if (ST.view === 'protokolle' || ST.view === 'kunde') await protLoad(ST.view, arg);
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
     if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); }
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
   if (seq !== ST.seq) return;
-  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr };
+  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle };
   $('#app').innerHTML = shell((V[ST.view] || viewHome)());
 }
 window.addEventListener('hashchange', route);

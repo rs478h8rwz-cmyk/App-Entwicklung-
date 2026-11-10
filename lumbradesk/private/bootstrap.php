@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '2.0';
+const LD_VERSION = '2.1';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -209,7 +209,7 @@ function send_mail(string $to, string $subject, string $text, string $html): voi
 function mail_tpl(string $hello, string $intro, string $btn, string $url, string $outro): array {
   $h = fn($s) => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
   $html = '<!doctype html><html><body style="margin:0;background:#F4F6F8;font-family:Arial,Helvetica,sans-serif;color:#0F1B26"><div style="max-width:520px;margin:0 auto;padding:28px 16px">'
-    . '<div style="font-size:20px;font-weight:bold;margin-bottom:18px">LumbraDesk <span style="color:#6B7884;font-weight:normal;font-size:14px">· Frühauf Solar</span></div>'
+    . '<div style="font-size:20px;font-weight:bold;margin-bottom:18px"><span style="display:inline-block;width:22px;height:22px;border-radius:6px;background:#0E7C66;vertical-align:-4px;margin-right:8px;text-align:center"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#F5A524;margin-top:4px"></span></span>LumbraDesk</div>'
     . '<div style="background:#fff;border:1px solid #E3E8EE;border-radius:14px;padding:24px"><p style="font-size:16px;margin:0 0 12px">' . $h($hello) . '</p><p style="font-size:15px;line-height:1.5;margin:0 0 20px">' . $h($intro) . '</p>'
     . '<a href="' . $h($url) . '" style="display:inline-block;background:#0E7C66;color:#fff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:9px">' . $h($btn) . '</a>'
     . '<p style="font-size:13px;color:#6B7884;line-height:1.5;margin:20px 0 0">' . $h($outro) . '<br>Falls der Knopf nicht geht: <a href="' . $h($url) . '" style="color:#0E7C66;word-break:break-all">' . $h($url) . '</a></p></div></div></body></html>';

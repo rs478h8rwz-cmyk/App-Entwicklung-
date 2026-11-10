@@ -14,6 +14,7 @@ Object.assign(IC, {
   email: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/>',
   stufe: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   zuweisung: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+  protokoll: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/>',
   aufgabe: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
   x: '<path d="M18 6L6 18M6 6l12 12"/>',
   plus: '<path d="M12 5v14M5 12h14"/>'
@@ -24,7 +25,7 @@ const STG = ['anfrage', 'termin', 'angebot', 'auftrag', 'montage', 'fertig', 've
 const STG_L = { anfrage: 'Anfrage', termin: 'Termin', angebot: 'Angebot', auftrag: 'Auftrag', montage: 'Montage', fertig: 'Abgeschlossen', verloren: 'Verloren' };
 const STG_C = { anfrage: '#7A8692', termin: '#5B8DEF', angebot: '#F5A524', auftrag: '#0E7C66', montage: '#8B5CF6', fertig: '#2F9E44', verloren: '#C2412A' };
 const TYPE_L = { pv: 'PV', wp: 'Wärmepumpe', pvwp: 'PV + WP', speicher: 'Speicher', wb: 'Wallbox' };
-const KIND_L = { notiz: 'Notiz', anruf: 'Anruf', termin: 'Termin', email: 'E-Mail', stufe: 'Stufe geändert', zuweisung: 'Zuweisung', aufgabe: 'Wiedervorlage' };
+const KIND_L = { protokoll: 'Protokoll', notiz: 'Notiz', anruf: 'Anruf', termin: 'Termin', email: 'E-Mail', stufe: 'Stufe geändert', zuweisung: 'Zuweisung', aufgabe: 'Wiedervorlage' };
 const CR = { scope: 'meine', adv: '', stage: '', q: '', mode: 'liste', tscope: 'meine', kind: 'notiz', archiv: false };
 try { Object.assign(CR, JSON.parse(localStorage.getItem('ld-crm') || '{}'), { q: '' }); } catch (e) {}
 const crSave = () => { try { localStorage.setItem('ld-crm', JSON.stringify({ scope: CR.scope, adv: CR.adv, mode: CR.mode, tscope: CR.tscope })); } catch (e) {} };
@@ -125,6 +126,7 @@ function viewKunde() {
           ${open.length ? `<div class="tlist">${open.map(taskRow).join('')}</div>` : '<p class="muted">Keine offenen Wiedervorlagen.</p>'}
           ${taskForm(c.id)}
           ${done.length ? `<details class="done-l"><summary>${done.length} erledigt</summary><div class="tlist">${done.map(taskRow).join('')}</div></details>` : ''}</div>
+        ${typeof protCard === 'function' ? protCard() : ''}
       </div>
       <div class="kcol">
         <div class="card"><h2>Verlauf</h2>
@@ -201,7 +203,7 @@ function homeDue() {
 }
 /* Handy: „Mehr“ für die Admin-Seiten */
 function viewMehr() {
-  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Protokoll', 'Wer hat wann was gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="#/${k}"><span class="evi">${ic(k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
+  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Logbuch', 'Wer hat wann was gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="#/${k}"><span class="evi">${ic(k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
 }
 
 /* ---------- Laden ---------- */

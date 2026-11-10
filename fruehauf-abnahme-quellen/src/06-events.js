@@ -209,7 +209,7 @@ async function restore(file) {
   await DB.open(); await loadSettings();
   CUR = (await DB.get('kv', 'draft')) || null; if (CUR) { UI.step = CUR.step || 0; UI.maxStep = CUR.maxStep || 0; }
   PROTS = (await DB.all('prot')) || [];
-  applyTheme(); route();
+  applyTheme(); route(); APP_READY = true;
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.design.mode === 'system') { applyTheme(); render(); } }); } catch (e) {}
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
