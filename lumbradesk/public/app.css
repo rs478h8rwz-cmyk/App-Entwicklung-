@@ -238,3 +238,50 @@ h3 { font-size: 15px; margin: 0 0 6px; }
   .task { flex-wrap: wrap; } .tact { order: 5; width: 100%; padding-left: 38px; margin-top: -4px; }
   .kinds button span { font-size: 13px; }
 }
+/* iPhone/Safari: Datums-Felder wie normale Eingabefelder (links, volle Breite, nicht überlappend) – 1.8 */
+input[type=date], input[type=datetime-local] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; text-align: left; line-height: 42px; }
+input::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input::-webkit-datetime-edit { padding: 0; }
+.tform .row, .evform .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 0 10px; align-items: end; }
+.evform .row { grid-template-columns: minmax(0, 1fr) auto; }
+.inl { min-width: 0; margin-top: 10px; }
+.inl input, .inl select { margin-top: 5px; }
+.tform .row .btn, .evform .row .btn { margin-top: 10px; }
+@media (max-width: 760px) {
+  .tform .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tform .row .btn { grid-column: 1 / -1; width: 100%; }
+  .evform .row { grid-template-columns: 1fr; }
+  .evform .row .btn { width: 100%; }
+  .quick { flex-wrap: nowrap; }
+  .quick .chip { flex: 1; justify-content: center; padding: 0 6px; }
+}
+/* ---------- Dashboard (1.8) ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.kpi { display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: inherit; padding: 16px 18px; transition: border-color .15s; }
+.kpi:hover { border-color: var(--p); }
+.kl { font-size: 13px; color: var(--ink2); }
+.kv { font: 400 38px/1.1 "Instrument Serif", Georgia, serif; color: var(--ink); margin-top: 4px; }
+.ks { font-size: 12.5px; color: var(--ink3); }
+.kpi.warn .kv { color: var(--red); }
+.dgrid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 16px; align-items: start; }
+.bars { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; }
+.bar { display: grid; grid-template-columns: 104px minmax(0, 1fr) 92px; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 8px; color: inherit; text-decoration: none; }
+.bar:hover { background: var(--raised); }
+.bl { font-size: 13.5px; color: var(--ink2); }
+.bt { height: 14px; display: block; }
+.bt i { display: block; height: 100%; background: var(--p); border-radius: 0 4px 4px 0; min-width: 0; }
+.bv { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.bv b { font-size: 15px; } .bv .muted { font-size: 11.5px; white-space: nowrap; }
+table.team td, table.team th { text-align: right; } table.team td:first-child, table.team th:first-child { text-align: left; }
+table.team td.od { color: var(--red); font-weight: 600; }
+.ev.lnk { color: inherit; text-decoration: none; border-radius: 8px; }
+.ev.lnk:hover { background: var(--raised); }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dgrid { grid-template-columns: 1fr; } .dgrid > .card + .card { margin-top: 0; } }
+@media (max-width: 760px) {
+  .kpis { gap: 10px; } .kpi { padding: 14px; } .kv { font-size: 32px; }
+  .bar { grid-template-columns: 84px minmax(0, 1fr) 76px; gap: 8px; }
+  table.mt.team tr { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 6px; }
+  table.mt.team td { text-align: left; font-size: 15px; font-weight: 600; }
+  table.mt.team td.tn { grid-column: 1 / -1; font-size: 15px; }
+  table.mt.team td[data-l]::before { font-size: 10.5px; font-weight: 400; margin: 0 0 1px; line-height: 1.2; min-height: 2.4em; }
+}

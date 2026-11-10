@@ -35,7 +35,7 @@ function crm_stage(?string $stored, ?string $base, string $derived): string {
 }
 
 const CRM_FIELDS = "p.id, p.owner_id, p.created_by, p.assigned_by, p.assigned_at, p.updated_at, p.stage, p.stage_at, p.stage_base, p.name,
-  JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.type')) AS type, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.status')) AS status,
+  JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.type')) AS type, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.status')) AS status, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.statusDate')) AS status_date,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.step')) AS step, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.archived')) AS archived,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.created')) AS created_ms,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.customer.street')) AS street, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.customer.zip')) AS zip,
@@ -52,9 +52,10 @@ function crm_row_out(array $r, array $extra = []): array {
     'step' => (int)crm_val($r['step']) ?: 1, 'archived' => crm_val($r['archived']) === 'true',
     'street' => crm_val($r['street']), 'zip' => crm_val($r['zip']), 'city' => crm_val($r['city']), 'phone' => crm_val($r['phone']), 'email' => crm_val($r['email']),
     'total' => $total ?: null, 'offerNo' => crm_val($r['offer_no']),
-    'stage' => crm_stage($r['stage'], $r['stage_base'], $derived), 'derived' => $derived, 'stageAt' => $r['stage_at'],
+    'stage' => crm_stage($r['stage'], $r['stage_base'], $derived), 'derived' => $derived, 'stageSet' => $r['stage'], 'stageAt' => $r['stage_at'],
     'owner' => (int)$r['owner_id'], 'ownerName' => $n[(int)$r['owner_id']] ?? '', 'by' => (int)$r['created_by'], 'byName' => $n[(int)$r['created_by']] ?? '',
     'assignedBy' => $r['assigned_by'] ? (int)$r['assigned_by'] : null, 'assignedByName' => $r['assigned_by'] ? ($n[(int)$r['assigned_by']] ?? '') : '', 'assignedAt' => $r['assigned_at'],
+    'statusDate' => crm_val($r['status_date'] ?? null),
     'created' => crm_val($r['created_ms']) !== '' ? gmdate('Y-m-d H:i:s', (int)((float)$r['created_ms'] / 1000)) : null, 'upd' => $r['updated_at'],
   ] + $extra;
 }
@@ -139,4 +140,46 @@ function crm_send_reminders(): int {
     try { send_mail($email, 'Heute fällig: ' . $n . ' ' . ($n === 1 ? 'Wiedervorlage' : 'Wiedervorlagen'), $text, str_replace("\n", '<br>', $html)); $sent++; } catch (Throwable $e) { error_log('LumbraDesk Erinnerung: ' . $e->getMessage()); }
   }
   return $sent;
+}
+
+/* Dashboard: Kennzahlen, Pipeline, Team, letzte Aktivitäten */
+function crm_dash(array $u): array {
+  $list = crm_list($u); $pdo = db(); $n = user_names();
+  $tz = new DateTimeZone('Europe/Berlin'); $now = new DateTime('now', $tz); $month = $now->format('Y-m'); $today = $now->format('Y-m-d');
+  $won = ['auftrag', 'montage', 'fertig']; $act = array_values(array_filter($list, fn($c) => !$c['archived'] || in_array($c['stage'], $won, true)));
+  /* Datum „Auftrag erhalten“: CRM-Stufe gesetzt → stage_at, sonst Datum „Unterschrieben“ aus der App */
+  $wonDate = fn($c) => in_array($c['stage'], $won, true) ? (($c['stageAt'] && in_array($c['stageSet'], $won, true)) ? substr($c['stageAt'], 0, 10) : ($c['statusDate'] ?: substr((string)$c['upd'], 0, 10))) : null;
+  $stages = []; foreach (array_keys(STAGES) as $s) { $g = array_filter($act, fn($c) => $c['stage'] === $s); $stages[] = ['key' => $s, 'n' => count($g), 'sum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $g))]; }
+  $openOffers = array_filter($act, fn($c) => $c['stage'] === 'angebot');
+  $wonMonth = array_filter($act, fn($c) => ($d = $wonDate($c)) && substr($d, 0, 7) === $month);
+  $since = (clone $now)->modify('-12 months')->format('Y-m-d');
+  $dec = array_filter($act, fn($c) => in_array($c['stage'], array_merge($won, ['verloren']), true) && (($c['stageAt'] ? substr($c['stageAt'], 0, 10) : ($c['statusDate'] ?: $c['upd'])) >= $since));
+  $nWon = count(array_filter($dec, fn($c) => $c['stage'] !== 'verloren'));
+  /* Aufgaben */
+  $ids = array_column($list, 'id'); $visible = array_flip($ids);
+  $tasks = $pdo->query("SELECT t.assignee_id, t.due, t.project_id FROM crm_tasks t LEFT JOIN projects p ON p.id = t.project_id WHERE t.done_at IS NULL AND (t.project_id IS NULL OR p.deleted = 0)")->fetchAll();
+  $mine = fn($t) => (int)$t['assignee_id'] === (int)$u['id'];
+  $overdue = count(array_filter($tasks, fn($t) => $mine($t) && $t['due'] < $today)); $dueToday = count(array_filter($tasks, fn($t) => $mine($t) && $t['due'] === $today));
+  /* Aktivitäten (7 Tage) und letzte Einträge */
+  $ev = $pdo->query("SELECT e.*, p.name AS pname FROM crm_events e JOIN projects p ON p.id = e.project_id AND p.deleted = 0 WHERE e.at > UTC_TIMESTAMP() - INTERVAL 30 DAY ORDER BY e.at DESC, e.id DESC LIMIT 400")->fetchAll();
+  $ev = array_values(array_filter($ev, fn($e) => isset($visible[$e['project_id']])));
+  $recent = array_map(fn($e) => crm_event_out($e) + ['project' => $e['project_id'], 'projectName' => $e['pname']], array_slice($ev, 0, 8));
+  $team = [];
+  if (sees_all($u)) {
+    $wk = gmdate('Y-m-d H:i:s', time() - 7 * 86400);
+    foreach ($pdo->query("SELECT id, name FROM users WHERE active = 1 AND role IN ('admin','buero','vertrieb') ORDER BY name")->fetchAll() as $m) {
+      $id = (int)$m['id']; $own = array_filter($act, fn($c) => $c['owner'] === $id && !in_array($c['stage'], ['fertig', 'verloren'], true));
+      $team[] = ['id' => $id, 'name' => $m['name'], 'active' => count($own),
+        'offers' => array_sum(array_map(fn($c) => $c['stage'] === 'angebot' ? ($c['total'] ?: 0) : 0, $own)),
+        'won' => count(array_filter($wonMonth, fn($c) => $c['owner'] === $id)),
+        'acts' => count(array_filter($ev, fn($e) => (int)$e['user_id'] === $id && in_array($e['kind'], ['notiz', 'anruf', 'termin', 'email'], true) && $e['at'] >= $wk)),
+        'overdue' => count(array_filter($tasks, fn($t) => (int)$t['assignee_id'] === $id && $t['due'] < $today))];
+    }
+    $team = array_values(array_filter($team, fn($t) => $t['active'] || $t['won'] || $t['acts'] || $t['overdue']));
+  }
+  return ['all' => sees_all($u), 'month' => $month,
+    'kpi' => ['offers' => count($openOffers), 'offersSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $openOffers)),
+      'wonMonth' => count($wonMonth), 'wonMonthSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $wonMonth)),
+      'rate' => count($dec) ? round(100 * $nWon / count($dec)) : null, 'decided' => count($dec), 'overdue' => $overdue, 'dueToday' => $dueToday],
+    'stages' => $stages, 'team' => $team, 'recent' => $recent];
 }

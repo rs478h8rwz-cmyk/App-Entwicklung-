@@ -72,7 +72,7 @@ function shell(inner) {
 }
 function viewHome() {
   const h = new Date().getHours(), gr = h < 11 ? 'Guten Morgen' : h < 18 ? 'Hallo' : 'Guten Abend';
-  return `<section class="hero"><h1>${gr}, ${esc(ST.user.name.split(' ')[0])}.</h1><p class="muted">Deine Apps – gleiche Bedienung wie gewohnt.</p></section>
+  return `<section class="hero"><h1>${gr}, ${esc(ST.user.name.split(' ')[0])}.</h1><p class="muted">${typeof isCrm === 'function' && isCrm() ? 'Dein Überblick für heute.' : 'Deine Apps – gleiche Bedienung wie gewohnt.'}</p></section>
     <div class="grid">${ST.apps.map(a => `<a class="card tile ${a.url ? '' : 'off'}" href="${esc(a.url || '#')}"><div class="ic">${ic(a.key)}</div><div class="tx"><b>${esc(a.name)}</b><span class="muted">${esc(a.text)}</span>${a.url ? '' : '<div style="margin-top:8px"><span class="badge">folgt</span></div>'}</div><span class="go">${ic('next', 18)}</span></a>`).join('') || '<p class="muted">Für deine Rolle sind noch keine Apps freigeschaltet.</p>'}</div>
     ${typeof homeCrm === 'function' ? homeCrm() : ''}
     <div class="sec card acct"><div class="who"><span class="av">${esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span><div><b>${esc(ST.user.name)}</b><span class="muted">${esc(ST.user.email)} · ${esc(ST.user.roleName)}</span></div></div>

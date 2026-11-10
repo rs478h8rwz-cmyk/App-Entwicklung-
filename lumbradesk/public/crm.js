@@ -42,7 +42,7 @@ const ago = s => { if (!s) return ''; const m = (Date.now() - utc(s)) / 6e4; if 
 const stageBadge = s => `<span class="stg" style="--c:${STG_C[s]}"><i></i>${STG_L[s] || s}</span>`;
 const localNow = () => { const d = new Date(); return isoDay(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 const toUtc = v => { const d = new Date(v); return isNaN(d) ? '' : d.toISOString().slice(0, 16).replace('T', ' '); };
-const teamSel = (name, cur, cls = '') => `<select name="${name}" class="${cls}">${(ST.team || []).map(u => `<option value="${u.id}" ${u.id === cur ? 'selected' : ''}>${esc(u.name)}${u.id === ST.user.id ? ' (ich)' : ''}</option>`).join('')}</select>`;
+const teamSel = (name, cur, cls = '') => `<select name="${name}" class="${cls}">${(ST.team || []).map(u => `<option value="${u.id}" ${u.id === cur ? 'selected' : ''}>${u.id === ST.user.id ? 'Ich' : esc(u.name)}</option>`).join('')}</select>`;
 const rechnerUrl = c => `rechner/#/projekt/${encodeURIComponent(c.id)}/${c.step || 1}`;
 
 /* ---------- Kunden-Übersicht ---------- */
@@ -152,7 +152,7 @@ function taskRow(t) {
 function taskForm(pid) {
   return `<form id="f-crm-task" class="tform" data-p="${esc(pid || '')}"><input name="title" placeholder="${pid ? 'z. B. Nachfassen wegen Angebot' : 'Was ist zu tun?'}" required maxlength="300">
     ${pid ? '' : `<select name="project"><option value="">Ohne Kunde</option>${(ST.crm || []).filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name)).map(c => `<option value="${esc(c.id)}">${esc(c.name)}${c.city ? ' – ' + esc(c.city) : ''}</option>`).join('')}</select>`}
-    <div class="quick">${[[1, 'Morgen'], [3, 'In 3 Tagen'], [7, 'In 1 Woche'], [14, 'In 2 Wochen']].map(([n, l]) => `<button type="button" class="chip" data-a="crm-due" data-v="${n}">${l}</button>`).join('')}</div>
+    <div class="quick">${[[1, 'Morgen'], [3, '3 Tage'], [7, '1 Woche'], [14, '2 Wochen']].map(([n, l]) => `<button type="button" class="chip" data-a="crm-due" data-v="${n}">${l}</button>`).join('')}</div>
     <div class="row"><label class="inl">Fällig am<input name="due" type="date" value="${plusDays(3)}" required></label><label class="inl">Für${teamSel('assignee', ST.user.id)}</label><button class="btn" type="submit">${ic('plus', 18)}Wiedervorlage</button></div></form>`;
 }
 
@@ -166,11 +166,37 @@ function viewAufgaben() {
     ${groups.filter(g => g[1].length).map(([l, list, cls]) => cls === 'd' ? `<details class="card sec done-l"><summary><b>${l}</b> · ${list.length}</summary><div class="tlist">${list.map(taskRow).join('')}</div></details>` : `<div class="card sec"><h3 class="gh ${cls}">${l} <span class="muted">· ${list.length}</span></h3><div class="tlist">${list.map(taskRow).join('')}</div></div>`).join('') || '<p class="muted sec">Keine Aufgaben – alles erledigt.</p>'}
     <div class="card sec remind"><label class="sw"><input type="checkbox" id="crm-remind" ${ST.remind ? 'checked' : ''}><span>Morgens per E-Mail an fällige Wiedervorlagen erinnern</span></label><p class="muted small" style="margin:6px 0 0">Kommt einmal am Tag mit der nächtlichen Datensicherung (Cronjob).</p></div>`;
 }
+/* Startseite: Dashboard */
+function homeDash() {
+  const D = ST.dash; if (!D) return '';
+  const k = D.kpi, mName = new Date(D.month + '-01T12:00').toLocaleDateString('de-DE', { month: 'long' });
+  const tile = (label, val, sub, href, cls = '') => `<a class="card kpi ${cls}" href="${href}"><span class="kl">${label}</span><b class="kv">${val}</b><span class="ks">${sub}</span></a>`;
+  const st = D.stages.filter(s => s.key !== 'verloren'), max = Math.max(1, ...st.map(s => s.n));
+  return `<div class="kpis">
+      ${tile('Offene Angebote', k.offers, k.offersSum ? euro(k.offersSum) + ' Volumen' : 'noch ohne Summe', '#/kunden', '')}
+      ${tile('Aufträge im ' + mName, k.wonMonth, k.wonMonthSum ? euro(k.wonMonthSum) : 'diesen Monat', '#/kunden', '')}
+      ${tile('Abschlussquote', k.rate === null ? '–' : k.rate + ' %', k.decided ? `von ${k.decided} Entscheidungen` : 'noch keine Entscheidungen', '#/kunden', '')}
+      ${tile('Überfällig', k.overdue, k.dueToday ? `${k.dueToday} heute fällig` : 'Wiedervorlagen', '#/aufgaben', k.overdue ? 'warn' : '')}
+    </div>
+    <div class="dgrid sec">
+      <div class="card"><div class="row" style="justify-content:space-between"><h2>Pipeline</h2><a class="btn g sm" href="#/kunden" data-a="crm-go-pipe">Öffnen ${ic('next', 16)}</a></div>
+        <div class="bars" role="table" aria-label="Kunden je Vertriebs-Stufe">${st.map(s => `<a class="bar" role="row" href="#/kunden" data-a="crm-go-stage" data-v="${s.key}" title="${STG_L[s.key]}: ${s.n} ${s.n === 1 ? 'Kunde' : 'Kunden'}${s.sum ? ' · ' + euro(s.sum) : ''}">
+          <span class="bl" role="cell">${STG_L[s.key]}</span><span class="bt" role="cell"><i style="width:${s.n ? Math.max(3, s.n / max * 100) : 0}%"></i></span><span class="bv" role="cell"><b>${s.n}</b>${s.sum ? `<span class="muted">${euro(s.sum)}</span>` : ''}</span></a>`).join('')}</div>
+        ${D.stages.find(s => s.key === 'verloren').n ? `<p class="muted small" style="margin:10px 0 0">Verloren: ${D.stages.find(s => s.key === 'verloren').n}</p>` : ''}</div>
+      ${homeDue()}
+    </div>
+    ${D.all && D.team.length ? `<div class="card sec"><h2>Team</h2><table class="mt team"><thead><tr><th>Berater</th><th>Aktive Kunden</th><th>Angebote offen</th><th>Aufträge ${esc(mName)}</th><th>Aktivitäten 7 Tage</th><th>Überfällig</th></tr></thead><tbody>
+      ${D.team.map(t => `<tr><td class="tn"><b>${esc(t.name)}</b></td><td data-l="Aktive Kunden">${t.active}</td><td data-l="Angebote offen">${t.offers ? euro(t.offers) : '–'}</td><td data-l="Aufträge">${t.won}</td><td data-l="Aktivitäten 7 Tage">${t.acts}</td><td data-l="Überfällig" class="${t.overdue ? 'od' : ''}">${t.overdue}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${D.recent.length ? `<div class="card sec"><h2>Letzte Aktivitäten</h2><div class="tl">${D.recent.map(e => `<a class="ev lnk ${['notiz', 'anruf', 'termin', 'email'].includes(e.kind) ? '' : 'auto'}" href="#/kunde/${esc(e.project)}"><span class="evi">${ic(e.kind, 16)}</span><div class="evb"><div class="evh"><b>${esc(e.projectName)}</b><span class="muted small">${KIND_L[e.kind] || e.kind} · ${esc(ago(e.at))} · ${esc(e.userName)}</span></div><div class="evt">${esc(e.text.length > 140 ? e.text.slice(0, 140) + ' …' : e.text)}</div></div></a>`).join('')}</div></div>` : ''}`;
+}
 /* Startseite: heute fällig */
 function homeCrm() {
   if (!isCrm()) return '';
+  return homeDash() || homeDue();
+}
+function homeDue() {
   const due = (ST.tasks || []).filter(t => !t.done && t.due <= today() && t.assignee === ST.user.id);
-  return `<div class="card sec"><div class="row" style="justify-content:space-between"><h2>Heute fällig</h2><a class="btn g sm" href="#/aufgaben">Alle Aufgaben ${ic('next', 16)}</a></div>
+  return `<div class="card ${ST.dash ? '' : 'sec'}"><div class="row" style="justify-content:space-between"><h2>${due.some(t => t.due < today()) ? 'Fällig' : 'Heute fällig'}</h2><a class="btn g sm" href="#/aufgaben">Alle Aufgaben ${ic('next', 16)}</a></div>
     ${due.length ? `<div class="tlist">${due.slice(0, 8).map(taskRow).join('')}</div>${due.length > 8 ? `<p class="muted small">… und ${due.length - 8} weitere</p>` : ''}` : '<p class="muted">Nichts fällig – gute Arbeit. Neue Wiedervorlagen legst du beim Kunden oder unter Aufgaben an.</p>'}</div>`;
 }
 /* Handy: „Mehr“ für die Admin-Seiten */
@@ -182,6 +208,7 @@ function viewMehr() {
 async function crmLoad(view, arg) {
   if (view === 'kunden' || view === 'aufgaben') { const j = await api('crm'); ST.crm = j.customers; ST.crmAll = j.all; ST.team = j.team; }
   if (view === 'kunde') { ST.cd = null; try { const [d, t] = await Promise.all([api('crm-p&id=' + encodeURIComponent(arg)), ST.team ? null : api('tasks')]); ST.cd = d; if (t) ST.team = t.team; } catch (e) { if (e.status === 401) throw e; toast(e.message); } }
+  if (view === 'home') { try { ST.dash = await api('dash'); } catch (e) { if (e.status === 401) throw e; ST.dash = null; } }
   if (view === 'aufgaben' || view === 'home') { const j = await api('tasks&scope=' + (view === 'home' ? 'meine' : CR.tscope)); ST.tasks = j.tasks; ST.tasksAll = j.all; ST.remind = j.remind; ST.team = j.team; }
 }
 async function crmReload() { const y = scrollY; await route(); scrollTo(0, y); }
@@ -191,6 +218,8 @@ const crmApplyDetail = j => { if (j && j.customer) ST.cd = j; };
 async function crmClick(a) {
   const v = a.dataset.v, id = a.dataset.id;
   switch (a.dataset.a) {
+    case 'crm-go-pipe': CR.mode = 'pipeline'; crSave(); return;
+    case 'crm-go-stage': CR.mode = 'liste'; CR.stage = v; CR.scope = 'alle'; CR.adv = ''; crSave(); return;
     case 'crm-mode': CR.mode = v; crSave(); return void ($('#app main').innerHTML = viewKunden());
     case 'crm-scope': CR.scope = v; CR.stage = ''; crSave(); return void ($('#app main').innerHTML = viewKunden());
     case 'crm-archiv': CR.archiv = !CR.archiv; return void ($('#app main').innerHTML = viewKunden());
