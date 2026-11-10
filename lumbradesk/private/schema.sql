@@ -41,3 +41,19 @@ CREATE TABLE IF NOT EXISTS company_config (
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_by  VARCHAR(120) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Kunden / Berechnungen der Wirtschaftlichkeits-App (zentral für alle Geräte)
+CREATE TABLE IF NOT EXISTS projects (
+  id           VARCHAR(40) PRIMARY KEY,
+  owner_id     INT UNSIGNED NOT NULL,              -- zuständig
+  created_by   INT UNSIGNED NOT NULL,              -- angelegt von (sieht den Kunden weiterhin)
+  assigned_by  INT UNSIGNED NULL,
+  assigned_at  DATETIME NULL,
+  name         VARCHAR(200) NOT NULL DEFAULT '',
+  data         LONGTEXT NOT NULL,
+  version      INT UNSIGNED NOT NULL DEFAULT 1,
+  deleted      TINYINT(1) NOT NULL DEFAULT 0,
+  updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by   INT UNSIGNED NULL,
+  INDEX (owner_id), INDEX (created_by), INDEX (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -158,6 +158,84 @@ try {
       json_out(['ok' => true, 'version' => $cur + 1]);
     }
 
+    /* ---------- Kunden zentral (Wirtschaftlichkeits-App) ---------- */
+    case 'GET team': {
+      require_user();
+      $rows = db()->query("SELECT id, name, role FROM users WHERE active = 1 AND role IN ('admin','buero','vertrieb') ORDER BY name")->fetchAll();
+      json_out(['users' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'role' => $r['role'], 'roleName' => ROLES[$r['role']] ?? $r['role']], $rows)]);
+    }
+    case 'GET plist': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); projects_table();
+      if (sees_all($u)) $st = db()->query('SELECT id, version, owner_id, created_by, assigned_by, assigned_at, updated_at, updated_by FROM projects WHERE deleted = 0');
+      else { $st = db()->prepare('SELECT id, version, owner_id, created_by, assigned_by, assigned_at, updated_at, updated_by FROM projects WHERE deleted = 0 AND (owner_id = ? OR created_by = ?)'); $st->execute([$u['id'], $u['id']]); }
+      json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'projects' => array_map('project_meta', $st->fetchAll())]);
+    }
+    case 'POST pget': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); $out = [];
+      foreach (array_slice((array)(body()['ids'] ?? []), 0, 200) as $id) {
+        if (!is_string($id) || !valid_id($id)) continue; $p = project_row($id);
+        if ($p && !$p['deleted'] && can_see_project($u, $p)) $out[] = project_meta($p) + ['data' => json_decode($p['data'], true)];
+      }
+      json_out(['projects' => $out]);
+    }
+    case 'POST pput': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); $b = body(); $id = (string)($b['id'] ?? ''); $data = $b['data'] ?? null;
+      if (!valid_id($id) || !is_array($data)) fail('Ungültiger Kunde', 400);
+      $json = json_encode($data, JSON_UNESCAPED_UNICODE); if (strlen($json) > 8 * 1024 * 1024) fail('Kunde zu groß', 400);
+      $name = mb_substr(trim(($data['customer']['salutation'] ?? '') . ' ' . ($data['customer']['name'] ?? '')), 0, 200);
+      $pdo = db(); projects_table(); $pdo->beginTransaction();
+      $st = $pdo->prepare('SELECT * FROM projects WHERE id = ? FOR UPDATE'); $st->execute([$id]); $p = $st->fetch() ?: null;
+      if (!$p) {
+        $pdo->prepare('INSERT INTO projects (id, owner_id, created_by, name, data, version, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, 1, UTC_TIMESTAMP(), ?)')->execute([$id, $u['id'], $u['id'], $name, $json, $u['id']]);
+        $pdo->commit(); json_out(['v' => 1, 'created' => true]);
+      }
+      if (!can_see_project($u, $p)) { $pdo->rollBack(); fail('Keine Berechtigung für diesen Kunden', 403); }
+      if ($p['deleted']) { $pdo->rollBack(); json_out(['error' => 'Kunde wurde gelöscht', 'deleted' => true], 409); }
+      if (empty($b['force']) && (int)($b['base'] ?? 0) !== (int)$p['version']) { $pdo->rollBack(); json_out(['error' => 'Inzwischen geändert', 'conflict' => true] + project_meta($p) + ['data' => json_decode($p['data'], true)], 409); }
+      $v = (int)$p['version'] + 1;
+      $pdo->prepare('UPDATE projects SET data = ?, name = ?, version = ?, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?')->execute([$json, $name, $v, $u['id'], $id]);
+      $pdo->commit(); json_out(['v' => $v]);
+    }
+    case 'POST pdel': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); $id = (string)(body()['id'] ?? ''); if (!valid_id($id)) fail('Ungültig', 400);
+      $p = project_row($id); if (!$p) json_out(['ok' => true]);
+      if (!can_see_project($u, $p)) fail('Keine Berechtigung', 403);
+      db()->prepare('UPDATE projects SET deleted = 1, version = version + 1, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?')->execute([$u['id'], $id]);
+      audit((int)$u['id'], 'kunde_geloescht', $p['name']);
+      json_out(['ok' => true]);
+    }
+    case 'POST passign': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); $b = body(); $id = (string)($b['id'] ?? ''); $to = (int)($b['user'] ?? 0);
+      $p = valid_id($id) ? project_row($id) : null; if (!$p || $p['deleted']) fail('Kunde nicht gefunden (noch nicht abgeglichen?)', 404);
+      if (!can_see_project($u, $p)) fail('Keine Berechtigung', 403);
+      $st = db()->prepare("SELECT id, name FROM users WHERE id = ? AND active = 1 AND role IN ('admin','buero','vertrieb')"); $st->execute([$to]); $t = $st->fetch(); if (!$t) fail('Benutzer nicht gefunden', 404);
+      db()->prepare('UPDATE projects SET owner_id = ?, assigned_by = ?, assigned_at = UTC_TIMESTAMP(), version = version + 1, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?')->execute([$to, $u['id'], $u['id'], $id]);
+      audit((int)$u['id'], 'kunde_zugewiesen', $p['name'] . ' → ' . $t['name']);
+      json_out(['ok' => true] + project_meta(project_row($id)));
+    }
+    case 'POST pfile': {
+      $u = require_role(['admin', 'buero', 'vertrieb']);
+      $pid = (string)($_SERVER['HTTP_X_PROJECT_ID'] ?? ''); $fid = (string)($_SERVER['HTTP_X_FILE_ID'] ?? '');
+      if (!valid_id($pid) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', $fid)) fail('Ungültige Datei', 400);
+      $p = project_row($pid); if ($p && !can_see_project($u, $p)) fail('Keine Berechtigung', 403);
+      $f = pfiles_dir($pid) . '/' . $fid; if (is_file($f . '.bin')) json_out(['ok' => true, 'existed' => true]);
+      $raw = file_get_contents('php://input') ?: ''; if ($raw === '' || strlen($raw) > 40 * 1024 * 1024) fail('Datei leer oder zu groß (max. 40 MB)', 400);
+      file_put_contents($f . '.bin', $raw, LOCK_EX);
+      file_put_contents($f . '.json', json_encode(['type' => strtolower(trim(explode(';', (string)($_SERVER['CONTENT_TYPE'] ?? ''))[0])), 'name' => mb_substr(rawurldecode((string)($_SERVER['HTTP_X_FILE_NAME'] ?? '')), 0, 200), 'by' => (int)$u['id']]), LOCK_EX);
+      json_out(['ok' => true]);
+    }
+    case 'GET pfile': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); $pid = (string)($_GET['p'] ?? ''); $fid = (string)($_GET['id'] ?? '');
+      if (!valid_id($pid) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', $fid)) fail('Ungültige Datei', 400);
+      $p = project_row($pid); if (!can_see_project($u, $p)) fail('Keine Berechtigung', 403);
+      $f = pfiles_dir($pid) . '/' . $fid; if (!is_file($f . '.bin')) fail('Datei nicht gefunden', 404);
+      $m = json_decode((string)@file_get_contents($f . '.json'), true) ?: [];
+      header('Content-Type: ' . (preg_match('#^[\w.+-]+/[\w.+-]+$#', $m['type'] ?? '') ? $m['type'] : 'application/octet-stream'));
+      header('Cache-Control: private, max-age=31536000, immutable'); header('X-Content-Type-Options: nosniff');
+      if (!empty($m['name'])) header('X-File-Name: ' . rawurlencode($m['name']));
+      readfile($f . '.bin'); exit;
+    }
+
     /* ---------- System: Update hochladen (nur Admin) ---------- */
     case 'GET system': {
       require_role(['admin']);

@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '1.1';
+const LD_VERSION = '1.2';
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
 function cfg(?string $key = null) {
@@ -125,4 +125,30 @@ function files_dir(): string {
   $d = __DIR__ . '/files';
   if (!is_dir($d)) { @mkdir($d, 0700, true); @file_put_contents($d . '/.htaccess', "Require all denied\n"); }
   return $d;
+}
+
+/* ---------- Kunden (Projekte) ---------- */
+function projects_table(): void {
+  static $done = false; if ($done) return; $done = true;
+  db()->exec("CREATE TABLE IF NOT EXISTS projects (id VARCHAR(40) PRIMARY KEY, owner_id INT UNSIGNED NOT NULL, created_by INT UNSIGNED NOT NULL, assigned_by INT UNSIGNED NULL, assigned_at DATETIME NULL, name VARCHAR(200) NOT NULL DEFAULT '', data LONGTEXT NOT NULL, version INT UNSIGNED NOT NULL DEFAULT 1, deleted TINYINT(1) NOT NULL DEFAULT 0, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_by INT UNSIGNED NULL, INDEX (owner_id), INDEX (created_by), INDEX (deleted)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+/* Wer sieht was: Admin und Büro alle Kunden, alle anderen die eigenen (zuständig oder selbst angelegt) */
+function sees_all(array $u): bool { return in_array($u['role'], ['admin', 'buero'], true); }
+function can_see_project(array $u, ?array $p): bool { return $p && (sees_all($u) || (int)$p['owner_id'] === (int)$u['id'] || (int)$p['created_by'] === (int)$u['id']); }
+function project_row(string $id): ?array {
+  projects_table(); $st = db()->prepare('SELECT * FROM projects WHERE id = ?'); $st->execute([$id]); return $st->fetch() ?: null;
+}
+function valid_id(string $s): bool { return (bool)preg_match('/^[A-Za-z0-9_-]{1,40}$/', $s); }
+function pfiles_dir(string $pid): string {
+  $base = __DIR__ . '/pfiles';
+  if (!is_dir($base)) { @mkdir($base, 0700, true); @file_put_contents($base . '/.htaccess', "Require all denied\n"); }
+  $d = $base . '/' . $pid; if (!is_dir($d)) @mkdir($d, 0700, true); return $d;
+}
+function user_names(): array {
+  static $m = null; if ($m === null) { $m = []; foreach (db()->query('SELECT id, name FROM users')->fetchAll() as $r) $m[(int)$r['id']] = $r['name']; } return $m;
+}
+function project_meta(array $p): array {
+  $n = user_names();
+  return ['id' => $p['id'], 'v' => (int)$p['version'], 'owner' => (int)$p['owner_id'], 'ownerName' => $n[(int)$p['owner_id']] ?? '', 'by' => (int)$p['created_by'], 'byName' => $n[(int)$p['created_by']] ?? '',
+    'assignedBy' => $p['assigned_by'] ? (int)$p['assigned_by'] : null, 'assignedByName' => $p['assigned_by'] ? ($n[(int)$p['assigned_by']] ?? '') : '', 'assignedAt' => $p['assigned_at'], 'upd' => $p['updated_at'], 'updBy' => $n[(int)($p['updated_by'] ?? 0)] ?? ''];
 }

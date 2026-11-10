@@ -13,6 +13,10 @@ const WN_IMG = {
 const WN_BG = { sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.30', date: '2026-11-10', items: [
+    ['house', 'LumbraDesk: Kunden zentral', 'Unter LumbraDesk liegen alle Kunden auf dem Server – mit Angeboten, Fotos, Modulplan und Unterschriften. Jedes Gerät gleicht automatisch ab, offline wird später nachgereicht.'],
+    ['house', 'Kunden zuweisen', 'Oben im Kunden „Zuständig“ wählen: Der Kollege sieht den Kunden sofort, du behältst ihn in deiner Liste. Admin und Büro sehen alle Kunden, Vertrieb die eigenen.']
+  ] },
   { version: '2.29', date: '2026-11-10', items: [
     ['house', 'Kundenname ist Pflicht', 'Wer eine Schnellauslegung oder einen Modulplan für einen neuen Kunden startet, gibt zuerst Anrede und Namen ein – so landet kein „Neuer Kunde“ ohne Namen in der Liste.']
   ] },
