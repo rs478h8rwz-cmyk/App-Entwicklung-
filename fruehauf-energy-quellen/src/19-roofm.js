@@ -31,7 +31,7 @@ roofRender = function () {
     <div id="roof-stage" class="absolute inset-0 bg-black/40 touch-none select-none overflow-hidden"><canvas id="roof-cv" class="absolute inset-0 w-full h-full block"></canvas>
       <div id="roof-tip" class="absolute left-3 right-3 bottom-2 text-[11px] leading-snug text-white/80 pointer-events-none"></div>
       <div id="roof-badge" class="absolute left-1/2 -translate-x-1/2 top-2 pointer-events-none hidden rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-white shadow-lg max-w-[92%] text-center" style="background:rgba(12,20,28,.82);backdrop-filter:blur(6px)"></div>
-      <div id="roof-pad" class="absolute left-3 bottom-[70px] hidden flex-col items-center gap-1 select-none"><div class="relative w-[88px] h-[88px] rounded-full border-2 border-white/70 bg-black/45 backdrop-blur-sm touch-none" id="roof-pad-ring" title="Feinjustieren"><div id="roof-pad-knob" class="absolute w-9 h-9 rounded-full bg-white/90 shadow" style="left:26px;top:26px"></div><span class="absolute inset-0 grid place-items-center text-[10px] text-white/70 pointer-events-none" style="padding-top:58px">fein</span></div><div class="text-[11px] text-white/80" id="roof-pad-lbl"></div></div>
+      <div id="roof-pad" class="absolute hidden flex-col items-center gap-1 select-none" style="left:12px;bottom:70px"><div class="relative w-[96px] h-[96px] rounded-full border-2 border-white/70 bg-black/35 backdrop-blur-sm touch-none" id="roof-pad-ring" title="Feinjustieren"><div id="roof-pad-knob" class="absolute w-9 h-9 rounded-full bg-white/90 shadow" style="left:30px;top:30px"></div><span class="absolute inset-0 grid place-items-center text-[10px] text-white/70 pointer-events-none" style="padding-top:62px">fein</span></div><div class="text-[11px] text-white/80" id="roof-pad-lbl"></div></div>
       <div class="absolute right-2 top-2 flex flex-col gap-1.5"><button class="btn-s !h-10 !w-10 !px-0 text-[20px]" data-r="zoom" data-v="in" aria-label="Vergrößern">+</button><button class="btn-s !h-10 !w-10 !px-0 text-[20px]" data-r="zoom" data-v="out" aria-label="Verkleinern">−</button><button class="btn-s !h-10 !w-10 !px-0" data-r="zoom" data-v="fit" aria-label="Einpassen">${ic('grid', 16)}</button></div>
     </div>
   </div>
@@ -84,3 +84,19 @@ document.addEventListener('click', e => {
 /* Drehen des Handys: Ansicht neu aufbauen */
 let RM_PHONE = roofPhone() + '' + roofLand();
 window.addEventListener('resize', () => { const ph = roofPhone() + '' + roofLand(); if (RS && ph !== RM_PHONE) roofRender(); RM_PHONE = ph; });
+
+/* Feinjustier-Rad auf dem Handy immer gegenüber dem Punkt, der gerade verschoben wird – es verdeckt nie das Ziel */
+const _roofDrawPh = roofDraw;
+roofDraw = async function () {
+  const r = await _roofDrawPh.apply(this, arguments);
+  try {
+    const pad = $('#roof-pad'); if (!pad || !RS || !roofPhone() || pad.classList.contains('hidden') || !RS.act) return r;
+    const f = roofF(), cv = $('#roof-cv'), pts = f[RS.act[0]], c = pts && pts[RS.act[1]]; if (!cv || !c) return r;
+    const V = roofView(cv, f, faceGeom(f), RIMG[f.photo]); if (!V || V.kind !== 'img') return r;
+    const x = V.ox + c[0] * f.iw * V.k, y = V.oy + c[1] * f.ih * V.k, cw = cv.clientWidth, ch = cv.clientHeight;
+    const right = x < cw / 2, top = y > ch / 2;
+    pad.style.left = right ? '' : '12px'; pad.style.right = right ? '64px' : '';
+    pad.style.top = top ? '12px' : ''; pad.style.bottom = top ? '' : '44px';
+  } catch (e) {}
+  return r;
+};

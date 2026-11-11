@@ -15,6 +15,9 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.36', date: '2026-11-11', items: [
+    ['roof', 'Feinjustieren ohne Verdecken', 'Auf dem Handy springt das Feinjustier-Rad im Modulplan immer auf die gegenüberliegende Seite des Punkts, den Sie gerade verschieben – so bleibt die Ecke sichtbar.']
+  ] },
   { version: '2.35', date: '2026-11-11', items: [
     ['crm', 'Neues App-Symbol', 'Alle Apps tragen jetzt das lumbra.desk-Symbol „l.“. Auf dem Home-Bildschirm erscheint es, wenn Sie das Symbol einmal neu hinzufügen.']
   ] },
