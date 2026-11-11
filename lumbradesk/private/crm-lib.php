@@ -178,7 +178,22 @@ function crm_dash(array $u): array {
     $team = array_values(array_filter($team, fn($t) => $t['active'] || $t['won'] || $t['acts'] || $t['overdue']));
   }
   $vacReq = 0; if (sees_all($u)) { try { require_once __DIR__ . '/stempel-lib.php'; $vacReq = count(st_open_requests()); } catch (Throwable $e) {} }
-  return ['all' => sees_all($u), 'month' => $month, 'vacReq' => $vacReq,
+  /* Monatsreihe (12 Monate): neue Angebote (angelegt mit Angebotssumme) und gewonnene Aufträge */
+  $series = []; $m0 = (clone $now)->modify('first day of this month');
+  for ($i = 11; $i >= 0; $i--) { $m = (clone $m0)->modify("-$i months")->format('Y-m'); $series[$m] = ['m' => $m, 'offers' => 0, 'offersSum' => 0, 'won' => 0, 'wonSum' => 0]; }
+  foreach ($act as $c) {
+    $cm = $c['created'] ? substr($c['created'], 0, 7) : null;
+    if ($cm && isset($series[$cm]) && ($c['total'] ?: 0) > 0) { $series[$cm]['offers']++; $series[$cm]['offersSum'] += $c['total']; }
+    if (($d = $wonDate($c)) && isset($series[substr($d, 0, 7)])) { $series[substr($d, 0, 7)]['won']++; $series[substr($d, 0, 7)]['wonSum'] += $c['total'] ?: 0; }
+  }
+  $year = $now->format('Y'); $prevYear = (string)((int)$year - 1); $wonYear = 0; $wonPrevSame = 0; $md = $now->format('m-d');
+  foreach ($act as $c) { if (!($d = $wonDate($c))) continue; if (substr($d, 0, 4) === $year) $wonYear += $c['total'] ?: 0; if (substr($d, 0, 4) === $prevYear && substr($d, 5) <= $md) $wonPrevSame += $c['total'] ?: 0; }
+  /* Aktivität im Team: Einträge der letzten 8 Wochen nach Wochentag und Tageszeit */
+  $heat = array_fill(0, 6, array_fill(0, 6, 0));   // Mo–Sa × 7–9, 9–11, 11–13, 13–15, 15–17, 17–19
+  $tz = new DateTimeZone('Europe/Berlin');
+  $hq = $pdo->query("SELECT e.at, e.project_id FROM crm_events e JOIN projects p ON p.id = e.project_id AND p.deleted = 0 WHERE e.kind IN ('notiz','anruf','termin','email','protokoll') AND e.at > UTC_TIMESTAMP() - INTERVAL 56 DAY")->fetchAll();
+  foreach ($hq as $e) { if (!isset($visible[$e['project_id']])) continue; $t = new DateTime($e['at'] . ' UTC'); $t->setTimezone($tz); $wd = (int)$t->format('N') - 1; $h = (int)$t->format('G'); if ($wd > 5 || $h < 7 || $h >= 19) continue; $heat[$wd][intdiv($h - 7, 2)]++; }
+  return ['all' => sees_all($u), 'month' => $month, 'vacReq' => $vacReq, 'series' => array_values($series), 'year' => $year, 'wonYear' => $wonYear, 'wonPrevSame' => $wonPrevSame, 'heat' => $heat,
     'kpi' => ['offers' => count($openOffers), 'offersSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $openOffers)),
       'wonMonth' => count($wonMonth), 'wonMonthSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $wonMonth)),
       'rate' => count($dec) ? round(100 * $nWon / count($dec)) : null, 'decided' => count($dec), 'overdue' => $overdue, 'dueToday' => $dueToday],
