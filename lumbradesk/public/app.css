@@ -500,3 +500,7 @@ a.grow:active, button.grow:active { background: var(--raised); }
 /* Logbuch-Art und Schnellwahl auf schmalen Handys: Symbole ausblenden statt überlaufen */
 .evform .kinds button { min-width: 0; }
 @media (max-width: 400px) { .evform .kinds button svg { display: none; } .evform .kinds button span { font-size: 12.5px; } .quick .chip { min-width: 0; font-size: 12px; padding: 0 4px; } }
+
+/* Angebot: Preisart je Position (netto/brutto) */
+.pmb { border: 1px solid var(--line); background: var(--raised); color: var(--ink2); border-radius: 8px; height: 30px; padding: 0 8px; font-size: 12.5px; cursor: pointer; }
+.pmb.br { color: var(--p); border-color: color-mix(in srgb, var(--p) 40%, transparent); }

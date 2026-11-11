@@ -62,7 +62,7 @@ function parseSpeech(text, items) {
   }
   return out;
 }
-const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty, unit: it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null });
+const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch });
 /* Standardpakete anhand der Positionen ergänzen bzw. Mengen nachziehen */
 function ofApplyPackages(pos) {
   const C = OF.cat, items = Object.fromEntries(C.items.map(i => [i.id.replace(/^i/, ''), i]).concat(C.items.map(i => [i.id, i])));
@@ -79,10 +79,17 @@ function ofApplyPackages(pos) {
   }
   return base.concat(keep, next);
 }
+/* Preisart je Position (aus dem Produkt): netto (zzgl. USt., z. B. PV) oder brutto (inkl. USt., z. B. Wärmepumpe). Intern immer netto gespeichert. */
+const ofBr = p => p.pm === 'brutto';
+const ofUp = p => ofBr(p) ? Math.round(p.price * (1 + p.tax / 100) * 100) / 100 : p.price;
+const ofLine = p => p.qty * ofUp(p);
 function ofTotals(d) {
-  const f = 1 - (d.discount || 0) / 100; let net = 0; const tax = {};
-  for (const p of d.pos) { const l = p.qty * p.price * f; net += l; tax[p.tax] = (tax[p.tax] || 0) + l * p.tax / 100; }
-  const gross = net + Object.values(tax).reduce((a, b) => a + b, 0), sub = d.pos.reduce((a, p) => a + p.qty * p.price, 0);
+  const f = 1 - (d.discount || 0) / 100; let net = 0, sub = 0; const tax = {};
+  for (const p of d.pos) {
+    const t = p.tax / 100, l0 = ofBr(p) ? ofLine(p) / (1 + t) : ofLine(p), l = l0 * f;   // Nettobetrag der Position
+    sub += l0; net += l; tax[p.tax] = (tax[p.tax] || 0) + l * t;
+  }
+  const gross = net + Object.values(tax).reduce((a, b) => a + b, 0);
   return { sub, disc: sub - net, net, tax, gross };
 }
 
@@ -124,11 +131,12 @@ function viewAngebot() {
       <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px"><button class="btn" data-a="of-parse">${ic('check', 18)}${d.pos.length ? 'Positionen ergänzen' : 'Positionen erstellen'}</button>${d.pos.length ? `<button class="btn s" data-a="of-std">${ic('refresh', 16)}Standard neu berechnen</button>` : ''}</div>
     </div>
     <section class="h-sec"><h2>Positionen</h2><span class="muted small">${d.pos.length} Position${d.pos.length === 1 ? '' : 'en'}</span></section>
+
     <div class="glist ofl">${d.pos.map((p, i) => `<div class="ofp ${p.check ? 'chk-me' : ''}">
         <div class="ofp-h"><span class="ofn">${i + 1}</span><input class="ofi-name" data-of="name" data-i="${i}" value="${esc(p.name)}"><button class="xbtn" data-a="of-del" data-i="${i}" aria-label="Position löschen">${ic('x', 14)}</button></div>
         ${p.descr || p.pkg ? `<div class="ofd">${p.pkg ? `<span class="tag t-a">Standard</span> ` : ''}${esc(p.descr || '')}</div>` : ''}
-        <div class="ofp-r"><div class="qty"><button data-a="of-q" data-i="${i}" data-v="-1" aria-label="weniger">${ic('minus', 16)}</button><input inputmode="decimal" data-of="qty" data-i="${i}" value="${numDe(p.qty)}"><button data-a="of-q" data-i="${i}" data-v="1" aria-label="mehr">${ic('plus', 16)}</button></div>
-          <span class="muted small">${esc(p.unit)} ×</span><input class="ofi-pr" inputmode="decimal" data-of="price" data-i="${i}" value="${numDe(p.price)}"><span class="muted small">€</span><b class="ofl-t">${eur2(p.qty * p.price)}</b></div>
+        <div class="ofp-r">${p.pausch ? `<span class="tag">pauschal</span>` : `<div class="qty"><button data-a="of-q" data-i="${i}" data-v="-1" aria-label="weniger">${ic('minus', 16)}</button><input inputmode="decimal" data-of="qty" data-i="${i}" value="${numDe(p.qty)}"><button data-a="of-q" data-i="${i}" data-v="1" aria-label="mehr">${ic('plus', 16)}</button></div>
+          <span class="muted small">${esc(p.unit)} ×</span>`}<input class="ofi-pr" inputmode="decimal" data-of="price" data-i="${i}" value="${numDe(ofUp(p))}"><button class="pmb ${ofBr(p) ? 'br' : ''}" data-a="of-pm" data-i="${i}" title="Netto/Brutto umschalten">€ ${ofBr(p) ? 'brutto' : 'netto'}</button><b class="ofl-t">${eur2(ofLine(p))}</b></div>
       </div>`).join('') || '<div class="grow empty-g"><span class="gic">' + ic('mic', 16) + '</span><span class="gmain"><b>Noch keine Positionen</b><span>Sprechen oder unten aus dem Artikelstamm hinzufügen</span></span></div>'}
       <div class="ofadd"><div class="srch">${ic('search', 18)}<input id="of-q" placeholder="Artikel oder Leistung hinzufügen …" value="${esc(OF.q)}" autocomplete="off"></div><div id="of-sug">${ofSug()}</div></div>
     </div>
@@ -151,7 +159,7 @@ function ofSug() {
   return l.map(i => `<button class="grow" data-a="of-add" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${esc(OF.cat.cats[i.cat] || '')} · ${eur2(i.price)} / ${esc(i.unit)}${i.maker ? ' · ' + esc(i.maker) : ''}</span></span>${ic('plus', 16)}</button>`).join('') || '<div class="grow muted small">Nichts gefunden – unter Mehr → Produkte bzw. Leistungen & Pakete anlegen</div>';
 }
 const ofRender = () => { const y = scrollY; $('#app main').innerHTML = viewAngebot(); scrollTo(0, y); };
-function ofSumPaint() { const s = $('.ofsum'); if (!s) return; const tmp = document.createElement('div'); tmp.innerHTML = viewAngebot(); const n = tmp.querySelector('.ofsum'); if (n) s.replaceWith(n); $$('.ofl-t').forEach((el, i) => { const p = OF.edit.data.pos[i]; if (p) el.textContent = eur2(p.qty * p.price); }); }
+function ofSumPaint() { const s = $('.ofsum'); if (!s) return; const tmp = document.createElement('div'); tmp.innerHTML = viewAngebot(); const n = tmp.querySelector('.ofsum'); if (n) s.replaceWith(n); $$('.ofl-t').forEach((el, i) => { const p = OF.edit.data.pos[i]; if (p) el.textContent = eur2(ofLine(p)); }); }
 const $$ = s => [...document.querySelectorAll(s)];
 
 /* Spracherkennung (Safari/Chrome); sonst Tastatur-Diktat */
@@ -188,20 +196,22 @@ async function ofBuild() {
   let y = 92; const salut = /^Familie/i.test(c.name) ? `Sehr geehrte ${c.name},` : /^Frau/i.test(c.name) ? `Sehr geehrte ${c.name},` : /^Herr/i.test(c.name) ? `Sehr geehrter ${c.name},` : 'Sehr geehrte Damen und Herren,';
   const para = t => { const l = doc.splitTextToSize(t, W - 2 * M); doc.text(l, M, y); y += l.length * 4.6 + 3; };
   para(salut); if (d.intro) para(d.intro);
-  const cols = [[M, 'Pos.'], [M + 12, 'Menge'], [M + 30, 'Bezeichnung'], [W - M - 30, 'Einzelpreis'], [W - M, 'Gesamt']];
+  const mixed = d.pos.some(ofBr) && d.pos.some(p => !ofBr(p)), allBr = d.pos.length && d.pos.every(ofBr), wN = W - 2 * M - 62;
+  const cols = [[M, 'Pos.'], [M + 12, 'Menge'], [M + 30, 'Bezeichnung'], [W - M - 30, 'Einzelpreis' + (mixed ? '' : allBr ? ' brutto' : ' netto')], [W - M, 'Gesamt']];
   const th = () => { doc.setFillColor(242, 243, 246); doc.rect(M, y - 4, W - 2 * M, 7, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...GR); cols.forEach(([x, l], i) => doc.text(l, x + (i >= 3 ? 0 : 1), y, { align: i >= 3 ? 'right' : 'left' })); y += 7; doc.setFont('helvetica', 'normal'); };
   th();
   d.pos.forEach((p, i) => {
-    const nl = doc.splitTextToSize(p.name, W - 2 * M - 62), dl = p.descr && !p.check ? doc.splitTextToSize(p.descr, W - 2 * M - 62) : [], h = nl.length * 4.4 + dl.length * 3.6 + 3;
+    const nl = doc.splitTextToSize(p.name, wN), dl = p.descr && !p.check ? doc.splitTextToSize(p.descr, wN) : [], h = nl.length * 4.4 + dl.length * 3.6 + 3;
     if (y + h > 262) { doc.addPage(); head(); y = 40; th(); }
-    doc.setFontSize(9.5); doc.setTextColor(...INK); doc.text(String(i + 1), M + 1, y); doc.text(`${numDe(p.qty)} ${p.unit}`, M + 12, y); doc.text(nl, M + 30, y);
-    doc.text(eur2(p.price), W - M - 30, y, { align: 'right' }); doc.text(eur2(p.qty * p.price), W - M, y, { align: 'right' });
+    doc.setFontSize(9.5); doc.setTextColor(...INK); doc.text(String(i + 1), M + 1, y); doc.text(p.pausch ? 'pauschal' : `${numDe(p.qty)} ${p.unit}`, M + 12, y); doc.text(nl, M + 30, y);
+    if (!p.pausch) doc.text(eur2(ofUp(p)), W - M - 30, y, { align: 'right' }); doc.text(eur2(ofLine(p)), W - M, y, { align: 'right' });
+    if (mixed) { doc.setFontSize(7); doc.setTextColor(...GR); doc.text(ofBr(p) ? 'brutto' : 'netto', W - M, y + 3.4, { align: 'right' }); doc.setFontSize(9.5); doc.setTextColor(...INK); }
     if (dl.length) { doc.setFontSize(8); doc.setTextColor(...GR); doc.text(dl, M + 30, y + nl.length * 4.4); }
     y += h; doc.setDrawColor(...LN); doc.line(M, y - 2, W - M, y - 2); y += 2;
   });
   if (y > 230) { doc.addPage(); head(); y = 40; }
   const sr = (k, v, b) => { doc.setFont('helvetica', b ? 'bold' : 'normal'); doc.setFontSize(b ? 11 : 9.5); doc.setTextColor(...(b ? INK : GR)); doc.text(k, W - M - 60, y); doc.setTextColor(...INK); doc.text(v, W - M, y, { align: 'right' }); y += b ? 7 : 5; };
-  y += 2; sr('Zwischensumme netto', eur2(T.sub)); if (T.disc) sr(`Rabatt ${numDe(d.discount)} %`, '−' + eur2(T.disc)); sr('Netto', eur2(T.net));
+  y += 2; sr('Zwischensumme netto', eur2(T.sub)); if (T.disc) { sr(`Rabatt ${numDe(d.discount)} %`, '−' + eur2(T.disc)); sr('Netto', eur2(T.net)); }
   Object.entries(T.tax).sort().forEach(([r, v]) => sr(`USt. ${numDe(+r)} %`, eur2(v))); sr('Gesamt brutto', eur2(T.gross), true);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); y += 4;
   if (T.tax['0'] !== undefined) { doc.setFontSize(8.5); doc.setTextColor(...GR); para('Für Photovoltaikanlagen und Stromspeicher auf bzw. an Wohngebäuden gilt der Nullsteuersatz nach § 12 Abs. 3 UStG.'); doc.setFontSize(10); doc.setTextColor(...INK); }
@@ -250,6 +260,9 @@ function ofItemForm(it) {
     <label>${prod ? 'Art' : 'Bereich'}<select name="cat">${Object.entries(cats).map(([k, l]) => `<option value="${k}" ${it.cat === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     ${prod && pu ? `<label>Leistung (${pu})<input name="power" inputmode="decimal" value="${it.power === null || it.power === undefined ? '' : numDe(it.power)}"></label>` : ''}
     <label>Preis netto €<input name="price" inputmode="decimal" value="${numDe(it.price || 0)}"></label>
+    <label>Preis brutto €<input name="pgross" inputmode="decimal" value="${numDe((it.price || 0) * (1 + (+it.tax || 0) / 100))}"></label>
+    <label>Preisart im Angebot<select name="pm"><option value="netto" ${it.pm !== 'brutto' ? 'selected' : ''}>netto (zzgl. USt.)</option><option value="brutto" ${it.pm === 'brutto' ? 'selected' : ''}>brutto (inkl. USt.)</option></select></label>
+    <label class="sw" style="align-self:end;min-height:44px"><input type="checkbox" name="pausch" value="1" ${it.pausch ? 'checked' : ''}>Pauschalpreis</label>
     <label>USt.<select name="tax">${[0, 7, 19].map(t => `<option value="${t}" ${+it.tax === t ? 'selected' : ''}>${t} %</option>`).join('')}</select></label>
     <label>Einheit<input name="unit" value="${esc(it.unit || 'Stk')}"></label>
     <label style="grid-column:1/-1">Beschreibung (steht im Angebot)<textarea name="descr" rows="2" placeholder="${prod ? 'z. B. Maße, Garantie, Besonderheiten' : ''}">${esc(it.descr || '')}</textarea></label>
@@ -257,7 +270,7 @@ function ofItemForm(it) {
     ${prod ? '<p class="muted small" style="grid-column:1/-1;margin:0">PV-Module, Wechselrichter und Speicher: 0 % USt. (§ 12 Abs. 3 UStG).</p>' : ''}
     <div class="row" style="grid-column:1/-1;margin-top:12px"><button class="btn" type="submit">Speichern</button><button class="btn g" type="button" data-a="of-item-cancel">Abbrechen</button>${it.id ? `<button class="btn g danger" type="button" data-a="of-item-del" data-v="${esc(it.id)}">Löschen</button>` : ''}</div></form>`;
 }
-const ofRow = i => `<button class="grow" data-a="of-item-edit" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${[i.maker, i.kind === 'produkt' && i.power ? numDe(i.power) + ' ' + (OF_PCATS[i.cat] || ['', ''])[1] : '', eur2(i.price) + ' / ' + i.unit, i.tax + ' % USt.'].filter(Boolean).map(esc).join(' · ')}</span></span>${ic('next', 16)}</button>`;
+const ofRow = i => `<button class="grow" data-a="of-item-edit" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${[i.maker, i.kind === 'produkt' && i.power ? numDe(i.power) + ' ' + (OF_PCATS[i.cat] || ['', ''])[1] : '', i.pm === 'brutto' ? eur2(i.price * (1 + i.tax / 100)) + ' brutto' : eur2(i.price) + ' netto', i.pausch ? 'pauschal' : 'je ' + i.unit, i.tax + ' % USt.'].filter(Boolean).map(esc).join(' · ')}</span></span>${ic('next', 16)}</button>`;
 const ofEditBox = id => OF.itemEdit && (OF.itemEdit.id || '') === id ? `<div class="cardx">${ofItemForm(OF.itemEdit)}</div>` : '';
 
 function viewProdukte() {
@@ -293,6 +306,7 @@ document.addEventListener('click', async e => {
       case 'of-parse': return ofParse();
       case 'of-std': d.pos = ofApplyPackages(d.pos.filter(p => !p.pkg || p.man)); toast('Standardleistungen neu berechnet.'); return ofRender();
       case 'of-del': d.pos.splice(i, 1); return ofRender();
+      case 'of-pm': { const p = d.pos[i]; p.pm = ofBr(p) ? 'netto' : 'brutto'; return ofRender(); }
       case 'of-q': { const p = d.pos[i]; p.qty = Math.max(0, Math.round((p.qty + +a.dataset.v) * 100) / 100); if (p.pkg) p.man = true; const inp = $(`[data-of="qty"][data-i="${i}"]`); if (inp) inp.value = numDe(p.qty);
         if (p.cat === 'mod' && !p.pkg) d.pos = ofApplyPackages(d.pos), ofRender(); else ofSumPaint(); return; }
       case 'of-add': { const it = OF.cat.items.find(x => x.id === a.dataset.v); if (!it) return; d.pos.push(ofPos(it, 1)); d.pos = ofApplyPackages(d.pos); OF.q = ''; return ofRender(); }
@@ -300,7 +314,7 @@ document.addEventListener('click', async e => {
       case 'of-prev': return ofPreview();
       case 'of-pdf': { if (!E.id) { const j = await api('of-save', { id: E.id, project: E.project, title: E.title, status: E.status, data: d }); OF.edit = j; history.replaceState(null, '', '#/angebot/' + j.id); ofRender(); } return ofPdf(); }
       case 'of-delete': if (!confirm('Angebot löschen?')) return; await api('of-del', { id: E.id }); toast('Angebot gelöscht.'); OF.edit = null; location.hash = '#/kunde/' + E.project; return;
-      case 'of-prod-new': OF.itemEdit = { kind: 'produkt', cat: 'mod', unit: 'Stk', tax: 0, price: 0 }; return ofRedraw();
+      case 'of-prod-new': OF.itemEdit = { kind: 'produkt', cat: 'mod', unit: 'Stk', tax: 0, price: 0, pm: 'netto' }; return ofRedraw();
       case 'of-import': { a.disabled = true; const j = await api('of-import', {}); await ofCatalog(true); toast(j.n ? `${j.n} Produkte übernommen – ab jetzt unabhängig von der Wirtschaftlichkeit.` : 'Nichts Neues – alle Produkte sind schon da.'); return ofRedraw(); }
       case 'of-item-new': OF.itemEdit = { kind: 'leistung', unit: 'Stk', tax: 19, cat: 'sonst', price: 0 }; return ofRedraw();
       case 'of-item-edit': { const it = OF.cat.items.find(x => x.id === a.dataset.v); OF.itemEdit = OF.itemEdit && OF.itemEdit.id === a.dataset.v ? null : it ? { ...it } : null; ofRedraw(); const f = $('#f-of-item'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
@@ -313,17 +327,24 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'of-q') { OF.q = el.value; const s = $('#of-sug'); if (s) s.innerHTML = ofSug(); return; }
   if (el.id === 'of-text') { OF.text = el.value; return; }
+  const fi = el.closest && el.closest('#f-of-item');
+  if (fi && ['price', 'pgross', 'tax'].includes(el.name)) {
+    const t = +fi.tax.value / 100; if (el.name === 'pgross') fi.dataset.last = 'g'; else if (el.name === 'price') fi.dataset.last = 'n';
+    if (fi.dataset.last === 'g') fi.price.value = numDe(parseNum(fi.pgross.value) / (1 + t)); else fi.pgross.value = numDe(parseNum(fi.price.value) * (1 + t));
+    return;
+  }
   if (el.id === 'of-pq') { OF.pq = el.value; const t = document.createElement('div'); t.innerHTML = viewProdukte(); const n = t.querySelector('#of-plist'), o = $('#of-plist'); if (n && o) o.replaceWith(n); return; }
   const k = el.dataset && el.dataset.of; if (!k || !OF.edit) return; const d = OF.edit.data, i = +el.dataset.i;
-  if (k === 'qty' || k === 'price') { d.pos[i][k] = parseNum(el.value); if (k === 'qty' && d.pos[i].pkg) d.pos[i].man = true; ofSumPaint(); }
+  if (k === 'price' && ofBr(d.pos[i])) { const p = d.pos[i]; p.price = Math.round(parseNum(el.value) / (1 + p.tax / 100) * 10000) / 10000; ofSumPaint(); }
+  else if (k === 'qty' || k === 'price') { d.pos[i][k] = parseNum(el.value); if (k === 'qty' && d.pos[i].pkg) d.pos[i].man = true; ofSumPaint(); }
   else if (k === 'name') d.pos[i].name = el.value;
   else if (k === 'discount') { d.discount = Math.max(0, Math.min(100, parseNum(el.value))); ofSumPaint(); }
   else if (k === 'title' || k === 'status') OF.edit[k] = el.value;
   else d[k] = el.value;
 });
-document.addEventListener('change', e => { const el = e.target; if (el.name === 'cat' && el.closest('#f-of-item') && OF.itemEdit && OF.itemEdit.kind === 'produkt') { const d = Object.fromEntries(new FormData(el.closest('form'))); OF.itemEdit = { ...OF.itemEdit, ...d, power: d.power === '' || d.power === undefined ? null : parseNum(d.power), price: parseNum(d.price), tax: ofTaxFor(d.cat) }; ofRedraw(); return; } if (el.dataset && el.dataset.of === 'status' && OF.edit) OF.edit.status = el.value; if (el.dataset && el.dataset.of === 'qty' && OF.edit) { const p = OF.edit.data.pos[+el.dataset.i]; if (p && p.cat === 'mod' && !p.pkg) { OF.edit.data.pos = ofApplyPackages(OF.edit.data.pos); ofRender(); } } });
+document.addEventListener('change', e => { const el = e.target; if (el.name === 'cat' && el.closest('#f-of-item') && OF.itemEdit && OF.itemEdit.kind === 'produkt') { const d = Object.fromEntries(new FormData(el.closest('form'))); OF.itemEdit = { ...OF.itemEdit, ...d, power: d.power === '' || d.power === undefined ? null : parseNum(d.power), price: parseNum(d.price), tax: ofTaxFor(d.cat), pm: d.cat === 'wp' ? 'brutto' : 'netto', pausch: !!d.pausch }; ofRedraw(); return; } if (el.dataset && el.dataset.of === 'status' && OF.edit) OF.edit.status = el.value; if (el.dataset && el.dataset.of === 'qty' && OF.edit) { const p = OF.edit.data.pos[+el.dataset.i]; if (p && p.cat === 'mod' && !p.pkg) { OF.edit.data.pos = ofApplyPackages(OF.edit.data.pos); ofRender(); } } });
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'f-of-item') return; e.preventDefault(); e.stopImmediatePropagation();
-  const f = e.target, d = Object.fromEntries(new FormData(f)); d.id = f.dataset.id; d.price = parseNum(d.price); d.tax = +d.tax; if (d.power !== undefined) d.power = d.power === '' ? '' : parseNum(d.power);
+  const f = e.target, d = Object.fromEntries(new FormData(f)); d.id = f.dataset.id; d.tax = +d.tax; d.price = f.dataset.last === 'g' ? Math.round(parseNum(d.pgross) / (1 + d.tax / 100) * 10000) / 10000 : parseNum(d.price); delete d.pgross; d.pausch = !!d.pausch; if (d.power !== undefined) d.power = d.power === '' ? '' : parseNum(d.power);
   try { await api('of-item', d); OF.itemEdit = null; await ofCatalog(true); ofRedraw(); toast('Gespeichert.'); } catch (err) { toast(err.message); }
 }, true);
