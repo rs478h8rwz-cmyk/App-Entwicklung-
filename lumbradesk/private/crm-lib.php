@@ -16,6 +16,8 @@ function crm_tables(): void {
   $pdo->exec("CREATE TABLE IF NOT EXISTS crm_tasks (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(40) NULL, title VARCHAR(300) NOT NULL, due DATE NOT NULL, assignee_id INT UNSIGNED NOT NULL, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, done_at DATETIME NULL, done_by INT UNSIGNED NULL, INDEX (project_id), INDEX (assignee_id), INDEX (due), INDEX (done_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
   $cols = array_column($pdo->query('SHOW COLUMNS FROM projects')->fetchAll(), 'Field');
   if (!in_array('stage', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN stage VARCHAR(20) NULL, ADD COLUMN stage_at DATETIME NULL");
+  $ecols = array_column($pdo->query('SHOW COLUMNS FROM crm_events')->fetchAll(), 'Field');
+  if (!in_array('mentions', $ecols, true)) $pdo->exec("ALTER TABLE crm_events ADD COLUMN mentions VARCHAR(500) NULL");
   if (!in_array('stage_base', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN stage_base VARCHAR(20) NULL");
   $ucols = array_column($pdo->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field');
   if (!in_array('remind', $ucols, true)) $pdo->exec("ALTER TABLE users ADD COLUMN remind TINYINT(1) NOT NULL DEFAULT 1");
@@ -81,7 +83,9 @@ function crm_project(array $u, string $id): array {
 
 function crm_event_out(array $e): array {
   $n = user_names();
-  return ['id' => (int)$e['id'], 'kind' => $e['kind'], 'text' => $e['text'], 'at' => $e['at'], 'user' => $e['user_id'] ? (int)$e['user_id'] : null, 'userName' => $e['user_id'] ? ($n[(int)$e['user_id']] ?? '') : 'System'];
+  $men = array_values(array_filter(array_map('intval', explode(',', (string)($e['mentions'] ?? '')))));
+  return ['id' => (int)$e['id'], 'kind' => $e['kind'], 'text' => $e['text'], 'at' => $e['at'], 'user' => $e['user_id'] ? (int)$e['user_id'] : null, 'userName' => $e['user_id'] ? ($n[(int)$e['user_id']] ?? '') : 'System',
+    'mentions' => array_map(fn($i) => ['id' => $i, 'name' => $n[$i] ?? ''], $men)];
 }
 function crm_task_out(array $t): array {
   $n = user_names();
@@ -99,7 +103,8 @@ function crm_detail(array $u, string $id): array {
   $r = crm_project($u, $id);
   $ev = db()->prepare('SELECT * FROM crm_events WHERE project_id = ? ORDER BY at DESC, id DESC LIMIT 500'); $ev->execute([$id]);
   $tk = db()->prepare('SELECT * FROM crm_tasks WHERE project_id = ? ORDER BY done_at IS NOT NULL, due, id'); $tk->execute([$id]);
-  return ['customer' => crm_row_out($r), 'events' => array_map('crm_event_out', $ev->fetchAll()), 'tasks' => array_map('crm_task_out', $tk->fetchAll())];
+  $people = array_map(fn($x) => ['id' => (int)$x['id'], 'name' => $x['name']], db()->query('SELECT id, name FROM users WHERE active = 1 ORDER BY name')->fetchAll());
+  return ['people' => $people, 'customer' => crm_row_out($r), 'events' => array_map('crm_event_out', $ev->fetchAll()), 'tasks' => array_map('crm_task_out', $tk->fetchAll())];
 }
 
 /* Aufgaben, die ein Benutzer sehen darf: eigene (zuständig/angelegt) + bei Admin/Büro alle */
@@ -193,9 +198,28 @@ function crm_dash(array $u): array {
   $tz = new DateTimeZone('Europe/Berlin');
   $hq = $pdo->query("SELECT e.at, e.project_id FROM crm_events e JOIN projects p ON p.id = e.project_id AND p.deleted = 0 WHERE e.kind IN ('notiz','anruf','termin','email','protokoll') AND e.at > UTC_TIMESTAMP() - INTERVAL 56 DAY")->fetchAll();
   foreach ($hq as $e) { if (!isset($visible[$e['project_id']])) continue; $t = new DateTime($e['at'] . ' UTC'); $t->setTimezone($tz); $wd = (int)$t->format('N') - 1; $h = (int)$t->format('G'); if ($wd > 5 || $h < 7 || $h >= 19) continue; $heat[$wd][intdiv($h - 7, 2)]++; }
-  return ['all' => sees_all($u), 'month' => $month, 'vacReq' => $vacReq, 'series' => array_values($series), 'year' => $year, 'wonYear' => $wonYear, 'wonPrevSame' => $wonPrevSame, 'heat' => $heat,
+  $mq = $pdo->prepare("SELECT e.*, p.name AS pname FROM crm_events e JOIN projects p ON p.id = e.project_id AND p.deleted = 0 WHERE FIND_IN_SET(?, e.mentions) AND e.at > UTC_TIMESTAMP() - INTERVAL 14 DAY ORDER BY e.at DESC LIMIT 6"); $mq->execute([(string)$u['id']]);
+  $forMe = array_map(fn($e) => crm_event_out($e) + ['project' => $e['project_id'], 'projectName' => $e['pname']], $mq->fetchAll());
+  return ['all' => sees_all($u), 'month' => $month, 'vacReq' => $vacReq, 'forMe' => $forMe, 'series' => array_values($series), 'year' => $year, 'wonYear' => $wonYear, 'wonPrevSame' => $wonPrevSame, 'heat' => $heat,
     'kpi' => ['offers' => count($openOffers), 'offersSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $openOffers)),
       'wonMonth' => count($wonMonth), 'wonMonthSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $wonMonth)),
       'rate' => count($dec) ? round(100 * $nWon / count($dec)) : null, 'decided' => count($dec), 'overdue' => $overdue, 'dueToday' => $dueToday],
     'stages' => $stages, 'team' => $team, 'recent' => $recent];
+}
+
+/* Logbuch: Kollegen markieren – sie bekommen die Nachricht per E-Mail, der Eintrag bleibt beim Kunden */
+function crm_mention(array $u, string $pid, int $eventId, array $ids, string $kind, string $text): array {
+  $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0 && $i !== (int)$u['id'])));
+  if (!$ids) return [];
+  $st = db()->prepare('SELECT id, name, email FROM users WHERE active = 1 AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')'); $st->execute($ids); $to = $st->fetchAll();
+  if (!$to) return [];
+  db()->prepare('UPDATE crm_events SET mentions = ? WHERE id = ?')->execute([implode(',', array_column($to, 'id')), $eventId]);
+  $p = project_row($pid); $cust = $p ? $p['name'] : 'Kunde'; $sent = [];
+  foreach ($to as $r) {
+    try {
+      [$t, $h] = mail_tpl('Hallo ' . explode(' ', $r['name'])[0] . ',', $u['name'] . ' hat dich bei ' . $cust . ' markiert' . ($kind !== 'notiz' ? ' (' . (EVENT_KINDS[$kind] ?? $kind) . ')' : '') . ":\n\n„" . $text . '“', 'Kunde öffnen', base_url() . '/#/kunde/' . rawurlencode($pid), 'Die Nachricht steht im Logbuch des Kunden.');
+      send_mail($r['email'], $u['name'] . ' hat dich markiert: ' . $cust, $t, str_replace("\n", '<br>', $h)); $sent[] = $r['name'];
+    } catch (Throwable $e) { error_log('LumbraDesk Markierung: ' . $e->getMessage()); }
+  }
+  return $sent;
 }

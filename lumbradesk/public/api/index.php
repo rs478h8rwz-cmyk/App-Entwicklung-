@@ -310,6 +310,33 @@ try {
       readfile($f . '.bin'); exit;
     }
 
+    /* ---------- Angebote ---------- */
+    case 'GET of-catalog': {
+      require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php';
+      $row = cfg_row(); $cfg = $row ? json_decode((string)$row['data'], true) : []; $co = (array)(($cfg['settings'] ?? [])['company'] ?? []);
+      json_out(['items' => of_catalog(), 'packages' => of_packages(), 'cats' => OF_CATS, 'status' => OF_STATUS, 'company' => array_intersect_key($co, array_flip(['name', 'ceo', 'register', 'street', 'zip', 'city', 'phone', 'email', 'web', 'taxNo', 'vatId', 'bank', 'iban', 'bic', 'logoFile']))]);
+    }
+    case 'POST of-item': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(['ok' => true] + of_item_save(body())); }
+    case 'POST of-item-del': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('UPDATE offer_items SET active = 0 WHERE id = ?')->execute([(int)preg_replace('/\D/', '', (string)(body()['id'] ?? ''))]); json_out(['ok' => true]); }
+    case 'POST of-package': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; of_package_save(body()); json_out(['ok' => true]); }
+    case 'POST of-package-del': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('DELETE FROM offer_packages WHERE id = ?')->execute([(int)(body()['id'] ?? 0)]); json_out(['ok' => true]); }
+    case 'GET of-list': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; $pid = (string)($_GET['p'] ?? '');
+      $p = valid_id($pid) ? project_row($pid) : null; if (!can_see_project($u, $p)) fail('Keine Berechtigung', 403);
+      json_out(['offers' => of_list($pid)]);
+    }
+    case 'GET of-get': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; $r = of_get((string)($_GET['id'] ?? ''));
+      if (!can_see_project($u, project_row($r['project_id']))) fail('Keine Berechtigung', 403);
+      json_out(of_out($r));
+    }
+    case 'POST of-save': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(of_save($u, body())); }
+    case 'POST of-del': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; $r = of_get((string)(body()['id'] ?? ''));
+      if (!can_see_project($u, project_row($r['project_id']))) fail('Keine Berechtigung', 403);
+      db()->prepare('UPDATE offers SET deleted = 1, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?')->execute([$u['id'], $r['id']]); audit((int)$u['id'], 'angebot_geloescht', $r['nr']); json_out(['ok' => true]);
+    }
+
     /* ---------- Abnahme & Service zentral ---------- */
     case 'GET ab-list': {
       $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/abnahme-lib.php';
@@ -380,7 +407,8 @@ try {
     case 'GET crm': {
       $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
       $team = db()->query("SELECT id, name FROM users WHERE active = 1 AND role IN ('admin','buero','vertrieb') ORDER BY name")->fetchAll();
-      json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'stages' => STAGES, 'customers' => crm_list($u), 'team' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name']], $team)]);
+      $people = db()->query("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name")->fetchAll();
+      json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'stages' => STAGES, 'customers' => crm_list($u), 'team' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name']], $team), 'people' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'role' => $r['role']], $people)]);
     }
     case 'GET dash': {
       $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
@@ -406,7 +434,8 @@ try {
       crm_project($u, $id);
       $at = (string)($b['at'] ?? ''); $at = preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', $at) && strtotime($at . ' UTC') ? gmdate('Y-m-d H:i:s', strtotime($at . ' UTC')) : null;
       crm_add_event($id, (int)$u['id'], $kind, $text, $at);
-      json_out(crm_detail($u, $id));
+      $sent = []; if (!empty($b['mentions'])) $sent = crm_mention($u, $id, (int)db()->lastInsertId(), (array)$b['mentions'], $kind, $text);
+      json_out(crm_detail($u, $id) + ['mailed' => $sent]);
     }
     case 'POST crm-event-del': {
       $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables();

@@ -9,7 +9,7 @@
 declare(strict_types=1);
 
 const BACKUP_KEEP = 14;
-const BACKUP_TABLES = ['users', 'projects', 'company_config', 'audit_log', 'crm_events', 'crm_tasks', 'stempel_people', 'stempel_days', 'stempel_ops', 'stempel_acks', 'stempel_requests', 'stempel_config', 'abnahme_prots', 'abnahme_numbers'];
+const BACKUP_TABLES = ['users', 'projects', 'company_config', 'audit_log', 'crm_events', 'crm_tasks', 'stempel_people', 'stempel_days', 'stempel_ops', 'stempel_acks', 'stempel_requests', 'stempel_config', 'offer_items', 'offer_packages', 'offers', 'ld_numbers', 'abnahme_prots', 'abnahme_numbers'];
 
 function backup_dir(): string {
   $d = __DIR__ . '/backups';

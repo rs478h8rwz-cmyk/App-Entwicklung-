@@ -15,6 +15,10 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.38', date: '2026-11-11', items: [
+    ['crm', 'Angebot per Sprache', 'Oben im Kunden: „Angebot“ öffnet den Angebots-Editor in lumbra.desk. Einfach sprechen, z. B. „20 Module, 10er Speicher und eine Wallbox“ – Positionen, Standardleistungen und Summen entstehen automatisch, dann Mengen anpassen und als PDF senden.'],
+    ['house', 'Logbuch mit Markieren', 'Der Knopf heißt jetzt „Logbuch“. Dort Notizen festhalten und Kollegen markieren – sie bekommen die Nachricht per E-Mail.']
+  ] },
   { version: '2.37', date: '2026-11-11', items: [
     ['roof', 'Tutorial: Modulplan Schritt für Schritt', 'Das Tutorial erklärt den Modulplan jetzt in vier Schritten mit Beispielbildern – Foto, Dachfläche, Referenz und Belegen, auch auf dem Handy. Neu erklärt: Zuständig, Verlauf und das „l.“ zurück zu lumbra.desk.']
   ] },

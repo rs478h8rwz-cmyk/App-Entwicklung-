@@ -444,3 +444,36 @@ a.grow:active, button.grow:active { background: var(--raised); }
 }
 .hbars .ch { height: auto; } .ch .avgbg { fill: var(--card); stroke: var(--line2); }
 .hbars .ch { max-height: 210px; } @media (max-width: 760px) { .hbars .ch { max-height: none; } }
+.ment { margin-top: 8px; } .ment .chips { margin: 6px 0 0; }
+.evm { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; } .evm span { font-size: 12px; font-weight: 600; color: var(--cb, #5563D6); background: color-mix(in srgb, var(--cb, #5563D6) 12%, transparent); padding: 2px 8px; border-radius: 99px; }
+/* ---------- Angebote (3.0) ---------- */
+.voice { margin-top: 12px; }
+.vrow { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.mic { width: 64px; height: 64px; border-radius: 50%; border: 0; flex: none; display: grid; place-items: center; cursor: pointer; color: #fff; background: linear-gradient(160deg, #3C4C7A, #1B2340); box-shadow: 0 6px 18px rgba(27, 35, 64, .3); transition: transform .15s ease; }
+.mic:active { transform: scale(.94); }
+.voice.on .mic { background: linear-gradient(160deg, #FF6B5E, #D4342A); box-shadow: 0 0 0 0 rgba(212, 52, 42, .5); animation: micp 1.4s ease-out infinite; }
+@keyframes micp { to { box-shadow: 0 0 0 18px rgba(212, 52, 42, 0); } }
+.vtx { display: flex; flex-direction: column; gap: 2px; } .vtx b { font-size: 17px; } .vtx span { font-size: 13px; color: var(--ink3); }
+.voice textarea { margin-top: 0; font-size: 16px; }
+.ofl { overflow: visible; }
+.ofp { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.ofp.chk-me { background: color-mix(in srgb, var(--s) 10%, transparent); }
+.ofp-h { display: flex; align-items: center; gap: 8px; }
+.ofn { width: 22px; height: 22px; border-radius: 50%; background: var(--raised); font-size: 11px; font-weight: 600; display: grid; place-items: center; flex: none; color: var(--ink2); }
+.ofi-name { flex: 1; min-width: 0; height: 34px; margin: 0; border: 0; background: transparent; font-weight: 600; padding: 0 4px; }
+.ofi-name:focus { background: var(--field); outline: 2px solid var(--p); }
+.ofd { font-size: 12.5px; color: var(--ink3); margin: 2px 0 0 30px; }
+.ofp-r { display: flex; align-items: center; gap: 8px; margin: 8px 0 0 30px; flex-wrap: wrap; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; }
+.qty button { width: 36px; height: 36px; border: 0; background: var(--raised); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.qty input { width: 58px; height: 36px; margin: 0; border: 0; border-radius: 0; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0 4px; }
+.ofi-pr { width: 96px; height: 36px; margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.ofl-t { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ofadd { padding: 12px 16px; } .ofadd .srch input { margin: 0; } #of-sug .grow { padding: 8px 4px; min-height: 44px; }
+.ofsum .sr { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-variant-numeric: tabular-nums; }
+.ofsum .sr.big2 { font-size: 20px; font-weight: 700; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
+.ofi-disc { width: 64px; height: 32px; display: inline-block; margin: 0 4px; text-align: right; }
+.ofmeta { padding: 16px 20px 20px; } .ofmeta textarea { font-size: 15px; }
+.ofbar { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 12px 0; margin-top: 16px; background: linear-gradient(transparent, var(--bg) 30%); z-index: 5; }
+.ofbar .btn:first-child { flex: 1; }
+@media (max-width: 760px) { .ofbar { bottom: calc(76px + env(safe-area-inset-bottom)); } .ofp-r { margin-left: 0; } .ofd { margin-left: 0; } }

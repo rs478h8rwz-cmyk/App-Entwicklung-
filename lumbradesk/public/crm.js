@@ -1,4 +1,4 @@
-/* LumbraDesk – CRM: Kunden-Übersicht (Liste + Pipeline), Kundenseite mit Verlauf und Wiedervorlagen, Aufgaben */
+/* LumbraDesk – CRM: Kunden-Übersicht (Liste + Pipeline), Kundenseite mit Logbuch und Wiedervorlagen, Aufgaben */
 'use strict';
 Object.assign(IC, {
   kunden: '<path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>',
@@ -26,7 +26,7 @@ const STG_L = { anfrage: 'Anfrage', termin: 'Termin', angebot: 'Angebot', auftra
 const STG_C = { anfrage: '#7A8692', termin: '#5B8DEF', angebot: '#F5A524', auftrag: '#0E7C66', montage: '#8B5CF6', fertig: '#2F9E44', verloren: '#C2412A' };
 const TYPE_L = { pv: 'PV', wp: 'Wärmepumpe', pvwp: 'PV + WP', speicher: 'Speicher', wb: 'Wallbox' };
 const KIND_L = { protokoll: 'Protokoll', notiz: 'Notiz', anruf: 'Anruf', termin: 'Termin', email: 'E-Mail', stufe: 'Stufe geändert', zuweisung: 'Zuweisung', aufgabe: 'Wiedervorlage' };
-const CR = { scope: 'meine', adv: '', stage: '', q: '', mode: 'liste', tscope: 'meine', kind: 'notiz', archiv: false };
+const CR = { ment: new Set(), scope: 'meine', adv: '', stage: '', q: '', mode: 'liste', tscope: 'meine', kind: 'notiz', archiv: false };
 try { Object.assign(CR, JSON.parse(localStorage.getItem('ld-crm') || '{}'), { q: '' }); } catch (e) {}
 const crSave = () => { try { localStorage.setItem('ld-crm', JSON.stringify({ scope: CR.scope, adv: CR.adv, mode: CR.mode, tscope: CR.tscope })); } catch (e) {} };
 
@@ -63,7 +63,7 @@ function viewKunden() {
   const me = ST.user.id, all = ST.crmAll, list = ST.crm || [];
   const nZu = list.filter(c => c.owner === me && c.assignedBy && c.assignedBy !== me).length, nAb = list.filter(c => c.by === me && c.owner !== me).length;
   const scopes = [['meine', 'Meine'], ['zugewiesen', 'Mir zugewiesen' + (nZu ? ` · ${nZu}` : '')], ...(nAb ? [['abgegeben', 'Abgegeben · ' + nAb]] : []), ['alle', all ? 'Alle' : 'Alle sichtbaren']];
-  return `<section class="hero"><h1>Kunden</h1><p class="muted">Alle Kunden aus der Wirtschaftlichkeit – mit Vertriebs-Stufe, Verlauf und Wiedervorlagen.</p></section>
+  return `<section class="hero"><h1>Kunden</h1><p class="muted">Alle Kunden aus der Wirtschaftlichkeit – mit Vertriebs-Stufe, Logbuch und Wiedervorlagen.</p></section>
     <div class="crm-bar">
       <div class="srch">${ic('search', 18)}<input id="crm-q" type="search" placeholder="Name, Ort, Telefon, Angebots-Nr. …" value="${esc(CR.q)}" autocomplete="off"></div>
       <div class="seg" role="tablist">${[['liste', 'Liste'], ['pipeline', 'Pipeline']].map(([k, l]) => `<button class="${CR.mode === k ? 'on' : ''}" data-a="crm-mode" data-v="${k}">${l}</button>`).join('')}</div>
@@ -122,6 +122,7 @@ function viewKunde() {
           <div class="row" style="margin-top:12px">${c.stage === 'verloren' ? `<span class="muted small">Als verloren markiert.</span><button class="btn g sm" data-a="crm-set-stage" data-v="anfrage">Wieder aufnehmen</button>` : `<button class="btn g sm danger" data-a="crm-set-stage" data-v="verloren">Als verloren markieren</button>`}</div>
           <p class="muted small" style="margin:8px 0 0">Tippe auf eine Stufe, um sie zu setzen. Wird später in der Wirtschaftlichkeit „Gesendet“ oder „Unterschrieben“ gewählt, rückt die Stufe automatisch mit.</p></div>
 
+        ${typeof offerCard === 'function' ? offerCard() : ''}
         <div class="card sec"><h2>Wiedervorlagen</h2>
           ${open.length ? `<div class="tlist">${open.map(taskRow).join('')}</div>` : '<p class="muted">Keine offenen Wiedervorlagen.</p>'}
           ${taskForm(c.id)}
@@ -130,20 +131,25 @@ function viewKunde() {
         ${hoursCard()}
       </div>
       <div class="kcol">
-        <div class="card"><h2>Verlauf</h2>
+        <div class="card"><h2>Logbuch</h2>
           <form id="f-crm-ev" class="evform">
             <div class="seg kinds">${['notiz', 'anruf', 'termin', 'email'].map(k => `<button type="button" class="${CR.kind === k ? 'on' : ''}" data-a="crm-kind" data-v="${k}">${ic(k, 16)}<span>${KIND_L[k]}</span></button>`).join('')}</div>
             <textarea name="text" rows="3" placeholder="${{ notiz: 'Was gibt es Neues?', anruf: 'Worüber wurde gesprochen?', termin: 'Termin: wo, mit wem, Ergebnis …', email: 'Inhalt der E-Mail kurz zusammengefasst' }[CR.kind]}" required></textarea>
+            ${mentionChips()}
             <div class="row"><label class="inl">Wann<input name="at" type="datetime-local" value="${localNow()}"></label><button class="btn" type="submit">Speichern</button></div>
           </form>
           <div class="tl">${D.events.length ? D.events.map(evRow).join('') : '<p class="muted">Noch keine Einträge. Halte hier Gespräche, Termine und Notizen fest – alle Kollegen mit Zugriff sehen sie.</p>'}</div></div>
       </div>
     </div>`;
 }
+function mentionChips() {
+  const ppl = ((ST.cd && ST.cd.people) || []).filter(x => x.id !== ST.user.id); if (!ppl.length) return '';
+  return `<div class="ment"><span class="muted small">Markieren – bekommt eine E-Mail:</span><div class="chips">${ppl.map(x => `<button type="button" class="chip ${CR.ment.has(x.id) ? 'on' : ''}" data-a="crm-ment" data-v="${x.id}">@${esc(x.name.split(' ')[0])}</button>`).join('')}</div></div>`;
+}
 function evRow(e) {
   const mine = e.user === ST.user.id || ST.user.role === 'admin', manual = ['notiz', 'anruf', 'termin', 'email'].includes(e.kind);
   return `<div class="ev ${manual ? '' : 'auto'}"><span class="evi">${ic(e.kind, 16)}</span><div class="evb"><div class="evh"><b>${KIND_L[e.kind] || e.kind}</b><span class="muted small">${utc(e.at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${esc(e.userName)}</span>
-    ${mine && manual ? `<button class="xbtn" data-a="crm-ev-del" data-id="${e.id}" title="Eintrag löschen" aria-label="Eintrag löschen">${ic('x', 14)}</button>` : ''}</div><div class="evt">${esc(e.text)}</div></div></div>`;
+    ${mine && manual ? `<button class="xbtn" data-a="crm-ev-del" data-id="${e.id}" title="Eintrag löschen" aria-label="Eintrag löschen">${ic('x', 14)}</button>` : ''}</div><div class="evt">${esc(e.text)}</div>${(e.mentions || []).length ? `<div class="evm">${e.mentions.map(m => `<span>@${esc(m.name)}</span>`).join('')}</div>` : ''}</div></div>`;
 }
 function taskRow(t) {
   return `<div class="task ${t.done ? 'done' : ''}"><button class="chk" data-a="crm-task-done" data-id="${t.id}" data-v="${t.done ? 0 : 1}" aria-label="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? ic('aufgabe', 16) : ''}</button>
@@ -212,7 +218,7 @@ function homeDue() {
 }
 /* Handy: „Mehr“ für die Admin-Seiten */
 function viewMehr() {
-  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Logbuch', 'Wer hat wann was gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
+  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[['artikel', 'Artikel & Pakete', 'Was im Angebot stehen kann, Standardleistungen'], ['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Änderungen', 'Wer hat wann was im System gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k === 'artikel' ? 'box' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
 }
 
 /* ---------- Laden ---------- */
@@ -236,6 +242,7 @@ async function crmClick(a) {
     case 'crm-archiv': CR.archiv = !CR.archiv; return void ($('#app main').innerHTML = viewKunden());
     case 'crm-stage-f': CR.stage = v; return void ($('#crm-res').innerHTML = crmResults());
     case 'crm-tscope': CR.tscope = v; crSave(); return crmReload();
+    case 'crm-ment': { const n = +v; CR.ment.has(n) ? CR.ment.delete(n) : CR.ment.add(n); a.classList.toggle('on', CR.ment.has(n)); return; }
     case 'crm-kind': { CR.kind = v; const f = $('#f-crm-ev'); f.querySelectorAll('.kinds button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); f.text.placeholder = { notiz: 'Was gibt es Neues?', anruf: 'Worüber wurde gesprochen?', termin: 'Termin: wo, mit wem, Ergebnis …', email: 'Inhalt der E-Mail kurz zusammengefasst' }[v]; f.text.focus(); return; }
     case 'crm-due': { const f = a.closest('form'); f.due.value = plusDays(+v); f.querySelectorAll('.quick .chip').forEach(b => b.classList.toggle('on', b === a)); return; }
     case 'crm-set-stage': {
@@ -252,7 +259,7 @@ async function crmClick(a) {
 const crmTask = id => (ST.cd ? ST.cd.tasks : []).concat(ST.tasks || []).find(t => t.id === id);
 function crmRender() { const y = scrollY; $('#app main').innerHTML = viewKunde(); scrollTo(0, y); }
 async function crmSubmit(f, d) {
-  if (f.id === 'f-crm-ev') { crmApplyDetail(await api('crm-event', { id: ST.cd.customer.id, kind: CR.kind, text: d.text, at: toUtc(d.at) })); toast('Im Verlauf gespeichert.'); return crmRender(); }
+  if (f.id === 'f-crm-ev') { const j = await api('crm-event', { id: ST.cd.customer.id, kind: CR.kind, text: d.text, at: toUtc(d.at), mentions: [...CR.ment] }); crmApplyDetail(j); CR.ment = new Set(); toast(j.mailed && j.mailed.length ? 'Im Logbuch gespeichert · E-Mail an ' + j.mailed.join(', ') : 'Im Logbuch gespeichert.', ); return crmRender(); }
   if (f.id === 'f-crm-task') {
     const pid = f.dataset.p || d.project || '';
     const j = await api('task', { project: pid, title: d.title, due: d.due, assignee: +d.assignee });
