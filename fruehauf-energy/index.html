@@ -4069,7 +4069,7 @@ async function saveSignature(p, auto) {
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
   ['download', '1 · LumbraDesk aufs Handy', 'Öffnen Sie lumbradesk.de und legen Sie es auf den Home-Bildschirm – iPhone: Safari → Teilen → „Zum Home-Bildschirm“, Android: Chrome → Menü ⋮ → „App installieren“. Angemeldet bleiben Sie auch ohne Internet bis zu 14 Tage.'],
-  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Zusätzlich gibt es den „Modulplan“ – auch auf dem Handy: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
+  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Zusätzlich gibt es den „Modulplan“ – auch auf dem Handy: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen – „Füllen“ spart Dachfenster, Schornstein & Co. automatisch aus, „Maximal“ holt die größte Modulzahl heraus. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
@@ -4259,7 +4259,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261111102733';
+const APP_VERSION = '20261111143227';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4307,8 +4307,8 @@ function guideCard() {
       ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'],
       ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'])
     + sec('3 · Dach planen nur mit dem Handy',
-      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch) bzw. Maß eingeben – Einstellungen über das Zahnrad.', '<b>Füllen</b> oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'],
-      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch) bzw. Maß eingeben – Einstellungen über das Zahnrad.', '<b>Füllen</b> oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'])
+      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch) bzw. Maß eingeben – Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'],
+      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch) bzw. Maß eingeben – Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'])
     + sec('4 · App aktualisieren',
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.'],
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.']));
@@ -4674,6 +4674,11 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.40', date: '2026-11-11', items: [
+    ['roof', 'Störstellen automatisch aussparen', 'Beim Drücken von „Füllen“ erkennt der Modulplan Dachfenster, Schornstein, Gauben, Lüfter und Satellitenschüssel im Foto und lässt sie frei – rot schraffiert im Plan. Falsch erkannt? Im Werkzeug „Auswählen“ die rote Fläche antippen und entfernen.'],
+    ['modplan', 'Maximal belegen', 'Neuer Knopf „Maximal“: legt so viele Module wie möglich aufs Dach – hochkant und quer frei kombiniert, ohne Raster oder Magnet, Störstellen ausgespart. „Zurück“ macht es rückgängig.'],
+    ['roof', 'Feinjustier-Rad in der Dachmitte', 'Das Rad zum Feinjustieren erscheint jetzt mittig auf der Dachfläche – so verdeckt es keine der Ecken, die Sie gerade setzen.']
+  ] },
   { version: '2.39', date: '2026-11-11', items: [
     ['crm', 'Eigene Produktdatenbank fürs Angebot', 'Für Angebote gibt es in lumbra.desk jetzt einen eigenen Reiter „Produkte“. Er ist getrennt von dieser App – Ihre Produkte in der Wirtschaftlichkeit bleiben unverändert.'],
     ['house', 'Neue Funktionen nach Freigabe', 'Der Knopf „Angebot“ erscheint erst, wenn der Admin die Funktion in lumbra.desk unter System freigeschaltet hat.']
@@ -6828,8 +6833,9 @@ function roofPanel(p, f, g) {
         <div class="mt-2 flex gap-2 items-start rounded-lg px-3 py-2 text-[13px] leading-snug" style="background:rgb(var(--p-rgb)/.10)"><span class="text-p shrink-0 mt-[1px]">${ic('info', 15)}</span><span>${ROOF_HOW[RS.mode] || ''}</span></div>
         ${RS.mode === 'select' ? `<label class="flex items-center gap-2 mt-2 text-[13px]"><input type="checkbox" data-r="multi" ${RS.multi ? 'checked' : ''}> Mehrfachauswahl (Antippen fügt hinzu)</label>` : ''}</div>
       ${RS.mode === 'string' || RS.mode === 'opt' ? '' : `<div class="grid grid-cols-2 gap-2">
-        <button class="btn-s !h-10 text-[13px]" data-r="fill">${ic('grid', 15)}Fläche füllen</button><button class="btn-s !h-10 text-[13px]" data-r="all">Alle auswählen</button>
-        <button class="btn-s !h-10 text-[13px]" data-r="rotate" ${RS.sel.size ? '' : 'disabled'}>${ic('refresh', 15)}Drehen</button><button class="btn-s !h-10 text-[13px]" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 15)}Löschen${RS.sel.size ? ` (${RS.sel.size})` : ''}</button>
+        <button class="btn-s !h-10 text-[13px]" data-r="fill">${ic('grid', 15)}Fläche füllen</button><button class="btn-s !h-10 text-[13px]" data-r="maxfill" title="So viele Module wie möglich – hochkant und quer kombiniert, Störstellen ausgespart">${ic('rocket', 15)}Maximal belegen</button>
+        <button class="btn-s !h-10 text-[13px]" data-r="all">Alle auswählen</button><button class="btn-s !h-10 text-[13px]" data-r="rotate" ${RS.sel.size ? '' : 'disabled'}>${ic('refresh', 15)}Drehen</button>
+        <button class="btn-s !h-10 text-[13px] col-span-2" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 15)}Löschen${RS.sel.size ? ` (${RS.sel.size})` : ''}</button>
         <button class="btn-s !h-10 text-[13px]" data-r="copy" ${RS.sel.size ? '' : 'disabled'}>${ic('copy', 15)}Kopieren</button><button class="btn-s !h-10 text-[13px]" data-r="paste" ${RS.clip && RS.clip.length ? '' : 'disabled'}>${ic('plus', 15)}Einfügen${RS.clip && RS.clip.length ? ` (${RS.clip.length})` : ''}</button>
         <button class="btn-g !h-10 text-[13px]" data-r="undo" ${RS.hist.length ? '' : 'disabled'}>${ic('arrowL', 15)}Rückgängig</button><button class="btn-g !h-10 text-[13px]" data-r="none" ${RS.sel.size ? '' : 'disabled'}>Auswahl aufheben</button>
       </div>
@@ -7867,6 +7873,7 @@ roofFoot = function (p, f) {
   const tot = p.roof.faces.reduce((a, x) => [a[0] + x.mods.length, a[1] + faceKwp(x)], [0, 0]);
   const tools = RS.step === 'mod' ? `<div class="flex gap-1 px-2 pt-2 overflow-x-auto no-scrollbar">${RM_TOOLS.map(([k, l, i]) => `<button class="flex-1 min-w-[64px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] font-medium border ${RS.mode === k ? 'border-p text-ink bg-p/10' : 'border-line text-ink2'}" data-r="mode" data-v="${k}">${ic(i, 17)}${l}</button>`).join('')}
       ${RS.mode === 'string' || RS.mode === 'opt' ? '' : `<button class="min-w-[56px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] border border-line text-ink2" data-r="fill">${ic('grid', 17)}Füllen</button>
+      <button class="min-w-[56px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] border border-line text-ink2" data-r="maxfill">${ic('rocket', 17)}Maximal</button>
       <button class="min-w-[56px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] border border-line ${RS.sel.size ? 'text-ember' : 'text-ink3 opacity-50'}" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 17)}Löschen</button>`}
       <button class="min-w-[56px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] border border-line ${RS.hist.length ? 'text-ink2' : 'text-ink3 opacity-50'}" data-r="undo" ${RS.hist.length ? '' : 'disabled'}>${ic('arrowL', 17)}Zurück</button></div>` : '';
   const next = RS.step === 'mod' ? `<button class="btn-p !h-11 !px-4 text-[14px]" data-r="apply" ${tot[0] ? '' : 'disabled'}>${ic('check', 16)}Übernehmen</button>`
@@ -7917,6 +7924,199 @@ roofDraw = async function () {
   } catch (e) {}
   return r;
 };
+/* ---------- Modulplan: Störstellen aussparen, maximal belegen, Feinjustier-Rad mittig ----------
+   Störstellen (Dachfenster, Schornstein, Gaube, Lüfter, Satellitenschüssel …) werden NUR beim Drücken
+   von „Füllen“ bzw. „Maximal“ im entzerrten Dachbild gesucht: Stellen, deren Farbe und Struktur deutlich
+   von den Dachpfannen abweichen. Sie liegen als rote Flächen im Plan (antippen im Auswahl-Modus = entfernen). */
+const OBS_CELL = 0.1;      // Raster der Erkennung: 10 cm
+const OBS_PAD = 0.1;       // Sicherheitsabstand um jede Störstelle: 10 cm
+
+const obsKey = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId]);
+const rgb2lab = (r, g, b) => {
+  const l = c => { c /= 255; return c > 0.04045 ? ((c + 0.055) / 1.055) ** 2.4 : c / 12.92; };
+  const R = l(r), G = l(g), B = l(b), X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047, Y = R * 0.2126 + G * 0.7152 + B * 0.0722, Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116, fx = f(X), fy = f(Y), fz = f(Z);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+};
+const median = a => { const s = Float64Array.from(a).sort(); return s.length ? s[s.length >> 1] : 0; };
+const mad = (a, m) => median(a.map(v => Math.abs(v - m))) * 1.4826;
+
+async function roofObsDetect(f, g) {
+  const img = await roofImg(f.photo); if (!img || !g || g.bad) return null;
+  const wc = roofWarp(f, g, img), ppm = wc.width / g.W, W = wc.width, H = wc.height;
+  const d = wc.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+  const zone = g.inset, cs = OBS_CELL, nx = Math.ceil(g.W / cs), ny = Math.ceil(g.H / cs);
+  const cells = [];   // {i, j, L, a, b, s}
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const X0 = i * cs, Y0 = j * cs, X1 = X0 + cs, Y1 = Y0 + cs;
+    if (![[X0, Y0], [X1, Y0], [X1, Y1], [X0, Y1]].every(p => inPoly(zone, p))) continue;
+    const px0 = Math.floor(X0 * ppm), py0 = Math.floor(Y0 * ppm), px1 = Math.min(W, Math.ceil(X1 * ppm)), py1 = Math.min(H, Math.ceil(Y1 * ppm)), st = Math.max(1, Math.round((px1 - px0) / 8));
+    let n = 0, r = 0, gg = 0, b = 0, y = 0, y2 = 0;
+    for (let py = py0; py < py1; py += st) for (let px = px0; px < px1; px += st) {
+      const k = (py * W + px) * 4; if (d[k + 3] < 200) continue;
+      r += d[k]; gg += d[k + 1]; b += d[k + 2]; const v = d[k] * 0.299 + d[k + 1] * 0.587 + d[k + 2] * 0.114; y += v; y2 += v * v; n++;
+    }
+    if (n < 6) continue;
+    const [L, A, B] = rgb2lab(r / n, gg / n, b / n), sd = Math.sqrt(Math.max(0, y2 / n - (y / n) ** 2));
+    cells.push({ i, j, L, a: A, b: B, s: Math.log(1 + sd) });
+  }
+  if (cells.length < 40) return null;
+  /* Dachfarbe und -struktur robust schätzen (Median), Abweichung je Zelle als Punktzahl */
+  const ms = ['L', 'a', 'b', 's'].map(k => { const v = cells.map(c => c[k]), m = median(v); return [k, m, mad(v, m)]; });
+  const [[, mL, sL], [, mA, sA], [, mB, sB], [, mS, sS]] = ms;
+  const SL = Math.max(7, sL), SA = Math.max(3, sA), SB = Math.max(3, sB), SS = Math.max(0.25, sS);
+  for (const c of cells) {
+    const dL = (c.L - mL) / SL, dA = (c.a - mA) / SA, dB = (c.b - mB) / SB, dS = (c.s - mS) / SS;
+    /* Helligkeit allein zählt nur halb (Schatten), Farbe und Struktur voll */
+    c.z = Math.sqrt(0.45 * dL * dL + dA * dA + dB * dB + 0.5 * dS * dS);
+  }
+  const grid = new Map(cells.map(c => [c.i + ',' + c.j, c])), at = (i, j) => grid.get(i + ',' + j);
+  const flag = c => c && c.z > 3.4;
+  /* Rauschen entfernen: einzelne Zellen nur, wenn sie sehr stark abweichen */
+  const hot = cells.filter(c => { if (!flag(c)) return false; let k = 0; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) if ((di || dj) && flag(at(c.i + di, c.j + dj))) k++; return k >= 2 || c.z > 6; });
+  const hs = new Set(hot.map(c => c.i + ',' + c.j)), seen = new Set(), rects = [];
+  for (const c of hot) {
+    const key = c.i + ',' + c.j; if (seen.has(key)) continue;
+    const st = [c], comp = []; seen.add(key);
+    while (st.length) { const q = st.pop(); comp.push(q); for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const k2 = (q.i + di) + ',' + (q.j + dj); if (hs.has(k2) && !seen.has(k2)) { seen.add(k2); st.push(at(q.i + di, q.j + dj)); } } }
+    const zmax = Math.max(...comp.map(x => x.z));
+    if (comp.length < 2 && zmax < 7) continue;
+    const i0 = Math.min(...comp.map(x => x.i)), i1 = Math.max(...comp.map(x => x.i)), j0 = Math.min(...comp.map(x => x.j)), j1 = Math.max(...comp.map(x => x.j));
+    /* Schmaler Streifen am Rand (Himmel, Firstziegel, Ortgang, ungenaue Ecke) ist keine Störstelle */
+    const edge = comp.some(q => [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([di, dj]) => !at(q.i + di, q.j + dj)));
+    const lw = i1 - i0 + 1, lh = j1 - j0 + 1, fill = comp.length / (lw * lh);
+    if (edge && (Math.min(lw, lh) <= 3 && Math.max(lw, lh) >= 4 * Math.min(lw, lh) || fill < 0.25)) continue;
+    rects.push({ x0: i0 * cs - OBS_PAD, y0: j0 * cs - OBS_PAD, x1: (i1 + 1) * cs + OBS_PAD, y1: (j1 + 1) * cs + OBS_PAD, n: comp.length });
+  }
+  /* Unplausibel viel gefunden (z. B. zweifarbiges Dach): lieber nichts aussparen */
+  if (hot.length > cells.length * 0.3) return { rects: [], unsure: true };
+  /* Überlappende Rechtecke zusammenfassen */
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let a = 0; a < rects.length && !merged; a++) for (let b = a + 1; b < rects.length && !merged; b++) {
+      const A = rects[a], B = rects[b];
+      if (A.x0 < B.x1 && A.x1 > B.x0 && A.y0 < B.y1 && A.y1 > B.y0) { rects[a] = { x0: Math.min(A.x0, B.x0), y0: Math.min(A.y0, B.y0), x1: Math.max(A.x1, B.x1), y1: Math.max(A.y1, B.y1), n: A.n + B.n }; rects.splice(b, 1); merged = true; }
+    }
+  }
+  return { rects: rects.map(r => ({ x0: +r.x0.toFixed(3), y0: +r.y0.toFixed(3), x1: +r.x1.toFixed(3), y1: +r.y1.toFixed(3) })) };
+}
+/* Störstellen der Fläche – einmal je Foto/Geometrie suchen; vom Nutzer entfernte bleiben entfernt */
+async function roofObs(f, g) {
+  const k = obsKey(f);
+  if (f.obsKey === k && Array.isArray(f.obs)) return { rects: f.obs, cached: true };
+  const r = await roofObsDetect(f, g); if (!r) return { rects: [] };
+  f.obs = r.rects; f.obsKey = k; return r;
+}
+const obsHit = (f, b) => (f.obs || []).some(o => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
+
+/* „Füllen“: wie bisher Reihen mittig, aber ohne Module auf Störstellen */
+const _roofFillObs = roofFill;
+roofFill = function (f, g) {
+  const before = f.mods.length, n = _roofFillObs(f, g);
+  if (!(f.obs || []).length) return n;
+  const keep = f.mods.slice(0, before), add = f.mods.slice(before).filter(m => !obsHit(f, modBox(f, m)));
+  f.mods = keep.concat(add); return add.length;
+};
+
+/* „Maximal“: so viele Module wie möglich – Reihen hochkant und/oder quer frei kombiniert (kein Raster/Magnet),
+   in jeder Reihe die freien Stücke zwischen Störstellen einzeln dicht belegt. Rechnet in 1-cm-Schritten. */
+function roofMaxPlan(f, g) {
+  const ins = g.inset, yTop = Math.max(ins[1][1], ins[2][1]), yBot = Math.min(ins[0][1], ins[3][1]), GAP = ROOF_GAP, dy = 0.01;
+  const O = { p: modWH(f, 'p'), l: modWH(f, 'l') }, obs = f.obs || [];
+  const row = (y, o) => {
+    const [w, h] = O[o]; if (y + h > yBot + 1e-6) return null;
+    const a = xRange(ins, y + 1e-4), b = xRange(ins, y + h - 1e-4); if (!a || !b) return { n: 0, mods: [] };
+    let iv = [[Math.max(a[0], b[0]), Math.min(a[1], b[1])]];
+    for (const ob of obs) if (ob.y0 < y + h && ob.y1 > y) iv = iv.flatMap(([s, e]) => [[s, Math.min(e, ob.x0 - GAP)], [Math.max(s, ob.x1 + GAP), e]]).filter(([s, e]) => e - s >= w);
+    const mods = [];
+    for (const [s, e] of iv) { const k = Math.floor((e - s + GAP) / (w + GAP)); if (k < 1) continue; const st = s + (e - s - (k * w + (k - 1) * GAP)) / 2; for (let c = 0; c < k; c++) mods.push({ x: +(st + c * (w + GAP)).toFixed(4), y: +y.toFixed(4), o }); }
+    return { n: mods.length, mods };
+  };
+  const N = Math.max(0, Math.floor((yBot - yTop) / dy)) + 1, best = new Float64Array(N + 1), pick = new Array(N + 1).fill(null);
+  /* von unten nach oben: bester Wert ab Höhe y (eine Reihe legen oder 1 cm weiter) */
+  for (let s = N - 1; s >= 0; s--) {
+    const y = yTop + s * dy; best[s] = best[s + 1] - 1e-6; pick[s] = null;   // Lücke kostet minimal → Reihen bleiben dicht
+    for (const o of ['p', 'l']) {
+      const r = row(y, o); if (!r || !r.n) continue;
+      const nxt = Math.min(N, s + Math.ceil((O[o][1] + GAP) / dy - 1e-9)), v = r.n + best[nxt] + (o === f.orient ? 1e-4 : 0);
+      if (v > best[s] + 1e-9) { best[s] = v; pick[s] = [o, nxt, r.mods]; }
+    }
+  }
+  const out = []; for (let s = 0; s < N;) { const p = pick[s]; if (!p) { s++; continue; } out.push(...p[2]); s = p[1]; }
+  return out;
+}
+
+/* Zeichnen: Störstellen rot schraffiert im Belegungsplan */
+const _roofDrawObs = roofDraw;
+roofDraw = async function () {
+  const r = await _roofDrawObs.apply(this, arguments);
+  try {
+    const cv = $('#roof-cv'); if (!cv || !RS) return r;
+    const f = roofF(), g = faceGeom(f), V = RS.view;
+    if (RS.step === 'mod' && g && !g.bad && V && V.kind !== 'img' && (f.obs || []).length && f.obsKey === obsKey(f)) {
+      const x = cv.getContext('2d'), M = (a, b) => roofP2S(V, g, a, b);
+      for (const o of f.obs) {
+        const q = [[o.x0, o.y0], [o.x1, o.y0], [o.x1, o.y1], [o.x0, o.y1]].map(p => M(...p));
+        x.save(); x.beginPath(); q.forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath();
+        x.fillStyle = 'rgba(229,72,77,.22)'; x.fill(); x.clip();
+        const xs = q.map(p => p[0]), ys = q.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+        x.strokeStyle = 'rgba(229,72,77,.7)'; x.lineWidth = 1.2; x.beginPath(); for (let t = x0 - (y1 - y0); t < x1; t += 7) { x.moveTo(t, y1); x.lineTo(t + (y1 - y0), y0); } x.stroke(); x.restore();
+        x.save(); x.strokeStyle = 'rgba(229,72,77,.95)'; x.lineWidth = 1.5; x.setLineDash([4, 3]); x.beginPath(); q.forEach((p, i) => (i ? x.lineTo(...p) : x.moveTo(...p))); x.closePath(); x.stroke(); x.restore();
+      }
+    }
+    /* Feinjustier-Rad mittig auf der Dachfläche – weg von den Ecken, die man gerade setzt */
+    const pad = $('#roof-pad');
+    if (pad && !pad.classList.contains('hidden') && V && V.kind === 'img' && RS.act && f.corners) {
+      const S = ([u, v]) => [V.ox + u * f.iw * V.k, V.oy + v * f.ih * V.k], cs = f.corners.map(S);
+      const cx = cs.reduce((s, p) => s + p[0], 0) / 4, cy = cs.reduce((s, p) => s + p[1], 0) / 4;
+      const pts = cs.concat(f.ref && RS.step === 'ref' ? f.ref.map(S) : []), cw = cv.clientWidth, ch = cv.clientHeight, pw = 96, ph = 118, R = 64;
+      /* Platz suchen: so nah wie möglich an der Dachmitte, aber kein Eck- oder Referenzpunkt unter dem Rad */
+      let best = null;
+      for (let dy = -240; dy <= 240; dy += 12) for (let dx = -300; dx <= 300; dx += 12) {
+        const x0 = cx + dx, y0 = cy + dy; if (x0 - pw / 2 < 8 || x0 + pw / 2 > cw - 8 || y0 - pw / 2 < 8 || y0 - pw / 2 + ph > ch - 8) continue;
+        const free = Math.min(...pts.map(q => Math.hypot(q[0] - x0, q[1] - y0))), cost = Math.hypot(dx, dy) + (free < R ? 10000 - free * 50 : 0);
+        if (!best || cost < best[2]) best = [x0, y0, cost];
+      }
+      const L = best ? best[0] - pw / 2 : Math.max(8, Math.min(cw - pw - 8, cx - pw / 2)), T = best ? best[1] - pw / 2 : Math.max(8, Math.min(ch - ph - 8, cy - pw / 2));
+      Object.assign(pad.style, { left: L + 'px', top: T + 'px', right: '', bottom: '' });
+    }
+  } catch (e) {}
+  return r;
+};
+
+/* Knöpfe: Füllen (mit Störstellen) und Maximal */
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('#roof-ed [data-r="fill"],#roof-ed [data-r="maxfill"]'); if (!a || !RS) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const f = roofF(), g = faceGeom(f); if (!g || g.bad) return;
+  const busy = a.innerHTML; a.disabled = true;
+  let o = { rects: [] }; try { o = await roofObs(f, g); } catch (err) { o = { rects: [] }; }
+  a.disabled = false; a.innerHTML = busy;
+  const so = o.unsure ? ' Störstellen waren nicht sicher erkennbar – bitte selbst prüfen.' : (f.obs || []).length ? ` ${f.obs.length} Störstelle${f.obs.length > 1 ? 'n' : ''} ausgespart (rot).` : '';
+  if (a.dataset.r === 'fill') {
+    roofHist(); const n = roofFill(f, g); roofSave(); roofSoft();
+    return toast((n ? `${n} Module ergänzt.` : 'Kein freier Platz mehr für weitere Module.') + so, 'ok', 4500);
+  }
+  const plan = roofMaxPlan(f, g), had = f.mods.length;
+  if (!plan.length) return toast('Hier passt kein Modul hin – Randabstände und Störstellen prüfen.', 'warn');
+  if (had && plan.length < had && !(await confirmDlg('Weniger als jetzt?', `Die freie Maximal-Belegung ergibt ${plan.length} Module – jetzt liegen ${had}. Trotzdem ersetzen?`, 'Ersetzen', false))) return;
+  roofHist(); f.mods = plan; RS.sel = new Set(); try { roofCleanStrs(roofP()); } catch (err) {} roofSave(); roofSoft();
+  const q = plan.filter(m => m.o === 'l').length, h = plan.length - q;
+  toast(`Maximal: ${plan.length} Module${had ? ` (vorher ${had})` : ''}${q && h ? ` – ${h} hochkant, ${q} quer` : ''}.${so}`, 'ok', 5000);
+}, true);
+
+/* Störstelle antippen (Werkzeug „Auswählen“, kein Modul darunter) = entfernen */
+document.addEventListener('pointerdown', async e => {
+  if (!RS || RS.step !== 'mod' || RS.mode !== 'select' || !e.target || e.target.id !== 'roof-cv') return;
+  const f = roofF(), g = faceGeom(f), V = RS.view; if (!g || !V || !(f.obs || []).length) return;
+  const r = e.target.getBoundingClientRect(), [X, Y] = roofS2P(V, g, e.clientX - r.left, e.clientY - r.top);
+  if (f.mods.some(m => { const b = modBox(f, m); return X >= b.x0 && X <= b.x1 && Y >= b.y0 && Y <= b.y1; })) return;
+  const i = f.obs.findIndex(o => X >= o.x0 && X <= o.x1 && Y >= o.y0 && Y <= o.y1); if (i < 0) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  if (!(await confirmDlg('Störstelle entfernen?', 'Die rote Fläche wird beim nächsten „Füllen“ bzw. „Maximal“ wieder belegt.', 'Entfernen', false))) return;
+  f.obs.splice(i, 1); roofSave(); roofDraw();
+}, true);
 /* Startanimation: Haus → Photovoltaik → Speicher → Wärmepumpe → E-Auto → Zoom → Logo → Zoom → App */
 const SPLASH = { ready: false, done: false, skip: false };
 const splashCfg = () => Object.assign({ on: true, logo: 'company', file: '' }, S.design.splash || {});
@@ -8107,9 +8307,9 @@ const TUT_STEPS = [
   ['upload', 'Angebot hochladen', 'Ziehen Sie das Angebot als PDF hinein oder machen Sie ein Foto davon. Die App liest Kunde, Preise, Anlagendaten, Garantien und Produkte automatisch aus.', ['Auf die gestrichelte Fläche tippen und das Angebot wählen.', 'Erkannte Werte kurz prüfen – sie sind mit „aus Angebot“ markiert.', 'Erkannte Produkte aus Ihrer Datenbank werden automatisch übernommen.']],
   ['data', 'Daten prüfen und ergänzen', 'Oben sehen Sie, wo Sie gerade sind: Angebot → Kunde → Daten → Ergebnis. Fehlt etwas, tragen Sie es einfach ein. Kleine Schilder zeigen, woher ein Wert stammt.', ['Grün „aus Angebot“, blau „Schnellauslegung“ oder „Modulplan“.', 'PLZ eintippen – der Ort wird automatisch ergänzt.', 'Rote Warnung = Werte passen nicht zusammen. Bitte auswählen, welcher Wert stimmt.', 'Mit „Weiter“ zum nächsten Schritt.']],
   ['roof', 'Modulplan – Dach planen', 'Mit dem Modulplan legen Sie die Module direkt auf ein Foto des Dachs – am iPad, PC oder zur Not nur mit dem Handy. So sieht der Kunde, wie seine Anlage aussieht, und Modulzahl und kWp kommen direkt in die Berechnung.', ['Im Kunden im Bereich Photovoltaik „Modulplan erstellen“ antippen (oder in der Kundenübersicht „Modulbelegung“).', 'Neuer Kunde? Zuerst Name eingeben – dann geht es los.', 'Vier Schritte: 1 Foto · 2 Fläche · 3 Referenz · 4 Belegen.']],
-  ['roofphoto', 'Modulplan: Foto und Dachfläche', 'Fotografieren Sie die Dachfläche möglichst frontal und ohne 0,5×-Weitwinkel. Dann ziehen Sie die vier Punkte genau auf die Ecken der Fläche.', ['„Foto aufnehmen“ öffnet direkt die Kamera – oder „Aus der Mediathek wählen“.', 'Punkte 1–4 mit dem Finger auf die Ecken ziehen: 1 unten links an der Rinne, 2 oben links am First, 3 oben rechts, 4 unten rechts.', 'Zum genauen Treffen: Lupe beim Ziehen, mit zwei Fingern zoomen, das runde Rad „fein“ schiebt den Punkt millimetergenau.', 'Auf dem Handy springt das Rad immer auf die andere Seite – es verdeckt den Punkt nie.']],
+  ['roofphoto', 'Modulplan: Foto und Dachfläche', 'Fotografieren Sie die Dachfläche möglichst frontal und ohne 0,5×-Weitwinkel. Dann ziehen Sie die vier Punkte genau auf die Ecken der Fläche.', ['„Foto aufnehmen“ öffnet direkt die Kamera – oder „Aus der Mediathek wählen“.', 'Punkte 1–4 mit dem Finger auf die Ecken ziehen: 1 unten links an der Rinne, 2 oben links am First, 3 oben rechts, 4 unten rechts.', 'Zum genauen Treffen: Lupe beim Ziehen, mit zwei Fingern zoomen, das runde Rad „fein“ schiebt den Punkt millimetergenau.', 'Das Rad erscheint mittig auf der Dachfläche – es verdeckt keine der Ecken.']],
   ['roofref', 'Modulplan: Referenz (Maßstab)', 'Damit die Module die richtige Größe haben, braucht die App einen Maßstab – aus den Dachpfannen oder einem gemessenen Maß.', ['Das orange gestrichelte Rechteck auf Pfannenkanten legen – möglichst groß.', '„Pfannen zählen“: Pfannentyp wählen und Anzahl eintragen – oder „Automatisch zählen und scannen“. Jedes gelbe Kästchen = genau eine Pfanne.', 'Oder „Maß eingeben“: Breite und Höhe in cm, wenn Sie gemessen haben.', 'Randabstände (First, Rinne, Seite) prüfen. Auf dem Handy öffnet das Zahnrad die Einstellungen.']],
-  ['roofmod', 'Modulplan: Module belegen', 'Jetzt kommen die Module aufs Dach. Unten liegen die Werkzeuge griffbereit.', ['„Füllen“ legt so viele Module wie möglich in die Fläche.', '„Setzen“: doppelt tippen setzt ein Modul. „Auswählen“: antippen, dann Drehen oder Löschen. Rot = Module überlappen.', '„Strings“: Module der Reihe nach antippen (auch über mehrere Dachflächen). „Optimierer“: Modul antippen.', 'Weitere Dachfläche? Zahnrad → „+ Fläche“. Zum Schluss „Übernehmen“ – das Bild kommt zum Kunden.']],
+  ['roofmod', 'Modulplan: Module belegen', 'Jetzt kommen die Module aufs Dach. Unten liegen die Werkzeuge griffbereit.', ['„Füllen“ legt Module in Reihen – Dachfenster, Schornstein, Gauben & Co. werden automatisch ausgespart (rot). „Maximal“ holt die größtmögliche Anzahl heraus, hochkant und quer kombiniert.', '„Setzen“: doppelt tippen setzt ein Modul. „Auswählen“: antippen, dann Drehen oder Löschen. Rot = Module überlappen.', '„Strings“: Module der Reihe nach antippen (auch über mehrere Dachflächen). „Optimierer“: Modul antippen.', 'Weitere Dachfläche? Zahnrad → „+ Fläche“. Zum Schluss „Übernehmen“ – das Bild kommt zum Kunden.']],
   ['team', 'Im Team: Zuständig, Logbuch, Angebot', 'Alle Kunden liegen auf dem lumbra.desk-Server und sind auf jedem Gerät gleich. Oben im Kunden geben Sie ihn an einen Kollegen weiter, öffnen das Logbuch oder erstellen ein Angebot.', ['„Zuständig“: Kollegen wählen – er sieht den Kunden sofort, Sie behalten ihn.', '„Logbuch“: Notizen, Anrufe, Termine – Kollegen markieren, sie bekommen die Nachricht per E-Mail.', '„Angebot“ (sobald der Admin es freigeschaltet hat): ins Handy sprechen („20 Module, 10er Speicher, Wallbox“) – Positionen und Standardleistungen kommen automatisch, Mengen anpassen, PDF.', 'Oben links das „l.“ führt jederzeit zurück zur lumbra.desk-Startseite.']],
   ['funding', 'Förderung', 'Bei der Wärmepumpe rechnet die App die BEG-Förderung automatisch aus. Wichtig sind Wohneinheiten, selbst bewohnte Wohneinheiten und das Einkommen.', ['Anzahl Wohneinheiten eintragen.', '„Davon selbst bewohnt“ wählen – Klima- und Einkommensbonus gibt es nur dafür.', 'Einkommen auswählen – der Fördersatz rechts aktualisiert sich sofort.']],
   ['result', 'Ergebnis zeigen', 'Jetzt sehen Sie Ersparnis, Amortisation und Förderung auf einen Blick. Ideal, um es dem Kunden direkt auf dem Tablet zu zeigen.', ['Oben „Übersicht“ oder „Dokument-Vorschau“ wählen.', 'Mit dem Monatsregler einen Tag im Winter oder Sommer zeigen.', '„Hochpushen“ zeigt das optimistische Szenario.']],

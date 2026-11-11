@@ -15,6 +15,11 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.40', date: '2026-11-11', items: [
+    ['roof', 'Störstellen automatisch aussparen', 'Beim Drücken von „Füllen“ erkennt der Modulplan Dachfenster, Schornstein, Gauben, Lüfter und Satellitenschüssel im Foto und lässt sie frei – rot schraffiert im Plan. Falsch erkannt? Im Werkzeug „Auswählen“ die rote Fläche antippen und entfernen.'],
+    ['modplan', 'Maximal belegen', 'Neuer Knopf „Maximal“: legt so viele Module wie möglich aufs Dach – hochkant und quer frei kombiniert, ohne Raster oder Magnet, Störstellen ausgespart. „Zurück“ macht es rückgängig.'],
+    ['roof', 'Feinjustier-Rad in der Dachmitte', 'Das Rad zum Feinjustieren erscheint jetzt mittig auf der Dachfläche – so verdeckt es keine der Ecken, die Sie gerade setzen.']
+  ] },
   { version: '2.39', date: '2026-11-11', items: [
     ['crm', 'Eigene Produktdatenbank fürs Angebot', 'Für Angebote gibt es in lumbra.desk jetzt einen eigenen Reiter „Produkte“. Er ist getrennt von dieser App – Ihre Produkte in der Wirtschaftlichkeit bleiben unverändert.'],
     ['house', 'Neue Funktionen nach Freigabe', 'Der Knopf „Angebot“ erscheint erst, wenn der Admin die Funktion in lumbra.desk unter System freigeschaltet hat.']

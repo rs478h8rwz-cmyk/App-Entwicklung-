@@ -212,8 +212,9 @@ function roofPanel(p, f, g) {
         <div class="mt-2 flex gap-2 items-start rounded-lg px-3 py-2 text-[13px] leading-snug" style="background:rgb(var(--p-rgb)/.10)"><span class="text-p shrink-0 mt-[1px]">${ic('info', 15)}</span><span>${ROOF_HOW[RS.mode] || ''}</span></div>
         ${RS.mode === 'select' ? `<label class="flex items-center gap-2 mt-2 text-[13px]"><input type="checkbox" data-r="multi" ${RS.multi ? 'checked' : ''}> Mehrfachauswahl (Antippen fügt hinzu)</label>` : ''}</div>
       ${RS.mode === 'string' || RS.mode === 'opt' ? '' : `<div class="grid grid-cols-2 gap-2">
-        <button class="btn-s !h-10 text-[13px]" data-r="fill">${ic('grid', 15)}Fläche füllen</button><button class="btn-s !h-10 text-[13px]" data-r="all">Alle auswählen</button>
-        <button class="btn-s !h-10 text-[13px]" data-r="rotate" ${RS.sel.size ? '' : 'disabled'}>${ic('refresh', 15)}Drehen</button><button class="btn-s !h-10 text-[13px]" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 15)}Löschen${RS.sel.size ? ` (${RS.sel.size})` : ''}</button>
+        <button class="btn-s !h-10 text-[13px]" data-r="fill">${ic('grid', 15)}Fläche füllen</button><button class="btn-s !h-10 text-[13px]" data-r="maxfill" title="So viele Module wie möglich – hochkant und quer kombiniert, Störstellen ausgespart">${ic('rocket', 15)}Maximal belegen</button>
+        <button class="btn-s !h-10 text-[13px]" data-r="all">Alle auswählen</button><button class="btn-s !h-10 text-[13px]" data-r="rotate" ${RS.sel.size ? '' : 'disabled'}>${ic('refresh', 15)}Drehen</button>
+        <button class="btn-s !h-10 text-[13px] col-span-2" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 15)}Löschen${RS.sel.size ? ` (${RS.sel.size})` : ''}</button>
         <button class="btn-s !h-10 text-[13px]" data-r="copy" ${RS.sel.size ? '' : 'disabled'}>${ic('copy', 15)}Kopieren</button><button class="btn-s !h-10 text-[13px]" data-r="paste" ${RS.clip && RS.clip.length ? '' : 'disabled'}>${ic('plus', 15)}Einfügen${RS.clip && RS.clip.length ? ` (${RS.clip.length})` : ''}</button>
         <button class="btn-g !h-10 text-[13px]" data-r="undo" ${RS.hist.length ? '' : 'disabled'}>${ic('arrowL', 15)}Rückgängig</button><button class="btn-g !h-10 text-[13px]" data-r="none" ${RS.sel.size ? '' : 'disabled'}>Auswahl aufheben</button>
       </div>
