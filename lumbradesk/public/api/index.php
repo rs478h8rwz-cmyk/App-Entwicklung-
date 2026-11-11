@@ -348,13 +348,25 @@ try {
       $p = valid_id($pid) ? project_row($pid) : null; if (!can_see_project($u, $p)) fail('Keine Berechtigung', 403);
       json_out(st_customer_hours($pid));
     }
+    case 'POST st-req': {
+      $u = require_user(); require_once LD_PRIV_DIR . '/stempel-lib.php';
+      json_out(['ok' => true, 'id' => st_request($u, body())]);
+    }
+    case 'POST st-req-decide': {
+      $me = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/stempel-lib.php'; $b = body();
+      st_decide($me, (int)($b['id'] ?? 0), !empty($b['ok'])); json_out(['ok' => true]);
+    }
+    case 'POST st-firm': {
+      $me = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/stempel-lib.php';
+      st_firm_save($me, body()); json_out(['ok' => true]);
+    }
     case 'POST st-ack': {
       $u = require_user(); require_once LD_PRIV_DIR . '/stempel-lib.php';
       st_ack($u, (array)(body()['ids'] ?? [])); json_out(['ok' => true]);
     }
     case 'GET st-staff': {
       require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/stempel-lib.php';
-      json_out(['staff' => st_staff()]);
+      json_out(['staff' => st_staff(), 'requests' => st_open_requests()]);
     }
     case 'POST st-ops': {
       $me = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/stempel-lib.php'; $b = body();

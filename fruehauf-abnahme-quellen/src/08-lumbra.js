@@ -70,7 +70,7 @@ function ldaPaint() { const el = $('#lda-status'); if (el) el.outerHTML = ldaSta
 const _setBodyLda = setBody;
 setBody = function () {
   const b = _setBodyLda(); if (!LDA.on || UI.tab !== 'daten') return b;
-  return ldaStatus() + b.replace('Alle Daten liegen nur auf diesem Gerät. Bitte regelmäßig eine Sicherung speichern – damit lassen sich Protokolle auch auf ein anderes Gerät übertragen.', 'Fertige Protokolle werden automatisch auf dem Firmen-Server gespeichert. Eine Sicherungsdatei brauchst du nur noch, um Protokolle aus der alten App zu übernehmen.');
+  return ldaStatus() + b;
 };
 
 /* Neues Protokoll: Kunde aus LumbraDesk wählen, Nummer vom Server */

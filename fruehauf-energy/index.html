@@ -812,21 +812,16 @@ async function exportBackup() {
   if (await shareOrDownload(blob, `Frühauf-Energy-Sicherung_${isoToday()}.json`)) { PERSONAL.lastBackup = Date.now(); savePersonal(); toast('Sicherung erstellt.'); render(); }
 }
 async function importBackup(file) {
+  /* Umzug aus der alten Einzel-App: Kunden und Dateien ergänzen – nichts wird ersetzt oder gelöscht */
   let d; try { d = JSON.parse(await file.text()); } catch (e) { return toast('Die Datei ist keine gültige Sicherung.', 'err'); }
   if (!d || d.app !== 'fruehauf-energy') return toast('Die Datei ist keine Sicherung dieser App.', 'err');
-  if (!(await confirmDlg('Sicherung einspielen?', UI.admin ? 'Alle aktuellen Daten werden durch die Sicherung ersetzt.' : 'Kunden, Berechnungen und Produkte werden durch die Sicherung ersetzt. Die Firmen-Einstellungen bleiben unverändert (dafür ist das Admin-Passwort nötig).', 'Einspielen', false))) return;
-  const keepS = UI.admin ? null : clone(S);
-  await Promise.all(['kv', 'projects', 'files'].map(s => DB.clear(s)));
-  for (const k in FILES) { URL.revokeObjectURL(FILES[k].url); delete FILES[k]; }
-  for (const f of d.files || []) await DB.put('files', { id: f.id, name: f.name, type: f.type, blob: await dataURLToBlob(f.data) });
-  S = keepS || deepMerge(clone(DEFAULT_SETTINGS), d.settings || {});
-  PRODUCTS = d.products || [];
-  PROJECTS = (d.projects || []).map(p => deepMerge(newProject(p.type || 'wp'), p)); ARCHIVED = [];
-  await saveSettingsNow(); await saveProductsNow();
-  for (const p of PROJECTS) await DB.put('projects', clone(p));
-  splitArchive();
-  await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file]);
-  applyTheme(); toast('Sicherung eingespielt.'); go('kunden');
+  const have = new Set(PROJECTS.concat(ARCHIVED).map(p => p.id)), add = (d.projects || []).filter(p => p && p.id && !have.has(p.id));
+  if (!add.length) return toast('Alle Kunden aus der Datei sind schon vorhanden.', 'info');
+  if (!(await confirmDlg('Kunden übernehmen?', `${add.length} Kunde${add.length === 1 ? '' : 'n'} aus der alten App werden ergänzt und auf den Server geladen. Vorhandene Kunden bleiben unverändert.`, 'Übernehmen', false))) return;
+  const used = new Set(add.flatMap(p => (p.docs || []).map(x => x.fileId).concat([p.sign && p.sign.cust && p.sign.cust.file].filter(Boolean))));
+  for (const f of d.files || []) { if (FILES[f.id] || (used.size && !used.has(f.id) && !String(JSON.stringify(add)).includes(f.id))) continue; await DB.put('files', { id: f.id, name: f.name, type: f.type, blob: await dataURLToBlob(f.data) }); }
+  for (const p of add) { const x = deepMerge(newProject(p.type || 'wp'), p); PROJECTS.push(x); await DB.put('projects', clone(x)); }
+  splitArchive(); toast(`${add.length} Kunde${add.length === 1 ? '' : 'n'} übernommen.`); go('kunden');
 }
 async function wipeAll() {
   if (!UI.admin) return toast('Nur im Admin-Bereich möglich.', 'err');
@@ -2318,7 +2313,7 @@ function viewKunden() {
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}
     <div class="flex flex-col 2xl:flex-row 2xl:items-end gap-4 justify-between">
-      <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
+      <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen – auf dem LumbraDesk-Server, auf jedem Gerät gleich.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]" data-countup>${v}</div></div>`).join('')}</div>
       ${salesStats()}
     </div>
@@ -2430,7 +2425,7 @@ function step1(p) {
     ? `<div class="grid sm:grid-cols-2 gap-4">${dropZone('offerWP', 'Angebot Wärmepumpe', 'PDF, JPG oder PNG hierher ziehen oder tippen')}${dropZone('offerPV', 'Angebot Photovoltaik', 'PDF, JPG oder PNG hierher ziehen oder tippen')}</div>`
     : dropZone('offer', 'Angebot', 'PDF, JPG oder PNG hierher ziehen oder tippen');
   const offerDocs = p.docs.filter(d => d.role !== 'tech'), techDocs = p.docs.filter(d => d.role === 'tech');
-  return `<div class="card p-5 sm:p-6">${cardHead('upload', 'Angebot und Unterlagen', `Wir lesen Kunde, Preise und Anlagendaten automatisch aus. ${typeof LD !== 'undefined' && LD.on ? 'Ihre Dateien liegen geschützt auf dem LumbraDesk-Server.' : 'Ihre Dateien bleiben auf diesem Gerät.'}`)}
+  return `<div class="card p-5 sm:p-6">${cardHead('upload', 'Angebot und Unterlagen', `Wir lesen Kunde, Preise und Anlagendaten automatisch aus. Ihre Dateien liegen geschützt auf dem LumbraDesk-Server.`)}
     ${zones}${offerDocs.length ? `<div class="space-y-3 mt-4">${offerDocs.map(d => docCard(p, d)).join('')}</div>` : ''}
     ${typeof roofSnapCard === 'function' ? roofSnapCard(p) : ''}
     ${typeof quickPvOffer === 'function' ? quickPvOffer(p) : ''}
@@ -3585,7 +3580,7 @@ function productModal(id) {
 /* =========================================================
    Einstellungen
    ========================================================= */
-const STABS_ME = [['ansicht', 'Ansicht & Tutorial', 'eye'], ['profil', 'Mein Profil', 'users'], ['daten', 'Datensicherung', 'db']];
+const STABS_ME = [['ansicht', 'Ansicht & Tutorial', 'eye'], ['profil', 'Mein Profil', 'users'], ['daten', 'Daten & Abgleich', 'db']];
 const STABS = [...STABS_ME, ['firma', 'Unternehmen', 'building'], ['berater', 'Berater', 'users'], ['design', 'Design & Deckblatt', 'palette'], ['rabatt', 'Rabatt & Unterschrift', 'tag'], ['foerderung', 'Förderung', 'gift'], ['preise', 'Preisentwicklung', 'chart'], ['dokument', 'Dokument & Verkauf', 'file'], ['ablauf', 'Roadmap', 'arrowR'], ['vergleiche', 'Vergleiche', 'scale'], ['berechnung', 'Berechnung', 'calc'], ['optimistisch', 'Optimistisches Szenario', 'rocket'], ['admin', 'Admin & Konfiguration', 'gear']];
 function viewSettings() {
   const t = UI.settingsTab, locked = ADMIN_TABS.includes(t) && !UI.admin;
@@ -3761,14 +3756,7 @@ const SET = {
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${field('Bezeichnung', o + 'label', { cls: 'sm:col-span-2 lg:col-span-3' })}${field('Öl/Gas ohne CO₂', o + 'fuelInc', { t: 'n', unit: '% p. a.' })}${field('Strom', o + 'elecInc', { t: 'n', unit: '% p. a.' })}${field('Wartung', o + 'maintInc', { t: 'n', unit: '% p. a.' })}${field('Kalkulationszins', o + 'rate', { t: 'n', unit: '%' })}${field('Gasnetzentgelt-Zuschlag', o + 'gasNet', { t: 'n', unit: 'ct/kWh' })}${field('Zieljahr', o + 'gasNetYear', { t: 'y' })}</div>
       <span class="lbl mt-5">CO₂-Pfad (€/t)</span><div class="grid grid-cols-3 sm:grid-cols-6 gap-2">${co2.map(y => `<label class="block"><span class="text-[11.5px] font-bold text-ink3">${y}</span>${inp(`s:optimistic.co2Path.${y}`, { t: 'n', icls: '!h-10 !px-3' })}</label>`).join('')}</div>`);
   },
-  daten: () => {
-    const last = PERSONAL.lastBackup ? new Date(PERSONAL.lastBackup).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'noch nie';
-    return sCard('db', 'Datensicherung', `Kunden und Berechnungen liegen nur auf diesem Gerät. Letzte Sicherung: ${last}`, `
-      <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="backup">${ic('download', 17)}Sicherung erstellen</button><label class="btn-s cursor-pointer">${ic('upload', 17)}Sicherung einspielen<input type="file" accept="application/json,.json" class="hidden" data-import></label></div>
-      <p class="hint">Auf dem iPhone öffnet sich der Teilen-Dialog: „In Dateien sichern“ → iCloud Drive. Die Sicherung enthält Kunden, Berechnungen, Produkte und hochgeladene Angebote.${UI.admin ? ' Im Admin-Modus zusätzlich alle Firmen-Einstellungen.' : ''}</p>`)
-      + sCard('download', 'Firmen-Konfiguration', 'Design, Förderung, Preise, Texte und Produkte Ihrer Firma – vom Admin bereitgestellt.', `<label class="btn-s cursor-pointer">${ic('upload', 17)}Firmen-Konfiguration einspielen<input type="file" accept="application/json,.json" class="hidden" data-import-config></label><p class="hint">Ihre Kunden, Ihre Ansicht und Ihr Profil bleiben dabei erhalten.</p>`)
-      + (UI.admin ? sCard('trash', 'Alles löschen', 'Nur im Admin-Modus.', `<button class="btn bg-tred text-ember2 hover:brightness-125" data-a="wipe">${ic('trash', 17)}Alles löschen</button>`) : '');
-  },
+  daten: () => '',
   ansicht: () => sCard('eye', 'Ansicht', 'Nur für Sie auf diesem Gerät – das Kundendokument ändert sich nicht.', `${seg('me:mode', [['light', 'Hell'], ['dark', 'Dunkel'], ['system', 'Wie System']], { cls: 'flex-wrap' })}<div class="hint">Schnell wechseln: Schalter in der Kopfleiste bzw. unten in der Seitenleiste.</div>`)
     + sCard('sparkle', 'Tutorial', 'Die Einführung in die App noch einmal ansehen.', `<button class="btn-s" data-a="tut" data-i="0">${ic('arrowR', 16)}Tutorial starten</button>`),
   profil: () => {
@@ -3777,10 +3765,8 @@ const SET = {
       <div class="flex flex-col sm:flex-row gap-5"><div class="flex sm:flex-col items-center gap-3 shrink-0">${img ? `<img src="${img}" class="w-20 h-20 rounded-full object-cover border border-line">` : `<div class="w-20 h-20 rounded-full bg-raised grid place-items-center text-ink3">${ic('users', 26)}</div>`}<label class="btn-g cursor-pointer">${ic('upload', 14)}Foto<input type="file" accept="image/*" class="hidden" data-imgup="me"></label></div>
       <div class="grid sm:grid-cols-2 gap-4 flex-1">${field('Name', 'me:profile.name')}${field('Funktion', 'me:profile.role', { ph: 'Energieberater' })}${field('Telefon', 'me:profile.phone', { t: 'tel' })}${field('E-Mail', 'me:profile.email', { t: 'email' })}</div></div>`);
   },
-  admin: () => sCard('gear', 'Admin & Konfiguration', 'Firmen-Einstellungen an die Vertriebler verteilen und den Admin-Bereich schützen.', `
-      <div class="font-medium text-[15px]">Firmen-Konfiguration exportieren</div><p class="text-[13px] text-ink3 mt-1">Die Datei schicken Sie per Mail oder AirDrop an Ihre Vertriebler. Diese spielen sie unter Einstellungen → Datensicherung ein. Kunden der Vertriebler bleiben unberührt.</p>
-      <button class="btn-p mt-3" data-a="export-config">${ic('download', 17)}Konfiguration exportieren</button>
-      <div class="mt-6 pt-5 border-t border-line"><div class="font-medium text-[15px]">Admin-Passwort ändern</div><p class="text-[13px] text-ink3 mt-1">Gilt auf allen Geräten, sobald dort die neue Konfiguration eingespielt ist.</p>
+  admin: () => sCard('gear', 'Admin', 'Den Admin-Bereich schützen. Firmen-Einstellungen verteilst du unter „Daten & Abgleich“ → „Für alle übernehmen“.', `
+      <div><div class="font-medium text-[15px]">Admin-Passwort ändern</div><p class="text-[13px] text-ink3 mt-1">Gilt auf allen Geräten, sobald die Firmen-Einstellungen unter „Daten &amp; Abgleich“ für alle übernommen sind.</p>
       <div class="grid sm:grid-cols-2 gap-3 mt-3 max-w-xl"><input type="password" class="inp" id="pw-new1" placeholder="Neues Passwort" autocomplete="new-password"><input type="password" class="inp" id="pw-new2" placeholder="Wiederholen" autocomplete="new-password"></div><button class="btn-s mt-3" data-a="admin-pw">${ic('check', 16)}Passwort speichern</button></div>
       <div class="mt-6 pt-5 border-t border-line flex flex-wrap items-center gap-3"><div class="flex-1 min-w-[220px]"><div class="font-medium text-[15px]">Auf diesem Gerät entsperrt lassen</div><p class="text-[13px] text-ink3">Nur auf Ihrem eigenen Gerät einschalten.</p></div>${tgl('me:keepAdmin', PERSONAL.keepAdmin)}</div>
       <button class="btn-s mt-5" data-a="admin-lock">${ic('x', 16)}Admin-Bereich jetzt sperren</button>`)
@@ -3823,7 +3809,7 @@ async function setAdminPassword(pw) { const salt = [...crypto.getRandomValues(ne
 function adminLockCard(tab) {
   return `<div class="card p-6 sm:p-8 max-w-lg" data-admin-card><div class="icon-box mb-4">${ic('gear', 18)}</div><h3 class="sec-t">Admin-Bereich</h3><p class="text-ink3 text-[14px] mt-1">Diese Einstellungen gelten für alle Berater und sind geschützt. Bitte das Admin-Passwort eingeben.</p>
     <form data-admin-form class="mt-5 space-y-3"><input type="password" class="inp !h-14 !text-[17px]" id="admin-pw" placeholder="Admin-Passwort" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><label class="flex items-center gap-2 text-[13px] text-ink2"><input type="checkbox" id="admin-keep">Auf diesem Gerät entsperrt lassen</label><button class="btn-p w-full" type="submit">Entsperren</button></form>
-    <p class="hint">Vertriebler ohne Passwort können Ansicht, eigenes Profil, Produkte und Datensicherung ändern.</p></div>`;
+    <p class="hint">Vertriebler ohne Passwort können Ansicht, eigenes Profil und Produkte ändern.</p></div>`;
 }
 async function tryUnlock() {
   const pw = ($('#admin-pw') || {}).value || '';
@@ -3868,7 +3854,9 @@ async function importConfig(file) {
 /* =========================================================
    Erinnerungen: Datensicherung und Nachfassen
    ========================================================= */
-function backupBanner() {
+function backupBanner() { return '';   // Kunden liegen auf dem Server, nachts automatisch gesichert
+}
+function backupBannerAlt() {
   if (!PROJECTS.length) return '';
   const days = PERSONAL.lastBackup ? Math.floor((Date.now() - PERSONAL.lastBackup) / 864e5) : null;
   if (days !== null && days < 7) return '';
@@ -3969,7 +3957,7 @@ async function fetchPvgis(p) {
     }
     p.pv.pvgis = { E: Math.round(E), date: isoToday(), sig: pvSig(p) }; saveProject(p);
     toast(`PVGIS: ${num(E)} kWh pro Jahr übernommen.`);
-  } catch (e) { console.warn(e); toast('PVGIS ist gerade nicht erreichbar (nur online und auf der Netlify-Seite möglich). Es wird mit der Ausrichtungs-Tabelle gerechnet.', 'warn', 5500); }
+  } catch (e) { console.warn(e); toast('PVGIS ist gerade nicht erreichbar (nur mit Internet möglich). Es wird mit der Ausrichtungs-Tabelle gerechnet.', 'warn', 5500); }
   delete UI.busy.pvgis; render();
 }
 function roofsCard(p, R) {
@@ -4078,14 +4066,14 @@ async function saveSignature(p, auto) {
    ========================================================= */
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
-  ['download', '1 · Als App installieren', 'Legen Sie die App auf den Home-Bildschirm – iPhone: Teilen → „Zum Home-Bildschirm“, Android: Menü ⋮ → „App installieren“. So startet sie schneller, läuft offline und Ihre Daten sind geschützt.'],
+  ['download', '1 · LumbraDesk aufs Handy', 'Öffnen Sie lumbradesk.de und legen Sie es auf den Home-Bildschirm – iPhone: Safari → Teilen → „Zum Home-Bildschirm“, Android: Chrome → Menü ⋮ → „App installieren“. Angemeldet bleiben Sie auch ohne Internet bis zu 14 Tage.'],
   ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
   ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät; die Unterschrift wird sofort gespeichert und die Haken gesetzt.'],
   ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite. Oben in der Kundenübersicht sehen Sie Ihre Abschlüsse und die Abschlussquote. Erledigte Kunden archivieren Sie – im Filter „Archiv“ lassen sie sich jederzeit wiederherstellen. Sagt der Kunde später zu, tippen Sie auf der Kundenkarte auf „Auftrag gewonnen?“ – Sie landen direkt bei der Unterschrift.'],
-  ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
+  ['db', '8 · Alles automatisch gesichert', 'Ihre Kunden liegen auf dem LumbraDesk-Server und sind auf jedem Gerät gleich – jede Nacht wird automatisch gesichert. Ohne Internet speichert das Gerät und reicht alles später nach. Kunden geben Sie oben im Kunden unter „Zuständig“ an Kollegen weiter.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
   ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel), Wetter, Jahreszeit und Feiertags-Schmuck (Weihnachten, Ostern, Halloween) der Startseite (Reiter „Startseite & Wetter“) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
 ];
@@ -4164,15 +4152,15 @@ const DATENSCHUTZ_DEFAULT = `## Verantwortlicher
 {firma}, {adresse}
 Telefon {telefon} · E-Mail {email}
 ## Worum es geht
-Diese Web-App ist ein Arbeitswerkzeug für unsere Energieberater. Sie berechnet die Wirtschaftlichkeit von Photovoltaikanlagen, Stromspeichern und Wärmepumpen und erstellt daraus Kundendokumente.
-## Speicherung auf Ihrem Gerät
-Alle Eingaben – auch Kundendaten, hochgeladene Angebote, Fotos und Unterschriften – werden ausschließlich lokal im Browser des verwendeten Geräts gespeichert (IndexedDB). Sie werden nicht an uns oder an Dritte übertragen. Eine Weitergabe erfolgt nur, wenn Sie selbst eine Datensicherung, Konfigurationsdatei oder ein PDF exportieren und versenden. Die Angebotserkennung (Texterkennung) läuft vollständig auf dem Gerät.
+Diese App (Teil von LumbraDesk) ist ein Arbeitswerkzeug für unsere Energieberater. Sie berechnet die Wirtschaftlichkeit von Photovoltaikanlagen, Stromspeichern und Wärmepumpen und erstellt daraus Kundendokumente.
+## Speicherung
+Eingaben – auch Kundendaten, hochgeladene Angebote, Fotos und Unterschriften – werden auf dem verwendeten Gerät und auf unserem eigenen Server (LumbraDesk) gespeichert, damit sie auf allen Geräten unseres Teams verfügbar und gesichert sind. Zugriff haben nur angemeldete Mitarbeiterinnen und Mitarbeiter im Rahmen ihrer Rolle. Die Übertragung ist verschlüsselt (HTTPS). Die Angebotserkennung (Texterkennung) läuft vollständig auf dem Gerät.
 ## Hosting und Server-Logfiles
-Die App wird bei Netlify, Inc. (512 2nd Street, Suite 200, San Francisco, CA 94107, USA) bereitgestellt. Beim Aufruf verarbeitet Netlify technisch notwendige Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene Datei und Browserkennung, um die App auszuliefern und vor Missbrauch zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren und stabilen Betrieb). Die Übermittlung in die USA stützt sich auf das EU-US Data Privacy Framework bzw. die Standardvertragsklauseln der EU-Kommission.
+App und Server werden bei der IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, in Deutschland betrieben (Auftragsverarbeitung nach Art. 28 DSGVO). Beim Aufruf werden technisch notwendige Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene Datei und Browserkennung verarbeitet, um die App auszuliefern und vor Missbrauch zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren und stabilen Betrieb).
 ## Solarertrag (PVGIS)
 Wenn Sie den Solarertrag für einen Standort berechnen lassen, werden ausschließlich die aus der Postleitzahl ermittelten Koordinaten sowie Dachneigung und -ausrichtung über unseren Server an PVGIS der Gemeinsamen Forschungsstelle der Europäischen Kommission (Joint Research Centre, Ispra, Italien) übermittelt. Namen oder Adressen werden dabei nicht übertragen.
-## Keine Cookies, kein Tracking
-Die App setzt keine Cookies, verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von fremden Servern nach. Schriften und Programmbibliotheken werden von unserem eigenen Server geladen.
+## Cookies und Tracking
+Die App setzt nur ein technisch notwendiges Anmelde-Cookie (Sitzung). Sie verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von fremden Servern nach. Schriften und Programmbibliotheken werden von unserem eigenen Server geladen.
 ## Kundendaten
 Personenbezogene Daten unserer Kundinnen und Kunden verarbeiten wir zur Erstellung von Angeboten und Berechnungen, also zur Durchführung vorvertraglicher Maßnahmen (Art. 6 Abs. 1 lit. b DSGVO). Wir löschen sie, sobald sie dafür nicht mehr benötigt werden und keine gesetzlichen Aufbewahrungspflichten bestehen.
 ## Ihre Rechte
@@ -4181,6 +4169,8 @@ Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Ve
 const LEGAL_DEFAULT = { withdrawOn: true, withdrawForm: true, withdrawal: WIDERRUF_DEFAULT, imprintExtra: IMPRESSUM_EXTRA_DEFAULT, privacy: DATENSCHUTZ_DEFAULT };
 DEFAULT_SETTINGS.legal = clone(LEGAL_DEFAULT);
 if (!S.legal) S.legal = clone(LEGAL_DEFAULT);
+/* Alter Standardtext (Netlify, nur auf dem Gerät) → neuer Standardtext */
+if (S.legal && String(S.legal.privacy || '').includes('Netlify, Inc.')) S.legal.privacy = DATENSCHUTZ_DEFAULT;
 const legalOf = k => { const v = (S.legal || {})[k]; return v === undefined ? LEGAL_DEFAULT[k] : v; };
 
 /* Platzhalter mit den Firmendaten füllen */
@@ -4267,7 +4257,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261110235712';
+const APP_VERSION = '20261111001044';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4295,6 +4285,7 @@ const A2HS_STEPS = {
   android: 'In <b>Chrome</b> oben rechts auf das Menü <b>⋮</b> tippen → <b>App installieren</b> bzw. <b>Zum Startbildschirm hinzufügen</b> → bestätigen. Danach die App immer über das neue Symbol öffnen.'
 };
 function a2hsBanner() {
+  return '';   // LumbraDesk: Daten liegen auf dem Server
   const pf = platform();
   if (isStandalone() || PERSONAL.a2hsOff || pf === 'desktop') return '';
   const why = pf === 'ios' ? 'Im Safari-Tab kann iOS Ihre Daten nach einigen Wochen ohne Nutzung löschen.' : 'Als installierte App startet sie schneller, läuft offline und Ihre Daten sind besser geschützt.';
@@ -4306,27 +4297,19 @@ const backupWhere = () => (platform() === 'android' ? 'Google Drive oder „Down
 function guideCard() {
   const pf = platform(), col = (title, items) => `<div class="rounded-[calc(var(--r)-4px)] border border-line p-4"><div class="font-medium text-[15px] mb-2">${title}</div><ol class="list-decimal pl-5 space-y-2 text-[14px] text-ink2 leading-relaxed">${items.map(i => `<li>${i}</li>`).join('')}</ol></div>`;
   const sec = (t, ios, and) => `<div class="mt-5"><div class="font-semibold text-[15px] mb-2">${t}</div><div class="grid lg:grid-cols-2 gap-3">${col(`iPhone / iPad${pf === 'ios' ? ' <span class="badge ml-1 text-[11px]">Ihr Gerät</span>' : ''}`, ios)}${col(`Android${pf === 'android' ? ' <span class="badge ml-1 text-[11px]">Ihr Gerät</span>' : ''}`, and)}</div></div>`;
-  return sCard('info', 'Anleitung für iPhone und Android', 'Einmal einrichten – dann sind Ihre Daten gut geschützt.',
-    sec('1 · App auf den Startbildschirm legen',
-      ['Die App-Adresse in <b>Safari</b> öffnen (nicht in Chrome oder einer anderen App).', 'Unten auf <b>Teilen</b> tippen (Quadrat mit Pfeil nach oben).', 'Nach unten scrollen → <b>Zum Home-Bildschirm</b> → <b>Hinzufügen</b>.', 'Die App ab jetzt <b>nur noch über das neue Symbol</b> öffnen – sonst sieht iOS sie als normale Webseite und kann die Daten nach einigen Wochen löschen.'],
-      ['Die App-Adresse in <b>Chrome</b> öffnen.', 'Oben rechts auf das Menü <b>⋮</b> tippen.', '<b>App installieren</b> oder <b>Zum Startbildschirm hinzufügen</b> wählen und bestätigen.', 'Die App ab jetzt über das neue Symbol öffnen.'])
-    + sec('2 · Daten sichern (mindestens einmal pro Woche)',
-      ['In der App: <b>Einstellungen → Datensicherung → Sicherung erstellen</b>.', 'Im Teilen-Dialog <b>In Dateien sichern</b> wählen.', 'Ordner <b>iCloud Drive</b> (z. B. „Frühauf Sicherungen“) auswählen → <b>Sichern</b>.', 'Die App erinnert Sie nach 7 Tagen ohne Sicherung.'],
-      ['In der App: <b>Einstellungen → Datensicherung → Sicherung erstellen</b>.', 'Im Teilen-Dialog <b>Drive</b> wählen (oder die Datei landet unter <b>Downloads</b>).', 'In Google Drive einen Ordner wie „Frühauf Sicherungen“ wählen → <b>Speichern</b>.', 'Die App erinnert Sie nach 7 Tagen ohne Sicherung.'])
-    + sec('3 · Sicherung zurückspielen (z. B. neues Handy)',
-      ['App wie unter 1 auf dem neuen Gerät einrichten.', '<b>Einstellungen → Datensicherung → Sicherung einspielen</b>.', 'In <b>Dateien → iCloud Drive</b> die neueste Sicherung antippen.', 'Fertig – Kunden, Berechnungen und Angebote sind wieder da.'],
-      ['App wie unter 1 auf dem neuen Gerät einrichten.', '<b>Einstellungen → Datensicherung → Sicherung einspielen</b>.', 'Die Datei in <b>Drive</b> oder <b>Downloads</b> auswählen.', 'Fertig – Kunden, Berechnungen und Angebote sind wieder da.'])
-    + sec('4 · Firmen-Einstellungen vom Admin übernehmen',
-      ['Die vom Admin geschickte <b>Konfigurationsdatei</b> (z. B. per Mail oder AirDrop) in <b>Dateien</b> speichern.', 'In der App: <b>Einstellungen → Datensicherung → Firmen-Konfiguration einspielen</b> und die Datei wählen.', 'Ihre eigenen Kunden bleiben dabei erhalten.'],
-      ['Die vom Admin geschickte <b>Konfigurationsdatei</b> (z. B. per Mail oder WhatsApp) unter <b>Downloads</b> speichern.', 'In der App: <b>Einstellungen → Datensicherung → Firmen-Konfiguration einspielen</b> und die Datei wählen.', 'Ihre eigenen Kunden bleiben dabei erhalten.'])
-    + sec('5 · App aktualisieren',
+  return sCard('info', 'Anleitung für iPhone und Android', 'Einmal einrichten – Ihre Daten liegen sicher auf dem LumbraDesk-Server.',
+    sec('1 · LumbraDesk auf den Startbildschirm legen',
+      ['<b>lumbradesk.de</b> in <b>Safari</b> öffnen (nicht in Chrome oder einer anderen App).', 'Unten auf <b>Teilen</b> tippen (Quadrat mit Pfeil nach oben).', 'Nach unten scrollen → <b>Zum Home-Bildschirm</b> → <b>Hinzufügen</b>.', 'Die App ab jetzt <b>nur noch über das neue Symbol</b> öffnen – sonst sieht iOS sie als normale Webseite und kann die Daten nach einigen Wochen löschen.'],
+      ['<b>lumbradesk.de</b> in <b>Chrome</b> öffnen.', 'Oben rechts auf das Menü <b>⋮</b> tippen.', '<b>App installieren</b> oder <b>Zum Startbildschirm hinzufügen</b> wählen und bestätigen.', 'Die App ab jetzt über das neue Symbol öffnen.'])
+    + sec('2 · Neues Handy',
+      ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'],
+      ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'])
+    + sec('3 · App aktualisieren',
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.'],
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.']));
 }
 const _setAnsicht14 = SET.ansicht;
 SET.ansicht = () => _setAnsicht14() + guideCard();
-const _setDaten14 = SET.daten;
-if (_setDaten14) SET.daten = () => _setDaten14().replace('Auf dem iPhone öffnet sich der Teilen-Dialog: „In Dateien sichern“ → iCloud Drive.', platform() === 'android' ? 'Auf Android öffnet sich der Teilen-Dialog: „Drive“ wählen – oder die Datei landet unter „Downloads“.' : 'Auf dem iPhone öffnet sich der Teilen-Dialog: „In Dateien sichern“ → iCloud Drive. Auf Android: „Drive“ oder „Downloads“.') + `<p class="hint">Schritt-für-Schritt-Anleitung für iPhone und Android: <a class="text-p underline" href="#/einstellungen/ansicht">Einstellungen → Ansicht &amp; Tutorial</a>.</p>`;
 
 /* ---------- 5) Erinnerung: Preise und Förderung prüfen ---------- */
 const REVIEW_DAYS = 180;
@@ -4685,6 +4668,10 @@ WN_IMG.crm = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect w
 const WN_BG = { crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.33', date: '2026-11-11', items: [
+    ['crm', 'Alles auf dem Server', 'Sicherungsdateien, Konfigurationsdateien und Erinnerungen ans Sichern sind weg: Kunden liegen auf dem LumbraDesk-Server, nachts wird automatisch gesichert. Firmen-Einstellungen verteilt der Admin unter „Daten & Abgleich“.'],
+    ['house', 'Datenschutz aktualisiert', 'Der Standard-Datenschutztext nennt jetzt den eigenen LumbraDesk-Server bei IONOS in Deutschland.']
+  ] },
   { version: '2.32', date: '2026-11-10', items: [
     ['crm', 'Verlauf & Wiedervorlagen', 'Oben im Kunden neben „Zuständig“: „Verlauf“ öffnet den Kunden in LumbraDesk – mit Notizen, Anrufen, Terminen, Wiedervorlagen und Vertriebs-Stufe (Anfrage bis Abgeschlossen).']
   ] },
@@ -5637,7 +5624,7 @@ async function ldpSync(opts = {}) {
     if (changed || removed || pushed) {
       const editing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
       if (!editing && !$('#roof-ed') && !$('#modal').innerHTML.trim()) render(); else LDP.renderLater = true;
-      if (removedTxt.length) toast(removedTxt.slice(0, 2).join(' · ') + (removedTxt.length > 2 ? ` · und ${removedTxt.length - 2} weitere` : '') + ' (Papierkorb unter Einstellungen → Datensicherung).', 'info', 7000);
+      if (removedTxt.length) toast(removedTxt.slice(0, 2).join(' · ') + (removedTxt.length > 2 ? ` · und ${removedTxt.length - 2} weitere` : '') + ' (Papierkorb unter Einstellungen → Daten & Abgleich).', 'info', 7000);
       else if (changed) toast(`Kunden abgeglichen · ${changed} aktualisiert.`);
       /* Fotos und Angebote der geänderten Kunden nachladen */
       (async () => { let got = 0; for (const id of need) { const p = ldpFind(id); if (p) got += await ldpFetchFiles(p); } if (got) { await loadFiles([...new Set(need.flatMap(id => [...ldpFileIds(ldpFind(id) || {})]))]); if (!$('#roof-ed') && !$('#modal').innerHTML.trim()) render(); } })();
@@ -7947,7 +7934,7 @@ const TUT_IMG = {
     ${[['Familie Becker', 'offen', '#FFF4DC', '#8A5A06'], ['Herr Schulte', 'gesendet', '#E2F0ED', c.p], ['Eheleute Körber', 'unterschrieben', c.p, '#fff']].map(([n, st, bg, fc], i) => tR(10, 100 + i * 26, 300, 22, '#fff', { r: 6 }) + tT(20, 114 + i * 26, n, { s: 6.6, w: 700 }) + tR(214, 104 + i * 26, 88, 14, c.bg, { r: 4 }) + tT(220, 113.5 + i * 26, 'Status:', { s: 5, c: c.i3 }) + tPill(240, 106 + i * 26, st, bg, fc)).join('')}${tTap(262, 137)}`); },
   products: () => { const c = TC(); return tApp(`${tT(12, 42, 'Produkte', { s: 10, w: 700 })}${tBtn(242, 31, 68, '+ Produkt')}${tTap(298, 39)}
     ${[['PV-Modul', 'Winaico 500 W', '#1D2A3A'], ['Speicher', 'EcoFlow 10 kWh', '#B8C2CC'], ['Wechselrichter', 'EcoFlow 10 kW', '#8896A4'], ['Wärmepumpe', 'Wolf CHA 7 kW', '#E9EDF1']].map(([k, n, col], i) => tR(10 + i * 76, 52, 70, 118, '#fff', { r: 7 }) + tR(16 + i * 76, 58, 58, 58, c.bg, { r: 5 }) + (i === 3 ? tR(24 + i * 76, 70, 42, 34, col, { r: 3, st: '#C5CDD5' }) + `<circle cx="${38 + i * 76}" cy="87" r="10" fill="none" stroke="#9AA7B3" stroke-width="1.2"/>` : tR(31 + i * 76, 64, 28, 46, col, { r: 2 })) + tT(16 + i * 76, 128, k, { s: 5.2, c: c.p, w: 600 }) + tT(16 + i * 76, 138, n, { s: 5.8, w: 700 }) + tT(16 + i * 76, 150, 'Bild, Daten, Garantie', { s: 4.8, c: c.i3 })).join('')}`, 'produkte'); },
-  settings: () => { const c = TC(); return tApp(`${tR(10, 32, 92, 140, '#fff', { r: 7 })}${['Ansicht & Tutorial', 'Mein Profil', 'Datensicherung', 'Unternehmen', 'Design & Deckblatt', 'Förderung', 'Dokument & Verkauf'].map((l, i) => (i === 4 ? tR(14, 38 + i * 18, 84, 15, c.bg, { r: 5 }) : '') + tT(20, 48 + i * 18, l, { s: 5.8, w: i === 4 ? 700 : 500, c: i === 4 ? c.ink : c.i2 })).join('')}
+  settings: () => { const c = TC(); return tApp(`${tR(10, 32, 92, 140, '#fff', { r: 7 })}${['Ansicht & Tutorial', 'Mein Profil', 'Daten & Abgleich', 'Unternehmen', 'Design & Deckblatt', 'Förderung', 'Dokument & Verkauf'].map((l, i) => (i === 4 ? tR(14, 38 + i * 18, 84, 15, c.bg, { r: 5 }) : '') + tT(20, 48 + i * 18, l, { s: 5.8, w: i === 4 ? 700 : 500, c: i === 4 ? c.ink : c.i2 })).join('')}
     ${tR(108, 32, 202, 140, '#fff', { r: 7 })}${tT(118, 48, 'Erscheinungsbild', { s: 7.4, w: 700 })}${tT(118, 62, 'Kundendokument', { s: 5.4, c: c.i3 })}${tR(118, 66, 150, 18, c.bg, { r: 9 })}${['Hell', 'Gemischt', 'Dunkel'].map((l, i) => (i === 2 ? tR(120 + i * 49, 68, 48, 14, '#0F2A3D', { r: 7 }) : '') + tT(144 + i * 49, 77.6, l, { s: 6, w: i === 2 ? 700 : 500, c: i === 2 ? '#fff' : c.i2, a: 'middle' })).join('')}${tTap(242, 75)}
     ${tR(118, 94, 40, 40, '#0B1118', { r: 3 })}${tR(124, 100, 20, 3, '#EEF2F6', { r: 1 })}${tR(124, 108, 28, 2, '#828E9B', { r: 1 })}${tR(124, 114, 24, 2, '#828E9B', { r: 1 })}${tR(166, 94, 40, 40, '#fff', { r: 3, st: c.line })}${tR(172, 100, 20, 3, c.ink, { r: 1 })}${tR(172, 108, 28, 2, c.line, { r: 1 })}
     ${tT(118, 150, 'Farben, Logo, Deckblatt, Texte – alles einstellbar.', { s: 5.4, c: c.i2 })}`, 'einst'); },
@@ -7963,7 +7950,7 @@ const TUT_IMG = {
 /* Schritte: [Bild, Titel, Erklärung, So geht's] */
 const TUT_STEPS = [
   ['welcome', 'Willkommen', 'Mit dieser App erstellen Sie in wenigen Minuten eine Wirtschaftlichkeitsberechnung für Wärmepumpe, Photovoltaik oder beides – als schönes PDF, das jeder Kunde versteht. Diese Anleitung zeigt Ihnen jeden Schritt mit einem Beispielbild.', ['Der orange Punkt im Bild zeigt immer, wohin Sie tippen.', 'Mit „Weiter“ geht es zum nächsten Schritt, mit „Zurück“ einen Schritt zurück.']],
-  ['install', 'Als App installieren', 'Legen Sie die App einmalig auf den Home-Bildschirm. Dann startet sie wie eine normale App, läuft auch ohne Internet und Ihre Daten bleiben sicher gespeichert.', ['iPhone/iPad: in Safari unten auf „Teilen“ (Quadrat mit Pfeil) tippen.', 'Nach unten scrollen → „Zum Home-Bildschirm“ → „Hinzufügen“.', 'Android: in Chrome oben rechts ⋮ → „App installieren“.', 'Ab jetzt nur noch über das neue Symbol öffnen.']],
+  ['install', 'LumbraDesk aufs Handy', 'Öffnen Sie lumbradesk.de und legen Sie es einmalig auf den Home-Bildschirm. Dann startet LumbraDesk wie eine normale App – mit allen Apps unter einem Login.', ['iPhone/iPad: lumbradesk.de in Safari öffnen, unten auf „Teilen“ (Quadrat mit Pfeil) tippen.', 'Nach unten scrollen → „Zum Home-Bildschirm“ → „Hinzufügen“.', 'Android: in Chrome oben rechts ⋮ → „App installieren“.', 'Ab jetzt über das neue Symbol öffnen.']],
   ['newcalc', 'Neue Berechnung starten', 'Alle Kunden sehen Sie unter „Kunden“. Für einen neuen Kunden tippen Sie oben rechts auf „Neue Berechnung“.', ['Oben auf „Kunden“ tippen.', 'Rechts oben „+ Neue Berechnung“ antippen.', 'Einen bestehenden Kunden öffnen Sie, indem Sie ihn in der Liste antippen.']],
   ['type', 'Art der Berechnung wählen', 'Wählen Sie, was der Kunde bekommt: nur Wärmepumpe, nur Photovoltaik oder beides zusammen.', ['Passende Karte antippen – z. B. „PV + Wärmepumpe“.', 'Später ändern? Im Kunden oben auf die Art (z. B. „WP“) und dann „ändern“ tippen – alle Eingaben bleiben erhalten.']],
   ['quick', 'Schnellauslegung Wärmepumpe', 'Die App fragt, ob Sie die Wärmepumpe schnell auslegen möchten. Sie geben ein paar Eckdaten ein und bekommen Heizlast und eine passende Wärmepumpe vorgeschlagen.', ['Wohnfläche, Baujahr, Verbrauch und Dämmung eintragen – oder die Heizlast direkt.', 'Rechts erscheint die Empfehlung → „Übernehmen“.', 'Später jederzeit in der Kundenübersicht: „Schnellauslegung anpassen“.']],
@@ -7977,7 +7964,6 @@ const TUT_STEPS = [
   ['status', 'Status und Nachfassen', 'Jeder Kunde hat einen Status: offen, gesendet, unterschrieben oder verloren. Die Startseite erinnert Sie, wenn eine Rabatt-Frist bald abläuft.', ['Status im Kunden oben rechts auswählen.', 'Oben in der Kundenübersicht sehen Sie Ihre Abschlussquote.', 'Erinnerungen ernst nehmen – rechtzeitig anrufen!']],
   ['products', 'Produkte pflegen', 'Unter „Produkte“ legen Sie Ihre Module, Speicher, Wechselrichter und Wärmepumpen einmal an – mit Bild, Daten und Garantie. Dann erkennt die App sie im Angebot und zeigt sie mit Bild im PDF.', ['Oben auf „Produkte“ tippen.', '„+ Produkt“ – Name, Hersteller, Leistung, Garantie und Bild eintragen.', 'Gutes Produktbild = schöneres PDF.']],
   ['settings', 'Einstellungen und Design', 'Unter „Einstellungen“ passen Sie alles an: Firmendaten, Berater, Farben, Deckblatt, Hell oder Dunkel fürs PDF, Förderung und Texte.', ['Oben auf „Einstellungen“ tippen und links einen Bereich wählen.', 'Design & Deckblatt: Hell, Gemischt oder Dunkel fürs Kundendokument.', 'Manche Bereiche brauchen das Admin-Passwort.']],
-  ['backup', 'Daten sichern – ganz wichtig!', 'Ihre Kunden liegen nur auf diesem Gerät. Geht das Gerät kaputt oder verloren, sind sie weg – außer Sie haben gesichert.', ['Einstellungen → Datensicherung → „Sicherung erstellen“.', 'iPhone: „In Dateien sichern“ → iCloud Drive. Android: „Drive“ wählen.', 'Mindestens einmal pro Woche – die App erinnert Sie nach 7 Tagen.']],
   ['update', 'Updates installieren', 'Gibt es eine neue Version, erscheint unten ein Hinweis. Ein Tipp genügt, Ihre Daten bleiben dabei immer erhalten.', ['Unten „Jetzt aktualisieren“ antippen.', 'Danach zeigt die App kurz, was neu ist.']],
   ['done', 'Fertig!', 'Mehr müssen Sie nicht wissen. Mit dem Zurück-Knopf oben kommen Sie immer zur Kundenübersicht. Diese Anleitung finden Sie jederzeit wieder unter Einstellungen → Ansicht & Tutorial.', []]
 ];

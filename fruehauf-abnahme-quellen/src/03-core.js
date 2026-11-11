@@ -4,7 +4,7 @@
    Eigenständige App: Baustellen-Abnahme und Serviceeinsätze für DC, AC und SHK.
    Daten bleiben auf dem Gerät (IndexedDB), Protokolle als PDF teilen.
    ========================================================= */
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];

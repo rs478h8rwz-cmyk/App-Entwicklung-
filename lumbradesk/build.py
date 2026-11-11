@@ -19,7 +19,7 @@ skip = shutil.ignore_patterns('config.php', 'sessions', 'aprot', 'pfiles', 'file
 shutil.copytree(os.path.join(SP, 'public'), os.path.join(APP, 'public'), ignore=skip)
 shutil.copytree(os.path.join(SP, 'private'), os.path.join(APP, 'private'), ignore=skip)
 
-# Wirtschaftlichkeits-App unverändert übernehmen (nur Netlify-Dateien weglassen)
+# Wirtschaftlichkeits-App übernehmen
 R = os.path.join(APP, 'public', 'rechner')
 shutil.copytree(os.path.join(ROOT, 'fruehauf-energy'), R, ignore=shutil.ignore_patterns('_headers', '_redirects', 'LIESMICH.txt', 'diag.html'))
 p = os.path.join(R, 'index.html'); s = open(p, encoding='utf-8').read()
@@ -27,8 +27,8 @@ assert '<head>' in s
 s = s.replace('<head>', '<head>\n<script src="../guard.js"></script>', 1)
 open(p, 'w', encoding='utf-8').write(s)
 
-# Regeln für die App: gleiche Sicherheits-Header wie bisher bei Netlify (die App braucht Inline-Skripte)
-open(os.path.join(R, '.htaccess'), 'w').write('''# Wirtschaftlichkeits-App (übernommen von Netlify)
+# Regeln für die App: Sicherheits-Header (die App braucht Inline-Skripte)
+open(os.path.join(R, '.htaccess'), 'w').write('''# Wirtschaftlichkeits-App
 <IfModule mod_headers.c>
   Header always set X-Robots-Tag "noindex, nofollow"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=()"
@@ -55,7 +55,7 @@ for src, dst, perm in (('fruehauf-stempel', 'stempel', 'camera=(self), microphon
             assert os.path.isfile(b) and open(a, 'rb').read() == open(b, 'rb').read(), 'Bibliothek weicht ab: ' + a
     p2 = os.path.join(D, 'index.html'); t = open(p2, encoding='utf-8').read(); assert '<head>' in t
     open(p2, 'w', encoding='utf-8').write(t.replace('<head>', '<head>\n<script src="../guard.js"></script>', 1))
-    open(os.path.join(D, '.htaccess'), 'w').write(HT_APP.replace('# Wirtschaftlichkeits-App (übernommen von Netlify)', '# ' + dst + ' (übernommen von Netlify)').replace('camera=(), microphone=(), geolocation=(self), payment=()', perm))
+    open(os.path.join(D, '.htaccess'), 'w').write(HT_APP.replace('# Wirtschaftlichkeits-App', '# ' + dst).replace('camera=(), microphone=(), geolocation=(self), payment=()', perm))
 
 v = os.path.join(R, 'vendor')
 if os.path.isdir(v): open(os.path.join(v, '.htaccess'), 'w').write('<IfModule mod_headers.c>\n  Header set Cache-Control "public, max-age=31536000"\n</IfModule>\n')

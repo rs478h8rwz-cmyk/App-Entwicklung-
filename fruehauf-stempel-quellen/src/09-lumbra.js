@@ -1,7 +1,6 @@
 /* =========================================================
    LumbraDesk: Stempeluhr zentral
-   Nur aktiv, wenn die App unter LumbraDesk läuft (lumbradesk.de/stempel/) – die eigenständige
-   Netlify-Version bleibt unverändert (Daten nur auf dem Handy).
+   Aktiv, sobald die App unter LumbraDesk läuft (lumbradesk.de/stempel/).
    - Tage und Einstellungen gleichen sich automatisch mit dem Server ab, ein neues Handy holt alles zurück.
    - Büro/Admin (LumbraDesk-Rolle) sehen unter „Mitarbeiter“ alle Kollegen und schicken Änderungen direkt.
    ========================================================= */
@@ -51,6 +50,9 @@ async function ldsSync() {
       if (j.settings && fresh && noLocal) { const keep = { admin: S.admin, pin: S.pin, design: S.design }; S = deepMerge(clone(DEFAULTS), j.settings); Object.assign(S, keep); fixSettings(); await DB.put('kv', clone(S), 'settings'); changed++; }
     } finally { LDS.applying = false; }
     if (!S.person.name && j.me && j.me.name) { S.person.name = j.me.name; saveSettings(); changed++; }
+    if (j.firm && j.firm.contact && !LDS.office && JSON.stringify(j.firm.contact) !== JSON.stringify(contactOf())) { S.company.contact = { name: '', phone: '', email: '', ...j.firm.contact }; saveSettings(); changed++; }
+    if (j.firm && j.firm.contact && LDS.office && !((contactOf().name || contactOf().phone || contactOf().email))) { S.company.contact = { name: '', phone: '', email: '', ...j.firm.contact }; saveSettings(); changed++; }
+    if (Array.isArray(j.requests)) { const old = JSON.stringify(UI.requests || []); UI.requests = j.requests; if (JSON.stringify(UI.requests) !== old) { await DB.put('kv', UI.requests, 'requests'); changed++; } }
     LDS.since = j.since || LDS.since; LDS.init = true; LDS.last = Date.now(); LDS.err = '';
     await ldsSave();
     /* Änderungen vom Büro übernehmen */
@@ -84,7 +86,7 @@ function ldsStatusHtml() {
   const n = LDS.dirty.size + (LDS.setDirty ? 1 : 0);
   return `<div id="lds-status" class="rounded-[var(--r)] border border-line p-4 mb-6"><div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold flex-1">Abgleich mit LumbraDesk</h3><button class="btn-s !h-9" data-a="lds-now">${ic('refresh', 15)}Jetzt abgleichen</button></div>
     <p class="text-[14px] mt-2 ${LDS.err ? 'text-yel-ink' : 'text-ink2'}">${LDS.err ? esc(LDS.err) : LDS.last ? `Zuletzt abgeglichen ${ago2(LDS.last)}${n ? ` · ${n} Änderung${n === 1 ? '' : 'en'} warten` : ' · alles auf dem Server'}` : 'Noch nicht abgeglichen.'}</p>
-    <p class="hint">Angemeldet als ${esc((LDS.me || {}).name || '')}. Änderungen vom Büro kommen automatisch – eine Sicherungsdatei schicken ist nicht mehr nötig.</p></div>`;
+    <p class="hint">Angemeldet als ${esc((LDS.me || {}).name || '')}. Änderungen vom Büro kommen automatisch.</p></div>`;
 }
 function ldsStatusPaint() { const el = $('#lds-status'); if (el) el.outerHTML = ldsStatusHtml(); }
 
@@ -108,7 +110,7 @@ consentModal = function () {
 /* ---------- Büro/Admin: alle Mitarbeiter vom Server ---------- */
 async function ldsLoadStaff(force) {
   if (!LDS.office || (!force && Date.now() - LDS.staffAt < 20000)) return;
-  const j = await ldsApi('st-staff'); LDS.staffAt = Date.now();
+  const j = await ldsApi('st-staff'); LDS.staffAt = Date.now(); LDS.requests = j.requests || [];
   const keep = STAFF; STAFF = {};
   for (const m of j.staff) {
     const k = 'u' + m.uid, old = keep[k] || {};
@@ -122,7 +124,9 @@ async function ldsLoadStaff(force) {
 }
 function ldsTeam() {
   const list = Object.entries(STAFF).filter(([k]) => k.startsWith('u')).sort((a, b) => a[1].name.localeCompare(b[1].name)), sel = STAFF[UI.staff] ? UI.staff : '';
-  let h = `<p class="text-ink3 text-[14px] mb-4">Alle Mitarbeiter aus LumbraDesk mit dem aktuellen Stand ihrer Stempeluhr. Urlaub, Krankheit oder Konten unten eintragen und „An Handy senden“ – der Mitarbeiter bekommt die Änderung beim nächsten Öffnen der App.</p>
+  const reqs = LDS.requests || [];
+  let h = (reqs.length ? `<div class="rounded-[var(--r)] border border-line p-4 mb-5" style="background:var(--t-yel)"><h3 class="font-semibold mb-2">Urlaubsanträge (${reqs.length})</h3>${reqs.map(r => `<div class="flex flex-wrap items-center gap-2 py-2 border-b border-line last:border-0 text-[14px]"><b class="min-w-[120px]">${esc(r.name)}</b><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''} · ${fmtDays(r.n)} Tag${r.n === 1 ? '' : 'e'}${r.note ? ' · „' + esc(r.note) + '“' : ''}</span><button class="btn-p !h-9" data-a="lds-req" data-id="${r.id}" data-v="1">${ic('check', 15)}Genehmigen</button><button class="btn-s !h-9" data-a="lds-req" data-id="${r.id}" data-v="0">Ablehnen</button></div>`).join('')}</div>` : '')
+    + `<p class="text-ink3 text-[14px] mb-4">Alle Mitarbeiter aus LumbraDesk mit dem aktuellen Stand ihrer Stempeluhr. Urlaub, Krankheit oder Konten unten eintragen und „An Handy senden“ – der Mitarbeiter bekommt die Änderung beim nächsten Öffnen der App.</p>
     <div class="flex flex-wrap gap-2 mb-4"><button class="btn-s" data-a="lds-staff">${ic('refresh', 15)}Aktualisieren</button></div>`;
   if (!list.length) return h + `<div class="kpi text-[14px] text-ink3">${LDS.staffAt ? 'Noch keine Mitarbeiter in LumbraDesk.' : 'Wird geladen …'}</div>`;
   h += `<div class="grid gap-2">${list.map(([k, st]) => { const s = staffStats(st), used = !!st.at; return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b>${used ? `<span class="text-[13px] text-ink2">Resturlaub <b>${fmtDays(s.v.left)}</b> von ${fmtDays(s.v.total)}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span>` : ''}<span class="text-[12px] text-ink3">${used ? 'abgeglichen ' + (st.lastSync ? ago2(new Date(st.lastSync).getTime()) : '') : 'nutzt die Stempeluhr noch nicht'}${(st.open || []).length ? ` · <span class="text-yel-ink">${st.open.length} noch nicht auf dem Handy</span>` : ''}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} vorgemerkt</span>` : ''}</span></button>`; }).join('')}</div>`;
@@ -132,7 +136,18 @@ function ldsTeam() {
 }
 /* „Aktualisierung senden“ / „Betriebsurlaub an alle“ direkt über den Server statt als Datei */
 document.addEventListener('click', async e => {
-  const a = e.target.closest('[data-a="tm-send"],[data-a="buf-send"],[data-a="lds-now"],[data-a="lds-staff"]'); if (!a || !LDS.on) return;
+  const a = e.target.closest('[data-a="tm-send"],[data-a="buf-send"],[data-a="lds-now"],[data-a="lds-staff"],[data-a="lds-req"],[data-a="contact-all"]'); if (!a || !LDS.on) return;
+  if (a.dataset.a === 'contact-all') {
+    e.stopImmediatePropagation();
+    try { await ldsApi('st-firm', { contact: contactOf() }); toast('Ansprechpartner für alle übernommen – erscheint beim nächsten Öffnen der Stempeluhr.'); } catch (err) { toast(err.message, 'err'); }
+    return;
+  }
+  if (a.dataset.a === 'lds-req') {
+    e.stopImmediatePropagation(); const ok = a.dataset.v === '1', r = (LDS.requests || []).find(x => String(x.id) === a.dataset.id); if (!r) return;
+    if (!ok && !(await confirmDlg('Urlaubsantrag ablehnen?', `${r.name}: ${deDate(r.von)} – ${deDate(r.bis)}. Die Tage werden bei ${r.name.split(' ')[0]} wieder zu Arbeitstagen.`, 'Ablehnen', true))) return;
+    try { await ldsApi('st-req-decide', { id: r.id, ok }); toast(ok ? `Urlaub für ${r.name.split(' ')[0]} genehmigt.` : 'Antrag abgelehnt.'); await ldsLoadStaff(true); rerender(); } catch (err) { toast(err.message, 'err'); }
+    return;
+  }
   if (a.dataset.a === 'lds-now') { e.stopImmediatePropagation(); await ldsSync(); toast(LDS.err || 'Abgeglichen.', LDS.err ? 'warn' : 'ok'); return; }
   if (a.dataset.a === 'lds-staff') { e.stopImmediatePropagation(); try { await ldsLoadStaff(true); rerender(); } catch (err) { toast(err.message, 'err'); } return; }
   if (!LDS.office) return;
@@ -172,9 +187,9 @@ render = function () { _renderLds(); if (LDS.on) ldsSitesPaint(); };
     const j = await ldsApi('me'); if (!j.user) return;
     await new Promise(r => { const t = setInterval(() => { if (APP_READY) { clearInterval(t); r(); } }, 50); });   // App-Start (Einstellungen, Tage) abwarten
     await ldsState(); LDS.on = true; LDS.me = j.user; LDS.office = ['admin', 'buero'].includes(j.user.role);
-    if (LDS.office) DEVICE.admin = true;   // Büro/Admin in LumbraDesk: wie ein Admin-Gerät (nur solange angemeldet, nicht gespeichert)
+    if (LDS.office) { DEVICE.admin = true; if (!SET_TABS.some(t => t[0] === 'team')) SET_TABS.splice(SET_TABS.findIndex(t => t[0] === 'admin'), 0, ['team', 'Mitarbeiter', 'users']); }   // Büro/Admin in LumbraDesk: wie ein Admin-Gerät (nur solange angemeldet, nicht gespeichert)
     await ldsSync();
-    if (LDS.office) { try { await ldsLoadStaff(true); if (typeof awEnable === 'function') awEnable(); if (UI.tab === 'team' || UI.tab === 'auswertung') rerender(); } catch (e) {} }
+    if (LDS.office) { try { await ldsLoadStaff(true); if (typeof awEnable === 'function') awEnable(); } catch (e) {} if (/^#\/?einstellungen\/(team|auswertung)/.test(location.hash)) route(); else if (UI.tab === 'team' || UI.tab === 'auswertung') rerender(); }
     ldsCustomerSites();
     setInterval(() => { ldsSync(); if (LDS.office && (UI.tab === 'team' || UI.tab === 'auswertung') && UI.route === 'settings') ldsLoadStaff().then(() => rerender()).catch(() => {}); }, 60000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ldsSync(); });
@@ -182,3 +197,7 @@ render = function () { _renderLds(); if (LDS.on) ldsSitesPaint(); };
     if (typeof render === 'function') render();
   } catch (e) { /* nicht unter LumbraDesk oder offline */ }
 })();
+
+/* Nachricht vom Büro (z. B. „Urlaub genehmigt“) */
+const _opTextLds = opText;
+opText = function (o) { if (o.t === 'info') return o.text || ''; return _opTextLds(o); };

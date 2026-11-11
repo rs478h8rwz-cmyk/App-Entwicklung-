@@ -1,13 +1,12 @@
 {
-  "name": "LumbraDesk",
-  "short_name": "LumbraDesk",
+  "name": "lumbra.desk",
+  "short_name": "lumbra.desk",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0A0E13",
-  "theme_color": "#0E7C66",
+  "theme_color": "#242E48",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "logo.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }

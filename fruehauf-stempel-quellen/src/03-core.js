@@ -2,9 +2,9 @@
 /* =========================================================
    Frühauf – Stempeluhr
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
-   Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
+   Wochenzettel als PDF. Teil von LumbraDesk: Daten gleichen sich mit dem Firmen-Server ab.
    ========================================================= */
-const APP_VERSION = '2.1';
+const APP_VERSION = '2.2';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -12,7 +12,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const uid = (p = 'x') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2, '0');
-/* Geprüfte Uhrzeit: Abstand zur Serverzeit (HTTP-Date von Netlify). Verstellte Handy-Uhren ändern nichts. */
+/* Geprüfte Uhrzeit: Abstand zur Serverzeit (HTTP-Date des LumbraDesk-Servers). Verstellte Handy-Uhren ändern nichts. */
 const TIME = { off: 0, ok: false, at: 0 };
 const tNow = () => new Date(Date.now() + TIME.off);
 async function syncTime(timeout = 3000) {
@@ -57,10 +57,10 @@ const DB = {
 
 /* ---------- Einstellungen ---------- */
 const DEFAULTS = {
-  company: { name: 'Frühauf Solar', street: '', city: '', phone: '', email: '', logo: 'logo.png' },
+  company: { name: 'Frühauf Solar', street: '', city: '', phone: '', email: '', logo: 'logo.png', contact: { name: '', phone: '', email: '' } },   // contact: Ansprechpartner im Büro (vom Büro für alle festgelegt)
   design: { mode: 'system', primary: '#0E7C66', secondary: '#F5A524', radius: 14, fontBody: 'Geist', fontHead: 'Instrument Serif' },
   person: { name: '', nr: '', start: '' },   // start: Eintrittsdatum
-  recipient: { name: 'Jule', phone: '' },
+  recipient: { name: '', phone: '' },
   state: 'NW',
   /* Sollzeiten je Wochentag (0 = Sonntag) */
   hours: { 1: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 2: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 3: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 4: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 5: { on: true, von: '07:30', bis: '13:45', pause: 15 }, 6: { on: false, von: '', bis: '', pause: 30 }, 0: { on: false, von: '', bis: '', pause: 30 } },

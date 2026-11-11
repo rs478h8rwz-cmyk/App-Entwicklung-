@@ -22,15 +22,15 @@ const DATENSCHUTZ_DEFAULT = `## Verantwortlicher
 {firma}, {adresse}
 Telefon {telefon} · E-Mail {email}
 ## Worum es geht
-Diese Web-App ist ein Arbeitswerkzeug für unsere Energieberater. Sie berechnet die Wirtschaftlichkeit von Photovoltaikanlagen, Stromspeichern und Wärmepumpen und erstellt daraus Kundendokumente.
-## Speicherung auf Ihrem Gerät
-Alle Eingaben – auch Kundendaten, hochgeladene Angebote, Fotos und Unterschriften – werden ausschließlich lokal im Browser des verwendeten Geräts gespeichert (IndexedDB). Sie werden nicht an uns oder an Dritte übertragen. Eine Weitergabe erfolgt nur, wenn Sie selbst eine Datensicherung, Konfigurationsdatei oder ein PDF exportieren und versenden. Die Angebotserkennung (Texterkennung) läuft vollständig auf dem Gerät.
+Diese App (Teil von LumbraDesk) ist ein Arbeitswerkzeug für unsere Energieberater. Sie berechnet die Wirtschaftlichkeit von Photovoltaikanlagen, Stromspeichern und Wärmepumpen und erstellt daraus Kundendokumente.
+## Speicherung
+Eingaben – auch Kundendaten, hochgeladene Angebote, Fotos und Unterschriften – werden auf dem verwendeten Gerät und auf unserem eigenen Server (LumbraDesk) gespeichert, damit sie auf allen Geräten unseres Teams verfügbar und gesichert sind. Zugriff haben nur angemeldete Mitarbeiterinnen und Mitarbeiter im Rahmen ihrer Rolle. Die Übertragung ist verschlüsselt (HTTPS). Die Angebotserkennung (Texterkennung) läuft vollständig auf dem Gerät.
 ## Hosting und Server-Logfiles
-Die App wird bei Netlify, Inc. (512 2nd Street, Suite 200, San Francisco, CA 94107, USA) bereitgestellt. Beim Aufruf verarbeitet Netlify technisch notwendige Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene Datei und Browserkennung, um die App auszuliefern und vor Missbrauch zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren und stabilen Betrieb). Die Übermittlung in die USA stützt sich auf das EU-US Data Privacy Framework bzw. die Standardvertragsklauseln der EU-Kommission.
+App und Server werden bei der IONOS SE, Elgendorfer Str. 57, 56410 Montabaur, in Deutschland betrieben (Auftragsverarbeitung nach Art. 28 DSGVO). Beim Aufruf werden technisch notwendige Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene Datei und Browserkennung verarbeitet, um die App auszuliefern und vor Missbrauch zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren und stabilen Betrieb).
 ## Solarertrag (PVGIS)
 Wenn Sie den Solarertrag für einen Standort berechnen lassen, werden ausschließlich die aus der Postleitzahl ermittelten Koordinaten sowie Dachneigung und -ausrichtung über unseren Server an PVGIS der Gemeinsamen Forschungsstelle der Europäischen Kommission (Joint Research Centre, Ispra, Italien) übermittelt. Namen oder Adressen werden dabei nicht übertragen.
-## Keine Cookies, kein Tracking
-Die App setzt keine Cookies, verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von fremden Servern nach. Schriften und Programmbibliotheken werden von unserem eigenen Server geladen.
+## Cookies und Tracking
+Die App setzt nur ein technisch notwendiges Anmelde-Cookie (Sitzung). Sie verwendet keine Analyse- oder Werbedienste und lädt keine Inhalte von fremden Servern nach. Schriften und Programmbibliotheken werden von unserem eigenen Server geladen.
 ## Kundendaten
 Personenbezogene Daten unserer Kundinnen und Kunden verarbeiten wir zur Erstellung von Angeboten und Berechnungen, also zur Durchführung vorvertraglicher Maßnahmen (Art. 6 Abs. 1 lit. b DSGVO). Wir löschen sie, sobald sie dafür nicht mehr benötigt werden und keine gesetzlichen Aufbewahrungspflichten bestehen.
 ## Ihre Rechte
@@ -39,6 +39,8 @@ Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Ve
 const LEGAL_DEFAULT = { withdrawOn: true, withdrawForm: true, withdrawal: WIDERRUF_DEFAULT, imprintExtra: IMPRESSUM_EXTRA_DEFAULT, privacy: DATENSCHUTZ_DEFAULT };
 DEFAULT_SETTINGS.legal = clone(LEGAL_DEFAULT);
 if (!S.legal) S.legal = clone(LEGAL_DEFAULT);
+/* Alter Standardtext (Netlify, nur auf dem Gerät) → neuer Standardtext */
+if (S.legal && String(S.legal.privacy || '').includes('Netlify, Inc.')) S.legal.privacy = DATENSCHUTZ_DEFAULT;
 const legalOf = k => { const v = (S.legal || {})[k]; return v === undefined ? LEGAL_DEFAULT[k] : v; };
 
 /* Platzhalter mit den Firmendaten füllen */

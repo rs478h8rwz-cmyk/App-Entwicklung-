@@ -211,21 +211,16 @@ async function exportBackup() {
   if (await shareOrDownload(blob, `Frühauf-Energy-Sicherung_${isoToday()}.json`)) { PERSONAL.lastBackup = Date.now(); savePersonal(); toast('Sicherung erstellt.'); render(); }
 }
 async function importBackup(file) {
+  /* Umzug aus der alten Einzel-App: Kunden und Dateien ergänzen – nichts wird ersetzt oder gelöscht */
   let d; try { d = JSON.parse(await file.text()); } catch (e) { return toast('Die Datei ist keine gültige Sicherung.', 'err'); }
   if (!d || d.app !== 'fruehauf-energy') return toast('Die Datei ist keine Sicherung dieser App.', 'err');
-  if (!(await confirmDlg('Sicherung einspielen?', UI.admin ? 'Alle aktuellen Daten werden durch die Sicherung ersetzt.' : 'Kunden, Berechnungen und Produkte werden durch die Sicherung ersetzt. Die Firmen-Einstellungen bleiben unverändert (dafür ist das Admin-Passwort nötig).', 'Einspielen', false))) return;
-  const keepS = UI.admin ? null : clone(S);
-  await Promise.all(['kv', 'projects', 'files'].map(s => DB.clear(s)));
-  for (const k in FILES) { URL.revokeObjectURL(FILES[k].url); delete FILES[k]; }
-  for (const f of d.files || []) await DB.put('files', { id: f.id, name: f.name, type: f.type, blob: await dataURLToBlob(f.data) });
-  S = keepS || deepMerge(clone(DEFAULT_SETTINGS), d.settings || {});
-  PRODUCTS = d.products || [];
-  PROJECTS = (d.projects || []).map(p => deepMerge(newProject(p.type || 'wp'), p)); ARCHIVED = [];
-  await saveSettingsNow(); await saveProductsNow();
-  for (const p of PROJECTS) await DB.put('projects', clone(p));
-  splitArchive();
-  await loadFiles([S.company.logoFile, S.design.cover.file, S.design.coverLogo.file]);
-  applyTheme(); toast('Sicherung eingespielt.'); go('kunden');
+  const have = new Set(PROJECTS.concat(ARCHIVED).map(p => p.id)), add = (d.projects || []).filter(p => p && p.id && !have.has(p.id));
+  if (!add.length) return toast('Alle Kunden aus der Datei sind schon vorhanden.', 'info');
+  if (!(await confirmDlg('Kunden übernehmen?', `${add.length} Kunde${add.length === 1 ? '' : 'n'} aus der alten App werden ergänzt und auf den Server geladen. Vorhandene Kunden bleiben unverändert.`, 'Übernehmen', false))) return;
+  const used = new Set(add.flatMap(p => (p.docs || []).map(x => x.fileId).concat([p.sign && p.sign.cust && p.sign.cust.file].filter(Boolean))));
+  for (const f of d.files || []) { if (FILES[f.id] || (used.size && !used.has(f.id) && !String(JSON.stringify(add)).includes(f.id))) continue; await DB.put('files', { id: f.id, name: f.name, type: f.type, blob: await dataURLToBlob(f.data) }); }
+  for (const p of add) { const x = deepMerge(newProject(p.type || 'wp'), p); PROJECTS.push(x); await DB.put('projects', clone(x)); }
+  splitArchive(); toast(`${add.length} Kunde${add.length === 1 ? '' : 'n'} übernommen.`); go('kunden');
 }
 async function wipeAll() {
   if (!UI.admin) return toast('Nur im Admin-Bereich möglich.', 'err');

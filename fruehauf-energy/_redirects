@@ -1,3 +1,0 @@
-/pvgis/*   https://re.jrc.ec.europa.eu/api/v5_2/:splat   200
-/wetter/*  https://api.open-meteo.com/:splat   200
-/*         /index.html   200

@@ -204,7 +204,7 @@ function viewKunden() {
   <section class="max-w-7xl mx-auto px-4 sm:px-8 pt-10">
     ${backupBanner()}${followUpCard()}
     <div class="flex flex-col 2xl:flex-row 2xl:items-end gap-4 justify-between">
-      <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen, gespeichert auf diesem Gerät.</p></div>
+      <div><h2 class="h-font text-[30px]">Ihre Kunden</h2><p class="text-ink3 text-[14px]">Alle Berechnungen – auf dem LumbraDesk-Server, auf jedem Gerät gleich.</p></div>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]" data-countup>${v}</div></div>`).join('')}</div>
       ${salesStats()}
     </div>
@@ -316,7 +316,7 @@ function step1(p) {
     ? `<div class="grid sm:grid-cols-2 gap-4">${dropZone('offerWP', 'Angebot Wärmepumpe', 'PDF, JPG oder PNG hierher ziehen oder tippen')}${dropZone('offerPV', 'Angebot Photovoltaik', 'PDF, JPG oder PNG hierher ziehen oder tippen')}</div>`
     : dropZone('offer', 'Angebot', 'PDF, JPG oder PNG hierher ziehen oder tippen');
   const offerDocs = p.docs.filter(d => d.role !== 'tech'), techDocs = p.docs.filter(d => d.role === 'tech');
-  return `<div class="card p-5 sm:p-6">${cardHead('upload', 'Angebot und Unterlagen', `Wir lesen Kunde, Preise und Anlagendaten automatisch aus. ${typeof LD !== 'undefined' && LD.on ? 'Ihre Dateien liegen geschützt auf dem LumbraDesk-Server.' : 'Ihre Dateien bleiben auf diesem Gerät.'}`)}
+  return `<div class="card p-5 sm:p-6">${cardHead('upload', 'Angebot und Unterlagen', `Wir lesen Kunde, Preise und Anlagendaten automatisch aus. Ihre Dateien liegen geschützt auf dem LumbraDesk-Server.`)}
     ${zones}${offerDocs.length ? `<div class="space-y-3 mt-4">${offerDocs.map(d => docCard(p, d)).join('')}</div>` : ''}
     ${typeof roofSnapCard === 'function' ? roofSnapCard(p) : ''}
     ${typeof quickPvOffer === 'function' ? quickPvOffer(p) : ''}

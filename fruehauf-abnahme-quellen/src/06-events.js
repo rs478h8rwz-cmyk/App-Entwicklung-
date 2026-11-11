@@ -113,7 +113,6 @@ document.addEventListener('click', async e => {
     case 'sys-reset': if (await confirmDlg('Systeme zurücksetzen?', 'EcoFlow, Tesla und E3/DC mit den Standardgrößen – eigene Änderungen gehen verloren.', 'Zurücksetzen')) { S.systems = clone(DEFAULTS.systems); saveSettings(); render(); } break;
     case 'mont-del': S.monteure.splice(+a.dataset.i, 1); saveSettings(); render(); break;
     case 'lists-reset': if (await confirmDlg('Listen zurücksetzen?', 'Alle Auswahllisten werden auf den Standard gesetzt.', 'Zurücksetzen')) { S.lists = clone(DEFAULTS.lists); saveSettings(); render(); } break;
-    case 'backup': backup(); break;
   }
 });
 

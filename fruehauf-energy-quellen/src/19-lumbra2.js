@@ -144,7 +144,7 @@ async function ldpSync(opts = {}) {
     if (changed || removed || pushed) {
       const editing = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
       if (!editing && !$('#roof-ed') && !$('#modal').innerHTML.trim()) render(); else LDP.renderLater = true;
-      if (removedTxt.length) toast(removedTxt.slice(0, 2).join(' · ') + (removedTxt.length > 2 ? ` · und ${removedTxt.length - 2} weitere` : '') + ' (Papierkorb unter Einstellungen → Datensicherung).', 'info', 7000);
+      if (removedTxt.length) toast(removedTxt.slice(0, 2).join(' · ') + (removedTxt.length > 2 ? ` · und ${removedTxt.length - 2} weitere` : '') + ' (Papierkorb unter Einstellungen → Daten & Abgleich).', 'info', 7000);
       else if (changed) toast(`Kunden abgeglichen · ${changed} aktualisiert.`);
       /* Fotos und Angebote der geänderten Kunden nachladen */
       (async () => { let got = 0; for (const id of need) { const p = ldpFind(id); if (p) got += await ldpFetchFiles(p); } if (got) { await loadFiles([...new Set(need.flatMap(id => [...ldpFileIds(ldpFind(id) || {})]))]); if (!$('#roof-ed') && !$('#modal').innerHTML.trim()) render(); } })();

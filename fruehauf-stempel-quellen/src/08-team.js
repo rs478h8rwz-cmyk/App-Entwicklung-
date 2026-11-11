@@ -1,7 +1,7 @@
 
 /* =========================================================
    Mitarbeiter-Sicherungen und Aktualisierungen vom Büro
-   - Jeder Mitarbeiter schickt seine Sicherung ans Büro (WhatsApp).
+   - Unter LumbraDesk läuft das über den Server (09-lumbra.js); die Datei-Wege hier sind nur noch Unterbau.
    - Admin-Geräte (Manuel, Jule, Artjom) bewahren je Mitarbeiter eine Kopie auf,
      ändern dort Urlaub, Krankheit, Urlaubskonto und Überstunden
      und schicken eine Aktualisierung zurück.
@@ -45,7 +45,7 @@ async function ensureSignKey() {
 function shareFile(blob, name, text, title) {
   const file = new File([blob], name, { type: 'application/json' }), can = navigator.canShare && navigator.canShare({ files: [file] });
   modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">${esc(title)}</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div>
-    <div class="grid gap-2 mt-6">${can ? `<button class="btn-p !h-12" id="tf-share">${ic('send', 17)}Per WhatsApp senden</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp wählen.</p>` : ''}
+    <div class="grid gap-2 mt-6">${can ? `<button class="btn-p !h-12" id="tf-share">${ic('send', 17)}Teilen</button>` : ''}
     <button class="btn-s" id="tf-save">${ic('download', 17)}Datei speichern</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
   $('#tf-save').onclick = () => saveBlob(blob, name);
   const b = $('#tf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') { saveBlob(blob, name); toast('Teilen nicht möglich – die Datei ist gespeichert.', 'warn'); } } };
@@ -142,24 +142,14 @@ function applyToCopy(st, o) {
 function staffStats(st) {
   return withStaff(st, () => { const v = vacation(), a = account(); return { v, over: a.over, minus: a.minus }; });
 }
-function teamBody() {
-  if (!DEVICE.admin) return `<p class="text-ink3 text-[14px]">Nur auf Admin-Geräten (Manuel, Jule, Artjom). Unter „Admin“ dieses Gerät mit dem Admin-Passwort freischalten.</p>`;
-  const list = Object.entries(STAFF).sort((a, b) => a[1].name.localeCompare(b[1].name));
-  const sel = STAFF[UI.staff] ? UI.staff : '';
-  let h = `<p class="text-ink3 text-[14px] mb-4">So geht's: Mitarbeiter schickt seine Sicherung per WhatsApp → hier öffnen → Urlaub, Krankheit oder Konten ändern → „Aktualisierung senden“. Der Mitarbeiter spielt sie unter Einstellungen → Daten ein, fertig.</p>
-    <div class="flex flex-wrap gap-2"><label class="btn-p cursor-pointer">${ic('upload', 16)}Sicherung eines Mitarbeiters öffnen<input type="file" accept=".json,application/json" class="hidden" data-staff-file></label><button class="btn-s" data-a="tm-new">${ic('plus', 16)}Ohne Sicherung anlegen</button></div>`;
-  if (!list.length) return h + `<div class="kpi mt-5 text-[14px] text-ink3">Noch keine Mitarbeiter gespeichert.</div>`;
-  h += `<div class="grid gap-2 mt-5">${list.map(([k, st]) => { const s = staffStats(st); return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b><span class="text-[13px] text-ink2">Resturlaub <b>${fmtDays(s.v.left)}</b> von ${fmtDays(s.v.total)}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span><span class="text-[12px] text-ink3">${st.at ? 'Sicherung ' + new Date(st.at).toLocaleDateString('de-DE') : 'ohne Sicherung'}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} offen</span>` : ''}</span></button>`; }).join('')}</div>`;
-  if (sel) h += staffEditor(sel);
-  return h;
-}
+function teamBody() { return `<p class="text-ink3 text-[14px]">Nur für Büro und Admins (in LumbraDesk angemeldet).</p>`; }
 function staffEditor(k) {
   const st = STAFF[k], s = staffStats(st), v = (st.settings || {}).vacation || DEFAULTS.vacation, b = (st.settings || {}).balance || DEFAULTS.balance, y = tNow().getFullYear();
   const days = withStaff(st, () => Object.values(DAYS).filter(d => OFF_TYPES.includes(d.type) && d.iso >= `${y}-01-01`).sort((a, c) => a.iso.localeCompare(c.iso)));
   /* zusammenhängende Zeiträume gleicher Art */
   const runs = []; days.forEach(d => { const r = runs[runs.length - 1]; if (r && r.type === d.type && withStaff(st, () => workDaysIn(addDays(r.bis, 1), addDays(d.iso, -1)).length === 0)) r.bis = d.iso; else runs.push({ type: d.type, von: d.iso, bis: d.iso }); });
   return `<div class="mt-6 rounded-[var(--r)] border border-line p-4 sm:p-5">
-    <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9" data-a="tm-dl" data-v="${esc(k)}">${ic('download', 15)}Sicherung herunterladen</button><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
+    <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, fmtDays(s.v.total) + ' Tage')}${kpi('Genommen', fmtDays(s.v.taken) + ' Tage')}${kpi('Geplant', fmtDays(s.v.planned) + ' Tage')}${kpi('Rest', fmtDays(s.v.left) + ' Tage')}</div>
     <h4 class="font-semibold mt-6 mb-2">Urlaub / Krank / Ausgleich eintragen</h4>
     <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="sonder">Sonderurlaub</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
@@ -225,12 +215,12 @@ function askName() {
 }
 
 /* ---------- Einbindung in die Einstellungen ---------- */
-SET_TABS.splice(SET_TABS.findIndex(t => t[0] === 'admin'), 0, ['team', 'Mitarbeiter', 'users']);
+/* Reiter „Mitarbeiter“ nur für Büro/Admin – wird in 09-lumbra.js nach der Anmeldung eingefügt */
 const _setBodyTeam = setBody;
 setBody = function () {
   if (UI.tab === 'team') return teamBody();
   const b = _setBodyTeam();
-  if (UI.tab !== 'daten') return b;
+  return b;
   return `<div class="rounded-[var(--r)] border border-line p-4 mb-6"><h3 class="font-semibold mb-1">Mit dem Büro abgleichen</h3><p class="text-ink3 text-[14px] mb-3">Sicherung an ${esc(S.recipient.name || 'das Büro')} schicken – das Büro bewahrt sie auf und kann Urlaub oder Konten ändern. Kommt eine Aktualisierung zurück, hier einspielen.</p>
     <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="tm-backup">${ic('send', 16)}Sicherung ans Büro senden</button><label class="btn-s cursor-pointer">${ic('upload', 16)}Aktualisierung vom Büro einspielen<input type="file" accept=".json,application/json" class="hidden" data-upd-file></label></div></div>` + b;
 };
@@ -280,7 +270,7 @@ function buBody(ro) {
         <div class="flex flex-wrap items-center gap-3 mt-2 text-[13px]"><label class="flex items-center gap-2 text-ink2"><input type="checkbox" data-buf="${i}" data-k="abzug" ${b.abzug === false ? '' : 'checked'}>vom Urlaub abziehen</label><span class="text-ink3">${b.abzug === false ? '' : cnt(b)}</span></div></div>`).join('') || '<div class="kpi text-[14px] text-ink3">Kein Betriebsurlaub eingetragen.</div>'}</div>
     ${ro ? '' : `<button class="btn-s mt-3" data-a="buf-add">${ic('plus', 16)}Zeitraum hinzufügen</button>`}
     ${(S.bu || []).length ? `<h3 class="font-semibold mt-7 mb-2">Nur auf diesem Gerät</h3><div class="space-y-1.5">${S.bu.map((b, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span>${ro ? '' : `<button class="text-ink3 hover:text-ember" data-a="bu-del" data-i="${i}">${ic('trash', 15)}</button>`}</div>`).join('')}</div>` : ''}
-    ${DEVICE.admin ? `<div class="rounded-[var(--r)] border border-line p-4 mt-7"><h3 class="font-semibold">An alle Mitarbeiter verteilen</h3><p class="text-ink3 text-[14px] mt-1 mb-3">Erstellt eine Aktualisierung für alle – z. B. in die WhatsApp-Gruppe schicken. Jeder spielt sie unter Einstellungen → Daten → „Aktualisierung vom Büro einspielen“ ein.</p><button class="btn-p" data-a="buf-send">${ic('send', 16)}Betriebsurlaub an alle senden</button></div>` : `<p class="hint mt-5">Änderungen hier gelten nur auf diesem Handy. Für alle Mitarbeiter: auf einem Admin-Gerät ändern und „An alle senden“.</p>`}`;
+    ${DEVICE.admin ? `<div class="rounded-[var(--r)] border border-line p-4 mt-7"><h3 class="font-semibold">An alle Mitarbeiter verteilen</h3><p class="text-ink3 text-[14px] mt-1 mb-3">Alle Mitarbeiter bekommen den Betriebsurlaub beim nächsten Öffnen der Stempeluhr.</p><button class="btn-p" data-a="buf-send">${ic('send', 16)}Betriebsurlaub an alle senden</button></div>` : `<p class="hint mt-5">Den Betriebsurlaub für alle legt das Büro fest.</p>`}`;
 }
 const _setBodyBu = setBody;
 setBody = function () { if (UI.tab === 'bu') return buBody(!canEdit()); return _setBodyBu(); };

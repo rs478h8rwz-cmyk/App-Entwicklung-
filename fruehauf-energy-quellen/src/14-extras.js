@@ -31,6 +31,7 @@ const A2HS_STEPS = {
   android: 'In <b>Chrome</b> oben rechts auf das Menü <b>⋮</b> tippen → <b>App installieren</b> bzw. <b>Zum Startbildschirm hinzufügen</b> → bestätigen. Danach die App immer über das neue Symbol öffnen.'
 };
 function a2hsBanner() {
+  return '';   // LumbraDesk: Daten liegen auf dem Server
   const pf = platform();
   if (isStandalone() || PERSONAL.a2hsOff || pf === 'desktop') return '';
   const why = pf === 'ios' ? 'Im Safari-Tab kann iOS Ihre Daten nach einigen Wochen ohne Nutzung löschen.' : 'Als installierte App startet sie schneller, läuft offline und Ihre Daten sind besser geschützt.';
@@ -42,27 +43,19 @@ const backupWhere = () => (platform() === 'android' ? 'Google Drive oder „Down
 function guideCard() {
   const pf = platform(), col = (title, items) => `<div class="rounded-[calc(var(--r)-4px)] border border-line p-4"><div class="font-medium text-[15px] mb-2">${title}</div><ol class="list-decimal pl-5 space-y-2 text-[14px] text-ink2 leading-relaxed">${items.map(i => `<li>${i}</li>`).join('')}</ol></div>`;
   const sec = (t, ios, and) => `<div class="mt-5"><div class="font-semibold text-[15px] mb-2">${t}</div><div class="grid lg:grid-cols-2 gap-3">${col(`iPhone / iPad${pf === 'ios' ? ' <span class="badge ml-1 text-[11px]">Ihr Gerät</span>' : ''}`, ios)}${col(`Android${pf === 'android' ? ' <span class="badge ml-1 text-[11px]">Ihr Gerät</span>' : ''}`, and)}</div></div>`;
-  return sCard('info', 'Anleitung für iPhone und Android', 'Einmal einrichten – dann sind Ihre Daten gut geschützt.',
-    sec('1 · App auf den Startbildschirm legen',
-      ['Die App-Adresse in <b>Safari</b> öffnen (nicht in Chrome oder einer anderen App).', 'Unten auf <b>Teilen</b> tippen (Quadrat mit Pfeil nach oben).', 'Nach unten scrollen → <b>Zum Home-Bildschirm</b> → <b>Hinzufügen</b>.', 'Die App ab jetzt <b>nur noch über das neue Symbol</b> öffnen – sonst sieht iOS sie als normale Webseite und kann die Daten nach einigen Wochen löschen.'],
-      ['Die App-Adresse in <b>Chrome</b> öffnen.', 'Oben rechts auf das Menü <b>⋮</b> tippen.', '<b>App installieren</b> oder <b>Zum Startbildschirm hinzufügen</b> wählen und bestätigen.', 'Die App ab jetzt über das neue Symbol öffnen.'])
-    + sec('2 · Daten sichern (mindestens einmal pro Woche)',
-      ['In der App: <b>Einstellungen → Datensicherung → Sicherung erstellen</b>.', 'Im Teilen-Dialog <b>In Dateien sichern</b> wählen.', 'Ordner <b>iCloud Drive</b> (z. B. „Frühauf Sicherungen“) auswählen → <b>Sichern</b>.', 'Die App erinnert Sie nach 7 Tagen ohne Sicherung.'],
-      ['In der App: <b>Einstellungen → Datensicherung → Sicherung erstellen</b>.', 'Im Teilen-Dialog <b>Drive</b> wählen (oder die Datei landet unter <b>Downloads</b>).', 'In Google Drive einen Ordner wie „Frühauf Sicherungen“ wählen → <b>Speichern</b>.', 'Die App erinnert Sie nach 7 Tagen ohne Sicherung.'])
-    + sec('3 · Sicherung zurückspielen (z. B. neues Handy)',
-      ['App wie unter 1 auf dem neuen Gerät einrichten.', '<b>Einstellungen → Datensicherung → Sicherung einspielen</b>.', 'In <b>Dateien → iCloud Drive</b> die neueste Sicherung antippen.', 'Fertig – Kunden, Berechnungen und Angebote sind wieder da.'],
-      ['App wie unter 1 auf dem neuen Gerät einrichten.', '<b>Einstellungen → Datensicherung → Sicherung einspielen</b>.', 'Die Datei in <b>Drive</b> oder <b>Downloads</b> auswählen.', 'Fertig – Kunden, Berechnungen und Angebote sind wieder da.'])
-    + sec('4 · Firmen-Einstellungen vom Admin übernehmen',
-      ['Die vom Admin geschickte <b>Konfigurationsdatei</b> (z. B. per Mail oder AirDrop) in <b>Dateien</b> speichern.', 'In der App: <b>Einstellungen → Datensicherung → Firmen-Konfiguration einspielen</b> und die Datei wählen.', 'Ihre eigenen Kunden bleiben dabei erhalten.'],
-      ['Die vom Admin geschickte <b>Konfigurationsdatei</b> (z. B. per Mail oder WhatsApp) unter <b>Downloads</b> speichern.', 'In der App: <b>Einstellungen → Datensicherung → Firmen-Konfiguration einspielen</b> und die Datei wählen.', 'Ihre eigenen Kunden bleiben dabei erhalten.'])
-    + sec('5 · App aktualisieren',
+  return sCard('info', 'Anleitung für iPhone und Android', 'Einmal einrichten – Ihre Daten liegen sicher auf dem LumbraDesk-Server.',
+    sec('1 · LumbraDesk auf den Startbildschirm legen',
+      ['<b>lumbradesk.de</b> in <b>Safari</b> öffnen (nicht in Chrome oder einer anderen App).', 'Unten auf <b>Teilen</b> tippen (Quadrat mit Pfeil nach oben).', 'Nach unten scrollen → <b>Zum Home-Bildschirm</b> → <b>Hinzufügen</b>.', 'Die App ab jetzt <b>nur noch über das neue Symbol</b> öffnen – sonst sieht iOS sie als normale Webseite und kann die Daten nach einigen Wochen löschen.'],
+      ['<b>lumbradesk.de</b> in <b>Chrome</b> öffnen.', 'Oben rechts auf das Menü <b>⋮</b> tippen.', '<b>App installieren</b> oder <b>Zum Startbildschirm hinzufügen</b> wählen und bestätigen.', 'Die App ab jetzt über das neue Symbol öffnen.'])
+    + sec('2 · Neues Handy',
+      ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'],
+      ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'])
+    + sec('3 · App aktualisieren',
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.'],
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.']));
 }
 const _setAnsicht14 = SET.ansicht;
 SET.ansicht = () => _setAnsicht14() + guideCard();
-const _setDaten14 = SET.daten;
-if (_setDaten14) SET.daten = () => _setDaten14().replace('Auf dem iPhone öffnet sich der Teilen-Dialog: „In Dateien sichern“ → iCloud Drive.', platform() === 'android' ? 'Auf Android öffnet sich der Teilen-Dialog: „Drive“ wählen – oder die Datei landet unter „Downloads“.' : 'Auf dem iPhone öffnet sich der Teilen-Dialog: „In Dateien sichern“ → iCloud Drive. Auf Android: „Drive“ oder „Downloads“.') + `<p class="hint">Schritt-für-Schritt-Anleitung für iPhone und Android: <a class="text-p underline" href="#/einstellungen/ansicht">Einstellungen → Ansicht &amp; Tutorial</a>.</p>`;
 
 /* ---------- 5) Erinnerung: Preise und Förderung prüfen ---------- */
 const REVIEW_DAYS = 180;

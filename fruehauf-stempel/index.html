@@ -163,9 +163,9 @@ const IP = {
 /* =========================================================
    Frühauf – Stempeluhr
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
-   Wochenzettel als PDF – direkt per WhatsApp teilen. Daten bleiben auf dem Gerät.
+   Wochenzettel als PDF. Teil von LumbraDesk: Daten gleichen sich mit dem Firmen-Server ab.
    ========================================================= */
-const APP_VERSION = '2.1';
+const APP_VERSION = '2.2';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -173,7 +173,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const uid = (p = 'x') => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const clone = o => JSON.parse(JSON.stringify(o));
 const pad2 = n => String(n).padStart(2, '0');
-/* Geprüfte Uhrzeit: Abstand zur Serverzeit (HTTP-Date von Netlify). Verstellte Handy-Uhren ändern nichts. */
+/* Geprüfte Uhrzeit: Abstand zur Serverzeit (HTTP-Date des LumbraDesk-Servers). Verstellte Handy-Uhren ändern nichts. */
 const TIME = { off: 0, ok: false, at: 0 };
 const tNow = () => new Date(Date.now() + TIME.off);
 async function syncTime(timeout = 3000) {
@@ -218,10 +218,10 @@ const DB = {
 
 /* ---------- Einstellungen ---------- */
 const DEFAULTS = {
-  company: { name: 'Frühauf Solar', street: '', city: '', phone: '', email: '', logo: 'logo.png' },
+  company: { name: 'Frühauf Solar', street: '', city: '', phone: '', email: '', logo: 'logo.png', contact: { name: '', phone: '', email: '' } },   // contact: Ansprechpartner im Büro (vom Büro für alle festgelegt)
   design: { mode: 'system', primary: '#0E7C66', secondary: '#F5A524', radius: 14, fontBody: 'Geist', fontHead: 'Instrument Serif' },
   person: { name: '', nr: '', start: '' },   // start: Eintrittsdatum
-  recipient: { name: 'Jule', phone: '' },
+  recipient: { name: '', phone: '' },
   state: 'NW',
   /* Sollzeiten je Wochentag (0 = Sonntag) */
   hours: { 1: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 2: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 3: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 4: { on: true, von: '07:30', bis: '16:30', pause: 30 }, 5: { on: true, von: '07:30', bis: '13:45', pause: 15 }, 6: { on: false, von: '', bis: '', pause: 30 }, 0: { on: false, von: '', bis: '', pause: 30 } },
@@ -502,8 +502,7 @@ function shell(inner) {
   return `<header class="sticky top-0 z-40 border-b border-line backdrop-blur-xl" style="background:color-mix(in srgb,var(--bg) 86%,transparent);padding-top:env(safe-area-inset-top)">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
       <a href="#/" class="flex items-center gap-3 min-w-0">${logoMark()}<span class="hidden sm:block leading-tight"><span class="block font-semibold text-[15px]">Stempeluhr</span><span class="block text-[12px] text-ink3">${esc(S.person.name || S.company.name)}</span></span></a>
-      <nav class="ml-auto flex items-center gap-1">${nav.map(([k, l, i, h]) => `<a href="${h}" class="navl ${UI.route === k ? 'on' : ''}" aria-label="${l}">${ic(i, 17)}<span class="hidden md:inline">${l}</span></a>`).join('')}
-      <button class="btn-p !h-10 !px-4 ml-1" data-a="send-week" data-mon="${mondayOf(isoToday())}">${ic('send', 16)}<span class="hidden sm:inline">An ${esc(S.recipient.name || 'Büro')}</span></button></nav>
+      <nav class="ml-auto flex items-center gap-1">${nav.map(([k, l, i, h]) => `<a href="${h}" class="navl ${UI.route === k ? 'on' : ''}" aria-label="${l}">${ic(i, 17)}<span class="hidden md:inline">${l}</span></a>`).join('')}</nav>
     </div></header>
     <main class="max-w-6xl mx-auto px-4 sm:px-6 pb-24">${inner}</main>
     <datalist id="dl-sites">${(S.sites || []).map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
@@ -532,6 +531,7 @@ function weekCard(mon, big) {
 /* ---------- Erinnerung: Stundenzettel freitags übermitteln ---------- */
 let SENT = {};   // Montag der Woche → Zeitpunkt des Sendens
 function reminderCard() {
+  return '';   // LumbraDesk: das Büro sieht die Zeiten automatisch
   const today = isoToday(), wd = tNow().getDay(), mon = mondayOf(today), last = addDays(mon, -7);
   let m = '', wk = '';
   if (wd === 5 && !SENT[mon]) { m = tNow().getHours() >= 12 || calcDay(dayOf(today)).end ? 'Heute ist Freitag – bitte den Stundenzettel an ' : 'Denk heute daran, den Stundenzettel an '; wk = mon; }
@@ -558,7 +558,7 @@ function viewHome() {
   if (state === 'idle') buttons = `<div class="grid gap-3">${btn('in', (d.segs || []).length ? 'Wieder kommen' : 'Kommen', 'play', G)}${(d.segs || []).length || !isWorkday(iso) ? '' : `<div class="grid grid-cols-2 gap-3">${btn('vac-today', 'Heute Urlaub', 'palm', V)}${btn('sick-today', 'Heute krank', 'heartp', 'background:var(--t-red);color:var(--red-ink);border:1px solid rgba(217,72,43,.35)')}</div>`}</div>`;
   else if (state === 'work') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause', 'coffee', Y)}${btn('switch', 'Baustelle wechseln', 'refresh', N)}<div class="col-span-2">${btn('out', 'Gehen', 'stop', R)}</div></div>`;
   else if (state === 'pause') buttons = `<div class="grid grid-cols-2 gap-3">${btn('pause', 'Pause beenden', 'play', G)}${btn('out', 'Gehen', 'stop', R)}</div>`;
-  else buttons = `<div class="rounded-[var(--r)] p-5 text-center" style="background:rgb(var(--s-rgb)/.14)"><div class="text-yel-ink">${ic(d.type === 'urlaub' ? 'palm' : d.type === 'krank' ? 'heartp' : 'cal', 34, 1.7)}</div><div class="text-[20px] font-semibold mt-2">Heute: ${d.betrieb ? esc(d.betrieb) : typeName(d.type)}</div>${d.type === 'feiertag' && holiday(iso) ? `<div class="text-ink3 text-[14px]">${esc(holiday(iso))}</div>` : ''}</div><div class="grid grid-cols-2 gap-3 mt-3">${btn('in', 'Trotzdem kommen', 'play', G)}${d.type === 'urlaub' ? btn('vac-undo', 'Urlaub zurücknehmen', 'x', N) : d.type === 'krank' ? btn('sick-undo', 'Doch nicht krank', 'x', N) : ''}</div>${d.type === 'krank' ? `<button class="btn-s w-full mt-3" data-a="sick-tell">${ic('send', 16)}${esc(S.recipient.name || 'Büro')} Bescheid geben</button><p class="hint text-center">Gute Besserung! Bitte die Krankmeldung (AU) wie gewohnt einreichen.</p>` : ''}`;
+  else buttons = `<div class="rounded-[var(--r)] p-5 text-center" style="background:rgb(var(--s-rgb)/.14)"><div class="text-yel-ink">${ic(d.type === 'urlaub' ? 'palm' : d.type === 'krank' ? 'heartp' : 'cal', 34, 1.7)}</div><div class="text-[20px] font-semibold mt-2">Heute: ${d.betrieb ? esc(d.betrieb) : typeName(d.type)}</div>${d.type === 'feiertag' && holiday(iso) ? `<div class="text-ink3 text-[14px]">${esc(holiday(iso))}</div>` : ''}</div><div class="grid grid-cols-2 gap-3 mt-3">${btn('in', 'Trotzdem kommen', 'play', G)}${d.type === 'urlaub' ? btn('vac-undo', 'Urlaub zurücknehmen', 'x', N) : d.type === 'krank' ? btn('sick-undo', 'Doch nicht krank', 'x', N) : ''}</div>${d.type === 'krank' ? `<p class="hint text-center">Gute Besserung! Das Büro sieht die Krankmeldung automatisch. Bitte die AU wie gewohnt einreichen.</p>` : ''}`;
   /* fehlendes Gehen an früheren Tagen */
   const miss = Object.values(DAYS).filter(x => x.iso < iso && x.iso >= addDays(iso, -21) && calcDay(x).missingEnd).sort((a, b) => a.iso.localeCompare(b.iso));
   const missCard = miss.length ? `<div class="card p-4 mt-4 border-ember/50 flex flex-wrap items-center gap-3" style="background:var(--t-red)"><span class="text-ember">${ic('alert', 20)}</span><div class="flex-1 min-w-[200px] text-[14px]">Ausstempeln fehlt: ${miss.map(x => `<b>${wdOf(x.iso).slice(0, 2)}, ${deDate(x.iso)}</b>`).join(', ')} – bitte vom Admin korrigieren lassen.</div><a class="btn-s !h-9" href="#/woche/${mondayOf(miss[0].iso)}">Ansehen</a></div>` : '';
@@ -585,7 +585,7 @@ function viewHome() {
     </div>
     <div class="mt-4">${weekCard(mondayOf(iso), true)}</div>
     <div class="card p-5 mt-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><h2 class="sec-t">Diese Woche</h2></div>${week || '<div class="text-ink3 text-[14px]">Noch keine Einträge.</div>'}
-      <div class="flex flex-wrap gap-2 mt-4"><a class="btn-s" href="#/woche">${ic('cal', 16)}Woche ansehen</a><button class="btn-g" data-a="konto-edit">${ic('edit', 15)}Bestand einpflegen (Admin)</button><button class="btn-p" data-a="send-week" data-mon="${mondayOf(iso)}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button></div></div>
+      <div class="flex flex-wrap gap-2 mt-4"><a class="btn-s" href="#/woche">${ic('cal', 16)}Woche ansehen</a><button class="btn-g" data-a="konto-edit">${ic('edit', 15)}Bestand einpflegen (Admin)</button><button class="btn-s" data-a="send-week" data-mon="${mondayOf(iso)}">${ic('file', 16)}Stundenzettel als PDF</button></div></div>
   </section>`;
 }
 
@@ -628,7 +628,7 @@ function viewWeek() {
       <div class="flex items-center gap-1"><a class="btn-s !px-3" href="#/woche/${addDays(mon, -7)}" aria-label="Vorige Woche">${ic('chevL', 18)}</a><a class="btn-s" href="#/woche/${mondayOf(today)}">Heute</a><a class="btn-s !px-3" href="#/woche/${addDays(mon, 7)}" aria-label="Nächste Woche">${ic('chevR', 18)}</a></div></div>
     <p class="text-ink3 text-[14px] mt-2">${deDate(mon)} – ${deDate(addDays(mon, 6))} · ${esc(S.person.name || 'Name fehlt')}</p>
     <div class="grid lg:grid-cols-[1fr_260px] gap-3 mt-5">${weekCard(mon)}<div class="kpi"><div class="text-[12px] text-ink3">Überstunden gesamt</div><div class="text-[22px] font-semibold mt-1 text-p">${overTxt(balance())}</div>${account().minus ? `<div class="text-[12px] text-red-ink mt-1">Minusstunden gesamt: ${hm(account().minus)}</div>` : ''}<button class="btn-g !h-8 !px-0 mt-2" data-a="konto-edit">${ic('edit', 14)}Bestand einpflegen</button></div></div>
-    <div class="flex flex-wrap items-center gap-2 mt-5"><button class="btn-p" data-a="send-week" data-mon="${mon}">${ic('send', 16)}Stundenzettel an ${esc(S.recipient.name || 'Büro')}</button><button class="btn-s" data-a="send-month" data-iso="${mon}">${ic('file', 16)}Monat ${MONTHS[+mon.slice(5, 7) - 1]}</button><span class="flex-1"></span>${lock}</div>
+    <div class="flex flex-wrap items-center gap-2 mt-5"><button class="btn-s" data-a="send-week" data-mon="${mon}">${ic('file', 16)}Woche als PDF</button><button class="btn-s" data-a="send-month" data-iso="${mon}">${ic('file', 16)}Monat ${MONTHS[+mon.slice(5, 7) - 1]}</button><span class="flex-1"></span>${lock}</div>
     <div class="space-y-3 mt-5">${cards}</div>
     ${Object.keys(W.sites).length ? `<div class="card p-5 mt-4"><h2 class="sec-t mb-3">Baustellen dieser Woche</h2>${Object.entries(W.sites).sort((a, b) => b[1] - a[1]).map(([k, m]) => `<div class="flex justify-between py-2 border-b border-line last:border-0 text-[14px]"><span>${esc(k)}</span><b class="mono">${hm(m)}</b></div>`).join('')}</div>` : ''}
   </section>`;
@@ -674,25 +674,34 @@ function viewUrlaub() {
         <label class="block mt-3"><span class="lbl">Bemerkung (optional)</span><input class="inp" data-vac="note" value="${esc(UI.vNote || '')}" placeholder="z. B. Familienurlaub"></label>
         <div class="kpi mt-4 flex items-center justify-between"><span class="text-[14px]">${deDate(von)} – ${deDate(bis)}</span><b class="text-[22px]" id="vac-n">${fmtDays(vacDays(days))} Urlaubstag${days.length === 1 ? '' : 'e'}</b></div>
         ${vacDays(days) > v.left ? `<p class="text-ember text-[13px] mt-2">Achtung: mehr Tage als Resturlaub (${fmtDays(v.left)}).</p>` : ''}
-        <div class="grid sm:grid-cols-2 gap-2 mt-4"><button class="btn-p !h-12" data-a="vac-submit">${ic('send', 17)}Urlaub einreichen (PDF an ${esc(S.recipient.name || 'Büro')})</button><button class="btn-s !h-12" data-a="vac-set">${ic('palm', 17)}Direkt eintragen</button></div>
-        <p class="hint">„Einreichen“ erstellt einen Urlaubsantrag als PDF, speichert ihn und öffnet Teilen (WhatsApp). „Direkt eintragen“ trägt die Tage in den Kalender ein – vergangene Tage nur mit Admin-Passwort.</p></div>
+        <div class="grid sm:grid-cols-2 gap-2 mt-4"><button class="btn-p !h-12" data-a="vac-submit">${ic('send', 17)}Urlaub beantragen</button><button class="btn-s !h-12" data-a="vac-set">${ic('palm', 17)}Direkt eintragen</button></div>
+        <p class="hint">„Beantragen“ trägt die Tage ein und schickt den Antrag ans Büro – die Antwort siehst du hier. „Direkt eintragen“ trägt nur ein (vergangene Tage nur mit Admin-Passwort).</p></div>
       <div class="card p-5 sm:p-6"><h2 class="sec-t mb-3">Eingetragener Urlaub ${y}</h2>${blocks.length ? blocks.map(b => `<div class="flex items-center gap-3 py-2.5 border-b border-line last:border-0 text-[14px]"><span class="text-yel-ink">${ic('palm', 16)}</span><span class="flex-1">${deDate(b.von)}${b.bis !== b.von ? ' – ' + deDate(b.bis) : ''}</span><b>${fmtDays(b.n)} Tag${b.n === 1 ? '' : 'e'}</b><button class="btn-g !h-8 !px-2 hover:!text-ember" data-a="vac-del" data-von="${b.von}" data-bis="${b.bis}" aria-label="Entfernen">${ic('trash', 15)}</button></div>`).join('') : '<div class="text-ink3 text-[14px]">Noch kein Urlaub eingetragen.</div>'}
-        ${reqs.length ? `<h3 class="font-semibold mt-6 mb-2 text-[15px]">Eingereichte Anträge</h3>${reqs.map(r => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[13px]"><span class="flex-1">${deDate(r.von)} – ${deDate(r.bis)} · ${r.n} Tage</span><span class="text-ink3">eingereicht ${deDate(r.at.slice(0, 10))}</span></div>`).join('')}` : ''}</div>
+        ${reqs.length ? `<h3 class="font-semibold mt-6 mb-2 text-[15px]">Deine Anträge</h3>${reqs.map(r => `<div class="flex items-center gap-3 py-2 border-b border-line last:border-0 text-[13px]"><span class="flex-1">${deDate(r.von)} – ${deDate(r.bis)} · ${r.n} Tage</span><span class="${r.status === 'abgelehnt' ? 'text-red-ink' : r.status === 'genehmigt' ? 'text-p' : 'text-ink3'}">${r.status === 'genehmigt' ? 'genehmigt' : r.status === 'abgelehnt' ? 'abgelehnt' : 'beantragt ' + deDate(r.at.slice(0, 10))}</span></div>`).join('')}` : ''}</div>
     </div>${calendar()}</section>`;
 }
 
 /* ---------- Einstellungen ---------- */
-const SET_TABS = [['person', 'Ich & Empfänger', 'users'], ['zeiten', 'Arbeitszeiten', 'clock'], ['konten', 'Konten', 'cal'], ['bu', 'Betriebsurlaub', 'palm'], ['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['admin', 'Admin', 'gear'], ['daten', 'Daten', 'download']];
+const SET_TABS = [['person', 'Ich', 'users'], ['zeiten', 'Arbeitszeiten', 'clock'], ['konten', 'Konten', 'cal'], ['bu', 'Betriebsurlaub', 'palm'], ['firma', 'Firma & Logo', 'building'], ['design', 'Design', 'sun'], ['admin', 'Admin', 'gear'], ['daten', 'Daten', 'download']];
 const LOCKED_TABS = ['zeiten', 'konten', 'bu'];
+/* Ansprechpartner im Büro: steht auf dem Stundenzettel; das Büro legt ihn für alle fest */
+const contactOf = () => (S.company && S.company.contact) || {};
+function contactInfo() {
+  const c = contactOf(); if (!c.name && !c.phone && !c.email) return '';
+  return `<div class="kpi mt-6 text-[14px]"><div class="text-[12px] text-ink3 mb-1">Dein Ansprechpartner im Büro</div><b>${esc(c.name || '')}</b>${c.phone ? ` · <a class="text-p" href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a>` : ''}${c.email ? ` · <a class="text-p" href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ''}</div>`;
+}
+function contactBlock() {
+  const office = typeof LDS !== 'undefined' && LDS.office;
+  return `<h3 class="font-semibold mt-7 mb-1">Ansprechpartner im Büro</h3><p class="text-ink3 text-[13px] mb-3">Steht oben auf jedem Stundenzettel und bei allen Mitarbeitern unter „Ich“.${office ? '' : ' Festgelegt vom Büro.'}</p>
+    <div class="grid sm:grid-cols-3 gap-4">${sIn('company.contact.name', 'Name', 'z. B. Jule Frühauf', 'text', !office)}${sIn('company.contact.phone', 'Telefon', '', 'tel', !office)}${sIn('company.contact.email', 'E-Mail', '', 'email', !office)}</div>
+    ${office ? `<button class="btn-p mt-3" data-a="contact-all">${ic('send', 16)}Für alle Mitarbeiter übernehmen</button>` : ''}`;
+}
 const sIn = (path, label, ph = '', type = 'text', dis = false) => { const v = path.split('.').reduce((o, k) => (o || {})[k], S); return `<label class="block"><span class="lbl">${label}</span><input class="inp" data-s="${path}" type="${type}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" ${type === 'number' ? 'inputmode="decimal"' : ''} ${dis ? 'disabled' : ''}></label>`; };
 function setBody() {
   const ro = LOCKED_TABS.includes(UI.tab) && !canEdit();
   const lockNote = ro ? `<div class="rounded-[var(--rb)] bg-raised p-3 mb-5 flex flex-wrap items-center gap-3 text-[14px]"><span class="text-ink3">${ic('alert', 17)}</span><span class="flex-1">Nur mit Admin-Passwort änderbar.</span><button class="btn-s !h-9" data-a="unlock">Freischalten</button></div>` : '';
   switch (UI.tab) {
-    case 'person': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('person.name', 'Mein Name', 'Vor- und Nachname')}${sIn('person.nr', 'Personalnummer (optional)')}</div>
-      <h3 class="font-semibold mt-7 mb-3">Stundenzettel senden an</h3><div class="grid sm:grid-cols-2 gap-4">${sIn('recipient.name', 'Name', 'z. B. Jule')}${sIn('recipient.phone', 'WhatsApp-Nummer (optional)', 'z. B. 0176 …', 'tel')}</div>
-      <p class="hint">Das PDF wird gespeichert und über „Teilen“ an WhatsApp übergeben – dort ${esc(S.recipient.name || 'den Empfänger')} auswählen. Die Nummer wird genutzt, wenn das Gerät kein Teilen von Dateien kann.</p>
-      <h3 class="font-semibold mt-7 mb-2">Erinnerung jeden Freitag</h3><p class="text-ink3 text-[14px] mb-3">Die App erinnert freitags auf der Startseite. Zusätzlich kann eine wiederkehrende Erinnerung in den Handy-Kalender übernommen werden – sie meldet sich jeden Freitag um 13:30 Uhr, auch wenn die App geschlossen ist.</p><button class="btn-s" data-a="ics">${ic('cal', 16)}Erinnerung in Kalender übernehmen</button>
+    case 'person': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('person.name', 'Mein Name', 'Vor- und Nachname')}${sIn('person.nr', 'Personalnummer (optional)')}</div>${contactInfo()}
       <div class="kpi mt-6 text-[14px] flex items-start gap-2"><span class="text-p mt-0.5">${ic('pin', 16)}</span><span>Beim Kommen, bei Pausen und beim Gehen wird der Standort gespeichert (Pflicht). Ohne Standortfreigabe ist Stempeln nicht möglich.${S.gpsConsent ? ` Hinweis bestätigt am ${deDate(S.gpsConsent.slice(0, 10))}.` : ''}</span></div>`;
     case 'zeiten': return `${lockNote}<p class="text-ink3 text-[14px] mb-4">Sollzeiten je Wochentag. Die Mindestpause wird bei der Sollzeit und bei jedem Arbeitstag abgezogen.</p>
       <div class="grid grid-cols-[70px_1fr_1fr_64px_58px] gap-2 text-[12px] text-ink3 mb-1"><span>Tag</span><span>Beginn</span><span>Ende</span><span>Pause</span><span class="text-right">Soll</span></div><div class="space-y-2">${[1, 2, 3, 4, 5, 6, 0].map(k => { const h = S.hours[k]; return `<div class="grid grid-cols-[70px_1fr_1fr_64px_58px] gap-2 items-center"><label class="flex items-center gap-2 text-[14px]"><input type="checkbox" data-hour="${k}" data-k="on" ${h.on ? 'checked' : ''} ${ro ? 'disabled' : ''}>${WD[k].slice(0, 2)}</label><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="von" value="${esc(h.von)}" ${ro || !h.on ? 'disabled' : ''}><input type="time" class="inp !h-10 !px-2" data-hour="${k}" data-k="bis" value="${esc(h.bis)}" ${ro || !h.on ? 'disabled' : ''}><input class="inp !h-10 !px-2" inputmode="numeric" data-hour="${k}" data-k="pause" value="${esc(h.pause ?? '')}" ${ro || !h.on ? 'disabled' : ''}><span class="text-[13px] text-ink3 mono text-right">${h.on ? hm(tplSoll(k === 0 ? '2026-11-15' : addDays('2026-11-09', k - 1))) : '–'}</span></div>`; }).join('')}</div>
@@ -709,7 +718,7 @@ function setBody() {
       <h3 class="font-semibold mt-7 mb-3">Überstundenkonto</h3><div class="grid grid-cols-2 gap-4">${sIn('balance.from', 'Zählt ab', '', 'date', ro)}<label class="block"><span class="lbl">Startwert Überstunden (Std:Min, z. B. 12:30)</span><input class="inp" data-bal value="${esc(hm(S.balance.min || 0))}" ${ro ? 'disabled' : ''}></label></div><p class="hint">Aktuell: <b>${overTxt(balance())}</b>${account().minus ? ` · Minusstunden: ${hm(account().minus)}` : ''}. Fehlende Stunden werden zuerst von den Überstunden abgezogen, der Rest als Minusstunden ausgewiesen.</p>
       <button class="btn-p mt-4" data-a="konto-edit">${ic('edit', 16)}Bestand einpflegen</button>
       ${(S.kontoLog || []).length ? `<h3 class="font-semibold mt-7 mb-2">Änderungsprotokoll</h3><div class="space-y-1">${S.kontoLog.slice().reverse().slice(0, 15).map(l => `<div class="text-[12px] text-ink3"><b class="text-ink2">${new Date(l.at).toLocaleString('de-DE')}</b> · ${esc(l.what)}</div>`).join('')}</div>` : ''}`; }
-    case 'firma': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('company.name', 'Firmenname')}${sIn('company.phone', 'Telefon')}${sIn('company.street', 'Straße')}${sIn('company.city', 'PLZ und Ort')}</div>
+    case 'firma': return `<div class="grid sm:grid-cols-2 gap-4">${sIn('company.name', 'Firmenname')}${sIn('company.phone', 'Telefon')}${sIn('company.street', 'Straße')}${sIn('company.city', 'PLZ und Ort')}</div>${contactBlock()}
       <div class="mt-6"><span class="lbl">Logo (App und PDF)</span><div class="flex flex-wrap items-center gap-3">${S.company.logo ? `<span class="rounded-[var(--rb)] bg-white p-3 border border-line"><img src="${esc(S.company.logo)}" class="h-14" alt=""></span>` : '<span class="text-ink3 text-[14px]">Kein Logo</span>'}
         <label class="btn-s cursor-pointer">${ic('upload', 16)}Logo wählen<input type="file" accept="image/*" class="hidden" data-logo></label>${S.company.logo !== 'logo.png' ? '<button class="btn-g" data-a="logo-reset">Standard-Logo</button>' : ''}</div></div>`;
     case 'design': return `<div><span class="lbl">Ansicht</span><div class="seg">${[['system', 'Wie Gerät'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, l]) => `<button class="${S.design.mode === k ? 'on' : ''}" data-a="mode" data-v="${k}">${l}</button>`).join('')}</div></div>
@@ -718,15 +727,12 @@ function setBody() {
       <button class="btn-g mt-6" data-a="design-reset">${ic('refresh', 15)}Design zurücksetzen</button>`;
     case 'admin': return DEVICE.admin ? `<div class="rounded-[var(--rb)] p-4 text-[14px] flex items-center gap-3" style="background:var(--p-light)"><span class="text-p">${ic('check', 20, 2.4)}</span><span class="flex-1">Dieses Gerät ist ein <b>Admin-Gerät</b>: Nachtragen und Korrigieren ohne erneute Abfrage. Alle Änderungen werden protokolliert.</span></div>
       <button class="btn-s mt-4" data-a="admin-off">${ic('x', 16)}Admin-Gerät beenden</button>
-      <h3 class="font-semibold mt-8 mb-3">Admin-Passwort ändern</h3><div class="grid sm:grid-cols-2 gap-3"><input type="password" class="inp" id="pw-new1" placeholder="Neues Passwort" autocomplete="new-password"><input type="password" class="inp" id="pw-new2" placeholder="Wiederholen" autocomplete="new-password"></div><button class="btn-s mt-3" data-a="pw-change">Passwort ändern</button><p class="hint">Gilt für dieses Gerät und für Sicherungen, die von hier eingespielt werden.</p>`
+      <h3 class="font-semibold mt-8 mb-3">Admin-Passwort ändern</h3><div class="grid sm:grid-cols-2 gap-3"><input type="password" class="inp" id="pw-new1" placeholder="Neues Passwort" autocomplete="new-password"><input type="password" class="inp" id="pw-new2" placeholder="Wiederholen" autocomplete="new-password"></div><button class="btn-s mt-3" data-a="pw-change">Passwort ändern</button><p class="hint">Gilt für dieses Gerät.</p>`
       : `<p class="text-ink3 text-[14px] mb-4">Nur für Manuel, Artjom und Jule: Mit dem Admin-Passwort wird dieses Gerät dauerhaft zum Admin-Gerät – dort lässt sich ohne erneute Abfrage nachtragen und korrigieren. Auf Mitarbeiter-Geräten wird bei jeder Änderung neu gefragt.</p>
       <div class="flex flex-col sm:flex-row gap-2 max-w-md"><input type="password" class="inp" id="pw-admin" placeholder="Admin-Passwort" autocomplete="current-password"><button class="btn-p shrink-0" data-a="admin-on">Als Admin-Gerät freischalten</button></div>`;
-    case 'daten': return `<div class="rounded-[var(--r)] p-4 mb-6" style="background:var(--p-light)"><div class="flex items-center gap-2 font-semibold">${ic('check', 17, 2.4)}Datenschutz</div><p class="text-[14px] text-ink2 mt-2">Deine Zeiten, dein Urlaub und deine Baustellen liegen <b>nur auf deinem Handy</b>. Es gibt keinen gemeinsamen Server – Kollegen sehen nichts davon. Ins Büro geht nur, was du selbst als PDF an ${esc(S.recipient.name || 'das Büro')} schickst.</p></div>
+    case 'daten': return `<div class="rounded-[var(--r)] p-4 mb-6" style="background:var(--p-light)"><div class="flex items-center gap-2 font-semibold">${ic('check', 17, 2.4)}Datenschutz</div><p class="text-[14px] text-ink2 mt-2">Deine Zeiten, dein Urlaub, deine Baustellen und der Standort beim Stempeln werden mit dem Firmen-Server (LumbraDesk) abgeglichen. Sehen können sie nur <b>Büro und Admins</b> – Kollegen nicht.</p></div>
       <h3 class="font-semibold mb-2">App-PIN</h3><p class="text-ink3 text-[14px] mb-3">Schützt die App, falls das Handy verloren geht oder jemand anderes es benutzt. Beim Öffnen wird die PIN abgefragt.</p>
       ${S.pin ? `<div class="flex flex-wrap gap-2"><span class="badge bg-tgrn text-p !h-9 !px-3">${ic('check', 14, 2.4)}PIN aktiv</span><button class="btn-s !h-9" data-a="pin-off">PIN entfernen</button></div>` : `<div class="flex flex-col sm:flex-row gap-2 max-w-md"><input class="inp" id="pin-new" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="4–8 Ziffern" style="-webkit-text-security:disc"><button class="btn-s shrink-0" data-a="pin-set">PIN festlegen</button></div>`}
-      <h3 class="font-semibold mt-8 mb-2">Sicherung</h3><p class="text-ink3 text-[14px] mb-4">Alle Daten liegen nur auf diesem Gerät. Bitte regelmäßig eine Sicherung speichern – damit lassen sich die Zeiten auch auf ein neues Handy übertragen.</p>
-      <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="backup">${ic('download', 16)}Sicherung speichern</button><label class="btn-s cursor-pointer ${canEdit() ? '' : 'opacity-40 pointer-events-none'}">${ic('upload', 16)}Sicherung einspielen<input type="file" accept="application/json,.json" class="hidden" data-restore ${canEdit() ? '' : 'disabled'}></label></div>
-      ${canEdit() ? '' : '<p class="hint">Einspielen nur mit Admin-Freischaltung.</p>'}
       <div class="kpi mt-5 text-[14px]">${Object.keys(DAYS).length} Tage gespeichert</div><p class="hint mt-6">Version ${APP_VERSION}</p>`;
   }
   return '';
@@ -794,7 +800,7 @@ function geoBlockedModal() {
 function consentModal() {
   return new Promise(res => {
     modal(`<div class="text-center"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('pin', 26)}</div><div class="font-semibold text-[19px] mt-4">Hinweis zum Standort</div></div>
-      <div class="text-[14px] text-ink2 mt-4 space-y-2"><p>Beim <b>Kommen, bei Pausen und beim Gehen</b> speichert die Stempeluhr einmalig deinen Standort – nicht dauerhaft und nicht im Hintergrund.</p><p>Der Standort liegt auf deinem Handy und erscheint in deinem Stundenzettel, den du an ${esc(S.recipient.name || 'das Büro')} schickst. Ohne Standortfreigabe ist Stempeln nicht möglich.</p></div>
+      <div class="text-[14px] text-ink2 mt-4 space-y-2"><p>Beim <b>Kommen, bei Pausen und beim Gehen</b> speichert die Stempeluhr einmalig deinen Standort – nicht dauerhaft und nicht im Hintergrund.</p><p>Der Standort wird mit deinen Zeiten auf dem Firmen-Server (LumbraDesk) gespeichert und ist nur für Büro und Admins sichtbar. Ohne Standortfreigabe ist Stempeln nicht möglich.</p></div>
       <button class="btn-p w-full mt-5" id="cs-ok">${ic('check', 16)}Verstanden und einverstanden</button>`);
     $('#cs-ok').onclick = () => { S.gpsConsent = tNow().toISOString(); saveSettings(); closeModal(); res(true); };
   });
@@ -859,7 +865,7 @@ async function stampInner(kind) {
   } else if (kind === 'out') {
     if (!seg) return; if (op) op.bis = t; seg.bis = t;
     await saveDay(d); const c = calcDay(d); toast(`Gegangen um ${t} Uhr · heute ${hm(c.netto)} Std.`, 'ok', 4500); rerender();
-    if (isFriday()) { const w = weekStat(mondayOf(d.iso)); cheer('Geschafft!', `Schönes Wochenende!${w.over ? ` Diese Woche +${hm(w.over)} Überstunden.` : ''}${SENT[mondayOf(d.iso)] ? '' : ` Denk an den Stundenzettel für ${S.recipient.name || 'das Büro'}.`}`, 'check'); }
+    if (isFriday()) { const w = weekStat(mondayOf(d.iso)); cheer('Geschafft!', `Schönes Wochenende!${w.over ? ` Diese Woche +${hm(w.over)} Überstunden.` : ''}`, 'check'); }
     return;
   }
   await saveDay(d); rerender();
@@ -902,10 +908,8 @@ document.addEventListener('click', async e => {
     case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${fmtDays(vacation().left - dayFactor(isoToday()))} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
     case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'vac-set': await setVacation(); break;
-    case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); tellSick(); break; }
+    case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); toast('Gute Besserung! Das Büro sieht die Krankmeldung automatisch.', 'ok', 4500); break; }
     case 'sick-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Krank', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
-    case 'sick-tell': tellSick(); break;
-    case 'ics': icsReminder(); break;
     case 'konto-edit': if (await needEdit()) kontoDialog(); break;
     case 'konto-save': kontoSave(); break;
     case 'cal': UI.calM = a.dataset.v; rerender(); break;
@@ -937,7 +941,6 @@ document.addEventListener('click', async e => {
     case 'admin-on': { const pw = $('#pw-admin').value; if (await checkAdmin(pw)) { DEVICE.admin = true; await DB.put('kv', DEVICE, 'device'); toast('Dieses Gerät ist jetzt ein Admin-Gerät.'); render(); } else toast('Passwort falsch.', 'err'); break; }
     case 'admin-off': DEVICE.admin = false; await DB.put('kv', DEVICE, 'device'); UI.editUntil = 0; toast('Admin-Gerät beendet.'); render(); break;
     case 'pw-change': { const p1 = $('#pw-new1').value, p2 = $('#pw-new2').value; if (p1.length < 6) return toast('Mindestens 6 Zeichen.', 'warn'); if (p1 !== p2) return toast('Die Passwörter stimmen nicht überein.', 'warn'); await setAdminPassword(p1); toast('Admin-Passwort geändert.'); render(); break; }
-    case 'backup': backup(); break;
   }
 });
 document.addEventListener('input', e => {
@@ -963,7 +966,6 @@ document.addEventListener('change', async e => {
   if (el.dataset.bal !== undefined) { if (!canEdit()) return rerender(); const m = /^\s*([−-])?\s*(\d+)(?::(\d{1,2}))?\s*$/.exec(el.value); if (!m) { toast('Bitte als Std:Min eingeben, z. B. 12:30', 'warn'); return; } S.balance.min = (m[1] ? -1 : 1) * (+m[2] * 60 + (+m[3] || 0)); saveSettings(); return rerender(); }
   if (el.dataset.s && (el.tagName === 'SELECT' || ['minPause', 'vacation.perYear', 'vacation.carry', 'balance.from', 'person.start'].includes(el.dataset.s))) { if (LOCKED_TABS.includes(UI.tab) && !canEdit()) return rerender(); return rerender(); }
   if (el.matches('[data-logo]') && el.files && el.files[0]) { const im = await shrinkImage(el.files[0], 700, 0.92, 'image/png'); S.company.logo = im.data; saveSettings(); render(); toast('Logo gespeichert.'); return; }
-  if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
 
 /* ---------- Bestand einpflegen (nur mit Admin-Passwort) ---------- */
@@ -996,20 +998,6 @@ function kontoSave() {
 }
 
 /* ---------- Krank melden ---------- */
-function tellSick() {
-  const text = `Hallo ${S.recipient.name || ''}, ich bin heute (${WD[tNow().getDay()]}, ${deDate(isoToday())}) krank und kann nicht arbeiten. Die Krankmeldung reiche ich nach. Viele Grüße, ${S.person.name || ''}`;
-  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
-  modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full grid place-items-center mx-auto" style="background:var(--t-red);color:var(--red-ink)">${ic('heartp', 26)}</div><div class="font-semibold text-[19px] mt-4">Gute Besserung!</div><p class="text-ink3 text-[14px] mt-1">Heute ist als Krankheitstag eingetragen.</p></div>
-    <div class="rounded-[var(--rb)] bg-raised p-3 text-[14px] mt-5">${esc(text)}</div>
-    <div class="grid gap-2 mt-4">${navigator.share ? `<button class="btn-p !h-12" id="sick-share">${ic('send', 17)}${esc(S.recipient.name || 'Büro')} Bescheid geben (WhatsApp)</button>` : ''}<a class="${navigator.share ? 'btn-s' : 'btn-p !h-12'}" href="https://wa.me/${phone}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp öffnen</a><button class="btn-g" data-a="modal-close">Später</button></div>`);
-  const b = $('#sick-share'); if (b) b.onclick = async () => { try { await navigator.share({ text }); closeModal(); } catch (e) {} };
-}
-/* Wiederkehrende Kalender-Erinnerung (jeden Freitag 13:30, Hinweis 0 Min. vorher) */
-function icsReminder() {
-  let d = tNow(); while (d.getDay() !== 5) d.setDate(d.getDate() + 1); const ymd = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`, stamp = tNow().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fruehauf//Stempeluhr//DE', 'BEGIN:VEVENT', `UID:stundenzettel-${Date.now()}@fruehauf`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Europe/Berlin:${ymd}T133000`, `DTEND;TZID=Europe/Berlin:${ymd}T134500`, 'RRULE:FREQ=WEEKLY;BYDAY=FR', `SUMMARY:Stundenzettel an ${S.recipient.name || 'Büro'} senden`, 'DESCRIPTION:Stempeluhr öffnen → „Stundenzettel senden“.', 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Stundenzettel senden', 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  saveBlob(new Blob([ics], { type: 'text/calendar' }), 'Erinnerung-Stundenzettel.ics'); toast('Kalender-Datei gespeichert – zum Übernehmen öffnen.', 'ok', 4500);
-}
 
 /* ---------- Urlaub ---------- */
 async function setVacation(silent) {
@@ -1024,27 +1012,18 @@ async function submitVacation() {
   if (!S.person.name) { toast('Bitte zuerst deinen Namen eintragen.', 'warn'); location.hash = '#/einstellungen/person'; return; }
   const von = UI.vVon || isoToday(), bis = UI.vBis || von, days = workDaysIn(von, bis);
   if (!days.length) return toast('Im Zeitraum liegen keine Arbeitstage.', 'warn');
-  const before = vacation(+von.slice(0, 4));
-  modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">Urlaubsantrag wird erstellt …</div></div>`);
   try {
-    const left = before.left - days.filter(i => dayOf(i).type !== 'urlaub').length;
-    const blob = await buildVacationPdf({ von, bis, n: vacDays(days), note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
-    const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
-    saveBlob(blob, name);
-    UI.requests = (UI.requests || []).concat({ von, bis, n: vacDays(days), at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
-    await setVacation(true);
-    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${fmtDays(vacDays(days))} Urlaubstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
-    render();
-  } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
+    const j = await ldsApi('st-req', { von, bis, n: vacDays(days), note: UI.vNote || '' });
+    UI.requests = (UI.requests || []).concat({ id: j.id, von, bis, n: vacDays(days), at: tNow().toISOString(), status: 'offen' }); await DB.put('kv', UI.requests, 'requests');
+    await setVacation(true); toast('Urlaub eingetragen und beim Büro beantragt.', 'ok', 4500); render();
+  } catch (err) { toast(navigator.onLine ? 'Antrag nicht möglich: ' + err.message : 'Ohne Internet kein Antrag möglich – bitte später nochmal.', 'err', 5000); }
 }
 function shareModal(blob, name, text, title) {
   const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
-  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
   modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">${esc(title)}</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
-    <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p !h-12" id="pdf-share">${ic('send', 17)}An ${esc(S.recipient.name || 'Büro')} senden (WhatsApp)</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp und dann ${esc(S.recipient.name || 'den Empfänger')} wählen.</p>` : `<a class="btn-p !h-12" href="https://wa.me/${phone}?text=${encodeURIComponent(text + ' (PDF folgt als Anhang)')}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp an ${esc(S.recipient.name || 'Büro')} öffnen</a><p class="hint text-center -mt-1">Dann das gespeicherte PDF im Chat anhängen.</p>`}
-    <button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
+    <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-s" id="pdf-share">${ic('share', 17)}Teilen</button>` : ''}<button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
   $('#pdf-again').onclick = () => saveBlob(blob, name);
-  const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist gespeichert.', 'warn'); } };
+  const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], title: name }); closeModal(); } catch (err) {} };
 }
 
 /* ---------- PDF speichern und senden ---------- */
@@ -1063,21 +1042,6 @@ async function sendPdf(kind, iso) {
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
 
-/* ---------- Datensicherung ---------- */
-function backup() {
-  const data = { app: 'fruehauf-stempel', version: APP_VERSION, date: tNow().toISOString(), settings: S, days: Object.values(DAYS) };
-  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); saveBlob(blob, `stempeluhr-sicherung-${isoToday()}.json`); toast('Sicherung gespeichert.');
-}
-async function restore(file) {
-  if (!canEdit()) return toast('Einspielen nur mit Admin-Freischaltung.', 'warn');
-  try {
-    const d = JSON.parse(await file.text()); if (d.app !== 'fruehauf-stempel') throw new Error('Keine Sicherung der Stempeluhr');
-    if (!(await confirmDlg('Sicherung einspielen?', `${(d.days || []).length} Tage werden übernommen bzw. überschrieben.`, 'Einspielen'))) return;
-    S = deepMerge(clone(DEFAULTS), d.settings || {}); saveSettings();
-    for (const x of d.days || []) await DB.put('days', x);
-    DAYS = {}; ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; }); applyTheme(); render(); toast('Sicherung eingespielt.');
-  } catch (err) { toast('Sicherung konnte nicht gelesen werden: ' + err.message, 'err', 5000); }
-}
 
 /* ---------- App-PIN ---------- */
 function pinCheck(msg = 'PIN eingeben') {
@@ -1145,7 +1109,9 @@ async function buildPdf(isos, label) {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...INK); doc.text(T(`Stundenzettel ${label}`), W - M, 12.5, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
     doc.text(T(`${S.person.name}${S.person.nr ? ' · Pers.-Nr. ' + S.person.nr : ''} · ${deDate(isos[0])} - ${deDate(isos[isos.length - 1])}`), W - M, 18, { align: 'right' });
-    doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, 25, W - M, 25); y = 31;
+    const ct = contactOf(), ctl = [ct.name, ct.phone, ct.email].filter(Boolean).join(' · ');
+    if (ctl) { doc.setFontSize(8.2); doc.text(T('Ansprechpartner: ' + ctl), W - M, 22.5, { align: 'right' }); }
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, ctl ? 26.5 : 25, W - M, ctl ? 26.5 : 25); y = ctl ? 32.5 : 31;
   };
   header();
   /* Tabelle */
@@ -1191,7 +1157,7 @@ async function buildPdf(isos, label) {
   doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag wird die Mindestpause abgezogen (Mo-Do ${S.hours[1].pause} Min., Fr ${S.hours[5].pause} Min.)${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; Überstunden = Wochenstunden über ${hm(weekTarget())}; fehlende Stunden werden von den Überstunden abgezogen, der Rest als Minusstunden ausgewiesen; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet; Stempelzeiten kommen vom Server, ohne Internet gestempelte Zeiten sind als "offline" markiert. Standorte je Stempel mit Kartenausschnitt auf der Seite "Standorte".`), CW), M, y + 2);
   y = Math.max(y + 16, H - 38);
   const bw = (CW - 12) / 2;
-  [['Mitarbeiter', S.person.name], ['Geprüft', S.recipient.name]].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });
+  [['Mitarbeiter', S.person.name], ['Geprüft (Büro)', '']].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });
   /* Standorte mit Kartenausschnitt */
   const geos = R.days.flatMap(({ d }) => (d.geo || []).map(g => ({ g, iso: d.iso })));
   if (geos.length) {
@@ -1244,7 +1210,7 @@ async function buildVacationPdf(v) {
   const bw = (CW - 12) / 2;
   doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(M, y + 12, M + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`Datum, Unterschrift ${S.person.name}`), M, y + 16);
   y += 28; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 34, 2, 2, 'F');
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(T(`Vom Büro auszufüllen${S.recipient.name ? ' (' + S.recipient.name + ')' : ''}`), M + 5, y + 7);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(T('Vom Büro auszufüllen'), M + 5, y + 7);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); [['genehmigt', 0], ['abgelehnt', 40]].forEach(([l, dx]) => { doc.setDrawColor(...INK); doc.rect(M + 5 + dx, y + 12, 4.5, 4.5); doc.text(l, M + 12 + dx, y + 15.6); });
   doc.line(M + 5, y + 28, M + 5 + bw, y + 28); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text('Datum, Unterschrift', M + 5, y + 32);
   const c = S.company; doc.setFontSize(7.2); doc.text(T([c.name, c.street, c.city, c.phone].filter(Boolean).join(' · ')), M, 287);
@@ -1253,7 +1219,7 @@ async function buildVacationPdf(v) {
 
 /* =========================================================
    Mitarbeiter-Sicherungen und Aktualisierungen vom Büro
-   - Jeder Mitarbeiter schickt seine Sicherung ans Büro (WhatsApp).
+   - Unter LumbraDesk läuft das über den Server (09-lumbra.js); die Datei-Wege hier sind nur noch Unterbau.
    - Admin-Geräte (Manuel, Jule, Artjom) bewahren je Mitarbeiter eine Kopie auf,
      ändern dort Urlaub, Krankheit, Urlaubskonto und Überstunden
      und schicken eine Aktualisierung zurück.
@@ -1297,7 +1263,7 @@ async function ensureSignKey() {
 function shareFile(blob, name, text, title) {
   const file = new File([blob], name, { type: 'application/json' }), can = navigator.canShare && navigator.canShare({ files: [file] });
   modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">${esc(title)}</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div>
-    <div class="grid gap-2 mt-6">${can ? `<button class="btn-p !h-12" id="tf-share">${ic('send', 17)}Per WhatsApp senden</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp wählen.</p>` : ''}
+    <div class="grid gap-2 mt-6">${can ? `<button class="btn-p !h-12" id="tf-share">${ic('send', 17)}Teilen</button>` : ''}
     <button class="btn-s" id="tf-save">${ic('download', 17)}Datei speichern</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
   $('#tf-save').onclick = () => saveBlob(blob, name);
   const b = $('#tf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') { saveBlob(blob, name); toast('Teilen nicht möglich – die Datei ist gespeichert.', 'warn'); } } };
@@ -1394,24 +1360,14 @@ function applyToCopy(st, o) {
 function staffStats(st) {
   return withStaff(st, () => { const v = vacation(), a = account(); return { v, over: a.over, minus: a.minus }; });
 }
-function teamBody() {
-  if (!DEVICE.admin) return `<p class="text-ink3 text-[14px]">Nur auf Admin-Geräten (Manuel, Jule, Artjom). Unter „Admin“ dieses Gerät mit dem Admin-Passwort freischalten.</p>`;
-  const list = Object.entries(STAFF).sort((a, b) => a[1].name.localeCompare(b[1].name));
-  const sel = STAFF[UI.staff] ? UI.staff : '';
-  let h = `<p class="text-ink3 text-[14px] mb-4">So geht's: Mitarbeiter schickt seine Sicherung per WhatsApp → hier öffnen → Urlaub, Krankheit oder Konten ändern → „Aktualisierung senden“. Der Mitarbeiter spielt sie unter Einstellungen → Daten ein, fertig.</p>
-    <div class="flex flex-wrap gap-2"><label class="btn-p cursor-pointer">${ic('upload', 16)}Sicherung eines Mitarbeiters öffnen<input type="file" accept=".json,application/json" class="hidden" data-staff-file></label><button class="btn-s" data-a="tm-new">${ic('plus', 16)}Ohne Sicherung anlegen</button></div>`;
-  if (!list.length) return h + `<div class="kpi mt-5 text-[14px] text-ink3">Noch keine Mitarbeiter gespeichert.</div>`;
-  h += `<div class="grid gap-2 mt-5">${list.map(([k, st]) => { const s = staffStats(st); return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b><span class="text-[13px] text-ink2">Resturlaub <b>${fmtDays(s.v.left)}</b> von ${fmtDays(s.v.total)}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span><span class="text-[12px] text-ink3">${st.at ? 'Sicherung ' + new Date(st.at).toLocaleDateString('de-DE') : 'ohne Sicherung'}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} offen</span>` : ''}</span></button>`; }).join('')}</div>`;
-  if (sel) h += staffEditor(sel);
-  return h;
-}
+function teamBody() { return `<p class="text-ink3 text-[14px]">Nur für Büro und Admins (in LumbraDesk angemeldet).</p>`; }
 function staffEditor(k) {
   const st = STAFF[k], s = staffStats(st), v = (st.settings || {}).vacation || DEFAULTS.vacation, b = (st.settings || {}).balance || DEFAULTS.balance, y = tNow().getFullYear();
   const days = withStaff(st, () => Object.values(DAYS).filter(d => OFF_TYPES.includes(d.type) && d.iso >= `${y}-01-01`).sort((a, c) => a.iso.localeCompare(c.iso)));
   /* zusammenhängende Zeiträume gleicher Art */
   const runs = []; days.forEach(d => { const r = runs[runs.length - 1]; if (r && r.type === d.type && withStaff(st, () => workDaysIn(addDays(r.bis, 1), addDays(d.iso, -1)).length === 0)) r.bis = d.iso; else runs.push({ type: d.type, von: d.iso, bis: d.iso }); });
   return `<div class="mt-6 rounded-[var(--r)] border border-line p-4 sm:p-5">
-    <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9" data-a="tm-dl" data-v="${esc(k)}">${ic('download', 15)}Sicherung herunterladen</button><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
+    <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-[18px] flex-1">${esc(st.name)}</h3><button class="btn-g !h-9 text-ember" data-a="tm-del" data-v="${esc(k)}">${ic('trash', 15)}Entfernen</button></div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">${kpi('Anspruch ' + y, fmtDays(s.v.total) + ' Tage')}${kpi('Genommen', fmtDays(s.v.taken) + ' Tage')}${kpi('Geplant', fmtDays(s.v.planned) + ' Tage')}${kpi('Rest', fmtDays(s.v.left) + ' Tage')}</div>
     <h4 class="font-semibold mt-6 mb-2">Urlaub / Krank / Ausgleich eintragen</h4>
     <div class="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_auto] gap-2"><input type="date" class="inp" id="tm-von"><input type="date" class="inp" id="tm-bis"><select class="inp" id="tm-type"><option value="urlaub">Urlaub</option><option value="krank">Krank</option><option value="sonder">Sonderurlaub</option><option value="frei">Ausgleich (frei)</option><option value="work">Wieder Arbeitstag</option></select><button class="btn-s col-span-2 sm:col-span-1" data-a="tm-days" data-v="${esc(k)}">${ic('plus', 16)}Eintragen</button></div>
@@ -1477,12 +1433,12 @@ function askName() {
 }
 
 /* ---------- Einbindung in die Einstellungen ---------- */
-SET_TABS.splice(SET_TABS.findIndex(t => t[0] === 'admin'), 0, ['team', 'Mitarbeiter', 'users']);
+/* Reiter „Mitarbeiter“ nur für Büro/Admin – wird in 09-lumbra.js nach der Anmeldung eingefügt */
 const _setBodyTeam = setBody;
 setBody = function () {
   if (UI.tab === 'team') return teamBody();
   const b = _setBodyTeam();
-  if (UI.tab !== 'daten') return b;
+  return b;
   return `<div class="rounded-[var(--r)] border border-line p-4 mb-6"><h3 class="font-semibold mb-1">Mit dem Büro abgleichen</h3><p class="text-ink3 text-[14px] mb-3">Sicherung an ${esc(S.recipient.name || 'das Büro')} schicken – das Büro bewahrt sie auf und kann Urlaub oder Konten ändern. Kommt eine Aktualisierung zurück, hier einspielen.</p>
     <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="tm-backup">${ic('send', 16)}Sicherung ans Büro senden</button><label class="btn-s cursor-pointer">${ic('upload', 16)}Aktualisierung vom Büro einspielen<input type="file" accept=".json,application/json" class="hidden" data-upd-file></label></div></div>` + b;
 };
@@ -1532,7 +1488,7 @@ function buBody(ro) {
         <div class="flex flex-wrap items-center gap-3 mt-2 text-[13px]"><label class="flex items-center gap-2 text-ink2"><input type="checkbox" data-buf="${i}" data-k="abzug" ${b.abzug === false ? '' : 'checked'}>vom Urlaub abziehen</label><span class="text-ink3">${b.abzug === false ? '' : cnt(b)}</span></div></div>`).join('') || '<div class="kpi text-[14px] text-ink3">Kein Betriebsurlaub eingetragen.</div>'}</div>
     ${ro ? '' : `<button class="btn-s mt-3" data-a="buf-add">${ic('plus', 16)}Zeitraum hinzufügen</button>`}
     ${(S.bu || []).length ? `<h3 class="font-semibold mt-7 mb-2">Nur auf diesem Gerät</h3><div class="space-y-1.5">${S.bu.map((b, i) => `<div class="flex flex-wrap items-center gap-2 rounded-[var(--rb)] bg-raised px-3 py-2 text-[14px]"><b>${esc(b.name || 'Betriebsurlaub')}</b><span class="flex-1">${deDate(b.von)} – ${deDate(b.bis)}</span>${ro ? '' : `<button class="text-ink3 hover:text-ember" data-a="bu-del" data-i="${i}">${ic('trash', 15)}</button>`}</div>`).join('')}</div>` : ''}
-    ${DEVICE.admin ? `<div class="rounded-[var(--r)] border border-line p-4 mt-7"><h3 class="font-semibold">An alle Mitarbeiter verteilen</h3><p class="text-ink3 text-[14px] mt-1 mb-3">Erstellt eine Aktualisierung für alle – z. B. in die WhatsApp-Gruppe schicken. Jeder spielt sie unter Einstellungen → Daten → „Aktualisierung vom Büro einspielen“ ein.</p><button class="btn-p" data-a="buf-send">${ic('send', 16)}Betriebsurlaub an alle senden</button></div>` : `<p class="hint mt-5">Änderungen hier gelten nur auf diesem Handy. Für alle Mitarbeiter: auf einem Admin-Gerät ändern und „An alle senden“.</p>`}`;
+    ${DEVICE.admin ? `<div class="rounded-[var(--r)] border border-line p-4 mt-7"><h3 class="font-semibold">An alle Mitarbeiter verteilen</h3><p class="text-ink3 text-[14px] mt-1 mb-3">Alle Mitarbeiter bekommen den Betriebsurlaub beim nächsten Öffnen der Stempeluhr.</p><button class="btn-p" data-a="buf-send">${ic('send', 16)}Betriebsurlaub an alle senden</button></div>` : `<p class="hint mt-5">Den Betriebsurlaub für alle legt das Büro fest.</p>`}`;
 }
 const _setBodyBu = setBody;
 setBody = function () { if (UI.tab === 'bu') return buBody(!canEdit()); return _setBodyBu(); };
@@ -1566,8 +1522,7 @@ const _applyUpdateBu = applyUpdate;
 applyUpdate = async function (u) { for (const o of u.ops) if (o.t === 'bu') S.buFirm = { at: o.at || u.created, by: u.by || '', list: o.list }; return _applyUpdateBu(u); };
 /* =========================================================
    LumbraDesk: Stempeluhr zentral
-   Nur aktiv, wenn die App unter LumbraDesk läuft (lumbradesk.de/stempel/) – die eigenständige
-   Netlify-Version bleibt unverändert (Daten nur auf dem Handy).
+   Aktiv, sobald die App unter LumbraDesk läuft (lumbradesk.de/stempel/).
    - Tage und Einstellungen gleichen sich automatisch mit dem Server ab, ein neues Handy holt alles zurück.
    - Büro/Admin (LumbraDesk-Rolle) sehen unter „Mitarbeiter“ alle Kollegen und schicken Änderungen direkt.
    ========================================================= */
@@ -1617,6 +1572,9 @@ async function ldsSync() {
       if (j.settings && fresh && noLocal) { const keep = { admin: S.admin, pin: S.pin, design: S.design }; S = deepMerge(clone(DEFAULTS), j.settings); Object.assign(S, keep); fixSettings(); await DB.put('kv', clone(S), 'settings'); changed++; }
     } finally { LDS.applying = false; }
     if (!S.person.name && j.me && j.me.name) { S.person.name = j.me.name; saveSettings(); changed++; }
+    if (j.firm && j.firm.contact && !LDS.office && JSON.stringify(j.firm.contact) !== JSON.stringify(contactOf())) { S.company.contact = { name: '', phone: '', email: '', ...j.firm.contact }; saveSettings(); changed++; }
+    if (j.firm && j.firm.contact && LDS.office && !((contactOf().name || contactOf().phone || contactOf().email))) { S.company.contact = { name: '', phone: '', email: '', ...j.firm.contact }; saveSettings(); changed++; }
+    if (Array.isArray(j.requests)) { const old = JSON.stringify(UI.requests || []); UI.requests = j.requests; if (JSON.stringify(UI.requests) !== old) { await DB.put('kv', UI.requests, 'requests'); changed++; } }
     LDS.since = j.since || LDS.since; LDS.init = true; LDS.last = Date.now(); LDS.err = '';
     await ldsSave();
     /* Änderungen vom Büro übernehmen */
@@ -1650,7 +1608,7 @@ function ldsStatusHtml() {
   const n = LDS.dirty.size + (LDS.setDirty ? 1 : 0);
   return `<div id="lds-status" class="rounded-[var(--r)] border border-line p-4 mb-6"><div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold flex-1">Abgleich mit LumbraDesk</h3><button class="btn-s !h-9" data-a="lds-now">${ic('refresh', 15)}Jetzt abgleichen</button></div>
     <p class="text-[14px] mt-2 ${LDS.err ? 'text-yel-ink' : 'text-ink2'}">${LDS.err ? esc(LDS.err) : LDS.last ? `Zuletzt abgeglichen ${ago2(LDS.last)}${n ? ` · ${n} Änderung${n === 1 ? '' : 'en'} warten` : ' · alles auf dem Server'}` : 'Noch nicht abgeglichen.'}</p>
-    <p class="hint">Angemeldet als ${esc((LDS.me || {}).name || '')}. Änderungen vom Büro kommen automatisch – eine Sicherungsdatei schicken ist nicht mehr nötig.</p></div>`;
+    <p class="hint">Angemeldet als ${esc((LDS.me || {}).name || '')}. Änderungen vom Büro kommen automatisch.</p></div>`;
 }
 function ldsStatusPaint() { const el = $('#lds-status'); if (el) el.outerHTML = ldsStatusHtml(); }
 
@@ -1674,7 +1632,7 @@ consentModal = function () {
 /* ---------- Büro/Admin: alle Mitarbeiter vom Server ---------- */
 async function ldsLoadStaff(force) {
   if (!LDS.office || (!force && Date.now() - LDS.staffAt < 20000)) return;
-  const j = await ldsApi('st-staff'); LDS.staffAt = Date.now();
+  const j = await ldsApi('st-staff'); LDS.staffAt = Date.now(); LDS.requests = j.requests || [];
   const keep = STAFF; STAFF = {};
   for (const m of j.staff) {
     const k = 'u' + m.uid, old = keep[k] || {};
@@ -1688,7 +1646,9 @@ async function ldsLoadStaff(force) {
 }
 function ldsTeam() {
   const list = Object.entries(STAFF).filter(([k]) => k.startsWith('u')).sort((a, b) => a[1].name.localeCompare(b[1].name)), sel = STAFF[UI.staff] ? UI.staff : '';
-  let h = `<p class="text-ink3 text-[14px] mb-4">Alle Mitarbeiter aus LumbraDesk mit dem aktuellen Stand ihrer Stempeluhr. Urlaub, Krankheit oder Konten unten eintragen und „An Handy senden“ – der Mitarbeiter bekommt die Änderung beim nächsten Öffnen der App.</p>
+  const reqs = LDS.requests || [];
+  let h = (reqs.length ? `<div class="rounded-[var(--r)] border border-line p-4 mb-5" style="background:var(--t-yel)"><h3 class="font-semibold mb-2">Urlaubsanträge (${reqs.length})</h3>${reqs.map(r => `<div class="flex flex-wrap items-center gap-2 py-2 border-b border-line last:border-0 text-[14px]"><b class="min-w-[120px]">${esc(r.name)}</b><span class="flex-1">${deDate(r.von)}${r.bis !== r.von ? ' – ' + deDate(r.bis) : ''} · ${fmtDays(r.n)} Tag${r.n === 1 ? '' : 'e'}${r.note ? ' · „' + esc(r.note) + '“' : ''}</span><button class="btn-p !h-9" data-a="lds-req" data-id="${r.id}" data-v="1">${ic('check', 15)}Genehmigen</button><button class="btn-s !h-9" data-a="lds-req" data-id="${r.id}" data-v="0">Ablehnen</button></div>`).join('')}</div>` : '')
+    + `<p class="text-ink3 text-[14px] mb-4">Alle Mitarbeiter aus LumbraDesk mit dem aktuellen Stand ihrer Stempeluhr. Urlaub, Krankheit oder Konten unten eintragen und „An Handy senden“ – der Mitarbeiter bekommt die Änderung beim nächsten Öffnen der App.</p>
     <div class="flex flex-wrap gap-2 mb-4"><button class="btn-s" data-a="lds-staff">${ic('refresh', 15)}Aktualisieren</button></div>`;
   if (!list.length) return h + `<div class="kpi text-[14px] text-ink3">${LDS.staffAt ? 'Noch keine Mitarbeiter in LumbraDesk.' : 'Wird geladen …'}</div>`;
   h += `<div class="grid gap-2">${list.map(([k, st]) => { const s = staffStats(st), used = !!st.at; return `<button class="text-left rounded-[var(--rb)] border ${k === sel ? 'border-p' : 'border-line'} bg-raised px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-1" data-a="tm-sel" data-v="${esc(k)}"><b class="text-[15px] flex-1 min-w-[140px]">${esc(st.name)}</b>${used ? `<span class="text-[13px] text-ink2">Resturlaub <b>${fmtDays(s.v.left)}</b> von ${fmtDays(s.v.total)}</span><span class="text-[13px] text-ink2">Überstunden <b>${hm(s.over)}</b></span>` : ''}<span class="text-[12px] text-ink3">${used ? 'abgeglichen ' + (st.lastSync ? ago2(new Date(st.lastSync).getTime()) : '') : 'nutzt die Stempeluhr noch nicht'}${(st.open || []).length ? ` · <span class="text-yel-ink">${st.open.length} noch nicht auf dem Handy</span>` : ''}${(st.pending || []).length ? ` · <span class="text-yel-ink">${st.pending.length} vorgemerkt</span>` : ''}</span></button>`; }).join('')}</div>`;
@@ -1698,7 +1658,18 @@ function ldsTeam() {
 }
 /* „Aktualisierung senden“ / „Betriebsurlaub an alle“ direkt über den Server statt als Datei */
 document.addEventListener('click', async e => {
-  const a = e.target.closest('[data-a="tm-send"],[data-a="buf-send"],[data-a="lds-now"],[data-a="lds-staff"]'); if (!a || !LDS.on) return;
+  const a = e.target.closest('[data-a="tm-send"],[data-a="buf-send"],[data-a="lds-now"],[data-a="lds-staff"],[data-a="lds-req"],[data-a="contact-all"]'); if (!a || !LDS.on) return;
+  if (a.dataset.a === 'contact-all') {
+    e.stopImmediatePropagation();
+    try { await ldsApi('st-firm', { contact: contactOf() }); toast('Ansprechpartner für alle übernommen – erscheint beim nächsten Öffnen der Stempeluhr.'); } catch (err) { toast(err.message, 'err'); }
+    return;
+  }
+  if (a.dataset.a === 'lds-req') {
+    e.stopImmediatePropagation(); const ok = a.dataset.v === '1', r = (LDS.requests || []).find(x => String(x.id) === a.dataset.id); if (!r) return;
+    if (!ok && !(await confirmDlg('Urlaubsantrag ablehnen?', `${r.name}: ${deDate(r.von)} – ${deDate(r.bis)}. Die Tage werden bei ${r.name.split(' ')[0]} wieder zu Arbeitstagen.`, 'Ablehnen', true))) return;
+    try { await ldsApi('st-req-decide', { id: r.id, ok }); toast(ok ? `Urlaub für ${r.name.split(' ')[0]} genehmigt.` : 'Antrag abgelehnt.'); await ldsLoadStaff(true); rerender(); } catch (err) { toast(err.message, 'err'); }
+    return;
+  }
   if (a.dataset.a === 'lds-now') { e.stopImmediatePropagation(); await ldsSync(); toast(LDS.err || 'Abgeglichen.', LDS.err ? 'warn' : 'ok'); return; }
   if (a.dataset.a === 'lds-staff') { e.stopImmediatePropagation(); try { await ldsLoadStaff(true); rerender(); } catch (err) { toast(err.message, 'err'); } return; }
   if (!LDS.office) return;
@@ -1738,9 +1709,9 @@ render = function () { _renderLds(); if (LDS.on) ldsSitesPaint(); };
     const j = await ldsApi('me'); if (!j.user) return;
     await new Promise(r => { const t = setInterval(() => { if (APP_READY) { clearInterval(t); r(); } }, 50); });   // App-Start (Einstellungen, Tage) abwarten
     await ldsState(); LDS.on = true; LDS.me = j.user; LDS.office = ['admin', 'buero'].includes(j.user.role);
-    if (LDS.office) DEVICE.admin = true;   // Büro/Admin in LumbraDesk: wie ein Admin-Gerät (nur solange angemeldet, nicht gespeichert)
+    if (LDS.office) { DEVICE.admin = true; if (!SET_TABS.some(t => t[0] === 'team')) SET_TABS.splice(SET_TABS.findIndex(t => t[0] === 'admin'), 0, ['team', 'Mitarbeiter', 'users']); }   // Büro/Admin in LumbraDesk: wie ein Admin-Gerät (nur solange angemeldet, nicht gespeichert)
     await ldsSync();
-    if (LDS.office) { try { await ldsLoadStaff(true); if (typeof awEnable === 'function') awEnable(); if (UI.tab === 'team' || UI.tab === 'auswertung') rerender(); } catch (e) {} }
+    if (LDS.office) { try { await ldsLoadStaff(true); if (typeof awEnable === 'function') awEnable(); } catch (e) {} if (/^#\/?einstellungen\/(team|auswertung)/.test(location.hash)) route(); else if (UI.tab === 'team' || UI.tab === 'auswertung') rerender(); }
     ldsCustomerSites();
     setInterval(() => { ldsSync(); if (LDS.office && (UI.tab === 'team' || UI.tab === 'auswertung') && UI.route === 'settings') ldsLoadStaff().then(() => rerender()).catch(() => {}); }, 60000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ldsSync(); });
@@ -1748,6 +1719,10 @@ render = function () { _renderLds(); if (LDS.on) ldsSitesPaint(); };
     if (typeof render === 'function') render();
   } catch (e) { /* nicht unter LumbraDesk oder offline */ }
 })();
+
+/* Nachricht vom Büro (z. B. „Urlaub genehmigt“) */
+const _opTextLds = opText;
+opText = function (o) { if (o.t === 'info') return o.text || ''; return _opTextLds(o); };
 /* =========================================================
    LumbraDesk: Stunden-Auswertung fürs Büro (nur Admin/Büro unter LumbraDesk)
    Monatsübersicht aller Mitarbeiter (Soll, Ist, Differenz, Konto, Urlaub, Krank),

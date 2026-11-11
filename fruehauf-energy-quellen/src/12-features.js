@@ -35,7 +35,7 @@ async function setAdminPassword(pw) { const salt = [...crypto.getRandomValues(ne
 function adminLockCard(tab) {
   return `<div class="card p-6 sm:p-8 max-w-lg" data-admin-card><div class="icon-box mb-4">${ic('gear', 18)}</div><h3 class="sec-t">Admin-Bereich</h3><p class="text-ink3 text-[14px] mt-1">Diese Einstellungen gelten für alle Berater und sind geschützt. Bitte das Admin-Passwort eingeben.</p>
     <form data-admin-form class="mt-5 space-y-3"><input type="password" class="inp !h-14 !text-[17px]" id="admin-pw" placeholder="Admin-Passwort" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"><label class="flex items-center gap-2 text-[13px] text-ink2"><input type="checkbox" id="admin-keep">Auf diesem Gerät entsperrt lassen</label><button class="btn-p w-full" type="submit">Entsperren</button></form>
-    <p class="hint">Vertriebler ohne Passwort können Ansicht, eigenes Profil, Produkte und Datensicherung ändern.</p></div>`;
+    <p class="hint">Vertriebler ohne Passwort können Ansicht, eigenes Profil und Produkte ändern.</p></div>`;
 }
 async function tryUnlock() {
   const pw = ($('#admin-pw') || {}).value || '';
@@ -80,7 +80,9 @@ async function importConfig(file) {
 /* =========================================================
    Erinnerungen: Datensicherung und Nachfassen
    ========================================================= */
-function backupBanner() {
+function backupBanner() { return '';   // Kunden liegen auf dem Server, nachts automatisch gesichert
+}
+function backupBannerAlt() {
   if (!PROJECTS.length) return '';
   const days = PERSONAL.lastBackup ? Math.floor((Date.now() - PERSONAL.lastBackup) / 864e5) : null;
   if (days !== null && days < 7) return '';
@@ -181,7 +183,7 @@ async function fetchPvgis(p) {
     }
     p.pv.pvgis = { E: Math.round(E), date: isoToday(), sig: pvSig(p) }; saveProject(p);
     toast(`PVGIS: ${num(E)} kWh pro Jahr übernommen.`);
-  } catch (e) { console.warn(e); toast('PVGIS ist gerade nicht erreichbar (nur online und auf der Netlify-Seite möglich). Es wird mit der Ausrichtungs-Tabelle gerechnet.', 'warn', 5500); }
+  } catch (e) { console.warn(e); toast('PVGIS ist gerade nicht erreichbar (nur mit Internet möglich). Es wird mit der Ausrichtungs-Tabelle gerechnet.', 'warn', 5500); }
   delete UI.busy.pvgis; render();
 }
 function roofsCard(p, R) {
@@ -290,14 +292,14 @@ async function saveSignature(p, auto) {
    ========================================================= */
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
-  ['download', '1 · Als App installieren', 'Legen Sie die App auf den Home-Bildschirm – iPhone: Teilen → „Zum Home-Bildschirm“, Android: Menü ⋮ → „App installieren“. So startet sie schneller, läuft offline und Ihre Daten sind geschützt.'],
+  ['download', '1 · LumbraDesk aufs Handy', 'Öffnen Sie lumbradesk.de und legen Sie es auf den Home-Bildschirm – iPhone: Safari → Teilen → „Zum Home-Bildschirm“, Android: Chrome → Menü ⋮ → „App installieren“. Angemeldet bleiben Sie auch ohne Internet bis zu 14 Tage.'],
   ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
   ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät; die Unterschrift wird sofort gespeichert und die Haken gesetzt.'],
   ['clock', '7 · Status und Nachfassen', 'Jede Berechnung hat einen Status: offen, gesendet, unterschrieben oder verloren. Läuft eine Rabatt-Frist ab, erinnert Sie die Startseite. Oben in der Kundenübersicht sehen Sie Ihre Abschlüsse und die Abschlussquote. Erledigte Kunden archivieren Sie – im Filter „Archiv“ lassen sie sich jederzeit wiederherstellen. Sagt der Kunde später zu, tippen Sie auf der Kundenkarte auf „Auftrag gewonnen?“ – Sie landen direkt bei der Unterschrift.'],
-  ['db', '8 · Sichern nicht vergessen', 'Ihre Kunden liegen nur auf diesem Gerät. Unter Einstellungen → Datensicherung sichern Sie alles in iCloud Drive (iPhone) bzw. Google Drive (Android) – die App erinnert Sie nach 7 Tagen. Eine Schritt-für-Schritt-Anleitung finden Sie unter Einstellungen → Ansicht & Tutorial.'],
+  ['db', '8 · Alles automatisch gesichert', 'Ihre Kunden liegen auf dem LumbraDesk-Server und sind auf jedem Gerät gleich – jede Nacht wird automatisch gesichert. Ohne Internet speichert das Gerät und reicht alles später nach. Kunden geben Sie oben im Kunden unter „Zuständig“ an Kollegen weiter.'],
   ['sparkle', '9 · Updates', 'Gibt es eine neue Version, erscheint unten „Version … verfügbar – Jetzt aktualisieren“. Danach zeigt Ihnen die App kurz, was neu ist. Ihre Daten bleiben dabei immer erhalten.'],
   ['gear', 'Fertig', 'Mit dem Zurück-Knopf oben kommen Sie jederzeit zu allen Kunden bzw. zur Übersicht zurück. Ansicht (Hell oder Dunkel), Wetter, Jahreszeit und Feiertags-Schmuck (Weihnachten, Ostern, Halloween) der Startseite (Reiter „Startseite & Wetter“) und Ihr Berater-Profil stellen Sie unter Einstellungen ein. Dort können Sie dieses Tutorial und die Neuigkeiten jederzeit wieder ansehen.']
 ];

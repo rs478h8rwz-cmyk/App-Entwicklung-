@@ -27,7 +27,7 @@ function productModal(id) {
 /* =========================================================
    Einstellungen
    ========================================================= */
-const STABS_ME = [['ansicht', 'Ansicht & Tutorial', 'eye'], ['profil', 'Mein Profil', 'users'], ['daten', 'Datensicherung', 'db']];
+const STABS_ME = [['ansicht', 'Ansicht & Tutorial', 'eye'], ['profil', 'Mein Profil', 'users'], ['daten', 'Daten & Abgleich', 'db']];
 const STABS = [...STABS_ME, ['firma', 'Unternehmen', 'building'], ['berater', 'Berater', 'users'], ['design', 'Design & Deckblatt', 'palette'], ['rabatt', 'Rabatt & Unterschrift', 'tag'], ['foerderung', 'Förderung', 'gift'], ['preise', 'Preisentwicklung', 'chart'], ['dokument', 'Dokument & Verkauf', 'file'], ['ablauf', 'Roadmap', 'arrowR'], ['vergleiche', 'Vergleiche', 'scale'], ['berechnung', 'Berechnung', 'calc'], ['optimistisch', 'Optimistisches Szenario', 'rocket'], ['admin', 'Admin & Konfiguration', 'gear']];
 function viewSettings() {
   const t = UI.settingsTab, locked = ADMIN_TABS.includes(t) && !UI.admin;
@@ -203,14 +203,7 @@ const SET = {
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${field('Bezeichnung', o + 'label', { cls: 'sm:col-span-2 lg:col-span-3' })}${field('Öl/Gas ohne CO₂', o + 'fuelInc', { t: 'n', unit: '% p. a.' })}${field('Strom', o + 'elecInc', { t: 'n', unit: '% p. a.' })}${field('Wartung', o + 'maintInc', { t: 'n', unit: '% p. a.' })}${field('Kalkulationszins', o + 'rate', { t: 'n', unit: '%' })}${field('Gasnetzentgelt-Zuschlag', o + 'gasNet', { t: 'n', unit: 'ct/kWh' })}${field('Zieljahr', o + 'gasNetYear', { t: 'y' })}</div>
       <span class="lbl mt-5">CO₂-Pfad (€/t)</span><div class="grid grid-cols-3 sm:grid-cols-6 gap-2">${co2.map(y => `<label class="block"><span class="text-[11.5px] font-bold text-ink3">${y}</span>${inp(`s:optimistic.co2Path.${y}`, { t: 'n', icls: '!h-10 !px-3' })}</label>`).join('')}</div>`);
   },
-  daten: () => {
-    const last = PERSONAL.lastBackup ? new Date(PERSONAL.lastBackup).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'noch nie';
-    return sCard('db', 'Datensicherung', `Kunden und Berechnungen liegen nur auf diesem Gerät. Letzte Sicherung: ${last}`, `
-      <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="backup">${ic('download', 17)}Sicherung erstellen</button><label class="btn-s cursor-pointer">${ic('upload', 17)}Sicherung einspielen<input type="file" accept="application/json,.json" class="hidden" data-import></label></div>
-      <p class="hint">Auf dem iPhone öffnet sich der Teilen-Dialog: „In Dateien sichern“ → iCloud Drive. Die Sicherung enthält Kunden, Berechnungen, Produkte und hochgeladene Angebote.${UI.admin ? ' Im Admin-Modus zusätzlich alle Firmen-Einstellungen.' : ''}</p>`)
-      + sCard('download', 'Firmen-Konfiguration', 'Design, Förderung, Preise, Texte und Produkte Ihrer Firma – vom Admin bereitgestellt.', `<label class="btn-s cursor-pointer">${ic('upload', 17)}Firmen-Konfiguration einspielen<input type="file" accept="application/json,.json" class="hidden" data-import-config></label><p class="hint">Ihre Kunden, Ihre Ansicht und Ihr Profil bleiben dabei erhalten.</p>`)
-      + (UI.admin ? sCard('trash', 'Alles löschen', 'Nur im Admin-Modus.', `<button class="btn bg-tred text-ember2 hover:brightness-125" data-a="wipe">${ic('trash', 17)}Alles löschen</button>`) : '');
-  },
+  daten: () => '',
   ansicht: () => sCard('eye', 'Ansicht', 'Nur für Sie auf diesem Gerät – das Kundendokument ändert sich nicht.', `${seg('me:mode', [['light', 'Hell'], ['dark', 'Dunkel'], ['system', 'Wie System']], { cls: 'flex-wrap' })}<div class="hint">Schnell wechseln: Schalter in der Kopfleiste bzw. unten in der Seitenleiste.</div>`)
     + sCard('sparkle', 'Tutorial', 'Die Einführung in die App noch einmal ansehen.', `<button class="btn-s" data-a="tut" data-i="0">${ic('arrowR', 16)}Tutorial starten</button>`),
   profil: () => {
@@ -219,10 +212,8 @@ const SET = {
       <div class="flex flex-col sm:flex-row gap-5"><div class="flex sm:flex-col items-center gap-3 shrink-0">${img ? `<img src="${img}" class="w-20 h-20 rounded-full object-cover border border-line">` : `<div class="w-20 h-20 rounded-full bg-raised grid place-items-center text-ink3">${ic('users', 26)}</div>`}<label class="btn-g cursor-pointer">${ic('upload', 14)}Foto<input type="file" accept="image/*" class="hidden" data-imgup="me"></label></div>
       <div class="grid sm:grid-cols-2 gap-4 flex-1">${field('Name', 'me:profile.name')}${field('Funktion', 'me:profile.role', { ph: 'Energieberater' })}${field('Telefon', 'me:profile.phone', { t: 'tel' })}${field('E-Mail', 'me:profile.email', { t: 'email' })}</div></div>`);
   },
-  admin: () => sCard('gear', 'Admin & Konfiguration', 'Firmen-Einstellungen an die Vertriebler verteilen und den Admin-Bereich schützen.', `
-      <div class="font-medium text-[15px]">Firmen-Konfiguration exportieren</div><p class="text-[13px] text-ink3 mt-1">Die Datei schicken Sie per Mail oder AirDrop an Ihre Vertriebler. Diese spielen sie unter Einstellungen → Datensicherung ein. Kunden der Vertriebler bleiben unberührt.</p>
-      <button class="btn-p mt-3" data-a="export-config">${ic('download', 17)}Konfiguration exportieren</button>
-      <div class="mt-6 pt-5 border-t border-line"><div class="font-medium text-[15px]">Admin-Passwort ändern</div><p class="text-[13px] text-ink3 mt-1">Gilt auf allen Geräten, sobald dort die neue Konfiguration eingespielt ist.</p>
+  admin: () => sCard('gear', 'Admin', 'Den Admin-Bereich schützen. Firmen-Einstellungen verteilst du unter „Daten & Abgleich“ → „Für alle übernehmen“.', `
+      <div><div class="font-medium text-[15px]">Admin-Passwort ändern</div><p class="text-[13px] text-ink3 mt-1">Gilt auf allen Geräten, sobald die Firmen-Einstellungen unter „Daten &amp; Abgleich“ für alle übernommen sind.</p>
       <div class="grid sm:grid-cols-2 gap-3 mt-3 max-w-xl"><input type="password" class="inp" id="pw-new1" placeholder="Neues Passwort" autocomplete="new-password"><input type="password" class="inp" id="pw-new2" placeholder="Wiederholen" autocomplete="new-password"></div><button class="btn-s mt-3" data-a="admin-pw">${ic('check', 16)}Passwort speichern</button></div>
       <div class="mt-6 pt-5 border-t border-line flex flex-wrap items-center gap-3"><div class="flex-1 min-w-[220px]"><div class="font-medium text-[15px]">Auf diesem Gerät entsperrt lassen</div><p class="text-[13px] text-ink3">Nur auf Ihrem eigenen Gerät einschalten.</p></div>${tgl('me:keepAdmin', PERSONAL.keepAdmin)}</div>
       <button class="btn-s mt-5" data-a="admin-lock">${ic('x', 16)}Admin-Bereich jetzt sperren</button>`)

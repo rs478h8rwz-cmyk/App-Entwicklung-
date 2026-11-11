@@ -177,7 +177,8 @@ function crm_dash(array $u): array {
     }
     $team = array_values(array_filter($team, fn($t) => $t['active'] || $t['won'] || $t['acts'] || $t['overdue']));
   }
-  return ['all' => sees_all($u), 'month' => $month,
+  $vacReq = 0; if (sees_all($u)) { try { require_once __DIR__ . '/stempel-lib.php'; $vacReq = count(st_open_requests()); } catch (Throwable $e) {} }
+  return ['all' => sees_all($u), 'month' => $month, 'vacReq' => $vacReq,
     'kpi' => ['offers' => count($openOffers), 'offersSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $openOffers)),
       'wonMonth' => count($wonMonth), 'wonMonthSum' => array_sum(array_map(fn($c) => $c['total'] ?: 0, $wonMonth)),
       'rate' => count($dec) ? round(100 * $nWon / count($dec)) : null, 'decided' => count($dec), 'overdue' => $overdue, 'dueToday' => $dueToday],

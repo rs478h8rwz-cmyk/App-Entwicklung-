@@ -14,6 +14,10 @@ WN_IMG.crm = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect w
 const WN_BG = { crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.33', date: '2026-11-11', items: [
+    ['crm', 'Alles auf dem Server', 'Sicherungsdateien, Konfigurationsdateien und Erinnerungen ans Sichern sind weg: Kunden liegen auf dem LumbraDesk-Server, nachts wird automatisch gesichert. Firmen-Einstellungen verteilt der Admin unter „Daten & Abgleich“.'],
+    ['house', 'Datenschutz aktualisiert', 'Der Standard-Datenschutztext nennt jetzt den eigenen LumbraDesk-Server bei IONOS in Deutschland.']
+  ] },
   { version: '2.32', date: '2026-11-10', items: [
     ['crm', 'Verlauf & Wiedervorlagen', 'Oben im Kunden neben „Zuständig“: „Verlauf“ öffnet den Kunden in LumbraDesk – mit Notizen, Anrufen, Terminen, Wiedervorlagen und Vertriebs-Stufe (Anfrage bis Abgeschlossen).']
   ] },

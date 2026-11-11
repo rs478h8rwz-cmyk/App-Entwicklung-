@@ -44,7 +44,7 @@ const IP = {
    Eigenständige App: Baustellen-Abnahme und Serviceeinsätze für DC, AC und SHK.
    Daten bleiben auf dem Gerät (IndexedDB), Protokolle als PDF teilen.
    ========================================================= */
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -634,7 +634,7 @@ function viewList() {
   const q = UI.q.trim().toLowerCase();
   const list = PROTS.slice().sort((a, b) => b.updated - a.updated).filter(p => (!UI.fType || p.type === UI.fType) && (!UI.fGew || p.gewerk === UI.fGew) && (!q || [p.nr, p.answers.kunde, p.answers.adresse, p.answers.monteur].join(' ').toLowerCase().includes(q)));
   const seg = (k, opts) => `<div class="seg flex-wrap">${opts.map(([v, l]) => `<button class="${UI[k] === v ? 'on' : ''}" data-a="filter" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
-  return `<section class="pt-8 sm:pt-12"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Protokolle</h1><p class="text-ink3 text-[14px] mt-2">${PROTS.length} gespeichert – auf diesem Gerät.</p>
+  return `<section class="pt-8 sm:pt-12"><h1 class="h-font text-[38px] sm:text-[48px] leading-none">Protokolle</h1><p class="text-ink3 text-[14px] mt-2">${PROTS.length} gespeichert – auf dem LumbraDesk-Server.</p>
     <div class="flex flex-col lg:flex-row gap-3 mt-6"><div class="relative flex-1"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-11" id="q" placeholder="Kunde, Adresse, Nummer, Monteur …" value="${esc(UI.q)}" autocomplete="off"></div>
       <div class="flex flex-wrap gap-2">${seg('fType', [['', 'Alle'], ['abnahme', 'Abnahme'], ['service', 'Service']])}${seg('fGew', [['', 'Alle Gewerke'], ['DC', 'DC'], ['AC', 'AC'], ['SHK', 'SHK']])}</div></div>
     <div class="space-y-2 mt-5" id="plist">${list.length ? list.map(protRow).join('') : '<div class="card p-8 text-center text-ink3 text-[14px]">Keine Protokolle gefunden.</div>'}</div></section>`;
@@ -694,8 +694,7 @@ function setBody() {
     case 'listen': return `<p class="text-ink3 text-[14px] mb-4">Je Zeile ein Eintrag. Diese Listen erscheinen als Auswahl bzw. als Schnell-Knöpfe in den Protokollen.</p>
       <div class="grid md:grid-cols-2 gap-4">${LISTS.map(([k, l]) => `<label class="block"><span class="lbl">${l}</span><textarea class="inp" rows="5" data-list="${k}">${esc(S.lists[k].join('\n'))}</textarea></label>`).join('')}</div>
       <button class="btn-g mt-4" data-a="lists-reset">${ic('refresh', 15)}Listen zurücksetzen</button>`;
-    case 'daten': return `<p class="text-ink3 text-[14px] mb-4">Alle Daten liegen nur auf diesem Gerät. Bitte regelmäßig eine Sicherung speichern – damit lassen sich Protokolle auch auf ein anderes Gerät übertragen.</p>
-      <div class="flex flex-wrap gap-2"><button class="btn-p" data-a="backup">${ic('download', 16)}Sicherung speichern</button><label class="btn-s cursor-pointer">${ic('upload', 16)}Sicherung einspielen<input type="file" accept="application/json,.json" class="hidden" data-restore></label></div>
+    case 'daten': return `<p class="text-ink3 text-[14px] mb-4">Fertige Protokolle mit Fotos und Unterschriften liegen auf dem LumbraDesk-Server und erscheinen beim Kunden. Ein neues Handy holt sie automatisch zurück.</p>
       <div class="kpi mt-5 text-[14px]">${PROTS.length} Protokolle gespeichert${CUR ? ' · 1 Entwurf' : ''}</div>
       <p class="hint mt-6">Version ${APP_VERSION}</p>`;
   }
@@ -844,7 +843,6 @@ document.addEventListener('click', async e => {
     case 'sys-reset': if (await confirmDlg('Systeme zurücksetzen?', 'EcoFlow, Tesla und E3/DC mit den Standardgrößen – eigene Änderungen gehen verloren.', 'Zurücksetzen')) { S.systems = clone(DEFAULTS.systems); saveSettings(); render(); } break;
     case 'mont-del': S.monteure.splice(+a.dataset.i, 1); saveSettings(); render(); break;
     case 'lists-reset': if (await confirmDlg('Listen zurücksetzen?', 'Alle Auswahllisten werden auf den Standard gesetzt.', 'Zurücksetzen')) { S.lists = clone(DEFAULTS.lists); saveSettings(); render(); } break;
-    case 'backup': backup(); break;
   }
 });
 
@@ -1118,7 +1116,7 @@ function ldaPaint() { const el = $('#lda-status'); if (el) el.outerHTML = ldaSta
 const _setBodyLda = setBody;
 setBody = function () {
   const b = _setBodyLda(); if (!LDA.on || UI.tab !== 'daten') return b;
-  return ldaStatus() + b.replace('Alle Daten liegen nur auf diesem Gerät. Bitte regelmäßig eine Sicherung speichern – damit lassen sich Protokolle auch auf ein anderes Gerät übertragen.', 'Fertige Protokolle werden automatisch auf dem Firmen-Server gespeichert. Eine Sicherungsdatei brauchst du nur noch, um Protokolle aus der alten App zu übernehmen.');
+  return ldaStatus() + b;
 };
 
 /* Neues Protokoll: Kunde aus LumbraDesk wählen, Nummer vom Server */

@@ -23,7 +23,9 @@ async function buildPdf(isos, label) {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...INK); doc.text(T(`Stundenzettel ${label}`), W - M, 12.5, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
     doc.text(T(`${S.person.name}${S.person.nr ? ' · Pers.-Nr. ' + S.person.nr : ''} · ${deDate(isos[0])} - ${deDate(isos[isos.length - 1])}`), W - M, 18, { align: 'right' });
-    doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, 25, W - M, 25); y = 31;
+    const ct = contactOf(), ctl = [ct.name, ct.phone, ct.email].filter(Boolean).join(' · ');
+    if (ctl) { doc.setFontSize(8.2); doc.text(T('Ansprechpartner: ' + ctl), W - M, 22.5, { align: 'right' }); }
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(M, ctl ? 26.5 : 25, W - M, ctl ? 26.5 : 25); y = ctl ? 32.5 : 31;
   };
   header();
   /* Tabelle */
@@ -69,7 +71,7 @@ async function buildPdf(isos, label) {
   doc.text(doc.splitTextToSize(T(`Pausenregel: Je Arbeitstag wird die Mindestpause abgezogen (Mo-Do ${S.hours[1].pause} Min., Fr ${S.hours[5].pause} Min.)${S.pauseOnlyOver6 ? ' (ab 6 Std. Arbeit)' : ''}; Überstunden = Wochenstunden über ${hm(weekTarget())}; fehlende Stunden werden von den Überstunden abgezogen, der Rest als Minusstunden ausgewiesen; längere Pausen werden vollständig abgezogen. "Pause" = gestempelte Pausen und Unterbrechungen, "Abzug" = davon abgezogen. Nachträgliche Änderungen sind mit "nachgetragen" gekennzeichnet; Stempelzeiten kommen vom Server, ohne Internet gestempelte Zeiten sind als "offline" markiert. Standorte je Stempel mit Kartenausschnitt auf der Seite "Standorte".`), CW), M, y + 2);
   y = Math.max(y + 16, H - 38);
   const bw = (CW - 12) / 2;
-  [['Mitarbeiter', S.person.name], ['Geprüft', S.recipient.name]].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });
+  [['Mitarbeiter', S.person.name], ['Geprüft (Büro)', '']].forEach(([l, n], i) => { const x0 = M + i * (bw + 12); doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(x0, y + 12, x0 + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`${l}${n ? ' - ' + n : ''} · Datum, Unterschrift`), x0, y + 16); });
   /* Standorte mit Kartenausschnitt */
   const geos = R.days.flatMap(({ d }) => (d.geo || []).map(g => ({ g, iso: d.iso })));
   if (geos.length) {
@@ -122,7 +124,7 @@ async function buildVacationPdf(v) {
   const bw = (CW - 12) / 2;
   doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(M, y + 12, M + bw, y + 12); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(T(`Datum, Unterschrift ${S.person.name}`), M, y + 16);
   y += 28; doc.setFillColor(244, 247, 249); doc.roundedRect(M, y, CW, 34, 2, 2, 'F');
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(T(`Vom Büro auszufüllen${S.recipient.name ? ' (' + S.recipient.name + ')' : ''}`), M + 5, y + 7);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(T('Vom Büro auszufüllen'), M + 5, y + 7);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); [['genehmigt', 0], ['abgelehnt', 40]].forEach(([l, dx]) => { doc.setDrawColor(...INK); doc.rect(M + 5 + dx, y + 12, 4.5, 4.5); doc.text(l, M + 12 + dx, y + 15.6); });
   doc.line(M + 5, y + 28, M + 5 + bw, y + 28); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text('Datum, Unterschrift', M + 5, y + 32);
   const c = S.company; doc.setFontSize(7.2); doc.text(T([c.name, c.street, c.city, c.phone].filter(Boolean).join(' · ')), M, 287);

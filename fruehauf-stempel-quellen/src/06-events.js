@@ -40,7 +40,7 @@ function geoBlockedModal() {
 function consentModal() {
   return new Promise(res => {
     modal(`<div class="text-center"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('pin', 26)}</div><div class="font-semibold text-[19px] mt-4">Hinweis zum Standort</div></div>
-      <div class="text-[14px] text-ink2 mt-4 space-y-2"><p>Beim <b>Kommen, bei Pausen und beim Gehen</b> speichert die Stempeluhr einmalig deinen Standort – nicht dauerhaft und nicht im Hintergrund.</p><p>Der Standort liegt auf deinem Handy und erscheint in deinem Stundenzettel, den du an ${esc(S.recipient.name || 'das Büro')} schickst. Ohne Standortfreigabe ist Stempeln nicht möglich.</p></div>
+      <div class="text-[14px] text-ink2 mt-4 space-y-2"><p>Beim <b>Kommen, bei Pausen und beim Gehen</b> speichert die Stempeluhr einmalig deinen Standort – nicht dauerhaft und nicht im Hintergrund.</p><p>Der Standort wird mit deinen Zeiten auf dem Firmen-Server (LumbraDesk) gespeichert und ist nur für Büro und Admins sichtbar. Ohne Standortfreigabe ist Stempeln nicht möglich.</p></div>
       <button class="btn-p w-full mt-5" id="cs-ok">${ic('check', 16)}Verstanden und einverstanden</button>`);
     $('#cs-ok').onclick = () => { S.gpsConsent = tNow().toISOString(); saveSettings(); closeModal(); res(true); };
   });
@@ -105,7 +105,7 @@ async function stampInner(kind) {
   } else if (kind === 'out') {
     if (!seg) return; if (op) op.bis = t; seg.bis = t;
     await saveDay(d); const c = calcDay(d); toast(`Gegangen um ${t} Uhr · heute ${hm(c.netto)} Std.`, 'ok', 4500); rerender();
-    if (isFriday()) { const w = weekStat(mondayOf(d.iso)); cheer('Geschafft!', `Schönes Wochenende!${w.over ? ` Diese Woche +${hm(w.over)} Überstunden.` : ''}${SENT[mondayOf(d.iso)] ? '' : ` Denk an den Stundenzettel für ${S.recipient.name || 'das Büro'}.`}`, 'check'); }
+    if (isFriday()) { const w = weekStat(mondayOf(d.iso)); cheer('Geschafft!', `Schönes Wochenende!${w.over ? ` Diese Woche +${hm(w.over)} Überstunden.` : ''}`, 'check'); }
     return;
   }
   await saveDay(d); rerender();
@@ -148,10 +148,8 @@ document.addEventListener('click', async e => {
     case 'vac-today': { if (!(await confirmDlg('Heute Urlaub?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Urlaubstag eingetragen (Resturlaub danach: ${fmtDays(vacation().left - dayFactor(isoToday()))} Tage).`, 'Urlaub eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Urlaub'); d.edited = false; d.type = 'urlaub'; await saveDay(d); toast('Heute ist Urlaub eingetragen. Schönen freien Tag!'); rerender(); break; }
     case 'vac-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Urlaub', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
     case 'vac-set': await setVacation(); break;
-    case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); tellSick(); break; }
+    case 'sick-today': { if (!(await confirmDlg('Heute krank?', `${WD[tNow().getDay()]}, ${deDate(isoToday())} wird als Krankheitstag eingetragen.`, 'Krank eintragen'))) return; const d = todayDay(); logChange(d, 'Art des Tages', typeName(d.type), 'Krank'); d.edited = false; d.type = 'krank'; await saveDay(d); rerender(); toast('Gute Besserung! Das Büro sieht die Krankmeldung automatisch.', 'ok', 4500); break; }
     case 'sick-undo': { const d = todayDay(); logChange(d, 'Art des Tages', 'Krank', 'Arbeit'); d.edited = false; d.type = 'work'; await saveDay(d); rerender(); break; }
-    case 'sick-tell': tellSick(); break;
-    case 'ics': icsReminder(); break;
     case 'konto-edit': if (await needEdit()) kontoDialog(); break;
     case 'konto-save': kontoSave(); break;
     case 'cal': UI.calM = a.dataset.v; rerender(); break;
@@ -183,7 +181,6 @@ document.addEventListener('click', async e => {
     case 'admin-on': { const pw = $('#pw-admin').value; if (await checkAdmin(pw)) { DEVICE.admin = true; await DB.put('kv', DEVICE, 'device'); toast('Dieses Gerät ist jetzt ein Admin-Gerät.'); render(); } else toast('Passwort falsch.', 'err'); break; }
     case 'admin-off': DEVICE.admin = false; await DB.put('kv', DEVICE, 'device'); UI.editUntil = 0; toast('Admin-Gerät beendet.'); render(); break;
     case 'pw-change': { const p1 = $('#pw-new1').value, p2 = $('#pw-new2').value; if (p1.length < 6) return toast('Mindestens 6 Zeichen.', 'warn'); if (p1 !== p2) return toast('Die Passwörter stimmen nicht überein.', 'warn'); await setAdminPassword(p1); toast('Admin-Passwort geändert.'); render(); break; }
-    case 'backup': backup(); break;
   }
 });
 document.addEventListener('input', e => {
@@ -209,7 +206,6 @@ document.addEventListener('change', async e => {
   if (el.dataset.bal !== undefined) { if (!canEdit()) return rerender(); const m = /^\s*([−-])?\s*(\d+)(?::(\d{1,2}))?\s*$/.exec(el.value); if (!m) { toast('Bitte als Std:Min eingeben, z. B. 12:30', 'warn'); return; } S.balance.min = (m[1] ? -1 : 1) * (+m[2] * 60 + (+m[3] || 0)); saveSettings(); return rerender(); }
   if (el.dataset.s && (el.tagName === 'SELECT' || ['minPause', 'vacation.perYear', 'vacation.carry', 'balance.from', 'person.start'].includes(el.dataset.s))) { if (LOCKED_TABS.includes(UI.tab) && !canEdit()) return rerender(); return rerender(); }
   if (el.matches('[data-logo]') && el.files && el.files[0]) { const im = await shrinkImage(el.files[0], 700, 0.92, 'image/png'); S.company.logo = im.data; saveSettings(); render(); toast('Logo gespeichert.'); return; }
-  if (el.matches('[data-restore]') && el.files && el.files[0]) restore(el.files[0]);
 });
 
 /* ---------- Bestand einpflegen (nur mit Admin-Passwort) ---------- */
@@ -242,20 +238,6 @@ function kontoSave() {
 }
 
 /* ---------- Krank melden ---------- */
-function tellSick() {
-  const text = `Hallo ${S.recipient.name || ''}, ich bin heute (${WD[tNow().getDay()]}, ${deDate(isoToday())}) krank und kann nicht arbeiten. Die Krankmeldung reiche ich nach. Viele Grüße, ${S.person.name || ''}`;
-  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
-  modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full grid place-items-center mx-auto" style="background:var(--t-red);color:var(--red-ink)">${ic('heartp', 26)}</div><div class="font-semibold text-[19px] mt-4">Gute Besserung!</div><p class="text-ink3 text-[14px] mt-1">Heute ist als Krankheitstag eingetragen.</p></div>
-    <div class="rounded-[var(--rb)] bg-raised p-3 text-[14px] mt-5">${esc(text)}</div>
-    <div class="grid gap-2 mt-4">${navigator.share ? `<button class="btn-p !h-12" id="sick-share">${ic('send', 17)}${esc(S.recipient.name || 'Büro')} Bescheid geben (WhatsApp)</button>` : ''}<a class="${navigator.share ? 'btn-s' : 'btn-p !h-12'}" href="https://wa.me/${phone}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp öffnen</a><button class="btn-g" data-a="modal-close">Später</button></div>`);
-  const b = $('#sick-share'); if (b) b.onclick = async () => { try { await navigator.share({ text }); closeModal(); } catch (e) {} };
-}
-/* Wiederkehrende Kalender-Erinnerung (jeden Freitag 13:30, Hinweis 0 Min. vorher) */
-function icsReminder() {
-  let d = tNow(); while (d.getDay() !== 5) d.setDate(d.getDate() + 1); const ymd = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`, stamp = tNow().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fruehauf//Stempeluhr//DE', 'BEGIN:VEVENT', `UID:stundenzettel-${Date.now()}@fruehauf`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Europe/Berlin:${ymd}T133000`, `DTEND;TZID=Europe/Berlin:${ymd}T134500`, 'RRULE:FREQ=WEEKLY;BYDAY=FR', `SUMMARY:Stundenzettel an ${S.recipient.name || 'Büro'} senden`, 'DESCRIPTION:Stempeluhr öffnen → „Stundenzettel senden“.', 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Stundenzettel senden', 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  saveBlob(new Blob([ics], { type: 'text/calendar' }), 'Erinnerung-Stundenzettel.ics'); toast('Kalender-Datei gespeichert – zum Übernehmen öffnen.', 'ok', 4500);
-}
 
 /* ---------- Urlaub ---------- */
 async function setVacation(silent) {
@@ -270,27 +252,18 @@ async function submitVacation() {
   if (!S.person.name) { toast('Bitte zuerst deinen Namen eintragen.', 'warn'); location.hash = '#/einstellungen/person'; return; }
   const von = UI.vVon || isoToday(), bis = UI.vBis || von, days = workDaysIn(von, bis);
   if (!days.length) return toast('Im Zeitraum liegen keine Arbeitstage.', 'warn');
-  const before = vacation(+von.slice(0, 4));
-  modal(`<div class="text-center py-6"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('file', 26)}</div><div class="font-semibold text-[18px] mt-4">Urlaubsantrag wird erstellt …</div></div>`);
   try {
-    const left = before.left - days.filter(i => dayOf(i).type !== 'urlaub').length;
-    const blob = await buildVacationPdf({ von, bis, n: vacDays(days), note: UI.vNote || '', leftBefore: before.left, leftAfter: left, total: before.total });
-    const name = `Urlaubsantrag_${deDate(von).replace(/\./g, '-')}_bis_${deDate(bis).replace(/\./g, '-')}_${S.person.name.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
-    saveBlob(blob, name);
-    UI.requests = (UI.requests || []).concat({ von, bis, n: vacDays(days), at: tNow().toISOString() }); await DB.put('kv', UI.requests, 'requests');
-    await setVacation(true);
-    shareModal(blob, name, `Hallo ${S.recipient.name || ''}, hiermit beantrage ich Urlaub vom ${deDate(von)} bis ${deDate(bis)} (${fmtDays(vacDays(days))} Urlaubstage). Viele Grüße, ${S.person.name}`, 'Urlaubsantrag gespeichert');
-    render();
-  } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
+    const j = await ldsApi('st-req', { von, bis, n: vacDays(days), note: UI.vNote || '' });
+    UI.requests = (UI.requests || []).concat({ id: j.id, von, bis, n: vacDays(days), at: tNow().toISOString(), status: 'offen' }); await DB.put('kv', UI.requests, 'requests');
+    await setVacation(true); toast('Urlaub eingetragen und beim Büro beantragt.', 'ok', 4500); render();
+  } catch (err) { toast(navigator.onLine ? 'Antrag nicht möglich: ' + err.message : 'Ohne Internet kein Antrag möglich – bitte später nochmal.', 'err', 5000); }
 }
 function shareModal(blob, name, text, title) {
   const file = new File([blob], name, { type: 'application/pdf' }), canShare = navigator.canShare && navigator.canShare({ files: [file] });
-  const phone = (S.recipient.phone || '').replace(/[^\d+]/g, '').replace(/^00/, '+').replace(/^0/, '+49').replace(/^\+/, '');
   modal(`<div class="text-center pt-2"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('check', 26, 2.4)}</div><div class="font-semibold text-[19px] mt-4">${esc(title)}</div><div class="text-[13px] text-ink3 mt-1 break-all">${esc(name)}</div></div>
-    <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-p !h-12" id="pdf-share">${ic('send', 17)}An ${esc(S.recipient.name || 'Büro')} senden (WhatsApp)</button><p class="hint text-center -mt-1">Im Teilen-Menü WhatsApp und dann ${esc(S.recipient.name || 'den Empfänger')} wählen.</p>` : `<a class="btn-p !h-12" href="https://wa.me/${phone}?text=${encodeURIComponent(text + ' (PDF folgt als Anhang)')}" target="_blank" rel="noopener">${ic('send', 17)}WhatsApp an ${esc(S.recipient.name || 'Büro')} öffnen</a><p class="hint text-center -mt-1">Dann das gespeicherte PDF im Chat anhängen.</p>`}
-    <button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
+    <div class="grid gap-2 mt-6">${canShare ? `<button class="btn-s" id="pdf-share">${ic('share', 17)}Teilen</button>` : ''}<button class="btn-s" id="pdf-again">${ic('download', 17)}Nochmal speichern / öffnen</button><button class="btn-g" data-a="modal-close">Fertig</button></div>`);
   $('#pdf-again').onclick = () => saveBlob(blob, name);
-  const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], text, title: name }); closeModal(); } catch (err) { if (err && err.name !== 'AbortError') toast('Teilen nicht möglich – das PDF ist gespeichert.', 'warn'); } };
+  const b = $('#pdf-share'); if (b) b.onclick = async () => { try { await navigator.share({ files: [file], title: name }); closeModal(); } catch (err) {} };
 }
 
 /* ---------- PDF speichern und senden ---------- */
@@ -309,21 +282,6 @@ async function sendPdf(kind, iso) {
   } catch (err) { console.error(err); closeModal(); toast('PDF konnte nicht erstellt werden: ' + (err.message || err), 'err', 5000); }
 }
 
-/* ---------- Datensicherung ---------- */
-function backup() {
-  const data = { app: 'fruehauf-stempel', version: APP_VERSION, date: tNow().toISOString(), settings: S, days: Object.values(DAYS) };
-  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); saveBlob(blob, `stempeluhr-sicherung-${isoToday()}.json`); toast('Sicherung gespeichert.');
-}
-async function restore(file) {
-  if (!canEdit()) return toast('Einspielen nur mit Admin-Freischaltung.', 'warn');
-  try {
-    const d = JSON.parse(await file.text()); if (d.app !== 'fruehauf-stempel') throw new Error('Keine Sicherung der Stempeluhr');
-    if (!(await confirmDlg('Sicherung einspielen?', `${(d.days || []).length} Tage werden übernommen bzw. überschrieben.`, 'Einspielen'))) return;
-    S = deepMerge(clone(DEFAULTS), d.settings || {}); saveSettings();
-    for (const x of d.days || []) await DB.put('days', x);
-    DAYS = {}; ((await DB.all('days')) || []).forEach(x => { DAYS[x.iso] = x; }); applyTheme(); render(); toast('Sicherung eingespielt.');
-  } catch (err) { toast('Sicherung konnte nicht gelesen werden: ' + err.message, 'err', 5000); }
-}
 
 /* ---------- App-PIN ---------- */
 function pinCheck(msg = 'PIN eingeben') {
