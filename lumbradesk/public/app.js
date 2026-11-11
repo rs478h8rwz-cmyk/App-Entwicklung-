@@ -64,9 +64,10 @@ function shell(inner) {
   const crm = typeof isCrm === 'function' && isCrm(), adm = ST.user.role === 'admin';
   const off = ['admin', 'buero'].includes(ST.user.role);
   const base = [['home', 'Start']].concat(crm ? [['kunden', 'Kunden'], ['aufgaben', 'Aufgaben']] : []).concat(off ? [['protokolle', 'Protokolle']] : []);
-  const nav = base.concat(adm ? [['users', 'Benutzer'], ['audit', 'Änderungen'], ['system', 'System']] : []);
-  const tabs = (adm ? base.filter(x => x[0] !== 'protokolle') : base).concat(adm ? [['mehr', 'Mehr']] : []);
-  const cur = ST.view === 'kunde' || ST.view === 'angebot' ? 'kunden' : ST.view === 'artikel' ? 'mehr' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view) || (adm && ST.view === 'protokolle');
+  const prod = off && (ST.features || {}).angebote ? [['produkte', 'Produkte']] : [];   // Produktdatenbank fürs Angebot
+  const nav = base.concat(prod, adm ? [['users', 'Benutzer'], ['audit', 'Änderungen'], ['system', 'System']] : []);
+  const tabs = (adm ? base.filter(x => x[0] !== 'protokolle') : base.concat(prod)).concat(adm ? [['mehr', 'Mehr']] : []);
+  const cur = ST.view === 'kunde' || ST.view === 'angebot' ? 'kunden' : ST.view === 'artikel' || (adm && ST.view === 'produkte') ? 'mehr' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view) || (adm && ST.view === 'protokolle');
   const link = ([k, l]) => `<a href="#/${k}" class="navl ${cur === k || (k === 'mehr' && inMehr) ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`;
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
     ${nav.length > 1 ? `<nav class="side">${nav.map(link).join('')}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
@@ -95,7 +96,7 @@ function viewUsers() {
       <td><div class="row"><button class="btn s sm" data-a="maillink" data-id="${u.id}">${u.mustChange ? 'Einladung erneut senden' : 'Link: neues Passwort'}</button><button class="btn g sm" data-a="reset" data-id="${u.id}">Einmal-Passwort</button>${u.id === ST.user.id ? '' : `<button class="btn g sm ${u.active ? 'danger' : ''}" data-a="active" data-id="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? 'Sperren' : 'Entsperren'}</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>`;
 }
-const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen', kunde_zugewiesen: 'Kunde zugewiesen', kunde_geloescht: 'Kunde gelöscht', kunde_angelegt: 'Kunde angelegt', sicherung: 'Sicherung erstellt', sicherung_geladen: 'Sicherung heruntergeladen', sicherung_zurueck: 'Sicherung zurückgespielt', einladung_gesendet: 'Einladung per E-Mail gesendet', link_gesendet: 'Passwort-Link per E-Mail gesendet', passwort_vergessen: 'Passwort vergessen (Link angefordert)', passwort_per_link: 'Passwort per Link festgelegt', mail_einstellungen: 'E-Mail-Einstellungen geändert', stempel_aenderung: 'Stempeluhr: Änderung ans Handy geschickt', protokoll_geloescht: 'Protokoll gelöscht', urlaub_beantragt: 'Urlaub beantragt', urlaub_genehmigt: 'Urlaub genehmigt', urlaub_abgelehnt: 'Urlaub abgelehnt', stempel_ansprechpartner: 'Stempeluhr: Ansprechpartner geändert', angebot_geloescht: 'Angebot gelöscht' };
+const ACT = { login: 'Anmeldung', login_fehler: 'Anmeldung fehlgeschlagen', login_gesperrt: 'Anmeldung gesperrt (zu viele Versuche)', logout: 'Abmeldung', passwort_geaendert: 'Passwort geändert', benutzer_angelegt: 'Benutzer angelegt', rolle_geaendert: 'Rolle geändert', benutzer_gesperrt: 'Benutzer gesperrt', benutzer_aktiviert: 'Benutzer entsperrt', passwort_zurueckgesetzt: 'Passwort zurückgesetzt', eingerichtet: 'System eingerichtet', update: 'Update eingespielt', firmeneinstellungen: 'Firmen-Einstellungen für alle übernommen', kunde_zugewiesen: 'Kunde zugewiesen', kunde_geloescht: 'Kunde gelöscht', kunde_angelegt: 'Kunde angelegt', sicherung: 'Sicherung erstellt', sicherung_geladen: 'Sicherung heruntergeladen', sicherung_zurueck: 'Sicherung zurückgespielt', einladung_gesendet: 'Einladung per E-Mail gesendet', link_gesendet: 'Passwort-Link per E-Mail gesendet', passwort_vergessen: 'Passwort vergessen (Link angefordert)', passwort_per_link: 'Passwort per Link festgelegt', mail_einstellungen: 'E-Mail-Einstellungen geändert', stempel_aenderung: 'Stempeluhr: Änderung ans Handy geschickt', protokoll_geloescht: 'Protokoll gelöscht', urlaub_beantragt: 'Urlaub beantragt', urlaub_genehmigt: 'Urlaub genehmigt', urlaub_abgelehnt: 'Urlaub abgelehnt', stempel_ansprechpartner: 'Stempeluhr: Ansprechpartner geändert', angebot_geloescht: 'Angebot gelöscht', angebot_produkte: 'Produktdatenbank (Angebote)', funktion_freigabe: 'Funktion freigeschaltet/gesperrt' };
 function viewAudit() {
   return `<section class="hero"><h1>Änderungen</h1><p class="muted">Die letzten 200 Vorgänge – wer hat wann was gemacht.</p></section>
     <div class="card"><table class="mt audit"><thead><tr><th>Zeit</th><th>Wer</th><th>Vorgang</th><th>Details</th><th class="hide-sm">IP</th></tr></thead><tbody>
@@ -105,7 +106,8 @@ function viewAudit() {
 function viewSystem() {
   const y = ST.sys || {};
   return `<section class="hero"><h1>System</h1><p class="muted">LumbraDesk ${esc(y.version || '')} · PHP ${esc(y.php || '')}</p></section>
-    <div class="card"><h2>Update einspielen</h2><p class="muted">Die Update-Datei (lumbradesk-update.zip) hier auswählen – sie wird direkt auf dem Server eingespielt. Zugangsdaten, Benutzer und Daten bleiben erhalten.</p>
+    ${featureCard().replace('card sec', 'card')}
+    <div class="card sec"><h2>Update einspielen</h2><p class="muted">Die Update-Datei (lumbradesk-update.zip) hier auswählen – sie wird direkt auf dem Server eingespielt. Zugangsdaten, Benutzer und Daten bleiben erhalten.</p>
       <form id="f-update" class="row" style="margin-top:12px"><input type="file" name="zip" accept=".zip,application/zip" required style="height:auto;padding:10px;max-width:420px;flex:1 1 220px"><button class="btn" type="submit">Update einspielen</button></form>
       ${y.zip === false ? '<p class="note err">Auf dem Server fehlt die ZIP-Unterstützung.</p>' : ''}<p class="muted" style="font-size:13px">Max. Dateigröße laut Server: ${esc(y.maxUpload || '–')}</p><div id="upd-msg"></div></div>
     ${backupCard()}
@@ -113,6 +115,12 @@ function viewSystem() {
 }
 const mb = n => (n / 1048576 >= 1 ? (n / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
 const utc = s => new Date(String(s).replace(' ', 'T') + 'Z');
+/* Neue Funktionen für alle freischalten */
+function featureCard() {
+  const l = ST.feat || []; if (!l.length) return '';
+  return `<div class="card sec"><h2>Funktionen freischalten</h2><p class="muted">Neue Funktionen siehst zuerst nur du als Admin – zum Testen. Erst mit dem Haken sind sie für alle frei.</p>
+    <div class="glist" style="margin-top:12px">${l.map(f => `<label class="grow" style="cursor:pointer"><span class="gmain"><b>${esc(f.name)}</b><span style="white-space:normal">${esc(f.text)}</span></span><span class="sw2"><input type="checkbox" data-feat="${esc(f.key)}" ${f.on ? 'checked' : ''}><i></i></span></label>`).join('')}</div></div>`;
+}
 function backupCard() {
   const b = ST.bk || {}, st = b.status || {}, list = b.list || [], age = st.last ? (Date.now() - utc(st.last)) / 36e5 : 999;
   return `<div class="card sec"><h2>Datensicherung</h2><p class="muted">Jede Nacht eine komplette Sicherung (Benutzer, Kunden, Firmen-Einstellungen, Angebote, Fotos) – die letzten ${b.keep || 14} bleiben auf dem Server. Zugangsdaten sind nicht enthalten.</p>
@@ -139,7 +147,7 @@ function mailCard() {
 async function load() {
   const tok = new URLSearchParams(location.search).get('setpw');
   if (tok) { ST.token = tok; history.replaceState(null, '', location.pathname); try { const r = await fetch('api/?r=tokeninfo&t=' + encodeURIComponent(tok), { credentials: 'same-origin', cache: 'no-store' }); ST.tokenInfo = r.ok ? await r.json() : null; } catch (e) { ST.tokenInfo = null; } return void ($('#app').innerHTML = viewSetPw(ST.tokenInfo)); }
-  try { const j = await api('me'); ST.user = j.user; ST.apps = j.apps || []; ST.roles = j.roles || {}; }
+  try { const j = await api('me'); ST.user = j.user; ST.apps = j.apps || []; ST.roles = j.roles || {}; ST.features = j.features || {}; }
   catch (e) { $('#app').innerHTML = `<main class="auth"><div class="card">${brand('')}<p class="note err">${esc(e.message)}</p></div></main>`; return; }
   route();
 }
@@ -148,18 +156,18 @@ async function route() {
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/'); ST.view = parts[0]; const arg = decodeURIComponent(parts[1] || '');
   if (!ST.user) return void ($('#app').innerHTML = ST.view === 'vergessen' ? viewForgot() : viewLogin());
   if (ST.user.mustChange) return void ($('#app').innerHTML = viewNewPw());
-  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel'];
+  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel', 'produkte'];
   if (!(ST.view === 'home' || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin') || (offViews.includes(ST.view) && ['admin', 'buero'].includes(ST.user.role)))) ST.view = 'home';
   try {
     if (isCrm() && (crmViews.includes(ST.view) || ST.view === 'home')) await crmLoad(ST.view, arg);
     if (ST.view === 'protokolle' || ST.view === 'kunde') await protLoad(ST.view, arg);
-    if (['kunde', 'angebot', 'artikel'].includes(ST.view)) await offLoad(ST.view);
+    if (['kunde', 'angebot', 'artikel', 'produkte'].includes(ST.view)) await offLoad(ST.view);
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
-    if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); }
+    if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); ST.feat = (await api('features')).list; }
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
   if (seq !== ST.seq) return;
-  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel };
+  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel, produkte: viewProdukte };
   $('#app').innerHTML = shell((V[ST.view] || viewHome)());
 }
 window.addEventListener('hashchange', route);
@@ -227,6 +235,8 @@ document.addEventListener('click', async e => {
   } catch (err) { toast(err.message); }
 });
 document.addEventListener('change', async e => {
+  const fe = e.target.closest && e.target.closest('[data-feat]');
+  if (fe) { try { await api('features', { key: fe.dataset.feat, on: fe.checked }); toast(fe.checked ? 'Für alle freigeschaltet.' : 'Für alle gesperrt – nur Admins sehen die Funktion.'); } catch (err) { toast(err.message); fe.checked = !fe.checked; } return; }
   const s = e.target.closest('[data-role]'); if (!s) return;
   try { await api('user-update', { id: +s.dataset.role, role: s.value }); toast('Rolle geändert.'); await route(); } catch (err) { toast(err.message); route(); }
 });

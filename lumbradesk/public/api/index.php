@@ -23,7 +23,7 @@ try {
       if (!$u) json_out(['user' => null]);
       try { require_once LD_PRIV_DIR . '/backup-lib.php'; backup_if_due(); } catch (Throwable $e) {}
       $apps = array_values(array_filter(LD_APPS, fn($a) => in_array($u['role'], $a['roles'], true)));
-      json_out(['user' => user_out($u), 'apps' => $u['must_change'] ? [] : $apps, 'roles' => ROLES]);
+      json_out(['user' => user_out($u), 'apps' => $u['must_change'] ? [] : $apps, 'roles' => ROLES, 'features' => ld_features_for($u)]);
     }
     case 'POST login': {
       $b = body(); $email = mb_strtolower(trim((string)($b['email'] ?? ''))); $pw = (string)($b['password'] ?? '');
@@ -310,29 +310,46 @@ try {
       readfile($f . '.bin'); exit;
     }
 
+    /* ---------- Funktionen freischalten (nur Admin) ---------- */
+    case 'GET features': {
+      require_role(['admin']); $f = ld_flags();
+      json_out(['list' => array_map(fn($k, $x) => ['key' => $k, 'name' => $x[0], 'text' => $x[1], 'on' => !empty($f[$k])], array_keys(LD_FEATURES), LD_FEATURES)]);
+    }
+    case 'POST features': {
+      $me = require_role(['admin']); $b = body(); $k = (string)($b['key'] ?? ''); if (!isset(LD_FEATURES[$k])) fail('Unbekannte Funktion', 400);
+      $f = ld_flags(); $f[$k] = !empty($b['on']);
+      db()->prepare("INSERT INTO ld_settings (k, v, updated_at, updated_by) VALUES ('features', ?, UTC_TIMESTAMP(), ?) ON DUPLICATE KEY UPDATE v = VALUES(v), updated_at = UTC_TIMESTAMP(), updated_by = VALUES(updated_by)")->execute([json_encode($f), $me['id']]);
+      audit((int)$me['id'], 'funktion_freigabe', LD_FEATURES[$k][0] . ': ' . ($f[$k] ? 'für alle freigeschaltet' : 'gesperrt'));
+      json_out(['ok' => true]);
+    }
+    case 'POST of-import': {
+      $me = require_role(['admin', 'buero']); require_feature($me, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php';
+      $n = of_import_rechner(); audit((int)$me['id'], 'angebot_produkte', $n . ' Produkte aus der Wirtschaftlichkeit übernommen'); json_out(['ok' => true, 'n' => $n]);
+    }
+
     /* ---------- Angebote ---------- */
     case 'GET of-catalog': {
-      require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php';
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php';
       $row = cfg_row(); $cfg = $row ? json_decode((string)$row['data'], true) : []; $co = (array)(($cfg['settings'] ?? [])['company'] ?? []);
       json_out(['items' => of_catalog(), 'packages' => of_packages(), 'cats' => OF_CATS, 'status' => OF_STATUS, 'company' => array_intersect_key($co, array_flip(['name', 'ceo', 'register', 'street', 'zip', 'city', 'phone', 'email', 'web', 'taxNo', 'vatId', 'bank', 'iban', 'bic', 'logoFile']))]);
     }
-    case 'POST of-item': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(['ok' => true] + of_item_save(body())); }
-    case 'POST of-item-del': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('UPDATE offer_items SET active = 0 WHERE id = ?')->execute([(int)preg_replace('/\D/', '', (string)(body()['id'] ?? ''))]); json_out(['ok' => true]); }
-    case 'POST of-package': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; of_package_save(body()); json_out(['ok' => true]); }
-    case 'POST of-package-del': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('DELETE FROM offer_packages WHERE id = ?')->execute([(int)(body()['id'] ?? 0)]); json_out(['ok' => true]); }
+    case 'POST of-item': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(['ok' => true] + of_item_save(body())); }
+    case 'POST of-item-del': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('UPDATE offer_items SET active = 0 WHERE id = ?')->execute([(int)preg_replace('/\D/', '', (string)(body()['id'] ?? ''))]); json_out(['ok' => true]); }
+    case 'POST of-package': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; of_package_save(body()); json_out(['ok' => true]); }
+    case 'POST of-package-del': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('DELETE FROM offer_packages WHERE id = ?')->execute([(int)(body()['id'] ?? 0)]); json_out(['ok' => true]); }
     case 'GET of-list': {
-      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; $pid = (string)($_GET['p'] ?? '');
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; $pid = (string)($_GET['p'] ?? '');
       $p = valid_id($pid) ? project_row($pid) : null; if (!can_see_project($u, $p)) fail('Keine Berechtigung', 403);
       json_out(['offers' => of_list($pid)]);
     }
     case 'GET of-get': {
-      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; $r = of_get((string)($_GET['id'] ?? ''));
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; $r = of_get((string)($_GET['id'] ?? ''));
       if (!can_see_project($u, project_row($r['project_id']))) fail('Keine Berechtigung', 403);
       json_out(of_out($r));
     }
-    case 'POST of-save': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(of_save($u, body())); }
+    case 'POST of-save': { $u = require_role(['admin', 'buero', 'vertrieb']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(of_save($u, body())); }
     case 'POST of-del': {
-      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/offers-lib.php'; $r = of_get((string)(body()['id'] ?? ''));
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; $r = of_get((string)(body()['id'] ?? ''));
       if (!can_see_project($u, project_row($r['project_id']))) fail('Keine Berechtigung', 403);
       db()->prepare('UPDATE offers SET deleted = 1, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?')->execute([$u['id'], $r['id']]); audit((int)$u['id'], 'angebot_geloescht', $r['nr']); json_out(['ok' => true]);
     }
@@ -434,7 +451,7 @@ try {
       crm_project($u, $id);
       $at = (string)($b['at'] ?? ''); $at = preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', $at) && strtotime($at . ' UTC') ? gmdate('Y-m-d H:i:s', strtotime($at . ' UTC')) : null;
       crm_add_event($id, (int)$u['id'], $kind, $text, $at);
-      $sent = []; if (!empty($b['mentions'])) $sent = crm_mention($u, $id, (int)db()->lastInsertId(), (array)$b['mentions'], $kind, $text);
+      $sent = []; if (!empty($b['mentions']) && ld_feature($u, 'markieren')) $sent = crm_mention($u, $id, (int)db()->lastInsertId(), (array)$b['mentions'], $kind, $text);
       json_out(crm_detail($u, $id) + ['mailed' => $sent]);
     }
     case 'POST crm-event-del': {

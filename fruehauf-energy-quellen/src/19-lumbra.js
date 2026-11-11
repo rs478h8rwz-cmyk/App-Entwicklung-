@@ -117,7 +117,7 @@ SET.daten = () => (LD.on ? sCard('refresh', 'Firmen-Einstellungen (LumbraDesk)',
 /* ---------- Start ---------- */
 async function ldInit() {
   if (!/\/rechner\//.test(location.pathname)) return;
-  try { const r = await ldApi('me'); if (!r.ok || !r.j || !r.j.user) return; LD.on = true; LD.user = r.j.user; } catch (e) { return; }
+  try { const r = await ldApi('me'); if (!r.ok || !r.j || !r.j.user) return; LD.on = true; LD.user = r.j.user; LD.features = r.j.features || {}; } catch (e) { return; }
   await ldPull();
   LD.ready = true; ldBar();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) ldPull(); });

@@ -5,7 +5,7 @@
 Object.assign(IC, {
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   offer: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/>',
-  minus: '<path d="M5 12h14"/>', box: '<path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8"/>'
+  minus: '<path d="M5 12h14"/>', box: '<path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8"/>', produkte: '<path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/>'
 });
 const OF = { cat: null, edit: null, rec: null, listening: false, text: '', q: '' };
 const eur2 = n => (Math.round((n || 0) * 100) / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -52,7 +52,7 @@ function parseSpeech(text, items) {
       if (cat && it.cat === cat) sc += 4;
       if (cat && it.cat !== cat && ['mod', 'bat', 'inv', 'wp', 'wb'].includes(it.cat)) sc -= 3;
       if (pow && it.power) sc += Math.max(0, 3 - Math.abs(it.power - pow) / Math.max(1, pow) * 6);
-      if (!it.own && it.price > 0) sc += 0.5;                                               // echte Produkte bevorzugen
+      if (it.kind === 'produkt' && it.price > 0) sc += 0.5;                                // echte Produkte bevorzugen
       if (sc > bs) { bs = sc; best = it; }
     }
     if (best && bs >= 3) {
@@ -88,14 +88,16 @@ function ofTotals(d) {
 
 /* ---------- Kundenseite: Karte „Angebote“ ---------- */
 function offerCard() {
+  if (!(ST.features || {}).angebote) return '';
   const l = ST.offers; if (!l) return '';
   const c = ST.cd && ST.cd.customer;
-  return `<div class="card sec"><div class="row" style="justify-content:space-between"><h2>Angebote</h2><a class="btn sm" href="#/angebot/neu/${esc(c.id)}">${ic('mic', 16)}Neues Angebot</a></div>
-    ${l.length ? `<div class="clist flat">${l.map(o => `<a class="crow" href="#/angebot/${esc(o.id)}"><span class="evi">${ic('offer', 18)}</span><div class="cmain"><b>${esc(o.nr)} · ${esc(o.title)}</b><span class="muted">${esc(ST.ofStatus[o.status] || o.status)} · ${utc(o.upd).toLocaleDateString('de-DE')} · ${esc(o.by)}</span></div><b class="small" style="white-space:nowrap">${eur2(o.gross)}</b></a>`).join('')}</div>`
+  return `<div class="card sec"><div class="of-head"><h2>Angebote</h2><a class="btn sm" href="#/angebot/neu/${esc(c.id)}">${ic('mic', 16)}Neues Angebot</a></div>
+    ${l.length ? `<div class="clist flat">${l.map(o => `<a class="crow" href="#/angebot/${esc(o.id)}"><span class="evi">${ic('offer', 18)}</span><div class="cmain"><b>${esc(o.nr)} · ${esc(o.title)}</b><span class="muted">${esc(ST.ofStatus[o.status] || o.status)} · ${utc(o.upd).toLocaleDateString('de-DE')} · ${esc(o.by)}</span></div><b class="small of-amt">${eur2(o.gross)}</b></a>`).join('')}</div>`
       : '<p class="muted">Noch kein Angebot. Tippe auf „Neues Angebot“ und sprich einfach, was der Kunde bekommt.</p>'}</div>`;
 }
 async function offLoad(view) {
   const h = location.hash.replace(/^#\/?/, '').split('/');
+  if (!(ST.features || {}).angebote) return;
   if (view === 'kunde') { ST.offers = null; try { const [l, c] = await Promise.all([api('of-list&p=' + encodeURIComponent(h[1])), ofCatalog()]); ST.offers = l.offers; ST.ofStatus = c.status; } catch (e) { ST.offers = []; } }
   if (view === 'angebot') {
     await ofCatalog(); ST.ofStatus = OF.cat.status;
@@ -105,7 +107,7 @@ async function offLoad(view) {
       OF.text = '';
     } else if (!OF.edit || OF.edit.id !== h[1]) { const o = await api('of-get&id=' + encodeURIComponent(h[1])); OF.edit = o; ST.cd = await api('crm-p&id=' + encodeURIComponent(o.project)); OF.text = o.data.spoken || ''; }
   }
-  if (view === 'artikel') await ofCatalog(true);
+  if (view === 'artikel' || view === 'produkte') await ofCatalog(true);
 }
 const ofIso = d => { const x = new Date(); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); };
 
@@ -119,7 +121,7 @@ function viewAngebot() {
       <div class="vrow">${SR ? `<button class="mic" data-a="of-mic" aria-label="${OF.listening ? 'Aufnahme beenden' : 'Sprechen'}">${ic('mic', 30)}</button>` : ''}
         <div class="vtx"><b>${OF.listening ? 'Ich höre zu …' : 'Was bekommt der Kunde?'}</b><span>${SR ? 'Tippen und sprechen, z. B. „20 Module, 10er Speicher, Wallbox“' : 'Ins Feld tippen und das Mikrofon der Tastatur nutzen'}</span></div></div>
       <textarea id="of-text" rows="3" placeholder="z. B. 22 Module, Hybrid-Wechselrichter 10 kW, 10er Speicher und eine Wallbox">${esc(OF.text)}</textarea>
-      <div class="row" style="margin-top:10px"><button class="btn" data-a="of-parse">${ic('check', 18)}${d.pos.length ? 'Positionen ergänzen' : 'Positionen erstellen'}</button>${d.pos.length ? `<button class="btn s" data-a="of-std">${ic('refresh', 16)}Standard neu berechnen</button>` : ''}</div>
+      <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px"><button class="btn" data-a="of-parse">${ic('check', 18)}${d.pos.length ? 'Positionen ergänzen' : 'Positionen erstellen'}</button>${d.pos.length ? `<button class="btn s" data-a="of-std">${ic('refresh', 16)}Standard neu berechnen</button>` : ''}</div>
     </div>
     <section class="h-sec"><h2>Positionen</h2><span class="muted small">${d.pos.length} Position${d.pos.length === 1 ? '' : 'en'}</span></section>
     <div class="glist ofl">${d.pos.map((p, i) => `<div class="ofp ${p.check ? 'chk-me' : ''}">
@@ -141,12 +143,12 @@ function viewAngebot() {
     <div class="cardx form-grid ofmeta"><label>Betreff<input data-of="title" value="${esc(E.title)}"></label><label>Gültig bis<input type="date" data-of="valid" value="${esc(d.valid)}"></label>
       <label>Status<select data-of="status">${Object.entries(ST.ofStatus).map(([k, l]) => `<option value="${k}" ${E.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label style="grid-column:1/-1">Einleitung<textarea rows="2" data-of="intro">${esc(d.intro)}</textarea></label><label style="grid-column:1/-1">Schlusstext<textarea rows="2" data-of="outro">${esc(d.outro)}</textarea></label></div>
-    <div class="ofbar"><button class="btn" data-a="of-save">${ic('check', 18)}Speichern</button><button class="btn s" data-a="of-pdf" ${d.pos.length ? '' : 'disabled'}>${ic('offer', 18)}PDF</button>${E.id ? `<button class="btn g danger" data-a="of-delete">${ic('x', 16)}</button>` : ''}</div>`;
+    <div class="ofbar"><button class="btn" data-a="of-save">${ic('check', 18)}Speichern</button><button class="btn s" data-a="of-prev" ${d.pos.length ? '' : 'disabled'}>${ic('offer', 18)}Vorschau</button><button class="btn s" data-a="of-pdf" ${d.pos.length ? '' : 'disabled'} aria-label="PDF teilen">PDF</button>${E.id ? `<button class="btn g danger" data-a="of-delete">${ic('x', 16)}</button>` : ''}</div>`;
 }
 function ofSug() {
   const q = OF.q.trim().toLowerCase(); if (!q || !OF.cat) return '';
   const l = OF.cat.items.filter(i => (i.name + ' ' + (i.words || '') + ' ' + (OF.cat.cats[i.cat] || '')).toLowerCase().includes(q)).slice(0, 8);
-  return l.map(i => `<button class="grow" data-a="of-add" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${esc(OF.cat.cats[i.cat] || '')} · ${eur2(i.price)} / ${esc(i.unit)}${i.own ? '' : ' · aus Produkten'}</span></span>${ic('plus', 16)}</button>`).join('') || '<div class="grow muted small">Nichts gefunden – unter Mehr → Artikel & Pakete anlegen</div>';
+  return l.map(i => `<button class="grow" data-a="of-add" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${esc(OF.cat.cats[i.cat] || '')} · ${eur2(i.price)} / ${esc(i.unit)}${i.maker ? ' · ' + esc(i.maker) : ''}</span></span>${ic('plus', 16)}</button>`).join('') || '<div class="grow muted small">Nichts gefunden – unter Mehr → Produkte bzw. Leistungen & Pakete anlegen</div>';
 }
 const ofRender = () => { const y = scrollY; $('#app main').innerHTML = viewAngebot(); scrollTo(0, y); };
 function ofSumPaint() { const s = $('.ofsum'); if (!s) return; const tmp = document.createElement('div'); tmp.innerHTML = viewAngebot(); const n = tmp.querySelector('.ofsum'); if (n) s.replaceWith(n); $$('.ofl-t').forEach((el, i) => { const p = OF.edit.data.pos[i]; if (p) el.textContent = eur2(p.qty * p.price); }); }
@@ -170,7 +172,7 @@ function ofParse() {
   const miss = neu.filter(p => p.check).length;
   toast(`${neu.length - miss} Position${neu.length - miss === 1 ? '' : 'en'} erkannt${miss ? ` · ${miss} bitte prüfen` : ''} – Standardleistungen ergänzt.`); ofRender();
 }
-async function ofPdf() {
+async function ofBuild() {
   await loadJs('rechner/vendor/jspdf.umd.min.js');
   const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'mm', format: 'a4' }), E = OF.edit, d = E.data, T = ofTotals(d), c = ST.cd.customer, co = OF.cat.company || {};
   const W = 210, M = 18, INK = [18, 23, 42], GR = [110, 116, 130], LN = [225, 228, 234];
@@ -208,31 +210,77 @@ async function ofPdf() {
   for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setDrawColor(...LN); doc.line(M, 280, W - M, 280); doc.setFontSize(7); doc.setTextColor(...GR);
     doc.text([co.name, co.ceo ? 'Geschäftsführung: ' + co.ceo : '', co.register].filter(Boolean).join(' · '), M, 284); doc.text([co.bank, co.iban ? 'IBAN ' + co.iban : '', co.bic ? 'BIC ' + co.bic : ''].filter(Boolean).join(' · '), M, 288);
     doc.text([co.taxNo ? 'St.-Nr. ' + co.taxNo : '', co.vatId ? 'USt-IdNr. ' + co.vatId : ''].filter(Boolean).join(' · '), M, 292); doc.text(`Seite ${i} von ${pages}`, W - M, 292, { align: 'right' }); }
-  const name = `Angebot_${(E.nr || 'Entwurf').replace(/[^\w-]/g, '_')}_${c.name.replace(/[^\wäöüÄÖÜß]+/g, '_')}.pdf`, blob = doc.output('blob'), file = new File([blob], name, { type: 'application/pdf' });
+  const name = `Angebot_${(E.nr || 'Entwurf').replace(/[^\w-]/g, '_')}_${c.name.replace(/[^\wäöüÄÖÜß]+/g, '_')}.pdf`;
+  return { blob: doc.output('blob'), name };
+}
+async function ofPdf(pre) {
+  const { blob, name } = pre || await ofBuild(), file = new File([blob], name, { type: 'application/pdf' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
+/* Vorschau: Seiten als Bilder (pdf.js) – zuverlässig auch auf dem iPhone */
+async function ofPreview() {
+  const ov = document.createElement('div'); ov.id = 'of-prev'; ov.innerHTML = `<div class="pv-bar"><button class="btn g" data-pv="close">${ic('x', 18)}Schließen</button><b>Vorschau</b><button class="btn" data-pv="share">${ic('offer', 16)}Teilen</button></div><div class="pv-pages"><p class="muted" style="text-align:center;padding:40px 0">Vorschau wird erstellt …</p></div>`;
+  document.body.appendChild(ov); document.documentElement.style.overflow = 'hidden';
+  const close = () => { ov.remove(); document.documentElement.style.overflow = ''; };
+  let built = null;
+  ov.addEventListener('click', async e => { const b = e.target.closest('[data-pv]'); if (!b) return; if (b.dataset.pv === 'close') close(); if (b.dataset.pv === 'share' && built) ofPdf(built); });
+  try {
+    built = await ofBuild();
+    await loadJs('rechner/vendor/pdf.min.js'); const lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = 'rechner/vendor/pdf.worker.min.js';
+    const pdf = await lib.getDocument({ data: new Uint8Array(await built.blob.arrayBuffer()) }).promise, box = ov.querySelector('.pv-pages'); box.innerHTML = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const pg = await pdf.getPage(i), w = Math.min(box.clientWidth - 24, 820), vp0 = pg.getViewport({ scale: 1 }), sc = w / vp0.width * (window.devicePixelRatio || 1), vp = pg.getViewport({ scale: sc });
+      const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; cv.style.width = w + 'px'; cv.className = 'pv-page';
+      box.appendChild(cv); await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    }
+  } catch (err) { ov.querySelector('.pv-pages').innerHTML = `<p class="note err">Vorschau nicht möglich: ${esc(err.message)}</p>`; }
+}
 const loadJs = src => new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Bibliothek fehlt')); document.head.appendChild(s); });
 
-/* ---------- Artikel & Pakete (Admin/Büro) ---------- */
-function viewArtikel() {
-  const C = OF.cat; if (!C) return ''; const own = C.items.filter(i => i.own), prod = C.items.filter(i => !i.own), ed = OF.itemEdit;
-  const form = it => `<form id="f-of-item" class="form-grid" data-id="${esc(it.id || '')}"><label style="grid-column:1/-1">Name<input name="name" value="${esc(it.name || '')}" required></label><label style="grid-column:1/-1">Beschreibung (steht im Angebot)<textarea name="descr" rows="2">${esc(it.descr || '')}</textarea></label>
-    <label>Einheit<input name="unit" value="${esc(it.unit || 'Stk')}"></label><label>Preis netto €<input name="price" inputmode="decimal" value="${numDe(it.price || 0)}"></label><label>USt.<select name="tax">${[0, 7, 19].map(t => `<option value="${t}" ${+it.tax === t ? 'selected' : ''}>${t} %</option>`).join('')}</select></label>
-    <label>Bereich<select name="cat">${Object.entries(C.cats).map(([k, l]) => `<option value="${k}" ${it.cat === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label style="grid-column:1/-1">Stichwörter für die Spracheingabe (Komma)<input name="words" value="${esc(it.words || '')}" placeholder="z. B. gerüst, absturzsicherung"></label>
+/* ---------- Produktdatenbank & Leistungen (Admin/Büro) – nur fürs Angebot, getrennt von der Wirtschaftlichkeit ---------- */
+const OF_PCATS = { mod: ['PV-Module', 'Wp'], inv: ['Wechselrichter', 'kW'], bat: ['Speicher', 'kWh'], wb: ['Wallbox', 'kW'], wp: ['Wärmepumpe', 'kW'], sonst: ['Sonstiges', ''] };
+const ofTaxFor = cat => ['mod', 'inv', 'bat'].includes(cat) ? 0 : 19;
+const ofRedraw = () => { const v = ST.view === 'produkte' ? viewProdukte() : viewArtikel(); $('#app main').innerHTML = v; };
+function ofItemForm(it) {
+  const C = OF.cat, prod = it.kind === 'produkt', cats = prod ? Object.fromEntries(Object.entries(OF_PCATS).map(([k, [l]]) => [k, l])) : C.cats, pu = (OF_PCATS[it.cat] || ['', ''])[1];
+  return `<form id="f-of-item" class="form-grid" data-id="${esc(it.id || '')}"><input type="hidden" name="kind" value="${prod ? 'produkt' : 'leistung'}">
+    <label style="grid-column:1/-1">Name<input name="name" value="${esc(it.name || '')}" required placeholder="${prod ? 'z. B. Glas-Glas-Modul 445 Wp' : 'z. B. Gerüst bis 2 Etagen'}"></label>
+    ${prod ? `<label>Hersteller<input name="maker" value="${esc(it.maker || '')}"></label>` : ''}
+    <label>${prod ? 'Art' : 'Bereich'}<select name="cat">${Object.entries(cats).map(([k, l]) => `<option value="${k}" ${it.cat === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    ${prod && pu ? `<label>Leistung (${pu})<input name="power" inputmode="decimal" value="${it.power === null || it.power === undefined ? '' : numDe(it.power)}"></label>` : ''}
+    <label>Preis netto €<input name="price" inputmode="decimal" value="${numDe(it.price || 0)}"></label>
+    <label>USt.<select name="tax">${[0, 7, 19].map(t => `<option value="${t}" ${+it.tax === t ? 'selected' : ''}>${t} %</option>`).join('')}</select></label>
+    <label>Einheit<input name="unit" value="${esc(it.unit || 'Stk')}"></label>
+    <label style="grid-column:1/-1">Beschreibung (steht im Angebot)<textarea name="descr" rows="2" placeholder="${prod ? 'z. B. Maße, Garantie, Besonderheiten' : ''}">${esc(it.descr || '')}</textarea></label>
+    <label style="grid-column:1/-1">Stichwörter für die Spracheingabe (Komma)<input name="words" value="${esc(it.words || '')}" placeholder="${prod ? 'z. B. trina, glas glas' : 'z. B. gerüst, absturzsicherung'}"></label>
+    ${prod ? '<p class="muted small" style="grid-column:1/-1;margin:0">PV-Module, Wechselrichter und Speicher: 0 % USt. (§ 12 Abs. 3 UStG).</p>' : ''}
     <div class="row" style="grid-column:1/-1;margin-top:12px"><button class="btn" type="submit">Speichern</button><button class="btn g" type="button" data-a="of-item-cancel">Abbrechen</button>${it.id ? `<button class="btn g danger" type="button" data-a="of-item-del" data-v="${esc(it.id)}">Löschen</button>` : ''}</div></form>`;
-  const row = i => `<button class="grow" data-a="of-item-edit" data-v="${esc(i.id)}" ${i.own ? '' : 'disabled'}><span class="gmain"><b>${esc(i.name)}</b><span>${esc(C.cats[i.cat] || '')} · ${eur2(i.price)} / ${esc(i.unit)} · ${i.tax} % USt.</span></span>${i.own ? ic('next', 16) : ''}</button>`;
-  return `<section class="hero"><h1>Artikel &amp; Pakete</h1><p class="muted">Was im Angebot stehen kann – und welche Standardleistungen automatisch dazukommen.</p></section>
+}
+const ofRow = i => `<button class="grow" data-a="of-item-edit" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${[i.maker, i.kind === 'produkt' && i.power ? numDe(i.power) + ' ' + (OF_PCATS[i.cat] || ['', ''])[1] : '', eur2(i.price) + ' / ' + i.unit, i.tax + ' % USt.'].filter(Boolean).map(esc).join(' · ')}</span></span>${ic('next', 16)}</button>`;
+const ofEditBox = id => OF.itemEdit && (OF.itemEdit.id || '') === id ? `<div class="cardx">${ofItemForm(OF.itemEdit)}</div>` : '';
+
+function viewProdukte() {
+  const C = OF.cat; if (!C) return ''; const q = (OF.pq || '').toLowerCase().trim();
+  const all = C.items.filter(i => i.kind === 'produkt'), list = all.filter(i => !q || (i.name + ' ' + (i.maker || '') + ' ' + (i.words || '')).toLowerCase().includes(q));
+  const groups = Object.keys(OF_PCATS).map(k => [k, list.filter(i => (OF_PCATS[i.cat] ? i.cat : 'sonst') === k)]).filter(([, l]) => l.length);
+  return `<section class="hero"><h1>Produkte</h1><p class="muted">Module, Speicher, Wechselrichter, Wallboxen, Wärmepumpen – nur fürs Angebot. Die Wirtschaftlichkeit bleibt davon unberührt.</p></section>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn" data-a="of-prod-new">${ic('plus', 16)}Neues Produkt</button><button class="btn g" data-a="of-import">Aus der Wirtschaftlichkeit übernehmen</button></div>
+    ${ofEditBox('')}
+    ${all.length > 6 ? `<input id="of-pq" class="search" type="search" placeholder="Produkt suchen …" value="${esc(OF.pq || '')}" style="width:100%;margin-bottom:8px">` : ''}
+    <div id="of-plist">${groups.map(([k, l]) => `<section class="h-sec"><h2>${OF_PCATS[k][0]}</h2><span class="muted small">${l.length}</span></section><div class="glist">${l.map(i => ofRow(i) + ofEditBox(i.id)).join('')}</div>`).join('') || `<div class="cardx muted">${all.length ? 'Nichts gefunden.' : 'Noch keine Produkte. Lege eins an oder übernimm die Produkte einmalig aus der Wirtschaftlichkeit – danach sind beide Listen unabhängig.'}</div>`}</div>`;
+}
+function viewArtikel() {
+  const C = OF.cat; if (!C) return ''; const own = C.items.filter(i => i.kind !== 'produkt');
+  return `<section class="hero"><h1>Leistungen &amp; Pakete</h1><p class="muted">Montage, Elektro, Gerüst & Co. – und welche Standardleistungen automatisch ins Angebot kommen.</p></section>
     <section class="h-sec"><h2>Standardpakete</h2></section>
     <div class="glist">${C.packages.map(pk => `<div class="grow" style="align-items:flex-start"><span class="gic">${ic('box', 16)}</span><span class="gmain"><b>${esc(pk.name)}</b><span>wenn im Angebot: ${esc(C.cats[pk.trig] || pk.trig)}</span>
       <span style="white-space:normal;margin-top:4px">${pk.lines.map(l => { const it = C.items.find(i => i.id === 'i' + l.item || i.id === l.item); return it ? `${esc(it.name)} (${l.rule === 'perMod' ? l.qty + ' je Modul' : l.rule === 'perKwp' ? l.qty + ' je kWp' : l.qty + ' ' + esc(it.unit)})` : ''; }).filter(Boolean).join(' · ')}</span></span></div>`).join('')}</div>
     <p class="muted small" style="margin:8px 4px 0">Pakete ändern: bitte kurz Bescheid geben – die Zusammenstellung passe ich gern an (Bearbeiten in der App folgt).</p>
-    <section class="h-sec"><h2>Eigene Artikel und Leistungen</h2><button class="btn sm" data-a="of-item-new">${ic('plus', 16)}Neu</button></section>
-    ${ed ? `<div class="cardx">${form(ed)}</div>` : ''}
-    <div class="glist">${own.map(row).join('')}</div>
-    <section class="h-sec"><h2>Produkte aus der Wirtschaftlichkeit</h2></section>
-    <div class="glist">${prod.map(row).join('') || '<div class="grow muted small">Keine Produkte</div>'}</div>
-    <p class="muted small" style="margin:8px 4px 0">Diese Produkte samt Preis pflegst du in der Wirtschaftlichkeit unter Produkte – sie stehen hier automatisch zur Verfügung.</p>`;
+    <section class="h-sec"><h2>Leistungen</h2><button class="btn sm" data-a="of-item-new">${ic('plus', 16)}Neu</button></section>
+    ${ofEditBox('')}
+    <div class="glist">${own.map(i => ofRow(i) + ofEditBox(i.id)).join('')}</div>
+    <p class="muted small" style="margin:8px 4px 0">Produkte (Module, Speicher …) pflegst du unter Mehr → Produkte.</p>`;
 }
 
 /* ---------- Bedienung ---------- */
@@ -249,12 +297,15 @@ document.addEventListener('click', async e => {
         if (p.cat === 'mod' && !p.pkg) d.pos = ofApplyPackages(d.pos), ofRender(); else ofSumPaint(); return; }
       case 'of-add': { const it = OF.cat.items.find(x => x.id === a.dataset.v); if (!it) return; d.pos.push(ofPos(it, 1)); d.pos = ofApplyPackages(d.pos); OF.q = ''; return ofRender(); }
       case 'of-save': { a.disabled = true; const j = await api('of-save', { id: E.id, project: E.project, title: E.title, status: E.status, data: d }); OF.edit = j; toast(`Angebot ${j.nr} gespeichert · ${eur2(j.gross)}`); if (!location.hash.includes(j.id)) { history.replaceState(null, '', '#/angebot/' + j.id); } return ofRender(); }
+      case 'of-prev': return ofPreview();
       case 'of-pdf': { if (!E.id) { const j = await api('of-save', { id: E.id, project: E.project, title: E.title, status: E.status, data: d }); OF.edit = j; history.replaceState(null, '', '#/angebot/' + j.id); ofRender(); } return ofPdf(); }
       case 'of-delete': if (!confirm('Angebot löschen?')) return; await api('of-del', { id: E.id }); toast('Angebot gelöscht.'); OF.edit = null; location.hash = '#/kunde/' + E.project; return;
-      case 'of-item-new': OF.itemEdit = { unit: 'Stk', tax: 19, cat: 'sonst', price: 0 }; return void ($('#app main').innerHTML = viewArtikel());
-      case 'of-item-edit': OF.itemEdit = OF.cat.items.find(x => x.id === a.dataset.v); return void ($('#app main').innerHTML = viewArtikel());
-      case 'of-item-cancel': OF.itemEdit = null; return void ($('#app main').innerHTML = viewArtikel());
-      case 'of-item-del': if (!confirm('Artikel löschen?')) return; await api('of-item-del', { id: a.dataset.v }); OF.itemEdit = null; await ofCatalog(true); return void ($('#app main').innerHTML = viewArtikel());
+      case 'of-prod-new': OF.itemEdit = { kind: 'produkt', cat: 'mod', unit: 'Stk', tax: 0, price: 0 }; return ofRedraw();
+      case 'of-import': { a.disabled = true; const j = await api('of-import', {}); await ofCatalog(true); toast(j.n ? `${j.n} Produkte übernommen – ab jetzt unabhängig von der Wirtschaftlichkeit.` : 'Nichts Neues – alle Produkte sind schon da.'); return ofRedraw(); }
+      case 'of-item-new': OF.itemEdit = { kind: 'leistung', unit: 'Stk', tax: 19, cat: 'sonst', price: 0 }; return ofRedraw();
+      case 'of-item-edit': { const it = OF.cat.items.find(x => x.id === a.dataset.v); OF.itemEdit = OF.itemEdit && OF.itemEdit.id === a.dataset.v ? null : it ? { ...it } : null; ofRedraw(); const f = $('#f-of-item'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+      case 'of-item-cancel': OF.itemEdit = null; return ofRedraw();
+      case 'of-item-del': if (!confirm('Wirklich löschen? Bestehende Angebote behalten ihre Positionen.')) return; await api('of-item-del', { id: a.dataset.v }); OF.itemEdit = null; await ofCatalog(true); toast('Gelöscht.'); return ofRedraw();
     }
   } catch (err) { toast(err.message); a.disabled = false; }
 });
@@ -262,6 +313,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'of-q') { OF.q = el.value; const s = $('#of-sug'); if (s) s.innerHTML = ofSug(); return; }
   if (el.id === 'of-text') { OF.text = el.value; return; }
+  if (el.id === 'of-pq') { OF.pq = el.value; const t = document.createElement('div'); t.innerHTML = viewProdukte(); const n = t.querySelector('#of-plist'), o = $('#of-plist'); if (n && o) o.replaceWith(n); return; }
   const k = el.dataset && el.dataset.of; if (!k || !OF.edit) return; const d = OF.edit.data, i = +el.dataset.i;
   if (k === 'qty' || k === 'price') { d.pos[i][k] = parseNum(el.value); if (k === 'qty' && d.pos[i].pkg) d.pos[i].man = true; ofSumPaint(); }
   else if (k === 'name') d.pos[i].name = el.value;
@@ -269,9 +321,9 @@ document.addEventListener('input', e => {
   else if (k === 'title' || k === 'status') OF.edit[k] = el.value;
   else d[k] = el.value;
 });
-document.addEventListener('change', e => { const el = e.target; if (el.dataset && el.dataset.of === 'status' && OF.edit) OF.edit.status = el.value; if (el.dataset && el.dataset.of === 'qty' && OF.edit) { const p = OF.edit.data.pos[+el.dataset.i]; if (p && p.cat === 'mod' && !p.pkg) { OF.edit.data.pos = ofApplyPackages(OF.edit.data.pos); ofRender(); } } });
+document.addEventListener('change', e => { const el = e.target; if (el.name === 'cat' && el.closest('#f-of-item') && OF.itemEdit && OF.itemEdit.kind === 'produkt') { const d = Object.fromEntries(new FormData(el.closest('form'))); OF.itemEdit = { ...OF.itemEdit, ...d, power: d.power === '' || d.power === undefined ? null : parseNum(d.power), price: parseNum(d.price), tax: ofTaxFor(d.cat) }; ofRedraw(); return; } if (el.dataset && el.dataset.of === 'status' && OF.edit) OF.edit.status = el.value; if (el.dataset && el.dataset.of === 'qty' && OF.edit) { const p = OF.edit.data.pos[+el.dataset.i]; if (p && p.cat === 'mod' && !p.pkg) { OF.edit.data.pos = ofApplyPackages(OF.edit.data.pos); ofRender(); } } });
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'f-of-item') return; e.preventDefault(); e.stopImmediatePropagation();
-  const f = e.target, d = Object.fromEntries(new FormData(f)); d.id = f.dataset.id; d.price = parseNum(d.price); d.tax = +d.tax;
-  try { await api('of-item', d); OF.itemEdit = null; await ofCatalog(true); $('#app main').innerHTML = viewArtikel(); toast('Artikel gespeichert.'); } catch (err) { toast(err.message); }
+  const f = e.target, d = Object.fromEntries(new FormData(f)); d.id = f.dataset.id; d.price = parseNum(d.price); d.tax = +d.tax; if (d.power !== undefined) d.power = d.power === '' ? '' : parseNum(d.power);
+  try { await api('of-item', d); OF.itemEdit = null; await ofCatalog(true); ofRedraw(); toast('Gespeichert.'); } catch (err) { toast(err.message); }
 }, true);

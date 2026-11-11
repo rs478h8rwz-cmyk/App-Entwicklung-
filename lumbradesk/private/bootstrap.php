@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '3.0';
+const LD_VERSION = '3.1';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -13,6 +13,21 @@ const LD_APPS = [
   ['key' => 'stempel', 'name' => 'Stempeluhr', 'text' => 'Arbeitszeit, Urlaub, Stundenzettel', 'url' => 'stempel/', 'roles' => ['admin', 'buero', 'vertrieb', 'monteur']],
   ['key' => 'abnahme', 'name' => 'Abnahme & Service', 'text' => 'Abnahmeprotokolle, Service-Einsätze, Fotos, Unterschrift', 'url' => 'abnahme/', 'roles' => ['admin', 'buero', 'monteur']],
 ];
+
+/* Neue Funktionen: erst für alle frei, wenn der Admin den Haken setzt (Admins sehen sie immer zum Testen) */
+const LD_FEATURES = [
+  'angebote' => ['Angebote per Sprache', 'Angebote mit Positionen beim Kunden, Produktdatenbank, Leistungen & Pakete, Knopf „Angebot“ in der Wirtschaftlichkeit'],
+  'markieren' => ['Logbuch: Kollegen markieren', 'Beim Logbuch-Eintrag Kollegen markieren – sie bekommen die Nachricht per E-Mail'],
+];
+function ld_flags(): array {
+  static $f = null; if ($f !== null) return $f; $f = [];
+  try { db()->exec("CREATE TABLE IF NOT EXISTS ld_settings (k VARCHAR(40) PRIMARY KEY, v TEXT NOT NULL, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_by INT UNSIGNED NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $r = db()->query("SELECT v FROM ld_settings WHERE k = 'features'")->fetchColumn(); $f = $r ? (json_decode($r, true) ?: []) : []; } catch (Throwable $e) {}
+  return $f;
+}
+function ld_feature(array $u, string $key): bool { return $u['role'] === 'admin' || !empty(ld_flags()[$key]); }
+function ld_features_for(array $u): array { $o = []; foreach (LD_FEATURES as $k => $x) $o[$k] = ld_feature($u, $k); return $o; }
+function require_feature(array $u, string $key): void { if (!ld_feature($u, $key)) fail('Diese Funktion ist noch nicht freigeschaltet.', 403); }
 
 function cfg(?string $key = null) {
   static $c = null;
