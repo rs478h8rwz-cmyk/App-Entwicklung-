@@ -16,7 +16,7 @@ const TILE_DEFAULTS = [
   { id: 'custom', name: 'Individuell', w: 30, l: 33 }
 ];
 const roofTiles = () => { if (!Array.isArray(S.roofTiles) || !S.roofTiles.length) S.roofTiles = clone(TILE_DEFAULTS); return S.roofTiles; };
-const roofOk = () => Math.min(innerWidth, innerHeight) >= 600 || innerWidth >= 900;
+const roofOk = () => true;   // auch auf dem Handy (eigene Ansicht in 19-roofm.js)
 const roofMods = () => PRODUCTS.filter(x => x.cat === 'mod' && +x.len > 0 && +x.wid > 0);
 const RIMG = {};
 let RS = null;                                               // Editor-Zustand

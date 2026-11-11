@@ -54,7 +54,7 @@ const IP = {
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF. Teil von LumbraDesk: Daten gleichen sich mit dem Firmen-Server ab.
    ========================================================= */
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -386,11 +386,13 @@ function logoMark(h = 34) {
   const l = S.company.logo;
   return l ? `<span class="inline-grid place-items-center rounded-[10px] bg-white px-2" style="height:${h}px"><img src="${esc(l)}" alt="" style="max-height:${h - 8}px;max-width:${h * 3.2}px"></span>` : `<span class="w-9 h-9 rounded-[10px] grid place-items-center text-white" style="background:rgb(var(--p-rgb))">${ic('clock', 18, 2.2)}</span>`;
 }
+/* Zurück zu lumbra.desk (Startseite mit allen Apps) */
+const ldHome = (s = 36) => `<a href="../" class="shrink-0 rounded-[10px] overflow-hidden block" style="width:${s}px;height:${s}px;background:#242E48" title="Zurück zu lumbra.desk" aria-label="Zurück zu lumbra.desk"><img src="../icon-192.png" width="${s}" height="${s}" alt="" style="display:block"></a>`;
 function shell(inner) {
   const nav = [['home', 'Heute', 'clock', '#/'], ['week', 'Woche', 'cal', '#/woche'], ['urlaub', 'Urlaub', 'palm', '#/urlaub'], ['settings', 'Einstellungen', 'gear', '#/einstellungen']];
   return `<header class="sticky top-0 z-40 border-b border-line backdrop-blur-xl" style="background:color-mix(in srgb,var(--bg) 86%,transparent);padding-top:env(safe-area-inset-top)">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
-      <a href="#/" class="flex items-center gap-3 min-w-0">${logoMark()}<span class="hidden sm:block leading-tight"><span class="block font-semibold text-[15px]">Stempeluhr</span><span class="block text-[12px] text-ink3">${esc(S.person.name || S.company.name)}</span></span></a>
+      ${ldHome()}<a href="#/" class="flex items-center gap-3 min-w-0">${logoMark()}<span class="hidden sm:block leading-tight"><span class="block font-semibold text-[15px]">Stempeluhr</span><span class="block text-[12px] text-ink3">${esc(S.person.name || S.company.name)}</span></span></a>
       <nav class="ml-auto flex items-center gap-1">${nav.map(([k, l, i, h]) => `<a href="${h}" class="navl ${UI.route === k ? 'on' : ''}" aria-label="${l}">${ic(i, 17)}<span class="hidden md:inline">${l}</span></a>`).join('')}</nav>
     </div></header>
     <main class="max-w-6xl mx-auto px-4 sm:px-6 pb-24">${inner}</main>

@@ -57,6 +57,8 @@ function logoMark(size = 40) {
   if (url) return `<span class="inline-flex items-center ${appDark() ? 'bg-white rounded-lg px-2 py-1' : ''}"><img src="${esc(url)}" alt="" class="${appDark() ? 'max-h-8' : 'max-h-10'} max-w-[140px] object-contain"></span>`;
   return sunMark(size - 4);
 }
+/* Zurück zu lumbra.desk (Startseite mit allen Apps) */
+const ldHome = (s = 36) => `<a href="../" class="shrink-0 rounded-[10px] overflow-hidden block" style="width:${s}px;height:${s}px;background:#242E48" title="Zurück zu lumbra.desk" aria-label="Zurück zu lumbra.desk"><img src="../icon-192.png" width="${s}" height="${s}" alt="" style="display:block"></a>`;
 function shell(inner) {
   if (isStudio() && inner !== '') return studioShell(inner);
   const nav = [['kunden', 'Kunden', 'users'], ['produkte', 'Produkte', 'box'], ['einstellungen', 'Einstellungen', 'gear']];
@@ -64,7 +66,7 @@ function shell(inner) {
   const links = cls => nav.map(([k, l, i]) => `<a href="#/${k}" class="navl ${cls} ${active === k ? 'on' : ''}">${ic(i, 17)}${l}</a>`).join('');
   return `<header class="sticky top-0 z-40 border-b border-line" style="background:var(--header);padding-top:env(safe-area-inset-top);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)">
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
-    <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3 hidden lg:block">Wirtschaftlichkeitsrechner</div></div></a>
+    ${ldHome()}<a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3 hidden lg:block">Wirtschaftlichkeitsrechner</div></div></a>
     <nav class="hidden md:flex items-center gap-1 ml-6">${links('')}</nav>
     ${themeButton('ml-auto')}
     <button class="btn-p !h-10 !px-4" data-a="new">${ic('plus', 17)}<span>Neue Berechnung</span></button>
@@ -88,7 +90,7 @@ function studioShell(inner) {
   const title = UI.route === 'projekt' ? (curProject() && curProject().customer.name || 'Berechnung') : { kunden: 'Übersicht', produkte: 'Produkte', einstellungen: 'Einstellungen' }[UI.route];
   const tIcon = UI.route === 'produkte' ? 'box' : UI.route === 'einstellungen' ? 'gear' : UI.route === 'projekt' ? 'calc' : 'grid';
   return `<aside class="hidden lg:flex fixed inset-y-0 left-0 w-[268px] flex-col border-r border-line z-40" style="background:var(--side);padding-top:env(safe-area-inset-top)">
-    <div class="h-[72px] px-6 flex items-center gap-3"><a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark(32)}<span class="font-medium text-[17px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</span></a></div>
+    <div class="h-[72px] px-6 flex items-center gap-3">${ldHome(32)}<a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark(32)}<span class="font-medium text-[17px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</span></a></div>
     <div class="px-4"><button class="w-full h-11 rounded-[12px] bg-[#1a1a1c] border border-line flex items-center gap-2.5 px-3 text-ink3 text-[14px] hover:border-line2 transition-colors" data-a="focus-search">${ic('search', 17)}<span>Suchen</span><span class="ml-auto flex gap-1"><span class="kbd">⌘</span><span class="kbd">K</span></span></button></div>
     <div class="mt-6 pt-6 border-t border-line px-4"><div class="mono text-[12px] text-ink3 px-2.5 mb-2">Navigation</div>
       <div class="space-y-1">${nav.map(([k, l, i, n]) => `<a href="#/${k}" class="side-row ${active === k ? 'on' : ''}">${ic(i, 17)}<span>${l}</span>${n !== '' ? `<span class="ml-auto mono text-[12px] text-ink3">${n}</span>` : ''}</a>`).join('')}</div></div>

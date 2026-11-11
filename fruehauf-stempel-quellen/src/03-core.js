@@ -4,7 +4,7 @@
    Eigenständige App: Arbeitszeiten stempeln (Kommen, Pause, Gehen), Baustellen je Tag,
    Wochenzettel als PDF. Teil von LumbraDesk: Daten gleichen sich mit dem Firmen-Server ab.
    ========================================================= */
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];

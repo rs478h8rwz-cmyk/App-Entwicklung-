@@ -2166,6 +2166,8 @@ function logoMark(size = 40) {
   if (url) return `<span class="inline-flex items-center ${appDark() ? 'bg-white rounded-lg px-2 py-1' : ''}"><img src="${esc(url)}" alt="" class="${appDark() ? 'max-h-8' : 'max-h-10'} max-w-[140px] object-contain"></span>`;
   return sunMark(size - 4);
 }
+/* Zurück zu lumbra.desk (Startseite mit allen Apps) */
+const ldHome = (s = 36) => `<a href="../" class="shrink-0 rounded-[10px] overflow-hidden block" style="width:${s}px;height:${s}px;background:#242E48" title="Zurück zu lumbra.desk" aria-label="Zurück zu lumbra.desk"><img src="../icon-192.png" width="${s}" height="${s}" alt="" style="display:block"></a>`;
 function shell(inner) {
   if (isStudio() && inner !== '') return studioShell(inner);
   const nav = [['kunden', 'Kunden', 'users'], ['produkte', 'Produkte', 'box'], ['einstellungen', 'Einstellungen', 'gear']];
@@ -2173,7 +2175,7 @@ function shell(inner) {
   const links = cls => nav.map(([k, l, i]) => `<a href="#/${k}" class="navl ${cls} ${active === k ? 'on' : ''}">${ic(i, 17)}${l}</a>`).join('');
   return `<header class="sticky top-0 z-40 border-b border-line" style="background:var(--header);padding-top:env(safe-area-inset-top);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)">
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
-    <a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3 hidden lg:block">Wirtschaftlichkeitsrechner</div></div></a>
+    ${ldHome()}<a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark()}<div class="min-w-0 leading-tight hidden sm:block"><div class="font-semibold text-[15px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</div><div class="text-[12px] text-ink3 hidden lg:block">Wirtschaftlichkeitsrechner</div></div></a>
     <nav class="hidden md:flex items-center gap-1 ml-6">${links('')}</nav>
     ${themeButton('ml-auto')}
     <button class="btn-p !h-10 !px-4" data-a="new">${ic('plus', 17)}<span>Neue Berechnung</span></button>
@@ -2197,7 +2199,7 @@ function studioShell(inner) {
   const title = UI.route === 'projekt' ? (curProject() && curProject().customer.name || 'Berechnung') : { kunden: 'Übersicht', produkte: 'Produkte', einstellungen: 'Einstellungen' }[UI.route];
   const tIcon = UI.route === 'produkte' ? 'box' : UI.route === 'einstellungen' ? 'gear' : UI.route === 'projekt' ? 'calc' : 'grid';
   return `<aside class="hidden lg:flex fixed inset-y-0 left-0 w-[268px] flex-col border-r border-line z-40" style="background:var(--side);padding-top:env(safe-area-inset-top)">
-    <div class="h-[72px] px-6 flex items-center gap-3"><a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark(32)}<span class="font-medium text-[17px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</span></a></div>
+    <div class="h-[72px] px-6 flex items-center gap-3">${ldHome(32)}<a href="#/kunden" class="flex items-center gap-3 min-w-0">${logoMark(32)}<span class="font-medium text-[17px] tracking-[-0.01em] truncate">${esc(S.company.name || 'Frühauf Energy')}</span></a></div>
     <div class="px-4"><button class="w-full h-11 rounded-[12px] bg-[#1a1a1c] border border-line flex items-center gap-2.5 px-3 text-ink3 text-[14px] hover:border-line2 transition-colors" data-a="focus-search">${ic('search', 17)}<span>Suchen</span><span class="ml-auto flex gap-1"><span class="kbd">⌘</span><span class="kbd">K</span></span></button></div>
     <div class="mt-6 pt-6 border-t border-line px-4"><div class="mono text-[12px] text-ink3 px-2.5 mb-2">Navigation</div>
       <div class="space-y-1">${nav.map(([k, l, i, n]) => `<a href="#/${k}" class="side-row ${active === k ? 'on' : ''}">${ic(i, 17)}<span>${l}</span>${n !== '' ? `<span class="ml-auto mono text-[12px] text-ink3">${n}</span>` : ''}</a>`).join('')}</div></div>
@@ -4067,7 +4069,7 @@ async function saveSignature(p, auto) {
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
   ['download', '1 · LumbraDesk aufs Handy', 'Öffnen Sie lumbradesk.de und legen Sie es auf den Home-Bildschirm – iPhone: Safari → Teilen → „Zum Home-Bildschirm“, Android: Chrome → Menü ⋮ → „App installieren“. Angemeldet bleiben Sie auch ohne Internet bis zu 14 Tage.'],
-  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Am iPad oder PC gibt es zusätzlich den „Modulplan“: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
+  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Zusätzlich gibt es den „Modulplan“ – auch auf dem Handy: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
@@ -4257,7 +4259,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261111001044';
+const APP_VERSION = '20261111002232';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4665,9 +4667,14 @@ const WN_IMG = {
     <rect x="86" y="23" width="14" height="8" rx="4" fill="#3FA98C"/><circle cx="96" cy="27" r="3" fill="#ffffff"/><rect x="16" y="45" width="88" height="9" rx="3" fill="#232E3A"/><rect x="16" y="57" width="88" height="9" rx="3" fill="#232E3A"/><text x="21" y="51.5" font-size="4" fill="#C9D3DD">Komplette PDF</text><text x="21" y="63.5" font-size="4" fill="#C9D3DD">Vertriebs-PDF</text></svg>`
 };
 WN_IMG.crm = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#12171D"/>${[['#7A8692', 8], ['#5B8DEF', 26], ['#F5A524', 44], ['#0E7C66', 62], ['#8B5CF6', 80], ['#2F9E44', 98]].map(([c, x], i) => `<rect x="${x}" y="10" width="15" height="4" rx="2" fill="${i < 4 ? c : '#2A323C'}"/>`).join('')}${[24, 42, 60].map((y, i) => `<circle cx="16" cy="${y + 5}" r="5" fill="#1F3A33"/><rect x="26" y="${y + 1}" width="${[62, 48, 70][i]}" height="4" rx="2" fill="#ECEFF3" opacity=".85"/><rect x="26" y="${y + 8}" width="${[40, 56, 34][i]}" height="3" rx="1.5" fill="#7A8692"/>`).join('')}<rect x="92" y="23" width="20" height="12" rx="6" fill="#4DB39C"/></svg>`;
-const WN_BG = { crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
+WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.roof() : WN_IMG.house());
+const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.34', date: '2026-11-11', items: [
+    ['roof', 'Modulplan auf dem Handy', 'Die Dachbelegung geht jetzt auch auf dem Handy: Foto direkt mit der Kamera, Ecken mit dem Finger ziehen, Werkzeuge unten griffbereit, Einstellungen zum Aufklappen. Hochkant und quer.'],
+    ['crm', 'Zurück zu lumbra.desk', 'Oben links führt das „l.“ jederzeit zurück zur lumbra.desk-Startseite mit allen Apps.']
+  ] },
   { version: '2.33', date: '2026-11-11', items: [
     ['crm', 'Alles auf dem Server', 'Sicherungsdateien, Konfigurationsdateien und Erinnerungen ans Sichern sind weg: Kunden liegen auf dem LumbraDesk-Server, nachts wird automatisch gesichert. Firmen-Einstellungen verteilt der Admin unter „Daten & Abgleich“.'],
     ['house', 'Datenschutz aktualisiert', 'Der Standard-Datenschutztext nennt jetzt den eigenen LumbraDesk-Server bei IONOS in Deutschland.']
@@ -6605,7 +6612,7 @@ const TILE_DEFAULTS = [
   { id: 'custom', name: 'Individuell', w: 30, l: 33 }
 ];
 const roofTiles = () => { if (!Array.isArray(S.roofTiles) || !S.roofTiles.length) S.roofTiles = clone(TILE_DEFAULTS); return S.roofTiles; };
-const roofOk = () => Math.min(innerWidth, innerHeight) >= 600 || innerWidth >= 900;
+const roofOk = () => true;   // auch auf dem Handy (eigene Ansicht in 19-roofm.js)
 const roofMods = () => PRODUCTS.filter(x => x.cat === 'mod' && +x.len > 0 && +x.wid > 0);
 const RIMG = {};
 let RS = null;                                               // Editor-Zustand
@@ -7788,6 +7795,92 @@ function roofFrame(x, q) {
   x.save(); poly(); x.clip(); x.strokeStyle = '#0B0D10'; x.lineJoin = 'round'; x.lineWidth = fw * 2; poly(); x.stroke(); x.restore();
   x.save(); x.strokeStyle = 'rgba(205,214,224,.55)'; x.lineWidth = Math.max(0.6, fw * 0.35); x.lineJoin = 'round'; poly(); x.stroke(); x.restore();
 }
+/* =========================================================
+   Modulplan auf dem Handy
+   Gleiche Funktionen wie am iPad/PC, nur anders angeordnet:
+   - Dachbild nimmt den ganzen Bildschirm ein
+   - Schritte oben als Leiste, Werkzeuge und „Weiter“ unten griffbereit
+   - alle Einstellungen in einem ausklappbaren Feld („Einstellungen“)
+   - Foto direkt mit der Kamera aufnehmen
+   ========================================================= */
+const roofPhone = () => Math.min(innerWidth, innerHeight) < 600;
+const roofLand = () => innerWidth > innerHeight;   // Handy quer: Leisten zusammenlegen
+const RM_TOOLS = [['add', 'Setzen', 'plus'], ['select', 'Auswählen', 'grid'], ['string', 'Strings', 'bolt'], ['opt', 'Optimierer', 'sparkle']];
+
+const _roofRenderDesk = roofRender;
+roofRender = function () {
+  if (!roofPhone()) return _roofRenderDesk();
+  const box = $('#roof-ed'); if (!box || !RS) return;
+  const p = roofP(), f = roofF(), g = faceGeom(f);
+  if (RS.rmStep !== RS.step) { RS.rmStep = RS.step; RS.sheet = RS.step === 'photo' || RS.step === 'ref'; }   // Foto/Referenz: Einstellungen offen, Fläche/Belegen: freier Blick
+  const steps = [['photo', 'Foto'], ['corners', 'Fläche'], ['ref', 'Referenz'], ['mod', 'Belegen']];
+  const can = { photo: true, corners: !!f.photo, ref: !!f.photo, mod: !!(g && !g.bad) };
+  const stepChips = steps.map(([k, l], i) => `<button class="chip !h-8 shrink-0 ${RS.step === k ? '!border-p !text-ink !bg-p/10' : ''} ${can[k] ? '' : 'opacity-40 pointer-events-none'}" data-r="step" data-v="${k}"><b class="text-p">${i + 1}</b>&nbsp;${l}</button>`).join(''), land = roofLand();
+  box.innerHTML = `
+  <div class="flex items-center gap-2 px-3 pb-2 ${land ? 'pt-2' : ''} border-b border-line" style="${land ? 'padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))' : 'padding-top:max(8px,env(safe-area-inset-top))'}">
+    <button class="btn-g !h-10 !w-10 !px-0 shrink-0" data-r="close" aria-label="Schließen">${ic('x', 20)}</button>
+    <div class="${land ? 'shrink-0 max-w-[150px]' : 'flex-1'} min-w-0 leading-tight"><div class="font-semibold text-[15px] truncate">Modulplan</div><div class="text-[12px] text-ink3 truncate">${esc(p.customer.name || 'Neue Berechnung')} · ${esc(f.name)}</div></div>
+    ${land ? `<div class="flex-1 min-w-0 flex gap-1 overflow-x-auto no-scrollbar">${stepChips}</div>` : ''}
+    <button class="btn-s !h-10 !px-3 text-[13px] shrink-0" data-r="save" aria-label="Stand speichern">${ic('download', 16)}Sichern</button>
+  </div>
+  ${land ? '' : `<div class="flex gap-1 px-3 py-2 overflow-x-auto no-scrollbar border-b border-line">${stepChips}</div>`}
+  <div class="relative flex-1 min-h-0">
+    <div id="roof-stage" class="absolute inset-0 bg-black/40 touch-none select-none overflow-hidden"><canvas id="roof-cv" class="absolute inset-0 w-full h-full block"></canvas>
+      <div id="roof-tip" class="absolute left-3 right-3 bottom-2 text-[11px] leading-snug text-white/80 pointer-events-none"></div>
+      <div id="roof-badge" class="absolute left-1/2 -translate-x-1/2 top-2 pointer-events-none hidden rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-white shadow-lg max-w-[92%] text-center" style="background:rgba(12,20,28,.82);backdrop-filter:blur(6px)"></div>
+      <div id="roof-pad" class="absolute left-3 bottom-[70px] hidden flex-col items-center gap-1 select-none"><div class="relative w-[88px] h-[88px] rounded-full border-2 border-white/70 bg-black/45 backdrop-blur-sm touch-none" id="roof-pad-ring" title="Feinjustieren"><div id="roof-pad-knob" class="absolute w-9 h-9 rounded-full bg-white/90 shadow" style="left:26px;top:26px"></div><span class="absolute inset-0 grid place-items-center text-[10px] text-white/70 pointer-events-none" style="padding-top:58px">fein</span></div><div class="text-[11px] text-white/80" id="roof-pad-lbl"></div></div>
+      <div class="absolute right-2 top-2 flex flex-col gap-1.5"><button class="btn-s !h-10 !w-10 !px-0 text-[20px]" data-r="zoom" data-v="in" aria-label="Vergrößern">+</button><button class="btn-s !h-10 !w-10 !px-0 text-[20px]" data-r="zoom" data-v="out" aria-label="Verkleinern">−</button><button class="btn-s !h-10 !w-10 !px-0" data-r="zoom" data-v="fit" aria-label="Einpassen">${ic('grid', 16)}</button></div>
+    </div>
+  </div>
+  <div id="rm-sheet" class="bg-card border-t border-line rounded-t-[18px] shadow-[0_-10px_30px_rgba(0,0,0,.25)] flex flex-col -mt-3 relative z-10 ${RS.sheet ? '' : 'hidden'}" style="max-height:${RS.step === 'photo' ? 60 : 46}dvh">
+    <button class="w-full flex items-center justify-center gap-2 py-2 text-[13px] text-ink3 shrink-0" data-r="sheet"><span class="w-10 h-1.5 rounded-full bg-line2"></span>Einstellungen schließen</button>
+    <div id="roof-panel" class="overflow-y-auto px-4 pb-4 space-y-4">${roofPanel(p, f, g)}</div>
+  </div>
+  <div id="roof-foot">${roofFoot(p, f)}</div>`;
+  roofBindStage(); roofDraw();
+};
+
+/* Fußleiste auf dem Handy: Werkzeuge (beim Belegen), Summe, Zurück/Weiter, Einstellungen */
+const _roofFootDesk = roofFoot;
+roofFoot = function (p, f) {
+  if (!roofPhone()) return _roofFootDesk(p, f);
+  const tot = p.roof.faces.reduce((a, x) => [a[0] + x.mods.length, a[1] + faceKwp(x)], [0, 0]);
+  const tools = RS.step === 'mod' ? `<div class="flex gap-1 px-2 pt-2 overflow-x-auto no-scrollbar">${RM_TOOLS.map(([k, l, i]) => `<button class="flex-1 min-w-[64px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] font-medium border ${RS.mode === k ? 'border-p text-ink bg-p/10' : 'border-line text-ink2'}" data-r="mode" data-v="${k}">${ic(i, 17)}${l}</button>`).join('')}
+      ${RS.mode === 'string' || RS.mode === 'opt' ? '' : `<button class="min-w-[56px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] border border-line text-ink2" data-r="fill">${ic('grid', 17)}Füllen</button>
+      <button class="min-w-[56px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] border border-line ${RS.sel.size ? 'text-ember' : 'text-ink3 opacity-50'}" data-r="del" ${RS.sel.size ? '' : 'disabled'}>${ic('trash', 17)}Löschen</button>`}
+      <button class="min-w-[56px] rounded-[var(--rb)] py-1.5 flex flex-col items-center gap-0.5 text-[11.5px] border border-line ${RS.hist.length ? 'text-ink2' : 'text-ink3 opacity-50'}" data-r="undo" ${RS.hist.length ? '' : 'disabled'}>${ic('arrowL', 17)}Zurück</button></div>` : '';
+  const next = RS.step === 'mod' ? `<button class="btn-p !h-11 !px-4 text-[14px]" data-r="apply" ${tot[0] ? '' : 'disabled'}>${ic('check', 16)}Übernehmen</button>`
+    : `<button class="btn-p !h-11 !px-4 text-[14px]" data-r="next" ${RS.step === 'photo' && !f.photo ? 'disabled' : ''}>Weiter ${ic('arrowR', 16)}</button>`;
+  if (roofLand()) return `<div class="flex items-center gap-2 px-3 py-1.5" style="padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right));padding-bottom:max(6px,env(safe-area-inset-bottom))">
+    ${RS.step !== 'photo' ? `<button class="btn-s !h-10 !w-10 !px-0 shrink-0" data-r="prev" aria-label="Zurück">${ic('arrowL', 17)}</button>` : ''}<button class="btn-s !h-10 !w-10 !px-0 shrink-0 ${RS.sheet ? '!border-p !text-p' : ''}" data-r="sheet" aria-label="Einstellungen">${ic('gear', 18)}</button>
+    <div class="flex-1 min-w-0">${tools.replace('px-2 pt-2', 'px-0 pt-0').replace(/py-1\.5/g, 'py-1')}</div>
+    <div class="text-[12px] leading-tight text-right whitespace-nowrap"><b>${f.mods.length} Module</b><div class="text-ink3">${num(faceKwp(f), 2)} kWp</div></div>${next}<span id="roof-warn" class="hidden"></span></div>`;
+  return `${tools}<div class="flex items-center gap-2 px-3 pt-2" style="padding-bottom:max(10px,env(safe-area-inset-bottom))">
+    ${RS.step !== 'photo' ? `<button class="btn-s !h-11 !w-11 !px-0 shrink-0" data-r="prev" aria-label="Zurück">${ic('arrowL', 17)}</button>` : ''}
+    <button class="btn-s !h-11 !w-11 !px-0 shrink-0 ${RS.sheet ? '!border-p !text-p' : ''}" data-r="sheet" aria-label="Einstellungen">${ic('gear', 18)}</button>
+    <div class="flex-1 min-w-0 text-[12.5px] leading-tight text-right whitespace-nowrap"><b>${f.mods.length} Module</b><div class="text-ink3">${num(faceKwp(f), 2)} kWp${p.roof.faces.length > 1 ? ` · gesamt ${num(tot[1], 2)}` : ''}</div></div>
+    ${next}<span id="roof-warn" class="hidden"></span></div>`;
+};
+
+/* Panel auf dem Handy: Foto auch direkt mit der Kamera */
+const _roofPanelDesk = roofPanel;
+roofPanel = function (p, f, g) {
+  const h = _roofPanelDesk(p, f, g); if (!roofPhone() || RS.step !== 'photo') return h;
+  return h.replace(/<label class="btn-p w-full mt-3 cursor-pointer">[\s\S]*?<\/label>/, `<label class="btn-p w-full mt-3 cursor-pointer">${ic('camera', 17)}Foto aufnehmen<input type="file" accept="image/*" capture="environment" class="hidden" data-r="photo"></label>
+    <label class="btn-s w-full mt-2 cursor-pointer">${ic('image', 17)}${f.photo ? 'Anderes Foto aus der Mediathek' : 'Aus der Mediathek wählen'}<input type="file" accept="image/*" class="hidden" data-r="photo"></label>`);
+};
+
+/* Einstellungen auf/zu – ohne das Dachbild neu aufzubauen */
+document.addEventListener('click', e => {
+  const a = e.target.closest('#roof-ed [data-r="sheet"]'); if (!a || !RS) return;
+  e.stopImmediatePropagation(); RS.sheet = !RS.sheet;
+  const s = $('#rm-sheet'); if (s) s.classList.toggle('hidden', !RS.sheet);
+  const ft = $('#roof-foot'); if (ft) ft.innerHTML = roofFoot(roofP(), roofF());
+  roofDraw();   // Dachbild an die neue Höhe anpassen
+}, true);
+/* Drehen des Handys: Ansicht neu aufbauen */
+let RM_PHONE = roofPhone() + '' + roofLand();
+window.addEventListener('resize', () => { const ph = roofPhone() + '' + roofLand(); if (RS && ph !== RM_PHONE) roofRender(); RM_PHONE = ph; });
 /* Startanimation: Haus → Photovoltaik → Speicher → Wärmepumpe → E-Auto → Zoom → Logo → Zoom → App */
 const SPLASH = { ready: false, done: false, skip: false };
 const splashCfg = () => Object.assign({ on: true, logo: 'company', file: '' }, S.design.splash || {});
@@ -7956,7 +8049,7 @@ const TUT_STEPS = [
   ['quick', 'Schnellauslegung Wärmepumpe', 'Die App fragt, ob Sie die Wärmepumpe schnell auslegen möchten. Sie geben ein paar Eckdaten ein und bekommen Heizlast und eine passende Wärmepumpe vorgeschlagen.', ['Wohnfläche, Baujahr, Verbrauch und Dämmung eintragen – oder die Heizlast direkt.', 'Rechts erscheint die Empfehlung → „Übernehmen“.', 'Später jederzeit in der Kundenübersicht: „Schnellauslegung anpassen“.']],
   ['upload', 'Angebot hochladen', 'Ziehen Sie das Angebot als PDF hinein oder machen Sie ein Foto davon. Die App liest Kunde, Preise, Anlagendaten, Garantien und Produkte automatisch aus.', ['Auf die gestrichelte Fläche tippen und das Angebot wählen.', 'Erkannte Werte kurz prüfen – sie sind mit „aus Angebot“ markiert.', 'Erkannte Produkte aus Ihrer Datenbank werden automatisch übernommen.']],
   ['data', 'Daten prüfen und ergänzen', 'Oben sehen Sie, wo Sie gerade sind: Angebot → Kunde → Daten → Ergebnis. Fehlt etwas, tragen Sie es einfach ein. Kleine Schilder zeigen, woher ein Wert stammt.', ['Grün „aus Angebot“, blau „Schnellauslegung“ oder „Modulplan“.', 'PLZ eintippen – der Ort wird automatisch ergänzt.', 'Rote Warnung = Werte passen nicht zusammen. Bitte auswählen, welcher Wert stimmt.', 'Mit „Weiter“ zum nächsten Schritt.']],
-  ['roof', 'Modulbelegung (Dach planen)', 'Fotografieren Sie das Dach (oder nehmen Sie ein Drohnenbild) und legen Sie die Module direkt aufs Foto. So sieht der Kunde, wie seine Anlage aussieht.', ['In der Kundenübersicht „Modulbelegung“ antippen.', 'Foto wählen, Dachecken antippen, dann „Automatisch zählen und scannen“ – die oberste Reihe und linke Spalte werden zur Kontrolle nummeriert.', 'Modul setzen: doppelt tippen bzw. doppelklicken. Rot markierte Module überlappen sich – etwas verschieben.', 'Werkzeug „Strings“: Module der Reihe nach antippen. „Optimierer“: Modul antippen.', '„Übernehmen“ – im PDF zählen trotzdem nur die Produkte aus dem Angebot.']],
+  ['roof', 'Modulbelegung (Dach planen)', 'Fotografieren Sie das Dach (oder nehmen Sie ein Drohnenbild) und legen Sie die Module direkt aufs Foto – am iPad, PC oder zur Not auch auf dem Handy. So sieht der Kunde, wie seine Anlage aussieht.', ['In der Kundenübersicht „Modulbelegung“ antippen.', 'Foto wählen, Dachecken antippen, dann „Automatisch zählen und scannen“ – die oberste Reihe und linke Spalte werden zur Kontrolle nummeriert.', 'Modul setzen: doppelt tippen bzw. doppelklicken. Rot markierte Module überlappen sich – etwas verschieben.', 'Werkzeug „Strings“: Module der Reihe nach antippen. „Optimierer“: Modul antippen.', '„Übernehmen“ – im PDF zählen trotzdem nur die Produkte aus dem Angebot.']],
   ['funding', 'Förderung', 'Bei der Wärmepumpe rechnet die App die BEG-Förderung automatisch aus. Wichtig sind Wohneinheiten, selbst bewohnte Wohneinheiten und das Einkommen.', ['Anzahl Wohneinheiten eintragen.', '„Davon selbst bewohnt“ wählen – Klima- und Einkommensbonus gibt es nur dafür.', 'Einkommen auswählen – der Fördersatz rechts aktualisiert sich sofort.']],
   ['result', 'Ergebnis zeigen', 'Jetzt sehen Sie Ersparnis, Amortisation und Förderung auf einen Blick. Ideal, um es dem Kunden direkt auf dem Tablet zu zeigen.', ['Oben „Übersicht“ oder „Dokument-Vorschau“ wählen.', 'Mit dem Monatsregler einen Tag im Winter oder Sommer zeigen.', '„Hochpushen“ zeigt das optimistische Szenario.']],
   ['pdf', 'PDF erstellen', 'Wählen Sie das Layout: die komplette PDF mit allen Details oder die kurze Vertriebs-PDF. Dann „PDF erstellen“ – fertig zum Senden.', ['Im Ergebnis rechts „Layout“ wählen: Komplett oder Vertrieb.', '„PDF erstellen“ antippen und den Sonderrabatt kurz prüfen.', 'Danach per E-Mail senden oder speichern.']],

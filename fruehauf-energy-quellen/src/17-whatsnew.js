@@ -11,9 +11,14 @@ const WN_IMG = {
     <rect x="86" y="23" width="14" height="8" rx="4" fill="#3FA98C"/><circle cx="96" cy="27" r="3" fill="#ffffff"/><rect x="16" y="45" width="88" height="9" rx="3" fill="#232E3A"/><rect x="16" y="57" width="88" height="9" rx="3" fill="#232E3A"/><text x="21" y="51.5" font-size="4" fill="#C9D3DD">Komplette PDF</text><text x="21" y="63.5" font-size="4" fill="#C9D3DD">Vertriebs-PDF</text></svg>`
 };
 WN_IMG.crm = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#12171D"/>${[['#7A8692', 8], ['#5B8DEF', 26], ['#F5A524', 44], ['#0E7C66', 62], ['#8B5CF6', 80], ['#2F9E44', 98]].map(([c, x], i) => `<rect x="${x}" y="10" width="15" height="4" rx="2" fill="${i < 4 ? c : '#2A323C'}"/>`).join('')}${[24, 42, 60].map((y, i) => `<circle cx="16" cy="${y + 5}" r="5" fill="#1F3A33"/><rect x="26" y="${y + 1}" width="${[62, 48, 70][i]}" height="4" rx="2" fill="#ECEFF3" opacity=".85"/><rect x="26" y="${y + 8}" width="${[40, 56, 34][i]}" height="3" rx="1.5" fill="#7A8692"/>`).join('')}<rect x="92" y="23" width="20" height="12" rx="6" fill="#4DB39C"/></svg>`;
-const WN_BG = { crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
+WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.roof() : WN_IMG.house());
+const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.34', date: '2026-11-11', items: [
+    ['roof', 'Modulplan auf dem Handy', 'Die Dachbelegung geht jetzt auch auf dem Handy: Foto direkt mit der Kamera, Ecken mit dem Finger ziehen, Werkzeuge unten griffbereit, Einstellungen zum Aufklappen. Hochkant und quer.'],
+    ['crm', 'Zurück zu lumbra.desk', 'Oben links führt das „l.“ jederzeit zurück zur lumbra.desk-Startseite mit allen Apps.']
+  ] },
   { version: '2.33', date: '2026-11-11', items: [
     ['crm', 'Alles auf dem Server', 'Sicherungsdateien, Konfigurationsdateien und Erinnerungen ans Sichern sind weg: Kunden liegen auf dem LumbraDesk-Server, nachts wird automatisch gesichert. Firmen-Einstellungen verteilt der Admin unter „Daten & Abgleich“.'],
     ['house', 'Datenschutz aktualisiert', 'Der Standard-Datenschutztext nennt jetzt den eigenen LumbraDesk-Server bei IONOS in Deutschland.']
