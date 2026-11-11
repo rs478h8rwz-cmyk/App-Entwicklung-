@@ -15,6 +15,10 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.41', date: '2026-11-11', items: [
+    ['roof', 'Pfanne & Deckmaß prüfen', 'Im Schritt „Referenz“ erkennt der Modulplan grob die Pfannenart (Doppelmulde, einfache Welle, flach, Biber) und prüft über die Perspektive, ob Pfannenzahl und Deckmaß zum Foto passen – mit Vorschlag zum Übernehmen und Hinweis, wenn doppelt gezählt wurde.'],
+    ['roof', 'Dachfenster als Maßstab', 'Beim „Füllen“ wird ein erkanntes Dachfenster grob vermessen: Passt es zu einer üblichen Größe, wirkt der Maßstab plausibel – sonst kommt ein Hinweis. Das Deckmaß bitte trotzdem vor Ort bestätigen.']
+  ] },
   { version: '2.40', date: '2026-11-11', items: [
     ['roof', 'Störstellen automatisch aussparen', 'Beim Drücken von „Füllen“ erkennt der Modulplan Dachfenster, Schornstein, Gauben, Lüfter und Satellitenschüssel im Foto und lässt sie frei – rot schraffiert im Plan. Falsch erkannt? Im Werkzeug „Auswählen“ die rote Fläche antippen und entfernen.'],
     ['modplan', 'Maximal belegen', 'Neuer Knopf „Maximal“: legt so viele Module wie möglich aufs Dach – hochkant und quer frei kombiniert, ohne Raster oder Magnet, Störstellen ausgespart. „Zurück“ macht es rückgängig.'],

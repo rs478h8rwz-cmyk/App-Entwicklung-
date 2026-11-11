@@ -167,7 +167,10 @@ document.addEventListener('click', async e => {
   const busy = a.innerHTML; a.disabled = true;
   let o = { rects: [] }; try { o = await roofObs(f, g); } catch (err) { o = { rects: [] }; }
   a.disabled = false; a.innerHTML = busy;
-  const so = o.unsure ? ' Störstellen waren nicht sicher erkennbar – bitte selbst prüfen.' : (f.obs || []).length ? ` ${f.obs.length} Störstelle${f.obs.length > 1 ? 'n' : ''} ausgespart (rot).` : '';
+  let sky = null; try { sky = typeof roofSkyCheck === 'function' ? roofSkyCheck(f, g) : null; } catch (err) {}
+  f.skyChk = sky;   // Dachfenster als grober Maßstab (Anzeige auch im Schritt „Referenz“)
+  const so0 = o.unsure ? ' Störstellen waren nicht sicher erkennbar – bitte selbst prüfen.' : (f.obs || []).length ? ` ${f.obs.length} Störstelle${f.obs.length > 1 ? 'n' : ''} ausgespart (rot).` : '';
+  const so = so0 + (sky && !sky.ok ? ' ' + sky.t : '');
   if (a.dataset.r === 'fill') {
     roofHist(); const n = roofFill(f, g); roofSave(); roofSoft();
     return toast((n ? `${n} Module ergänzt.` : 'Kein freier Platz mehr für weitere Module.') + so, 'ok', 4500);
