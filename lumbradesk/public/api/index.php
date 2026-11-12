@@ -18,6 +18,16 @@ try {
   switch ("$m $r") {
 
     /* ---------- Anmeldung ---------- */
+    /* Bundesland zur Kundenadresse (für die Aufstell-Regeln der Wärmepumpe) */
+    case 'GET land': {
+      require_user(); $q = trim((string)($_GET['q'] ?? '')); if ($q === '') fail('Keine Adresse.', 400);
+      $ch = curl_init('https://nominatim.openstreetmap.org/search?' . http_build_query(['format' => 'jsonv2', 'q' => mb_substr($q, 0, 200), 'countrycodes' => 'de', 'limit' => 1, 'addressdetails' => 1]));
+      curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_USERAGENT => 'LumbraDesk/' . LD_VERSION . ' (https://lumbradesk.de)', CURLOPT_HTTPHEADER => ['Accept-Language: de']]);
+      $b = curl_exec($ch); $c = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+      $r = $b !== false && $c === 200 ? json_decode((string)$b, true) : null;
+      if (!$r || empty($r[0]['address']['state'])) fail('Bundesland nicht gefunden.', 404);
+      json_out(['state' => (string)$r[0]['address']['state']]);
+    }
     /* Hausumriss aus OpenStreetMap für den Modulplan: Adresse (q) oder Standort (lat/lon) → Gebäude in der Nähe */
     case 'GET haus': {
       require_user();
