@@ -42,6 +42,7 @@ function faceGeom(f) {
   if (f.refMode === 'len') { rw = (+f.lw || 0) / 100; rh = (+f.lh || 0) / 100; }
   else { const t = roofTiles().find(x => x.id === f.tileId) || roofTiles()[0]; rw = (+f.nx || 0) * t.w / 100; rh = (+f.ny || 0) * t.l / 100; }
   if (!(rw > 0 && rh > 0)) return null;
+  rw *= +f.kx > 0 ? +f.kx : 1; rh *= +f.ky > 0 ? +f.ky : 1;   // Maßstab an Kartenmaß angepasst
   const H = sqToQuad(P(f.ref)), Hi = hInv(H);
   const toPlane = ([x, y]) => { const [u, v] = hApply(Hi, x, y); return [u * rw, v * rh]; };
   const raw = P(f.corners).map(toPlane);                    // Reihenfolge: Rinne li, First li, First re, Rinne re
@@ -95,7 +96,7 @@ async function roofPhoto(file) {
 }
 /* Entzerrtes Dachbild (Ebene in Metern) – per Dreiecksnetz, wird gecacht */
 function roofWarp(f, g, img) {
-  const key = JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId]);
+  const key = JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId, f.kx, f.ky]);
   if (RS && RS.warpKey === key && RS.warp) return RS.warp;
   const ppm = Math.min(90, 2200 / Math.max(g.W, g.H)), c = document.createElement('canvas');
   c.width = Math.ceil(g.W * ppm); c.height = Math.ceil(g.H * ppm);

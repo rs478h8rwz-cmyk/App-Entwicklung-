@@ -18,6 +18,32 @@ try {
   switch ("$m $r") {
 
     /* ---------- Anmeldung ---------- */
+    /* Hausumriss aus OpenStreetMap für den Modulplan: Adresse (q) oder Standort (lat/lon) → Gebäude in der Nähe */
+    case 'GET haus': {
+      require_user();
+      $get = function (string $url): ?array {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 25, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_USERAGENT => 'LumbraDesk/' . LD_VERSION . ' (https://lumbradesk.de)', CURLOPT_HTTPHEADER => ['Accept-Language: de']]);
+        $b = curl_exec($ch); $c = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+        return $b !== false && $c === 200 ? json_decode((string)$b, true) : null;
+      };
+      $q = trim((string)($_GET['q'] ?? '')); $lat = (float)($_GET['lat'] ?? 0); $lon = (float)($_GET['lon'] ?? 0); $name = '';
+      if ($q !== '') {
+        $r = $get('https://nominatim.openstreetmap.org/search?' . http_build_query(['format' => 'jsonv2', 'q' => mb_substr($q, 0, 200), 'countrycodes' => 'de,at,ch,nl,lu,be,dk,pl,fr', 'limit' => 1]));
+        if (!$r || empty($r[0])) fail('Adresse nicht gefunden – bitte Straße, Hausnummer und Ort prüfen.', 404);
+        $lat = (float)$r[0]['lat']; $lon = (float)$r[0]['lon']; $name = (string)($r[0]['display_name'] ?? '');
+      }
+      if (!$lat || !$lon || abs($lat) > 85 || abs($lon) > 180) fail('Kein Standort angegeben.', 400);
+      $ql = sprintf('[out:json][timeout:20];way(around:45,%.6F,%.6F)["building"];out geom 25;', $lat, $lon);
+      $o = null; foreach (['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'] as $srv) { $o = $get($srv . '?data=' . rawurlencode($ql)); if ($o) break; }
+      if (!$o) fail('Kartendienst gerade nicht erreichbar – bitte später erneut versuchen oder selbst messen.', 502);
+      $b = [];
+      foreach ((array)($o['elements'] ?? []) as $e) {
+        if (empty($e['geometry']) || count($e['geometry']) < 4) continue;
+        $b[] = ['id' => (int)$e['id'], 'typ' => (string)($e['tags']['building'] ?? 'yes'), 'pts' => array_map(fn($g) => [round((float)$g['lat'], 7), round((float)$g['lon'], 7)], $e['geometry'])];
+      }
+      json_out(['lat' => $lat, 'lon' => $lon, 'name' => $name, 'buildings' => $b]);
+    }
     case 'GET me': {
       $u = current_user();
       if (!$u) json_out(['user' => null]);

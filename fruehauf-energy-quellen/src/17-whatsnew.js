@@ -15,6 +15,10 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.42', date: '2026-11-12', items: [
+    ['roof', 'Dachmaße mit der Karte abgleichen', 'Im Modulplan unter „Mit Karte abgleichen“: Kundenadresse oder eigenen Standort antippen – die App holt den Hausumriss aus OpenStreetMap und prüft, ob Trauf- und Hanglänge aus dem Foto zum Haus passen. Weicht es ab (z. B. schmalere Pfannen als angenommen), passt ein Tipp den Maßstab an.'],
+    ['roof', 'Selbst gemessen? Auch gut', 'Wer die Traufe z. B. in Google Maps mit „Entfernung messen“ ermittelt hat, trägt das Maß einfach ein – die App gleicht damit genauso ab.']
+  ] },
   { version: '2.41', date: '2026-11-11', items: [
     ['roof', 'Pfanne & Deckmaß prüfen', 'Im Schritt „Referenz“ erkennt der Modulplan grob die Pfannenart (Doppelmulde, einfache Welle, flach, Biber) und prüft über die Perspektive, ob Pfannenzahl und Deckmaß zum Foto passen – mit Vorschlag zum Übernehmen und Hinweis, wenn doppelt gezählt wurde.'],
     ['roof', 'Dachfenster als Maßstab', 'Beim „Füllen“ wird ein erkanntes Dachfenster grob vermessen: Passt es zu einer üblichen Größe, wirkt der Maßstab plausibel – sonst kommt ein Hinweis. Das Deckmaß bitte trotzdem vor Ort bestätigen.']

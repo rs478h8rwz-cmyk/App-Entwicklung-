@@ -90,7 +90,7 @@ async function roofTileCheck(f) {
   if (!out.lines.length) out.lines.push({ ok: null, t: 'Für die Prüfung bitte zuerst Pfannen und Reihen zählen.' });
   return out;
 }
-const obsKeyChk = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId]);
+const obsKeyChk = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId, f.kx, f.ky]);
 
 /* 3. Dachfenster als grober Maßstab: übliche Breiten (Außenmaß) 55 / 66 / 78 / 94 / 114 / 134 cm */
 function roofSkyCheck(f, g) {

@@ -4259,7 +4259,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261111145022';
+const APP_VERSION = '20261112131516';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4307,8 +4307,8 @@ function guideCard() {
       ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'],
       ['LumbraDesk wie unter 1 einrichten und anmelden.', 'Fertig – Kunden, Berechnungen und Angebote kommen automatisch vom Server.'])
     + sec('3 · Dach planen nur mit dem Handy',
-      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch), dann <b>Pfanne &amp; Deckmaß prüfen</b> – bzw. Maß eingeben. Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'],
-      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch), dann <b>Pfanne &amp; Deckmaß prüfen</b> – bzw. Maß eingeben. Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'])
+      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch), dann <b>Pfanne &amp; Deckmaß prüfen</b> und <b>Mit Karte abgleichen</b> – bzw. Maß eingeben. Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'],
+      ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch), dann <b>Pfanne &amp; Deckmaß prüfen</b> und <b>Mit Karte abgleichen</b> – bzw. Maß eingeben. Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'])
     + sec('4 · App aktualisieren',
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.'],
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.']));
@@ -4674,6 +4674,10 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.42', date: '2026-11-12', items: [
+    ['roof', 'Dachmaße mit der Karte abgleichen', 'Im Modulplan unter „Mit Karte abgleichen“: Kundenadresse oder eigenen Standort antippen – die App holt den Hausumriss aus OpenStreetMap und prüft, ob Trauf- und Hanglänge aus dem Foto zum Haus passen. Weicht es ab (z. B. schmalere Pfannen als angenommen), passt ein Tipp den Maßstab an.'],
+    ['roof', 'Selbst gemessen? Auch gut', 'Wer die Traufe z. B. in Google Maps mit „Entfernung messen“ ermittelt hat, trägt das Maß einfach ein – die App gleicht damit genauso ab.']
+  ] },
   { version: '2.41', date: '2026-11-11', items: [
     ['roof', 'Pfanne & Deckmaß prüfen', 'Im Schritt „Referenz“ erkennt der Modulplan grob die Pfannenart (Doppelmulde, einfache Welle, flach, Biber) und prüft über die Perspektive, ob Pfannenzahl und Deckmaß zum Foto passen – mit Vorschlag zum Übernehmen und Hinweis, wenn doppelt gezählt wurde.'],
     ['roof', 'Dachfenster als Maßstab', 'Beim „Füllen“ wird ein erkanntes Dachfenster grob vermessen: Passt es zu einer üblichen Größe, wirkt der Maßstab plausibel – sonst kommt ein Hinweis. Das Deckmaß bitte trotzdem vor Ort bestätigen.']
@@ -6667,6 +6671,7 @@ function faceGeom(f) {
   if (f.refMode === 'len') { rw = (+f.lw || 0) / 100; rh = (+f.lh || 0) / 100; }
   else { const t = roofTiles().find(x => x.id === f.tileId) || roofTiles()[0]; rw = (+f.nx || 0) * t.w / 100; rh = (+f.ny || 0) * t.l / 100; }
   if (!(rw > 0 && rh > 0)) return null;
+  rw *= +f.kx > 0 ? +f.kx : 1; rh *= +f.ky > 0 ? +f.ky : 1;   // Maßstab an Kartenmaß angepasst
   const H = sqToQuad(P(f.ref)), Hi = hInv(H);
   const toPlane = ([x, y]) => { const [u, v] = hApply(Hi, x, y); return [u * rw, v * rh]; };
   const raw = P(f.corners).map(toPlane);                    // Reihenfolge: Rinne li, First li, First re, Rinne re
@@ -6720,7 +6725,7 @@ async function roofPhoto(file) {
 }
 /* Entzerrtes Dachbild (Ebene in Metern) – per Dreiecksnetz, wird gecacht */
 function roofWarp(f, g, img) {
-  const key = JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId]);
+  const key = JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId, f.kx, f.ky]);
   if (RS && RS.warpKey === key && RS.warp) return RS.warp;
   const ppm = Math.min(90, 2200 / Math.max(g.W, g.H)), c = document.createElement('canvas');
   c.width = Math.ceil(g.W * ppm); c.height = Math.ceil(g.H * ppm);
@@ -7917,7 +7922,7 @@ async function roofTileCheck(f) {
   if (!out.lines.length) out.lines.push({ ok: null, t: 'Für die Prüfung bitte zuerst Pfannen und Reihen zählen.' });
   return out;
 }
-const obsKeyChk = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId]);
+const obsKeyChk = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId, f.kx, f.ky]);
 
 /* 3. Dachfenster als grober Maßstab: übliche Breiten (Außenmaß) 55 / 66 / 78 / 94 / 114 / 134 cm */
 function roofSkyCheck(f, g) {
@@ -7985,6 +7990,126 @@ roofPhoto = async function (file) {
   setTimeout(() => { try { if (RS) { const f = roofF(); if (f.photo === ph.id) { f.f35 = f35 || null; roofSave(); } } } catch (e) {} }, 0);
   return ph;
 };
+/* ---------- Modulplan: Maße mit der Karte abgleichen ----------
+   Über die Adresse des Kunden oder den eigenen Standort holt lumbra.desk den Hausumriss aus OpenStreetMap
+   (Server-Schnittstelle „haus“). Die App vergleicht die Trauflänge aus dem Foto mit der Hauslänge (+ Dachüberstand)
+   und die Hanglänge mit der halben Hausbreite (Satteldach). Passt es nicht, lässt sich der Maßstab anpassen. */
+if (!IP.pin) IP.pin = '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>';
+const GEO_OVER = 0.6;   // Dachüberstand an den Giebeln zusammen (2 × ca. 30 cm)
+
+function geoLocal(pts, lat0, lon0) { const k = Math.cos(lat0 * Math.PI / 180) * 111320; return pts.map(([la, lo]) => [(lo - lon0) * k, (la - lat0) * 110540]); }
+function geoHull(P) {
+  const p = [...P].sort((a, b) => a[0] - b[0] || a[1] - b[1]), cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = []; for (const q of p) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of p.reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+/* kleinstes umschließendes Rechteck → Länge × Breite des Hauses */
+function geoRect(P) {
+  const h = geoHull(P); let best = null;
+  for (let i = 0; i < h.length; i++) {
+    const a = h[i], b = h[(i + 1) % h.length], t = Math.atan2(b[1] - a[1], b[0] - a[0]), c = Math.cos(t), s = Math.sin(t);
+    const xs = h.map(q => q[0] * c + q[1] * s), ys = h.map(q => -q[0] * s + q[1] * c), w = Math.max(...xs) - Math.min(...xs), hh = Math.max(...ys) - Math.min(...ys);
+    if (!best || w * hh < best.a) best = { a: w * hh, L: Math.max(w, hh), B: Math.min(w, hh) };
+  }
+  return best;
+}
+const geoInPoly = (P, [x, y]) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+
+async function roofGeoLoad(params) {
+  const r = await ldApi('haus&' + new URLSearchParams(params).toString());
+  if (!r.ok) throw new Error((r.j && r.j.error) || (r.status === 401 ? 'Bitte in lumbra.desk anmelden.' : 'Kartendienst nicht erreichbar.'));
+  const d = r.j, list = d.buildings.map(b => { const P = geoLocal(b.pts, d.lat, d.lon), R = geoRect(P), cx = P.reduce((s, q) => s + q[0], 0) / P.length, cy = P.reduce((s, q) => s + q[1], 0) / P.length; return { P, L: R.L, B: R.B, area: R.a, d: Math.hypot(cx, cy), inside: geoInPoly(P, [0, 0]), typ: b.typ }; });
+  if (!list.length) throw new Error('An dieser Stelle ist kein Gebäude in der Karte eingetragen – bitte selbst messen.');
+  const main = list.filter(b => b.area > 30), pick = (main.find(b => b.inside) || [...(main.length ? main : list)].sort((a, b) => a.d - b.d)[0]);
+  RS.geoList = { name: d.name, list, fi: RS.fi };
+  const f = roofF(); f.geo = { ...(f.geo || {}), name: d.name, L: +pick.L.toFixed(2), B: +pick.B.toFixed(2), sel: list.indexOf(pick) }; roofSave();
+}
+
+/* Vergleich Foto ↔ Karte */
+function roofGeoEval(f) {
+  const G = f.geo || {}, g0 = faceGeom({ ...f, kx: 1, ky: 1 }), g = faceGeom(f); if (!g0 || g0.bad) return null;
+  const man = +G.man > 0 ? +G.man : 0, wall = G.side === 'kurz' ? G.B : G.L, depth = G.side === 'kurz' ? G.L : G.B;
+  if (!man && !(wall > 0)) return null;
+  const expE = man || wall + GEO_OVER, kx = expE / g0.eave, out = { lines: [], kx: null, ky: null };
+  const q = g.eave / expE, okE = q > 0.92 && q < 1.09;
+  out.lines.push({ ok: okE, t: `Traufe laut Foto ${num(g.eave, 2)} m – ${man ? 'selbst gemessen' : `Haus laut Karte ${num(wall, 1)} m + ca. ${num(GEO_OVER, 1)} m Überstand =`} ${num(expE, 1)} m${okE ? ' – passt.' : ` – weicht ${num(Math.abs(q - 1) * 100, 0)} % ab.`}` });
+  if (!okE) {
+    const k = kx, t = roofTiles().find(x => x.id === f.tileId) || roofTiles()[0];
+    if (k > 0.42 && k < 0.58) out.lines.push({ ok: null, t: 'Sieht aus, als wären doppelt so viele Pfannen gezählt (Mulden statt Pfannen) – „÷2“ prüfen.' });
+    else if (k > 1.7 && k < 2.35) out.lines.push({ ok: null, t: 'Sieht aus, als wäre nur jede zweite Pfanne gezählt – „×2“ prüfen.' });
+    else if (f.refMode !== 'len') out.lines.push({ ok: null, t: `Passt zu einer Deckbreite von ca. ${num(t.w * k, 1)} cm statt ${num(t.w, 1)} cm – Pfannentyp/Deckbreite prüfen.` });
+    out.kx = +k.toFixed(4);
+  }
+  /* Hanglänge (Satteldach, Traufe an der langen Seite): halbe Hausbreite + Überstand, je nach Neigung */
+  if (!man && depth > 0) {
+    const run = depth / 2 + 0.4, pt = +G.pitch > 0 && +G.pitch < 75 ? +G.pitch : 0, cos = a => Math.cos(a * Math.PI / 180);
+    const lo = pt ? run / cos(pt) * 0.95 : run / cos(25), hi = pt ? run / cos(pt) * 1.05 : run / cos(52);
+    const okS = g.slope >= lo && g.slope <= hi;
+    out.lines.push({ ok: okS ? true : null, t: `Hanglänge laut Foto ${num(g.slope, 2)} m – bei Satteldach ${pt ? `und ${num(pt, 0)}° Neigung ca. ${num(run / cos(pt), 1)} m` : `und 25–52° Neigung ${num(lo, 1)}–${num(hi, 1)} m`}${okS ? ' – passt.' : ' – bitte prüfen (Walmdach, Gaube oder andere Dachform? Dann gilt das nicht).'}` });
+    if (pt && !okS) out.ky = +((run / cos(pt)) / g0.slope).toFixed(4);
+  }
+  return out;
+}
+
+function roofGeoCard(p, f) {
+  const G = f.geo || {}, L = RS.geoList && RS.geoList.fi === RS.fi ? RS.geoList : null, ev = roofGeoEval(f), c = p.customer || {};
+  const adr = [c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  let svg = '';
+  if (L) {
+    const all = L.list.flatMap(b => b.P), xs = all.map(q => q[0]), ys = all.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), pad = 3;
+    svg = `<svg viewBox="${x0 - pad} ${-y1 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}" class="w-full mt-2 rounded-lg bg-raised" style="height:150px">${L.list.map((b, i) => `<path data-r="geosel" data-v="${i}" d="M${b.P.map(q => `${q[0].toFixed(2)},${(-q[1]).toFixed(2)}`).join('L')}Z" style="cursor:pointer;fill:${i === G.sel ? 'rgb(var(--p-rgb)/.45)' : 'rgba(140,150,160,.25)'};stroke:${i === G.sel ? 'rgb(var(--p-rgb))' : 'rgba(140,150,160,.7)'};stroke-width:${(x1 - x0) / 220}"/>`).join('')}<circle cx="0" cy="0" r="${(x1 - x0) / 90}" fill="#E5484D"/></svg>
+      <div class="text-[11.5px] text-ink3 mt-1">Roter Punkt = Adresse/Standort. Anderes Haus? Einfach antippen.</div>`;
+  }
+  const kOn = (+f.kx > 0 && +f.kx !== 1) || (+f.ky > 0 && +f.ky !== 1);
+  return `<div class="mt-3 rounded-[calc(var(--r)-4px)] border border-line p-3" id="roof-geo"><div class="text-[13px] font-semibold">Mit Karte abgleichen</div>
+    <div class="text-[12px] text-ink3 mt-0.5">Prüft die Dachmaße am echten Hausumriss (OpenStreetMap) – passt die Länge vom Haus?</div>
+    <div class="grid grid-cols-2 gap-2 mt-2"><button type="button" class="btn-s !h-9 text-[12.5px]" data-r="geoadr" ${adr ? '' : 'disabled'}>${ic('home', 14)}Kundenadresse</button><button type="button" class="btn-s !h-9 text-[12.5px]" data-r="geopos">${ic('pin', 14)}Mein Standort</button></div>
+    ${adr ? `<div class="text-[11.5px] text-ink3 mt-1 truncate">${esc(adr)}</div>` : '<div class="text-[11.5px] text-ink3 mt-1">Beim Kunden ist keine Adresse eingetragen – Standort nutzen oder selbst messen.</div>'}
+    ${svg}
+    ${G.L ? `<div class="text-[12.5px] mt-2">Haus laut Karte: <b>${num(G.L, 1)} × ${num(G.B, 1)} m</b> (Außenwände)</div>
+      <div class="seg mt-2 w-full">${[['lang', 'Traufe an langer Seite'], ['kurz', 'an kurzer Seite']].map(([k, l]) => `<button type="button" class="flex-1 !text-[12px] ${(G.side || 'lang') === k ? 'on' : ''}" data-r="geoside" data-v="${k}">${l}</button>`).join('')}</div>` : ''}
+    <div class="grid grid-cols-2 gap-2 mt-2"><label><span class="text-[11px] text-ink3">Oder selbst gemessen: Traufe</span><div class="relative"><input class="inp pr-8" inputmode="decimal" data-geo="man" value="${+G.man > 0 ? inputFmt(+G.man, 'n') : ''}" placeholder="z. B. Google Maps"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">m</span></div></label>
+      <label><span class="text-[11px] text-ink3">Dachneigung (falls bekannt)</span><div class="relative"><input class="inp pr-8" inputmode="decimal" data-geo="pitch" value="${+G.pitch > 0 ? inputFmt(+G.pitch, 'n') : ''}"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-ink4">°</span></div></label></div>
+    ${ev ? `<div class="mt-2 space-y-1.5">${ev.lines.map(l => `<div class="flex gap-2 text-[12.5px] leading-snug"><span class="shrink-0" style="color:${l.ok === true ? '#2E9E6A' : l.ok === false ? '#C7792F' : 'var(--ink3)'}">${l.ok === true ? '✓' : l.ok === false ? '!' : '·'}</span><span>${esc(l.t)}</span></div>`).join('')}</div>
+      ${ev.kx || ev.ky ? `<button type="button" class="btn-p w-full mt-2 !h-10 text-[13px]" data-r="geoapply">Maßstab an ${+G.man > 0 ? 'Messung' : 'Karte'} anpassen</button>` : ''}` : ''}
+    ${kOn ? `<div class="flex items-center justify-between gap-2 mt-2 text-[12px] rounded-lg bg-raised px-3 py-2"><span>Maßstab angepasst: Breite ×${num(+f.kx || 1, 2)}${+f.ky > 0 && +f.ky !== 1 ? `, Hang ×${num(+f.ky, 2)}` : ''}</span><button type="button" class="chip !h-7 !px-2 text-[11.5px]" data-r="georeset">Zurücksetzen</button></div>` : ''}
+    <div class="text-[11px] text-ink3 mt-2">Kartendaten © OpenStreetMap-Mitwirkende. Die Adresse wird dafür an OpenStreetMap gesendet.</div></div>`;
+}
+
+const _roofPanelGeo = roofPanel;
+roofPanel = function (p, f, g) {
+  const h = _roofPanelGeo(p, f, g); if (!RS || !g || g.bad || (RS.step !== 'ref' && RS.step !== 'mod')) return h;
+  const card = roofGeoCard(p, f);
+  return RS.step === 'ref' && h.includes('<div id="roof-dims"') ? h.replace('<div id="roof-dims"', card + '<div id="roof-dims"') : h + card;
+};
+
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('#roof-ed [data-r^="geo"]'); if (!a || !RS) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const f = roofF(), r = a.dataset.r;
+  if (r === 'geosel') { const b = RS.geoList && RS.geoList.list[+a.dataset.v]; if (b) { f.geo = { ...(f.geo || {}), L: +b.L.toFixed(2), B: +b.B.toFixed(2), sel: +a.dataset.v }; roofSave(); } return roofSoft(); }
+  if (r === 'geoside') { f.geo = { ...(f.geo || {}), side: a.dataset.v }; roofSave(); return roofSoft(); }
+  if (r === 'georeset') { f.kx = null; f.ky = null; RS.warp = null; roofSave(); toast('Maßstab wieder aus den Pfannen.'); return roofSoft(); }
+  if (r === 'geoapply') {
+    const ev = roofGeoEval(f); if (!ev) return;
+    if (ev.kx) f.kx = ev.kx; if (ev.ky) f.ky = ev.ky; RS.warp = null; roofSave();
+    toast(`Maßstab angepasst – Traufe jetzt ${num(faceGeom(f).eave, 2)} m. Bitte „Füllen“ bzw. „Maximal“ neu drücken.`, 'ok', 5000); return roofSoft();
+  }
+  const busy = a.innerHTML; a.disabled = true; a.textContent = 'Suche …';
+  try {
+    if (r === 'geoadr') { const c = roofP().customer || {}; await roofGeoLoad({ q: [c.street, c.zip, c.city].filter(Boolean).join(', ') }); }
+    if (r === 'geopos') {
+      const pos = await new Promise((res, rej) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(res, () => rej(new Error('Standort nicht freigegeben – bitte in den Einstellungen erlauben oder die Adresse nutzen.')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }) : rej(new Error('Standort ist auf diesem Gerät nicht verfügbar.')));
+      await roofGeoLoad({ lat: pos.coords.latitude.toFixed(6), lon: pos.coords.longitude.toFixed(6) });
+    }
+    roofSoft(); const el = $('#roof-geo'); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  } catch (err) { a.disabled = false; a.innerHTML = busy; toast(err.message, 'warn', 5000); }
+}, true);
+document.addEventListener('change', e => {
+  const el = e.target; if (!RS || !el.dataset || !el.dataset.geo || !el.closest('#roof-ed')) return;
+  const f = roofF(), v = parseFloat(String(el.value).replace(',', '.')); f.geo = { ...(f.geo || {}), [el.dataset.geo]: isFinite(v) && v > 0 ? v : null }; roofSave(); roofSoft();
+});
 /* =========================================================
    Modulplan auf dem Handy
    Gleiche Funktionen wie am iPad/PC, nur anders angeordnet:
@@ -8095,7 +8220,7 @@ roofDraw = async function () {
 const OBS_CELL = 0.1;      // Raster der Erkennung: 10 cm
 const OBS_PAD = 0.1;       // Sicherheitsabstand um jede Störstelle: 10 cm
 
-const obsKey = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId]);
+const obsKey = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId, f.kx, f.ky]);
 const rgb2lab = (r, g, b) => {
   const l = c => { c /= 255; return c > 0.04045 ? ((c + 0.055) / 1.055) ** 2.4 : c / 12.92; };
   const R = l(r), G = l(g), B = l(b), X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047, Y = R * 0.2126 + G * 0.7152 + B * 0.0722, Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
@@ -8475,7 +8600,7 @@ const TUT_STEPS = [
   ['data', 'Daten prüfen und ergänzen', 'Oben sehen Sie, wo Sie gerade sind: Angebot → Kunde → Daten → Ergebnis. Fehlt etwas, tragen Sie es einfach ein. Kleine Schilder zeigen, woher ein Wert stammt.', ['Grün „aus Angebot“, blau „Schnellauslegung“ oder „Modulplan“.', 'PLZ eintippen – der Ort wird automatisch ergänzt.', 'Rote Warnung = Werte passen nicht zusammen. Bitte auswählen, welcher Wert stimmt.', 'Mit „Weiter“ zum nächsten Schritt.']],
   ['roof', 'Modulplan – Dach planen', 'Mit dem Modulplan legen Sie die Module direkt auf ein Foto des Dachs – am iPad, PC oder zur Not nur mit dem Handy. So sieht der Kunde, wie seine Anlage aussieht, und Modulzahl und kWp kommen direkt in die Berechnung.', ['Im Kunden im Bereich Photovoltaik „Modulplan erstellen“ antippen (oder in der Kundenübersicht „Modulbelegung“).', 'Neuer Kunde? Zuerst Name eingeben – dann geht es los.', 'Vier Schritte: 1 Foto · 2 Fläche · 3 Referenz · 4 Belegen.']],
   ['roofphoto', 'Modulplan: Foto und Dachfläche', 'Fotografieren Sie die Dachfläche möglichst frontal und ohne 0,5×-Weitwinkel. Dann ziehen Sie die vier Punkte genau auf die Ecken der Fläche.', ['„Foto aufnehmen“ öffnet direkt die Kamera – oder „Aus der Mediathek wählen“.', 'Punkte 1–4 mit dem Finger auf die Ecken ziehen: 1 unten links an der Rinne, 2 oben links am First, 3 oben rechts, 4 unten rechts.', 'Zum genauen Treffen: Lupe beim Ziehen, mit zwei Fingern zoomen, das runde Rad „fein“ schiebt den Punkt millimetergenau.', 'Das Rad erscheint mittig auf der Dachfläche – es verdeckt keine der Ecken.']],
-  ['roofref', 'Modulplan: Referenz (Maßstab)', 'Damit die Module die richtige Größe haben, braucht die App einen Maßstab – aus den Dachpfannen oder einem gemessenen Maß.', ['Das orange gestrichelte Rechteck auf Pfannenkanten legen – möglichst groß.', '„Pfannen zählen“: Pfannentyp wählen und Anzahl eintragen – oder „Automatisch zählen und scannen“. Jedes gelbe Kästchen = genau eine Pfanne.', '„Pfanne & Deckmaß prüfen“ erkennt grob die Pfannenart und meldet, wenn Anzahl oder Deckmaß nicht zum Foto passen (z. B. doppelt gezählt). Das Deckmaß trotzdem vor Ort bestätigen.', 'Oder „Maß eingeben“: Breite und Höhe in cm, wenn Sie gemessen haben.', 'Randabstände (First, Rinne, Seite) prüfen. Auf dem Handy öffnet das Zahnrad die Einstellungen.']],
+  ['roofref', 'Modulplan: Referenz (Maßstab)', 'Damit die Module die richtige Größe haben, braucht die App einen Maßstab – aus den Dachpfannen oder einem gemessenen Maß.', ['Das orange gestrichelte Rechteck auf Pfannenkanten legen – möglichst groß.', '„Pfannen zählen“: Pfannentyp wählen und Anzahl eintragen – oder „Automatisch zählen und scannen“. Jedes gelbe Kästchen = genau eine Pfanne.', '„Pfanne & Deckmaß prüfen“ erkennt grob die Pfannenart und meldet, wenn Anzahl oder Deckmaß nicht zum Foto passen (z. B. doppelt gezählt). Das Deckmaß trotzdem vor Ort bestätigen.', 'Oder „Maß eingeben“: Breite und Höhe in cm, wenn Sie gemessen haben.', '„Mit Karte abgleichen“: Kundenadresse oder Standort – die App prüft die Dachmaße am Hausumriss aus OpenStreetMap und passt den Maßstab auf Wunsch an. Selbst gemessene Trauflänge (z. B. Google Maps) geht auch.', 'Randabstände (First, Rinne, Seite) prüfen. Auf dem Handy öffnet das Zahnrad die Einstellungen.']],
   ['roofmod', 'Modulplan: Module belegen', 'Jetzt kommen die Module aufs Dach. Unten liegen die Werkzeuge griffbereit.', ['„Füllen“ legt Module in Reihen – Dachfenster, Schornstein, Gauben & Co. werden automatisch ausgespart (rot). „Maximal“ holt die größtmögliche Anzahl heraus, hochkant und quer kombiniert.', '„Setzen“: doppelt tippen setzt ein Modul. „Auswählen“: antippen, dann Drehen oder Löschen. Rot = Module überlappen.', '„Strings“: Module der Reihe nach antippen (auch über mehrere Dachflächen). „Optimierer“: Modul antippen.', 'Weitere Dachfläche? Zahnrad → „+ Fläche“. Zum Schluss „Übernehmen“ – das Bild kommt zum Kunden.']],
   ['team', 'Im Team: Zuständig, Logbuch, Angebot', 'Alle Kunden liegen auf dem lumbra.desk-Server und sind auf jedem Gerät gleich. Oben im Kunden geben Sie ihn an einen Kollegen weiter, öffnen das Logbuch oder erstellen ein Angebot.', ['„Zuständig“: Kollegen wählen – er sieht den Kunden sofort, Sie behalten ihn.', '„Logbuch“: Notizen, Anrufe, Termine – Kollegen markieren, sie bekommen die Nachricht per E-Mail.', '„Angebot“ (sobald der Admin es freigeschaltet hat): ins Handy sprechen („20 Module, 10er Speicher, Wallbox“) – Positionen und Standardleistungen kommen automatisch, Mengen anpassen, PDF.', 'Oben links das „l.“ führt jederzeit zurück zur lumbra.desk-Startseite.']],
   ['funding', 'Förderung', 'Bei der Wärmepumpe rechnet die App die BEG-Förderung automatisch aus. Wichtig sind Wohneinheiten, selbst bewohnte Wohneinheiten und das Einkommen.', ['Anzahl Wohneinheiten eintragen.', '„Davon selbst bewohnt“ wählen – Klima- und Einkommensbonus gibt es nur dafür.', 'Einkommen auswählen – der Fördersatz rechts aktualisiert sich sofort.']],

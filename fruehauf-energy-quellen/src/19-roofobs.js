@@ -5,7 +5,7 @@
 const OBS_CELL = 0.1;      // Raster der Erkennung: 10 cm
 const OBS_PAD = 0.1;       // Sicherheitsabstand um jede Störstelle: 10 cm
 
-const obsKey = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId]);
+const obsKey = f => JSON.stringify([f.photo, f.corners, f.ref, f.refMode, f.nx, f.ny, f.lw, f.lh, f.tileId, f.kx, f.ky]);
 const rgb2lab = (r, g, b) => {
   const l = c => { c /= 255; return c > 0.04045 ? ((c + 0.055) / 1.055) ** 2.4 : c / 12.92; };
   const R = l(r), G = l(g), B = l(b), X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047, Y = R * 0.2126 + G * 0.7152 + B * 0.0722, Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
