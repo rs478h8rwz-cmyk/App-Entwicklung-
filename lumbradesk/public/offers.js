@@ -158,19 +158,44 @@ function ofSug() {
   const l = OF.cat.items.filter(i => (i.name + ' ' + (i.words || '') + ' ' + (OF.cat.cats[i.cat] || '')).toLowerCase().includes(q)).slice(0, 8);
   return l.map(i => `<button class="grow" data-a="of-add" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${esc(OF.cat.cats[i.cat] || '')} · ${eur2(i.price)} / ${esc(i.unit)}${i.maker ? ' · ' + esc(i.maker) : ''}</span></span>${ic('plus', 16)}</button>`).join('') || '<div class="grow muted small">Nichts gefunden – unter Mehr → Produkte bzw. Leistungen & Pakete anlegen</div>';
 }
+window.addEventListener('hashchange', () => { if (OF.listening) ofMicReset(false); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && OF.listening) ofMicReset(false); });
 const ofRender = () => { const y = scrollY; $('#app main').innerHTML = viewAngebot(); scrollTo(0, y); };
 function ofSumPaint() { const s = $('.ofsum'); if (!s) return; const tmp = document.createElement('div'); tmp.innerHTML = viewAngebot(); const n = tmp.querySelector('.ofsum'); if (n) s.replaceWith(n); $$('.ofl-t').forEach((el, i) => { const p = OF.edit.data.pos[i]; if (p) el.textContent = eur2(ofLine(p)); }); }
 const $$ = s => [...document.querySelectorAll(s)];
 
 /* Spracherkennung (Safari/Chrome); sonst Tastatur-Diktat */
+/* Spracheingabe – robust für iPhone: Wächter, sofortiges Stoppen, sonst Diktat der Tastatur */
+const OF_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function ofMicUI() {   // nur die Anzeige umschalten – kein Neuaufbau der Seite während der Aufnahme
+  const v = $('.voice'); if (!v) return; v.classList.toggle('on', !!OF.listening);
+  const b = v.querySelector('.vtx b'), m = v.querySelector('.mic'); if (b) b.textContent = OF.listening ? 'Ich höre zu … zum Beenden tippen' : 'Was bekommt der Kunde?';
+  if (m) m.setAttribute('aria-label', OF.listening ? 'Aufnahme beenden' : 'Sprechen');
+}
+function ofMicReset(parse) {
+  clearTimeout(OF.micWatch); clearTimeout(OF.micMax); const r = OF.rec; OF.rec = null; OF.listening = false;
+  if (r) { r.onresult = r.onerror = r.onend = r.onstart = r.onaudiostart = null; try { r.abort(); } catch (e) {} }
+  ofMicUI(); if (parse && OF.text.trim()) ofParse();
+}
+function ofDictate() {   // Ersatz: Diktat über das Mikrofon der Tastatur
+  const ta = $('#of-text'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  toast('Bitte das Mikrofon unten auf der Tastatur antippen und sprechen – danach „Positionen erstellen“.', 'ok', 6000);
+}
 function ofMic() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return;
-  if (OF.listening && OF.rec) { OF.rec.stop(); return; }
-  const r = new SR(); r.lang = 'de-DE'; r.continuous = true; r.interimResults = true; const start = OF.text ? OF.text.trim() + ', ' : '';
-  r.onresult = e => { let s = ''; for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; OF.text = start + s; const ta = $('#of-text'); if (ta) ta.value = OF.text; };
-  r.onerror = e => { if (e.error === 'not-allowed') toast('Mikrofon nicht erlaubt – in den Einstellungen freigeben oder das Diktat der Tastatur nutzen.'); };
-  r.onend = () => { OF.listening = false; OF.rec = null; ofRender(); if (OF.text.trim()) ofParse(); };
-  OF.rec = r; OF.listening = true; ofRender(); try { r.start(); } catch (e) { OF.listening = false; ofRender(); }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (OF.listening) return ofMicReset(true);                                  // zweiter Tipp: sofort beenden
+  if (!SR || (OF_IOS && (navigator.standalone || matchMedia('(display-mode: standalone)').matches)) || OF.srBroken) return ofDictate();
+  const r = new SR(); r.lang = 'de-DE'; r.interimResults = true; r.continuous = !OF_IOS;   // iPhone: ein Satz am Stück
+  const start = OF.text ? OF.text.trim() + ', ' : ''; let alive = false;
+  r.onstart = r.onaudiostart = () => { alive = true; };
+  r.onresult = e => { alive = true; let s = ''; for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; OF.text = start + s; const ta = $('#of-text'); if (ta) ta.value = OF.text; };
+  r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { OF.srBroken = true; toast('Spracherkennung nicht erlaubt – bitte das Diktat der Tastatur nutzen.'); } };
+  r.onend = () => ofMicReset(true);
+  OF.rec = r; OF.listening = true; ofMicUI();
+  try { r.start(); } catch (e) { ofMicReset(false); OF.srBroken = true; return ofDictate(); }
+  /* Wächter: startet die Erkennung nicht innerhalb von 4 s, abbrechen und auf das Tastatur-Diktat wechseln */
+  OF.micWatch = setTimeout(() => { if (OF.rec === r && !alive) { ofMicReset(false); OF.srBroken = true; ofDictate(); } }, 4000);
+  OF.micMax = setTimeout(() => { if (OF.rec === r) ofMicReset(true); }, 90000);   // spätestens nach 90 s beenden
 }
 function ofParse() {
   const txt = ($('#of-text') || {}).value || OF.text; OF.text = txt; if (!txt.trim()) return toast('Bitte erst sprechen oder etwas eintippen.');

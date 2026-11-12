@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '3.3';
+const LD_VERSION = '3.4';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -25,6 +25,9 @@ function ld_flags(): array {
     $r = db()->query("SELECT v FROM ld_settings WHERE k = 'features'")->fetchColumn(); $f = $r ? (json_decode($r, true) ?: []) : []; } catch (Throwable $e) {}
   return $f;
 }
+/* Allgemeine Einstellungen (JSON je Schlüssel) */
+function ld_get(string $k, $def = null) { try { ld_flags(); $st = db()->prepare('SELECT v FROM ld_settings WHERE k = ?'); $st->execute([$k]); $r = $st->fetchColumn(); return $r === false ? $def : (json_decode($r, true) ?? $def); } catch (Throwable $e) { return $def; } }
+function ld_set(string $k, $v, int $uid): void { ld_flags(); db()->prepare('INSERT INTO ld_settings (k, v, updated_at, updated_by) VALUES (?, ?, UTC_TIMESTAMP(), ?) ON DUPLICATE KEY UPDATE v = VALUES(v), updated_at = UTC_TIMESTAMP(), updated_by = VALUES(updated_by)')->execute([$k, json_encode($v, JSON_UNESCAPED_UNICODE), $uid]); }
 function ld_feature(array $u, string $key): bool { return $u['role'] === 'admin' || !empty(ld_flags()[$key]); }
 function ld_features_for(array $u): array { $o = []; foreach (LD_FEATURES as $k => $x) $o[$k] = ld_feature($u, $k); return $o; }
 function require_feature(array $u, string $key): void { if (!ld_feature($u, $key)) fail('Diese Funktion ist noch nicht freigeschaltet.', 403); }
