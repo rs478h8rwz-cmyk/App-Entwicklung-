@@ -1,0 +1,16 @@
+/* Lade-Anzeige: Wärmepumpen-Außeneinheit mit drehendem Ventilator (PDF-Erstellung, Angebot übernehmen) */
+const HP_SVG = (w = 150) => `<svg viewBox="0 0 220 150" width="${w}" height="${Math.round(w * 150 / 220)}" aria-hidden="true" class="hpl">
+  <rect x="14" y="10" width="192" height="118" rx="12" style="fill:var(--raised);stroke:var(--line2);stroke-width:2"/>
+  <circle cx="78" cy="69" r="47" style="fill:var(--field)"/><circle cx="78" cy="69" r="41" fill="#2A3442"/>
+  <g class="hpl-fan" fill="#9FB2C8"><path d="M78 69 C70 52 72 36 84 30 C94 40 90 58 78 69Z"/><path d="M78 69 C70 52 72 36 84 30 C94 40 90 58 78 69Z" transform="rotate(120 78 69)"/><path d="M78 69 C70 52 72 36 84 30 C94 40 90 58 78 69Z" transform="rotate(240 78 69)"/><circle cx="78" cy="69" r="7" fill="#D6DEE8"/></g>
+  <g fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.2">${[0, 1, 2, 3, 4].map(i => `<circle cx="78" cy="69" r="${12 + i * 7}"/>`).join('')}<path d="M37 69H119M78 28V110"/></g>
+  <rect x="140" y="26" width="52" height="86" rx="6" style="fill:var(--card)"/>${[0, 1, 2, 3, 4, 5, 6].map(i => `<path d="M148 ${38 + i * 10.5}H184" style="stroke:var(--line2)" stroke-width="2" stroke-linecap="round"/>`).join('')}
+  <rect x="34" y="128" width="20" height="10" rx="2" fill="#8A96A6"/><rect x="166" y="128" width="20" height="10" rx="2" fill="#8A96A6"/>
+  <circle cx="190" cy="20" r="3" class="hpl-led" style="fill:rgb(var(--p-rgb))"/></svg>`;
+(function () { const st = document.createElement('style'); st.textContent = `.hpl-fan{transform-origin:78px 69px;animation:hplspin .9s linear infinite}.hpl-led{animation:hplled 1.4s ease-in-out infinite}@keyframes hplspin{to{transform:rotate(360deg)}}@keyframes hplled{50%{opacity:.25}}@media (prefers-reduced-motion:reduce){.hpl-fan{animation-duration:3s}}
+#hp-loader{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:rgba(10,14,22,.28);opacity:0;pointer-events:none;transition:opacity .2s}#hp-loader.on{opacity:1;pointer-events:auto}#hp-loader .box{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 26px 18px;border-radius:22px;background:var(--card);box-shadow:0 20px 60px rgba(0,0,0,.25);color:var(--ink2);font-size:14px;font-weight:500}`; document.head.appendChild(st); })();
+let HPL_N = 0, HPL_T = null;
+function hpLoadStart(text) { if (++HPL_N > 1) return; clearTimeout(HPL_T); HPL_T = setTimeout(() => { if (!HPL_N) return; let el = document.getElementById('hp-loader'); if (!el) { el = document.createElement('div'); el.id = 'hp-loader'; el.setAttribute('role', 'status'); document.body.appendChild(el); } el.innerHTML = `<div class="box">${HP_SVG(170)}<span>${esc(text || 'Lädt …')}</span></div>`; requestAnimationFrame(() => el.classList.add('on')); }, 300); }
+function hpLoadEnd() { HPL_N = Math.max(0, HPL_N - 1); if (HPL_N) return; clearTimeout(HPL_T); const el = document.getElementById('hp-loader'); if (el) el.classList.remove('on'); }
+/* Angebot aus lumbra.desk übernehmen: Anzeige während des Ladens */
+if (typeof ldOfferTake === 'function') { const _t = ldOfferTake; ldOfferTake = async function (...a) { hpLoadStart('Angebot wird übernommen …'); try { return await _t.apply(this, a); } finally { hpLoadEnd(); } }; }

@@ -555,7 +555,7 @@ async function makePdf(force, layout) {
   UI.pdfLayout = layout; p.docOpts.layout = layout; saveProject(p);
   if (!force) { const w = plausibility(p, compute(p)); if (w.length) { modal(`<h3 class="text-[20px] font-semibold pr-8">Bitte kurz prüfen</h3><p class="text-ink3 text-[14px] mt-1">Einige Angaben sind ungewöhnlich. Stimmen sie, können Sie das PDF trotzdem erstellen.</p><ul class="mt-4 space-y-2 text-[14px] text-ink2 list-disc pl-5">${w.map(t => `<li>${esc(t)}</li>`).join('')}</ul><div class="flex flex-wrap justify-end gap-2 mt-6"><button class="btn-s" data-a="plaus-back">Zurück zu den Daten</button><button class="btn-p" data-a="pdf-force">Trotzdem erstellen</button></div>`); return; } }
   pdfBusy = true;
-  modal(`<div class="text-center py-4"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto"><span class="spin inline-block">${ic('refresh', 26)}</span></div><div class="font-extrabold text-[18px] mt-4">PDF wird erstellt …</div><div class="text-ink3 text-[14px] mt-1" id="pdf-prog">Vorbereitung</div></div>`);
+  modal(`<div class="text-center py-4"><div class="grid place-items-center mx-auto">${typeof HP_SVG === 'function' ? HP_SVG(150) : `<span class="spin inline-block">${ic('refresh', 26)}</span>`}</div><div class="font-extrabold text-[18px] mt-4">PDF wird erstellt …</div><div class="text-ink3 text-[14px] mt-1" id="pdf-prog">Vorbereitung</div></div>`);
   try {
     const R = compute(p);
     const { html2canvas, jsPDF } = await needPdfMaker();

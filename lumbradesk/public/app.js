@@ -22,7 +22,8 @@ const ST = { user: null, apps: [], roles: {}, view: 'home', users: [], audit: []
 async function api(r, data) {
   const opt = data === undefined ? { credentials: 'same-origin' } : { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Lumbra': '1' }, body: JSON.stringify(data) };
   const [act, ...qs] = r.split('&');   // „aktion&feld=wert“: Werte kodiert der Aufrufer selbst
-  const res = await fetch('api/?r=' + encodeURIComponent(act) + (qs.length ? '&' + qs.join('&') : ''), opt);
+  if (typeof loadStart === 'function') loadStart(); let res;
+  try { res = await fetch('api/?r=' + encodeURIComponent(act) + (qs.length ? '&' + qs.join('&') : ''), opt); } finally { if (typeof loadEnd === 'function') loadEnd(); }
   let j = {}; try { j = await res.json(); } catch (e) {}
   if (!res.ok) { const err = new Error(j.error || 'Fehler ' + res.status); err.status = res.status; throw err; }
   return j;

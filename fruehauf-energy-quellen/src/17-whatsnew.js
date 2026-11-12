@@ -15,6 +15,9 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.2', date: '2026-11-13', items: [
+    ['house', 'Neue Lade-Anzeige', 'Während das PDF erstellt oder ein Angebot aus lumbra.desk übernommen wird, dreht sich in der Bildschirmmitte der Ventilator einer Wärmepumpe.']
+  ] },
   { version: '3.1', date: '2026-11-13', items: [
     ['crm', 'Angebots-Assistent statt Spracheingabe', 'Neue Angebote in lumbra.desk entstehen jetzt Schritt für Schritt: PV oder WP wählen, Module antippen und Menge eingeben, Gerüst (bis/ab 5 m), System mit Wechselrichter und Speicher, Zusatzkomponenten und -aufgaben. Unterkonstruktion, Kleinmaterial, DC-Montage und die Pauschalen kommen automatisch dazu – alles einstellbar unter Mehr → Angebots-Assistent.']
   ] },

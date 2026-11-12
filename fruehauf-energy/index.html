@@ -3214,7 +3214,7 @@ async function makePdf(force, layout) {
   UI.pdfLayout = layout; p.docOpts.layout = layout; saveProject(p);
   if (!force) { const w = plausibility(p, compute(p)); if (w.length) { modal(`<h3 class="text-[20px] font-semibold pr-8">Bitte kurz prüfen</h3><p class="text-ink3 text-[14px] mt-1">Einige Angaben sind ungewöhnlich. Stimmen sie, können Sie das PDF trotzdem erstellen.</p><ul class="mt-4 space-y-2 text-[14px] text-ink2 list-disc pl-5">${w.map(t => `<li>${esc(t)}</li>`).join('')}</ul><div class="flex flex-wrap justify-end gap-2 mt-6"><button class="btn-s" data-a="plaus-back">Zurück zu den Daten</button><button class="btn-p" data-a="pdf-force">Trotzdem erstellen</button></div>`); return; } }
   pdfBusy = true;
-  modal(`<div class="text-center py-4"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto"><span class="spin inline-block">${ic('refresh', 26)}</span></div><div class="font-extrabold text-[18px] mt-4">PDF wird erstellt …</div><div class="text-ink3 text-[14px] mt-1" id="pdf-prog">Vorbereitung</div></div>`);
+  modal(`<div class="text-center py-4"><div class="grid place-items-center mx-auto">${typeof HP_SVG === 'function' ? HP_SVG(150) : `<span class="spin inline-block">${ic('refresh', 26)}</span>`}</div><div class="font-extrabold text-[18px] mt-4">PDF wird erstellt …</div><div class="text-ink3 text-[14px] mt-1" id="pdf-prog">Vorbereitung</div></div>`);
   try {
     const R = compute(p);
     const { html2canvas, jsPDF } = await needPdfMaker();
@@ -4260,7 +4260,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261112203431';
+const APP_VERSION = '20261112204434';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4678,6 +4678,9 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.2', date: '2026-11-13', items: [
+    ['house', 'Neue Lade-Anzeige', 'Während das PDF erstellt oder ein Angebot aus lumbra.desk übernommen wird, dreht sich in der Bildschirmmitte der Ventilator einer Wärmepumpe.']
+  ] },
   { version: '3.1', date: '2026-11-13', items: [
     ['crm', 'Angebots-Assistent statt Spracheingabe', 'Neue Angebote in lumbra.desk entstehen jetzt Schritt für Schritt: PV oder WP wählen, Module antippen und Menge eingeben, Gerüst (bis/ab 5 m), System mit Wechselrichter und Speicher, Zusatzkomponenten und -aufgaben. Unterkonstruktion, Kleinmaterial, DC-Montage und die Pauschalen kommen automatisch dazu – alles einstellbar unter Mehr → Angebots-Assistent.']
   ] },
@@ -9092,6 +9095,22 @@ function qLandHTML() {
     ${L ? `<p class="text-[14px] mt-3 leading-relaxed">${esc(L[2])}</p><p class="hint">${esc(L[3])} · Rechtsstand ${WP_LAND_STAND}${!QS.land ? ' · aus der PLZ geschätzt – bitte prüfen' : ''}</p>` : '<p class="hint !mt-0">PLZ oben eingeben oder Bundesland wählen.</p>'}
     <p class="hint">Zusätzlich gilt bundesweit die TA Lärm: am Nachbarfenster nachts höchstens 35 dB(A) (reines Wohngebiet) bzw. 40 dB(A) (allgemeines Wohngebiet). Ohne Gewähr – Bebauungsplan und Bauamt gehen vor.</p>`;
 }
+/* Lade-Anzeige: Wärmepumpen-Außeneinheit mit drehendem Ventilator (PDF-Erstellung, Angebot übernehmen) */
+const HP_SVG = (w = 150) => `<svg viewBox="0 0 220 150" width="${w}" height="${Math.round(w * 150 / 220)}" aria-hidden="true" class="hpl">
+  <rect x="14" y="10" width="192" height="118" rx="12" style="fill:var(--raised);stroke:var(--line2);stroke-width:2"/>
+  <circle cx="78" cy="69" r="47" style="fill:var(--field)"/><circle cx="78" cy="69" r="41" fill="#2A3442"/>
+  <g class="hpl-fan" fill="#9FB2C8"><path d="M78 69 C70 52 72 36 84 30 C94 40 90 58 78 69Z"/><path d="M78 69 C70 52 72 36 84 30 C94 40 90 58 78 69Z" transform="rotate(120 78 69)"/><path d="M78 69 C70 52 72 36 84 30 C94 40 90 58 78 69Z" transform="rotate(240 78 69)"/><circle cx="78" cy="69" r="7" fill="#D6DEE8"/></g>
+  <g fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.2">${[0, 1, 2, 3, 4].map(i => `<circle cx="78" cy="69" r="${12 + i * 7}"/>`).join('')}<path d="M37 69H119M78 28V110"/></g>
+  <rect x="140" y="26" width="52" height="86" rx="6" style="fill:var(--card)"/>${[0, 1, 2, 3, 4, 5, 6].map(i => `<path d="M148 ${38 + i * 10.5}H184" style="stroke:var(--line2)" stroke-width="2" stroke-linecap="round"/>`).join('')}
+  <rect x="34" y="128" width="20" height="10" rx="2" fill="#8A96A6"/><rect x="166" y="128" width="20" height="10" rx="2" fill="#8A96A6"/>
+  <circle cx="190" cy="20" r="3" class="hpl-led" style="fill:rgb(var(--p-rgb))"/></svg>`;
+(function () { const st = document.createElement('style'); st.textContent = `.hpl-fan{transform-origin:78px 69px;animation:hplspin .9s linear infinite}.hpl-led{animation:hplled 1.4s ease-in-out infinite}@keyframes hplspin{to{transform:rotate(360deg)}}@keyframes hplled{50%{opacity:.25}}@media (prefers-reduced-motion:reduce){.hpl-fan{animation-duration:3s}}
+#hp-loader{position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:rgba(10,14,22,.28);opacity:0;pointer-events:none;transition:opacity .2s}#hp-loader.on{opacity:1;pointer-events:auto}#hp-loader .box{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 26px 18px;border-radius:22px;background:var(--card);box-shadow:0 20px 60px rgba(0,0,0,.25);color:var(--ink2);font-size:14px;font-weight:500}`; document.head.appendChild(st); })();
+let HPL_N = 0, HPL_T = null;
+function hpLoadStart(text) { if (++HPL_N > 1) return; clearTimeout(HPL_T); HPL_T = setTimeout(() => { if (!HPL_N) return; let el = document.getElementById('hp-loader'); if (!el) { el = document.createElement('div'); el.id = 'hp-loader'; el.setAttribute('role', 'status'); document.body.appendChild(el); } el.innerHTML = `<div class="box">${HP_SVG(170)}<span>${esc(text || 'Lädt …')}</span></div>`; requestAnimationFrame(() => el.classList.add('on')); }, 300); }
+function hpLoadEnd() { HPL_N = Math.max(0, HPL_N - 1); if (HPL_N) return; clearTimeout(HPL_T); const el = document.getElementById('hp-loader'); if (el) el.classList.remove('on'); }
+/* Angebot aus lumbra.desk übernehmen: Anzeige während des Ladens */
+if (typeof ldOfferTake === 'function') { const _t = ldOfferTake; ldOfferTake = async function (...a) { hpLoadStart('Angebot wird übernommen …'); try { return await _t.apply(this, a); } finally { hpLoadEnd(); } }; }
 
 /* =========================================================
    Router & Rendern

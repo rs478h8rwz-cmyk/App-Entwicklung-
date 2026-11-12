@@ -222,3 +222,8 @@ document.addEventListener('change', e => {
   else return;
   asRender();
 });
+/* Lade-Anzeige auch beim Erstellen von PDFs */
+if (typeof withLoader === 'function') {
+  ofBuild = (f => (...a) => withLoader(f(...a), 'PDF wird erstellt …'))(ofBuild);
+  if (typeof rePdf === 'function') rePdf = (f => (...a) => withLoader(f(...a), 'PDF wird erstellt …'))(rePdf);
+}

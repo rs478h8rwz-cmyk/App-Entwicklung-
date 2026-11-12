@@ -564,3 +564,20 @@ a.grow:active, button.grow:active { background: var(--raised); }
 .asf .seg { flex-wrap: wrap; max-width: 100%; } .asf label, .asf input, .asf select { min-width: 0; max-width: 100%; } .asf > label { display: flex; flex-direction: column; }
 .asf { grid-template-columns: minmax(0, 1fr); } .asf .pkrow .seg { flex: 1 1 auto; min-width: 0; } .asf .pkrow .seg button { padding: 0 8px; }
 .asf > label.sw { flex-direction: row; align-items: center; gap: 10px; }
+
+/* Lade-Anzeige: Wärmepumpe mit drehendem Ventilator */
+#ld-loader { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: rgba(10, 14, 22, .28); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+#ld-loader.on { opacity: 1; pointer-events: auto; }
+.ldl-box { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 26px 18px; border-radius: 22px; background: var(--card); box-shadow: 0 20px 60px rgba(0, 0, 0, .25); }
+.ldl-t { font-size: 14px; color: var(--ink2); font-weight: 500; }
+.hp-body { fill: #F4F6F9; } .hp-edge { fill: none; stroke: #C9D0DA; stroke-width: 2; }
+.hp-ring { fill: #E3E8EF; } .hp-hole { fill: #2A3442; }
+.hp-fan { fill: #9FB2C8; transform-origin: 78px 69px; animation: hpspin .9s linear infinite; } .hp-hub { fill: #D6DEE8; }
+.hp-grille { fill: none; stroke: rgba(255, 255, 255, .35); stroke-width: 1.2; }
+.hp-side rect { fill: #E9EDF2; } .hp-side path { stroke: #C3CBD6; stroke-width: 2; stroke-linecap: round; }
+.hp-foot { fill: #8A96A6; } .hp-led { fill: var(--p); animation: hpled 1.4s ease-in-out infinite; }
+@keyframes hpspin { to { transform: rotate(360deg); } }
+@keyframes hpled { 50% { opacity: .25; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hp-body { fill: #2B3442; } :root:not([data-theme="light"]) .hp-edge { stroke: #3E4A5C; } :root:not([data-theme="light"]) .hp-ring { fill: #222A36; } :root:not([data-theme="light"]) .hp-side rect { fill: #252E3B; } :root:not([data-theme="light"]) .hp-side path { stroke: #3E4A5C; } }
+:root[data-theme="dark"] .hp-body { fill: #2B3442; } :root[data-theme="dark"] .hp-edge { stroke: #3E4A5C; } :root[data-theme="dark"] .hp-ring { fill: #222A36; } :root[data-theme="dark"] .hp-side rect { fill: #252E3B; } :root[data-theme="dark"] .hp-side path { stroke: #3E4A5C; }
+@media (prefers-reduced-motion: reduce) { .hp-fan { animation-duration: 3s; } }
