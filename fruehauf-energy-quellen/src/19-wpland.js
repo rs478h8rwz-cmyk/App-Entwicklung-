@@ -54,6 +54,4 @@ function wpLandCard(p, R) {
     </div>
     <p class="hint">Ohne Gewähr. Ein Bebauungsplan oder eine Gemeindesatzung kann anderes festlegen – im Zweifel beim Bauamt nachfragen. Die Grenzbebauung zählt mit Garage und Carport zusammen.</p></div>`;
 }
-const _step3Land = step3;
-step3 = function (p, R) { const h = _step3Land(p, R); return hasWP(p) ? h + wpLandCard(p, R) : h; };
 document.addEventListener('change', e => { const el = e.target; if (el && el.dataset && el.dataset.b === 'p:hp.land') setTimeout(() => { if (typeof render === 'function') render(); }, 0); });

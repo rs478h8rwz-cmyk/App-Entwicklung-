@@ -15,6 +15,9 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.44', date: '2026-11-12', items: [
+    ['house', 'Aufstellort leichter zu finden', 'Die Karte „Aufstellort & Abstand zum Nachbarn“ steht jetzt im Schritt „Daten“ direkt unter „Neue Wärmepumpe“ – auch bei PV + Wärmepumpe nicht mehr ganz unten.']
+  ] },
   { version: '2.43', date: '2026-11-12', items: [
     ['house', 'Aufstellort & Abstand je Bundesland', 'Bei der Wärmepumpe zeigt die App jetzt passend zur Kundenadresse, wie nah die Außeneinheit an die Grundstücksgrenze darf – z. B. NRW: direkt an die Grenze, Niedersachsen: grundsätzlich mind. 3 m (Ausnahme nur unter Bedingungen). Mit Paragraph und Rechtsstand.'],
     ['quick', 'Schall: nötiger Abstand zum Nachbarn', 'Aus Schalldruck und Abstand im Datenblatt rechnet die App aus, wie weit das Nachbarfenster entfernt sein muss, damit nachts 35, 40 bzw. 45 dB(A) nach TA Lärm eingehalten werden.']
