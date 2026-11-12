@@ -1,5 +1,5 @@
 /* lumbra.desk – Angebote beim Kunden
-   Ins Handy sprechen („20 Module, 10er Speicher und eine Wallbox“) → Positionen aus Artikeln und Produkten,
+   Angebots-Assistent (wizard.js): PV oder WP wählen, Schritt für Schritt Module, Gerüst, System, Zusätze → Positionen aus Artikeln und Produkten,
    Standardpakete (Gerüst, Montage je Modul, AC, Anmeldung …) kommen automatisch dazu, Mengen anpassbar, PDF. */
 'use strict';
 Object.assign(IC, {
@@ -13,55 +13,6 @@ const numDe = n => (Math.round((n || 0) * 100) / 100).toLocaleString('de-DE', { 
 const parseNum = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
 async function ofCatalog(force) { if (!OF.cat || force) OF.cat = await api('of-catalog'); return OF.cat; }
 
-/* ---------- Sprache → Positionen ---------- */
-const NUMW = { ein: 1, eins: 1, eine: 1, einen: 1, einem: 1, einer: 1, zwei: 2, zwo: 2, drei: 3, vier: 4, 'fünf': 5, fuenf: 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, elf: 11, 'zwölf': 12, zwoelf: 12, dreizehn: 13, vierzehn: 14, 'fünfzehn': 15, sechzehn: 16, siebzehn: 17, achtzehn: 18, neunzehn: 19, zwanzig: 20, 'dreißig': 30, dreissig: 30, vierzig: 40, 'fünfzig': 50, sechzig: 60, siebzig: 70, achtzig: 80, neunzig: 90, hundert: 100, einhundert: 100 };
-function wordNum(w) {
-  w = w.toLowerCase(); if (NUMW[w] !== undefined) return NUMW[w];
-  const m = /^(\w+?)und(zwanzig|dreißig|dreissig|vierzig|fünfzig|sechzig|siebzig|achtzig|neunzig)$/.exec(w); if (m && NUMW[m[1]] !== undefined) return NUMW[m[1]] + NUMW[m[2]];
-  const e = /^(\w+?)er$/.exec(w); if (e && NUMW[e[1]] !== undefined) return NUMW[e[1]];   // „zehner“ Speicher
-  return null;
-}
-const SYN = { mod: ['modul', 'module', 'modulen', 'panel', 'paneele', 'solarmodul', 'solarmodule', 'pv-module', 'platten'], bat: ['speicher', 'batterie', 'batteriespeicher', 'akku', 'stromspeicher'], inv: ['wechselrichter', 'inverter', 'hybridwechselrichter'], wb: ['wallbox', 'ladestation', 'ladebox', 'ladesäule'], wp: ['wärmepumpe', 'waermepumpe', 'heizung'] };
-const tok = s => s.toLowerCase().replace(/[^\p{L}\p{N},.\- ]/gu, ' ').split(/\s+/).filter(Boolean);
-function parseSpeech(text, items) {
-  const t = ' ' + text.toLowerCase().replace(/(\d+)\s*er\b/g, '$1er') + ' ';
-  const segs = t.split(/,(?!\d)|;|\.\s|\bund\b(?!\s*(?:\d|ein|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|zwanzig)\w*\s*(?:kwh|kw|wp)\b)|\bplus\b|\bsowie\b|\bdazu\b|\bmit\b|\bnoch\b/).map(s => s.trim()).filter(s => s.length > 1);
-  const out = [];
-  for (const seg of segs) {
-    const words = tok(seg); if (!words.length) continue;
-    let qty = null, pow = null, kwp = null;
-    for (let i = 0; i < words.length; i++) {
-      const w = words[i], nx = words[i + 1] || '';
-      let n = /^\d+([.,]\d+)?(er)?$/.test(w) ? parseFloat(w.replace(',', '.')) : wordNum(w);
-      if (n === null || isNaN(n)) continue;
-      if (/er$/.test(w) && !/^\d+$/.test(w)) { pow = n; continue; }                       // „zehner“, „10er“
-      if (/^kwp$/.test(nx)) { kwp = n; i++; continue; }
-      if (/^(kwh|kw|wp|watt|kilowatt|kilowattstunden)$/.test(nx)) { pow = n; i++; continue; }
-      if (qty === null) qty = n;
-    }
-    let cat = Object.keys(SYN).find(c => SYN[c].some(s => words.some(w => w.startsWith(s))));
-    if (!cat && kwp) cat = 'mod';   // „8,8 kWp“ = PV-Module
-    let best = null, bs = 0;
-    for (const it of items) {
-      const nameT = tok(it.name.replace(/[-/]/g, ' ')), kw = (it.words || '').split(',').map(x => x.trim()).filter(Boolean); let sc = 0;
-      for (const w of words) {
-        if (w.length < 3) continue;
-        if (kw.some(k => w === k || (k.length >= 4 && w.startsWith(k)) || (w.length >= 5 && k.startsWith(w)))) sc += 4;          // Stichwort aus dem Artikelstamm
-        else if (nameT.some(n => n.length > 3 && (n.startsWith(w) || w.startsWith(n)))) sc += w.length >= 6 ? 3 : 2;         // Wort aus dem Namen
-      }
-      if (cat && it.cat === cat) sc += 4;
-      if (cat && it.cat !== cat && ['mod', 'bat', 'inv', 'wp', 'wb'].includes(it.cat)) sc -= 3;
-      if (pow && it.power) sc += Math.max(0, 3 - Math.abs(it.power - pow) / Math.max(1, pow) * 6);
-      if (it.kind === 'produkt' && it.price > 0) sc += 0.5;                                // echte Produkte bevorzugen
-      if (sc > bs) { bs = sc; best = it; }
-    }
-    if (best && bs >= 3) {
-      let q = qty || 1; if (kwp && best.cat === 'mod' && best.power) q = Math.ceil(kwp * 1000 / best.power);
-      const ex = out.find(x => x.item === best.id); if (ex) ex.qty += q; else out.push(ofPos(best, q));
-    } else out.push({ item: '', name: seg.replace(/^\w/, c => c.toUpperCase()), descr: 'Bitte prüfen – nicht im Artikelstamm gefunden', qty: qty || 1, unit: 'Stk', price: 0, tax: 19, cat: cat || 'sonst', check: true });
-  }
-  return out;
-}
 const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch, img: it.img || '' });
 /* Pakete: feste Positionen je Angebotsart („immer“) oder nur, wenn bestimmte Kategorien/Produkte im Angebot sind („wenn“) */
 const OF_OTYPES = { pv: 'Photovoltaik', wp: 'Wärmepumpe', pvwp: 'PV + Wärmepumpe' };
@@ -113,9 +64,9 @@ function offerCard() {
   if (!(ST.features || {}).angebote) return '';
   const l = ST.offers; if (!l) return '';
   const c = ST.cd && ST.cd.customer;
-  return `<div class="card sec"><div class="of-head"><h2>Angebote</h2><a class="btn sm" href="#/angebot/neu/${esc(c.id)}">${ic('mic', 16)}Neues Angebot</a></div>
+  return `<div class="card sec"><div class="of-head"><h2>Angebote</h2><a class="btn sm" href="#/angebot/neu/${esc(c.id)}">${ic('plus', 16)}Neues Angebot</a></div>
     ${l.length ? `<div class="clist flat">${l.map(o => `<a class="crow" href="#/angebot/${esc(o.id)}"><span class="evi">${ic('offer', 18)}</span><div class="cmain"><b>${esc(o.nr)} · ${esc(o.title)}</b><span class="muted">${esc(ST.ofStatus[o.status] || o.status)} · ${utc(o.upd).toLocaleDateString('de-DE')} · ${esc(o.by)}</span></div><b class="small of-amt">${eur2(o.gross)}</b></a>`).join('')}</div>`
-      : '<p class="muted">Noch kein Angebot. Tippe auf „Neues Angebot“ und sprich einfach, was der Kunde bekommt.</p>'}</div>`;
+      : '<p class="muted">Noch kein Angebot. Tippe auf „Neues Angebot“ – der Assistent fragt Schritt für Schritt alles ab.</p>'}</div>`;
 }
 async function offLoad(view) {
   const h = location.hash.replace(/^#\/?/, '').split('/');
@@ -127,8 +78,7 @@ async function offLoad(view) {
       const pid = h[2]; ST.cd = await api('crm-p&id=' + encodeURIComponent(pid));
       const ot = OF_OTYPES[ST.cd.customer.type] ? ST.cd.customer.type : 'pv';
       if (!OF.edit || OF.edit.project !== pid || OF.edit.id) { OF.edit = { id: '', project: pid, nr: '', title: 'Angebot ' + OF_OTYPES[ot], status: 'entwurf', data: { otype: ot, pos: [], discount: 0, intro: ofTxDef('intro', ot), outro: ofTxDef('outro', ot), pay: ofTxDef('pay', ot), imgs: false, valid: ofIso(30), spoken: '' } }; OF.edit.data.pos = ofApplyPackages([]); }
-      OF.text = '';
-    } else if (!OF.edit || OF.edit.id !== h[1]) { const o = await api('of-get&id=' + encodeURIComponent(h[1])); OF.edit = o; ST.cd = await api('crm-p&id=' + encodeURIComponent(o.project)); OF.text = o.data.spoken || ''; }
+    } else if (!OF.edit || OF.edit.id !== h[1]) { const o = await api('of-get&id=' + encodeURIComponent(h[1])); OF.edit = o; ST.cd = await api('crm-p&id=' + encodeURIComponent(o.project)); }
   }
   if (view === 'artikel' || view === 'produkte') await ofCatalog(true);
 }
@@ -137,25 +87,19 @@ const ofIso = d => { const x = new Date(); x.setDate(x.getDate() + d); return x.
 /* ---------- Editor ---------- */
 function viewAngebot() {
   const E = OF.edit; if (!E || !ST.cd) return '<p class="muted" style="padding:30px 0">Angebot nicht gefunden.</p>';
-  const c = ST.cd.customer, d = E.data, T = ofTotals(d), SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const c = ST.cd.customer, d = E.data, T = ofTotals(d);
   return `<a class="backl" href="#/kunde/${esc(c.id)}">${ic('back', 18)}${esc(c.name)}</a>
     <section class="h-top" style="padding-top:8px"><div class="h-date"><i></i>${E.nr ? esc(E.nr) + ' · ' : ''}${esc(ST.ofStatus[E.status] || 'Entwurf')}</div><h1 class="h-title" style="font-size:32px">${E.id ? 'Angebot' : 'Neues Angebot'}</h1></section>
-    <div class="cardx voice ${OF.listening ? 'on' : ''}">
-      <div class="vrow">${SR ? `<button class="mic" data-a="of-mic" aria-label="${OF.listening ? 'Aufnahme beenden' : 'Sprechen'}">${ic('mic', 30)}</button>` : ''}
-        <div class="vtx"><b>${OF.listening ? 'Ich höre zu …' : 'Was bekommt der Kunde?'}</b><span>${SR ? 'Tippen und sprechen, z. B. „20 Module, 10er Speicher, Wallbox“' : 'Ins Feld tippen und das Mikrofon der Tastatur nutzen'}</span></div></div>
-      <div id="of-dict" class="dict" ${OF.dict ? '' : 'hidden'}><b>Sprechen über die Tastatur</b><span class="why muted small"></span><ol><li>Ins Feld unten tippen – die Tastatur geht auf.</li><li>Unten rechts auf der Tastatur das <b>Mikrofon</b> antippen und sprechen.</li><li>Fertig? Auf „Fertig“ bzw. außerhalb tippen – die Positionen entstehen automatisch.</li></ol>${ofSrBroken() ? '<button class="linkbtn" data-a="of-srretry">Spracherkennung per Knopf erneut versuchen</button>' : ''}</div>
-      <textarea id="of-text" rows="3" placeholder="z. B. 22 Module, Hybrid-Wechselrichter 10 kW, 10er Speicher und eine Wallbox">${esc(OF.text)}</textarea>
-      <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px"><button class="btn" data-a="of-parse">${ic('check', 18)}${d.pos.length ? 'Positionen ergänzen' : 'Positionen erstellen'}</button>${d.pos.length ? `<button class="btn s" data-a="of-std">${ic('refresh', 16)}Standard neu berechnen</button>` : ''}</div>
-    </div>
+    ${typeof ofWizHTML === 'function' ? ofWizHTML() : ''}
     <div class="ofmode"><span class="muted small">Angebotsart</span><div class="seg">${Object.entries(OF_OTYPES).map(([k, l]) => `<button data-a="of-otype" data-v="${k}" class="${(d.otype || 'pv') === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <section class="h-sec"><h2>Positionen</h2><span class="muted small">${d.pos.length} Position${d.pos.length === 1 ? '' : 'en'}</span></section>
 
     <div class="glist ofl">${d.pos.map((p, i) => `<div class="ofp ${p.check ? 'chk-me' : ''}">
         <div class="ofp-h"><span class="ofn">${i + 1}</span><input class="ofi-name" data-of="name" data-i="${i}" value="${esc(p.name)}"><button class="xbtn" data-a="of-del" data-i="${i}" aria-label="Position löschen">${ic('x', 14)}</button></div>
-        ${p.descr || p.pkg ? `<div class="ofd">${p.pkg ? `<span class="tag t-a">Standard</span> ` : ''}${esc(p.descr || '')}</div>` : ''}
+        <div class="ofd">${p.pkg ? `<span class="tag t-a">Standard</span> ` : ''}${p.rab ? `<span class="tag t-a">Rabatt</span> ` : ''}<textarea class="ofi-descr" data-of="descr" data-i="${i}" rows="1" placeholder="Beschreibung (optional)">${esc(p.descr || '')}</textarea></div>
         <div class="ofp-r">${p.pausch ? `<span class="tag">pauschal</span>` : `<div class="qty"><button data-a="of-q" data-i="${i}" data-v="-1" aria-label="weniger">${ic('minus', 16)}</button><input inputmode="decimal" data-of="qty" data-i="${i}" value="${numDe(p.qty)}"><button data-a="of-q" data-i="${i}" data-v="1" aria-label="mehr">${ic('plus', 16)}</button></div>
-          <span class="muted small">${esc(p.unit)} ×</span>`}<input class="ofi-pr" inputmode="decimal" data-of="price" data-i="${i}" value="${numDe(ofUp(p))}"><button class="pmb ${ofBr(p) ? 'br' : ''}" data-a="of-pm" data-i="${i}" title="Netto/Brutto umschalten">€ ${ofBr(p) ? 'brutto' : 'netto'}</button><b class="ofl-t">${eur2(ofLine(p))}</b></div>
-      </div>`).join('') || '<div class="grow empty-g"><span class="gic">' + ic('mic', 16) + '</span><span class="gmain"><b>Noch keine Positionen</b><span>Sprechen oder unten aus dem Artikelstamm hinzufügen</span></span></div>'}
+          <input class="ofi-unit" data-of="unit" data-i="${i}" value="${esc(p.unit)}" aria-label="Einheit"><span class="muted small">×</span>`}<input class="ofi-pr" inputmode="decimal" data-of="price" data-i="${i}" value="${numDe(ofUp(p))}"><button class="pmb ${ofBr(p) ? 'br' : ''}" data-a="of-pm" data-i="${i}" title="Netto/Brutto umschalten">€ ${ofBr(p) ? 'brutto' : 'netto'}</button><b class="ofl-t">${eur2(ofLine(p))}</b>${p.item ? `<button class="pmb" data-a="of-stdsave" data-i="${i}" title="Bezeichnung, Beschreibung, Einheit und Preis als Standard für diese Position speichern">als Standard</button>` : ''}</div>
+      </div>`).join('') || '<div class="grow empty-g"><span class="gic">' + ic('plus', 16) + '</span><span class="gmain"><b>Noch keine Positionen</b><span>Assistent starten oder unten hinzufügen</span></span></div>'}
       <div class="ofadd"><div class="srch">${ic('search', 18)}<input id="of-q" placeholder="Artikel oder Leistung hinzufügen …" value="${esc(OF.q)}" autocomplete="off"></div><div id="of-sug">${ofSug()}</div></div>
     </div>
     <div class="cardx sec ofsum">
@@ -179,70 +123,10 @@ function ofSug() {
   const l = OF.cat.items.filter(i => (i.name + ' ' + (i.words || '') + ' ' + (OF.cat.cats[i.cat] || '')).toLowerCase().includes(q)).slice(0, 8);
   return l.map(i => `<button class="grow" data-a="of-add" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${esc(OF.cat.cats[i.cat] || '')} · ${eur2(i.price)} / ${esc(i.unit)}${i.maker ? ' · ' + esc(i.maker) : ''}</span></span>${ic('plus', 16)}</button>`).join('') || '<div class="grow muted small">Nichts gefunden – unter Mehr → Produkte bzw. Leistungen & Pakete anlegen</div>';
 }
-window.addEventListener('hashchange', () => { if (OF.listening) ofMicReset(false); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && OF.listening) ofMicReset(false); });
 const ofRender = () => { const y = scrollY; $('#app main').innerHTML = viewAngebot(); scrollTo(0, y); };
 function ofSumPaint() { const s = $('.ofsum'); if (!s) return; const tmp = document.createElement('div'); tmp.innerHTML = viewAngebot(); const n = tmp.querySelector('.ofsum'); if (n) s.replaceWith(n); $$('.ofl-t').forEach((el, i) => { const p = OF.edit.data.pos[i]; if (p) el.textContent = eur2(ofLine(p)); }); }
 const $$ = s => [...document.querySelectorAll(s)];
 
-/* Spracherkennung (Safari/Chrome); sonst Tastatur-Diktat */
-/* Spracheingabe – robust für iPhone: Wächter, sofortiges Stoppen, sonst Diktat der Tastatur */
-const OF_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-function ofMicUI() {   // nur die Anzeige umschalten – kein Neuaufbau der Seite während der Aufnahme
-  const v = $('.voice'); if (!v) return; v.classList.toggle('on', !!OF.listening);
-  const b = v.querySelector('.vtx b'), m = v.querySelector('.mic'); if (b) b.textContent = OF.listening ? 'Ich höre zu … zum Beenden tippen' : 'Was bekommt der Kunde?';
-  if (m) m.setAttribute('aria-label', OF.listening ? 'Aufnahme beenden' : 'Sprechen');
-}
-function ofMicReset(parse) {
-  clearTimeout(OF.micWatch); clearTimeout(OF.micMax); const r = OF.rec; OF.rec = null; OF.listening = false;
-  if (r) { r.onresult = r.onerror = r.onend = r.onstart = r.onaudiostart = null; try { r.abort(); } catch (e) {} }
-  ofMicUI(); if (parse && OF.text.trim()) ofParse();
-}
-/* Merken, ob die Spracherkennung auf diesem Gerät nicht geht (dann gleich Tastatur-Diktat) */
-const OF_SRKEY = 'ld-sr-broken';
-const ofSrBroken = () => { try { return localStorage.getItem(OF_SRKEY) || ''; } catch (e) { return ''; } };
-const ofSrMark = why => { try { if (why) localStorage.setItem(OF_SRKEY, why); else localStorage.removeItem(OF_SRKEY); } catch (e) {} };
-function ofDictate(why) {   // Ersatz: Diktat über das Mikrofon der Tastatur – mit Anleitung direkt im Feld
-  OF.dict = true; OF.dictStart = (OF.text || '').trim(); const box = $('#of-dict');
-  if (box) { box.hidden = false; box.querySelector('.why').textContent = why || ''; }
-  const ta = $('#of-text'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
-}
-function ofMic() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (OF.listening) return ofMicReset(true);                                  // zweiter Tipp: sofort beenden
-  if (!SR) return ofDictate('Dieser Browser hat keine eingebaute Spracherkennung.');
-  if (ofSrBroken()) return ofDictate(ofSrBroken());
-  const r = new SR(); r.lang = 'de-DE'; r.interimResults = true; r.continuous = !OF_IOS;   // iPhone: ein Satz am Stück
-  const start = OF.text ? OF.text.trim() + ', ' : ''; let alive = false;
-  const fail = why => { if (OF.rec !== r) return; ofMicReset(false); ofSrMark(why); ofDictate(why); };
-  r.onstart = r.onaudiostart = () => { alive = true; };
-  r.onresult = e => { alive = true; let s = ''; for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; OF.text = start + s; const ta = $('#of-text'); if (ta) ta.value = OF.text; };
-  r.onerror = e => {
-    if (e.error === 'no-speech' || e.error === 'aborted') return;
-    if (e.error === 'not-allowed') return fail('Mikrofon für lumbra.desk nicht erlaubt (iPhone-Einstellungen → Safari → Mikrofon).');
-    if (e.error === 'service-not-allowed') return fail(OF_IOS ? 'Apple erlaubt die Spracherkennung in der Startbildschirm-App nicht – bzw. „Siri & Diktieren“ ist ausgeschaltet.' : 'Spracherkennung ist auf diesem Gerät gesperrt.');
-    fail('Spracherkennung meldet „' + e.error + '“.');
-  };
-  r.onend = () => { if (OF.rec === r) ofMicReset(true); };
-  OF.rec = r; OF.listening = true; ofMicUI();
-  try { r.start(); } catch (e) { return fail('Spracherkennung ließ sich nicht starten.'); }
-  /* Wächter: startet die Erkennung nicht innerhalb von 4 s, abbrechen und auf das Tastatur-Diktat wechseln */
-  OF.micWatch = setTimeout(() => { if (OF.rec === r && !alive) fail(OF_IOS ? 'Die Spracherkennung startet in der Startbildschirm-App nicht.' : 'Die Spracherkennung startet nicht.'); }, 4000);
-  OF.micMax = setTimeout(() => { if (OF.rec === r) ofMicReset(true); }, 90000);   // spätestens nach 90 s beenden
-}
-/* Tastatur-Diktat: wenn das Feld verlassen wird und neuer Text da ist, Positionen automatisch erstellen */
-document.addEventListener('focusout', e => {
-  if (!OF.dict || !e.target || e.target.id !== 'of-text') return;
-  const t = e.target.value.trim(); if (t && t !== OF.dictStart) { OF.text = e.target.value; OF.dictStart = t; setTimeout(ofParse, 50); }
-});
-function ofParse() {
-  const txt = ($('#of-text') || {}).value || OF.text; OF.text = txt; if (!txt.trim()) return toast('Bitte erst sprechen oder etwas eintippen.');
-  const neu = parseSpeech(txt, OF.cat.items), d = OF.edit.data;
-  for (const p of neu) { const ex = p.item && d.pos.find(x => x.item === p.item && !x.pkg); if (ex) ex.qty = p.qty; else d.pos.push(p); }
-  d.pos = ofApplyPackages(d.pos); d.spoken = txt;
-  const miss = neu.filter(p => p.check).length;
-  toast(`${neu.length - miss} Position${neu.length - miss === 1 ? '' : 'en'} erkannt${miss ? ` · ${miss} bitte prüfen` : ''} – Standardleistungen ergänzt.`); ofRender();
-}
 async function ofBuild() {
   await loadJs('rechner/vendor/jspdf.umd.min.js');
   const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'mm', format: 'a4' }), E = OF.edit, d = E.data, T = ofTotals(d), c = ST.cd.customer, co = OF.cat.company || {};
@@ -336,7 +220,7 @@ function ofItemForm(it) {
       <span class="gmain"><b>Bild</b><span>${it.img ? 'erscheint im Angebot, wenn „Produktbilder im PDF“ an ist' : 'optional – Foto oder Datenblatt-Bild'}</span></span>
       <label class="btn sm s" style="cursor:pointer">${it.img ? 'Ändern' : 'Hinzufügen'}<input type="file" accept="image/*" data-imgup="1" hidden></label>${it.img ? '<button type="button" class="btn sm g" data-pk="img-del">Entfernen</button>' : ''}</div>
     <label style="grid-column:1/-1">Beschreibung (steht im Angebot)<textarea name="descr" rows="2" placeholder="${prod ? 'z. B. Maße, Garantie, Besonderheiten' : ''}">${esc(it.descr || '')}</textarea></label>
-    <label style="grid-column:1/-1">Stichwörter für die Spracheingabe (Komma)<input name="words" value="${esc(it.words || '')}" placeholder="${prod ? 'z. B. trina, glas glas' : 'z. B. gerüst, absturzsicherung'}"></label>
+    <input type="hidden" name="words" value="${esc(it.words || '')}">
     ${prod ? '<p class="muted small" style="grid-column:1/-1;margin:0">PV-Module, Wechselrichter und Speicher: 0 % USt. (§ 12 Abs. 3 UStG).</p>' : ''}
     <div class="row" style="grid-column:1/-1;margin-top:12px"><button class="btn" type="submit">Speichern</button><button class="btn g" type="button" data-a="of-item-cancel">Abbrechen</button>${it.id ? `<button class="btn g danger" type="button" data-a="of-item-del" data-v="${esc(it.id)}">Löschen</button>` : ''}</div></form>`;
 }
@@ -432,15 +316,15 @@ document.addEventListener('click', async e => {
   const E = OF.edit, d = E && E.data, i = +a.dataset.i;
   try {
     switch (a.dataset.a) {
-      case 'of-mic': return ofMic();
-      case 'of-srretry': ofSrMark(''); OF.dict = false; toast('Erneuter Versuch – jetzt das Mikrofon oben antippen.'); return ofRender();
-      case 'of-parse': return ofParse();
       case 'of-std': d.pos = ofApplyPackages(d.pos.filter(p => !p.pkg || p.man)); toast('Standardleistungen neu berechnet.'); return ofRender();
       case 'of-del': d.pos.splice(i, 1); return ofRender();
       case 'of-otype': { const old = d.otype || 'pv', nt = a.dataset.v; if (nt === old) return;
         for (const k of ['intro', 'outro', 'pay']) if (!d[k] || d[k] === ofTxDef(k, old)) d[k] = ofTxDef(k, nt);   // nur unveränderte Standardtexte tauschen
         d.otype = nt; if (/^Angebot (Photovoltaik|Wärmepumpe|PV \+ Wärmepumpe)$/.test(E.title)) E.title = 'Angebot ' + OF_OTYPES[nt];
         d.pos = ofApplyPackages(d.pos.filter(p => !p.pkg || p.man)); toast('Angebotsart: ' + OF_OTYPES[nt] + ' – feste Positionen angepasst.'); return ofRender(); }
+      case 'of-stdsave': { const p = d.pos[i], it = OF.cat.items.find(x => x.id === p.item); if (!it) return toast('Diese Position stammt nicht aus der Datenbank.');
+        if (!confirm(`„${p.name}“ als Standard speichern? Neue Angebote verwenden dann Bezeichnung, Beschreibung, Einheit (${p.unit}) und Preis ${eur2(ofUp(p))} ${ofBr(p) ? 'brutto' : 'netto'}.`)) return;
+        await api('of-item', { ...it, id: it.id, name: p.name, descr: p.descr, unit: p.unit, price: p.price, tax: p.tax, pm: p.pm, pausch: !!it.pausch }); await ofCatalog(true); toast('Als Standard gespeichert.'); return; }
       case 'of-pm': { const p = d.pos[i]; p.pm = ofBr(p) ? 'netto' : 'brutto'; return ofRender(); }
       case 'of-q': { const p = d.pos[i]; p.qty = Math.max(0, Math.round((p.qty + +a.dataset.v) * 100) / 100); if (p.pkg) p.man = true; const inp = $(`[data-of="qty"][data-i="${i}"]`); if (inp) inp.value = numDe(p.qty);
         if (p.cat === 'mod' && !p.pkg) d.pos = ofApplyPackages(d.pos), ofRender(); else ofSumPaint(); return; }
@@ -461,7 +345,6 @@ document.addEventListener('click', async e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'of-q') { OF.q = el.value; const s = $('#of-sug'); if (s) s.innerHTML = ofSug(); return; }
-  if (el.id === 'of-text') { OF.text = el.value; return; }
   const fi = el.closest && el.closest('#f-of-item');
   if (fi && ['price', 'pgross', 'tax'].includes(el.name)) {
     const t = +fi.tax.value / 100; if (el.name === 'pgross') fi.dataset.last = 'g'; else if (el.name === 'price') fi.dataset.last = 'n';
@@ -472,7 +355,7 @@ document.addEventListener('input', e => {
   const k = el.dataset && el.dataset.of; if (!k || !OF.edit) return; const d = OF.edit.data, i = +el.dataset.i;
   if (k === 'price' && ofBr(d.pos[i])) { const p = d.pos[i]; p.price = Math.round(parseNum(el.value) / (1 + p.tax / 100) * 10000) / 10000; ofSumPaint(); }
   else if (k === 'qty' || k === 'price') { d.pos[i][k] = parseNum(el.value); if (k === 'qty' && d.pos[i].pkg) d.pos[i].man = true; ofSumPaint(); }
-  else if (k === 'name') d.pos[i].name = el.value;
+  else if (k === 'name' || k === 'descr' || k === 'unit') d.pos[i][k] = el.value;
   else if (k === 'imgs') d.imgs = el.checked;
   else if (k === 'discount') { d.discount = Math.max(0, Math.min(100, parseNum(el.value))); ofSumPaint(); }
   else if (k === 'title' || k === 'status') OF.edit[k] = el.value;

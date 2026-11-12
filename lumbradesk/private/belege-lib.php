@@ -206,6 +206,7 @@ function re_xml(string $id): string {
     . '<rsm:SupplyChainTradeTransaction>';
   foreach ((array)($d['pos'] ?? []) as $i => $l) {
     $L = $T['lines'][$i]; $cat = (float)$l['tax'] > 0 ? 'S' : 'Z';
+    if ($L['unit'] < 0) { $L['unit'] = -$L['unit']; $l['qty'] = -(float)$l['qty']; }   // Rabattzeile: Preis darf nicht negativ sein (BR-27) → Menge negativ
     $x .= '<ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>' . ($i + 1) . '</ram:LineID></ram:AssociatedDocumentLineDocument>'
       . '<ram:SpecifiedTradeProduct><ram:Name>' . $e($l['name'] ?: 'Position ' . ($i + 1)) . '</ram:Name>' . (trim((string)$l['descr']) !== '' ? '<ram:Description>' . $e($l['descr']) . '</ram:Description>' : '') . '</ram:SpecifiedTradeProduct>'
       . '<ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>' . number_format($L['unit'], 4, '.', '') . '</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement>'

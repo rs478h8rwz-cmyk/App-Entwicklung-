@@ -137,3 +137,70 @@ function of_save(array $u, array $b): array {
   }
   return of_out(of_get($id));
 }
+
+/* ---------- Angebots-Assistent (ersetzt die Spracheingabe) ----------
+   Konfiguration je Angebotsart (pv/wp): Schritte in fester Reihenfolge.
+   type: one = eine Auswahl, multi = mehrere, system = System → Wechselrichter → Speicher, auto = kommt automatisch dazu.
+   items: feste Positionen (IDs), cats: alle Produkte dieser Kategorien, askQty/quick: Mengenabfrage, free/freeText: erste N Einheiten 100 % rabattiert,
+   links: Anhänge {item, qty: 'same'|Zahl, place: 'after'|Schritt-ID} – z. B. Unterkonstruktion je Modul. */
+function of_wiz_item(string $name, string $descr, string $unit, float $price, float $tax, string $cat): string {
+  $st = db()->prepare('SELECT id FROM offer_items WHERE name = ? AND active = 1 LIMIT 1'); $st->execute([$name]); $id = $st->fetchColumn();
+  if (!$id) { db()->prepare("INSERT INTO offer_items (kind, name, descr, unit, price, tax, cat, words) VALUES ('leistung', ?, ?, ?, ?, ?, ?, '')")->execute([$name, $descr, $unit, $price, $tax, $cat]); $id = db()->lastInsertId(); }
+  return 'i' . $id;
+}
+function of_wizard(): array {
+  of_tables(); $w = ld_get('assistent', null); if (is_array($w) && !empty($w['pv'])) return $w;
+  /* Startbestand – Preise bitte unter „Leistungen“ anpassen */
+  $I = fn(...$a) => of_wiz_item(...$a);
+  $uk = $I('Unterkonstruktion je Modul', 'Dachhaken, Schienen und Befestigung je Modul', 'Stk', 45, 0, 'mont');
+  $km = $I('Kleinmaterial je Modul', 'Kabel, Stecker, Kabelbinder, Befestigungsmaterial', 'Stk', 8, 0, 'mont');
+  $dc = $I('DC-Montage je Modul', 'Montage der Module auf dem Dach inkl. DC-Verkabelung', 'Stk', 35, 0, 'mont');
+  $g1 = $I('Gerüst bis 5 m Traufhöhe', 'Stellen, Vorhalten und Abbau je Gerüstseite', 'Stk', 450, 0, 'mont');
+  $g2 = $I('Gerüst ab 5 m Traufhöhe', 'Stellen, Vorhalten und Abbau je Gerüstseite', 'Stk', 690, 0, 'mont');
+  $el = $I('Elektro-Montage Pauschale', 'AC-Anschluss, Leitungen, Überspannungsschutz, Anpassung Zählerschrank', 'psch', 1450, 0, 'elek');
+  $an = $I('Anmeldung Netzbetreiber und Marktstammdatenregister', 'Anmeldung der Anlage beim Netzbetreiber und im Marktstammdatenregister', 'psch', 290, 0, 'elek');
+  $ib = $I('Inbetriebnahme und Einweisung', 'Inbetriebnahme der Anlage, Einrichtung der App, Einweisung des Kunden', 'psch', 350, 0, 'elek');
+  $wb = $I('Wallbox 11 kW inkl. Installation', 'Wallbox 11 kW, Montage und Anschluss inkl. Leitung bis 15 m', 'Stk', 1490, 19, 'wb');
+  $ns = $I('Notstrom-/Ersatzstrom-Umschaltung', 'Umschaltbox für Ersatzstrom bei Netzausfall inkl. Installation', 'Stk', 890, 0, 'elek');
+  $sat = $I('Sat-Schüssel versetzen', 'Satellitenschüssel abbauen und an neuer Stelle montieren und ausrichten', 'psch', 180, 19, 'sonst');
+  $dem = $I('Alte Module demontieren und entsorgen', 'Demontage vorhandener Module inkl. fachgerechter Entsorgung', 'Stk', 25, 19, 'mont');
+  $wpm = $I('Montage Wärmepumpe inkl. Hydraulik', 'Aufstellung Außengerät, hydraulischer Anschluss, Pufferspeicher, Inbetriebnahme', 'psch', 4800, 19, 'wp');
+  $wpd = $I('Demontage und Entsorgung Altanlage', 'Demontage der alten Heizung, fachgerechte Entsorgung', 'psch', 950, 19, 'wp');
+  $wpe = $I('Elektroanschluss Wärmepumpe', 'Stromversorgung, Zähleranpassung, Steuerleitung', 'psch', 890, 19, 'wp');
+  $w = ['pv' => ['steps' => [
+      ['id' => 'mod', 'title' => 'Module', 'type' => 'one', 'cats' => ['mod'], 'items' => [], 'askQty' => true, 'quick' => [10, 16, 20, 24, 30, 40], 'links' => [['item' => $uk, 'qty' => 'same', 'place' => 'after'], ['item' => $km, 'qty' => 'same', 'place' => 'after'], ['item' => $dc, 'qty' => 'same', 'place' => 'elek']]],
+      ['id' => 'geruest', 'title' => 'Gerüst', 'type' => 'one', 'cats' => [], 'items' => [$g1, $g2], 'askQty' => true, 'quick' => [1, 2, 3, 4], 'free' => ['item' => $g1, 'n' => 1, 'text' => 'Rabatt: erste Gerüstseite bis 5 m kostenlos'], 'optional' => true],
+      ['id' => 'system', 'title' => 'System', 'type' => 'system', 'cats' => [], 'items' => [], 'askQty' => true, 'quick' => [1, 2, 3, 4]],
+      ['id' => 'zusatz', 'title' => 'Zusatzkomponenten', 'type' => 'multi', 'cats' => [], 'items' => [$wb, $ns], 'askQty' => true, 'quick' => [1, 2], 'optional' => true],
+      ['id' => 'elek', 'title' => 'Elektro-Montage', 'type' => 'auto', 'cats' => [], 'items' => [$el]],
+      ['id' => 'anm', 'title' => 'Anmeldung & Inbetriebnahme', 'type' => 'auto', 'cats' => [], 'items' => [$an, $ib]],
+      ['id' => 'extra', 'title' => 'Zusatzaufgaben', 'type' => 'multi', 'cats' => [], 'items' => [$sat, $dem], 'askQty' => true, 'quick' => [1, 2, 10, 20], 'optional' => true]]],
+    'wp' => ['steps' => [
+      ['id' => 'wp', 'title' => 'Wärmepumpe', 'type' => 'one', 'cats' => ['wp'], 'items' => [], 'askQty' => false, 'onlyProd' => true],
+      ['id' => 'wpmont', 'title' => 'Montage', 'type' => 'auto', 'cats' => [], 'items' => [$wpm, $wpe]],
+      ['id' => 'wpextra', 'title' => 'Zusatzaufgaben', 'type' => 'multi', 'cats' => [], 'items' => [$wpd], 'askQty' => true, 'quick' => [1], 'optional' => true]]],
+    'systems' => [['id' => 's1', 'name' => 'EcoFlow'], ['id' => 's2', 'name' => 'Sigenergy'], ['id' => 's3', 'name' => 'Tesla'], ['id' => 's4', 'name' => 'E3/DC']]];
+  db()->exec("UPDATE offer_packages SET active = 0 WHERE name IN ('Standard Photovoltaik', 'Standard Wärmepumpe')");   // ersetzt durch den Assistenten
+  ld_set('assistent', $w, 0); return $w;
+}
+function of_wizard_save(array $u, array $w): array {
+  $clean = function ($steps) {
+    $out = [];
+    foreach (array_slice((array)$steps, 0, 30) as $s) {
+      if (!is_array($s)) continue; $id = preg_match('/^[\w-]{1,20}$/', (string)($s['id'] ?? '')) ? $s['id'] : 's' . bin2hex(random_bytes(3));
+      $ids = fn($l) => array_values(array_filter(array_map('strval', (array)$l), fn($v) => (bool)preg_match('/^i\d+$/', $v)));
+      $free = is_array($s['free'] ?? null) && preg_match('/^i\d+$/', (string)($s['free']['item'] ?? '')) && (float)($s['free']['n'] ?? 0) > 0 ? ['item' => $s['free']['item'], 'n' => (float)$s['free']['n'], 'text' => mb_substr((string)($s['free']['text'] ?? ''), 0, 120)] : null;
+      $out[] = ['id' => $id, 'title' => mb_substr(trim((string)($s['title'] ?? '')), 0, 60) ?: 'Schritt', 'type' => in_array($s['type'] ?? '', ['one', 'multi', 'system', 'auto'], true) ? $s['type'] : 'one',
+        'cats' => array_values(array_filter((array)($s['cats'] ?? []), fn($k) => isset(OF_CATS[$k]))), 'items' => $ids($s['items'] ?? []), 'askQty' => !empty($s['askQty']), 'optional' => !empty($s['optional']), 'onlyProd' => !empty($s['onlyProd']),
+        'quick' => array_values(array_slice(array_filter(array_map('floatval', (array)($s['quick'] ?? [])), fn($v) => $v > 0), 0, 8)), 'free' => $free,
+        'links' => array_values(array_filter(array_map(fn($l) => is_array($l) && preg_match('/^i\d+$/', (string)($l['item'] ?? '')) ? ['item' => $l['item'], 'qty' => ($l['qty'] ?? '') === 'same' ? 'same' : max(0, (float)($l['qty'] ?? 1)), 'place' => preg_match('/^[\w-]{1,20}$/', (string)($l['place'] ?? '')) ? $l['place'] : 'after'] : null, (array)($s['links'] ?? []))))];
+    }
+    return $out;
+  };
+  $sys = [];
+  foreach (array_slice((array)($w['systems'] ?? []), 0, 30) as $x) if (is_array($x) && trim((string)($x['name'] ?? '')) !== '') $sys[] = ['id' => preg_match('/^[\w-]{1,20}$/', (string)($x['id'] ?? '')) ? $x['id'] : 's' . bin2hex(random_bytes(3)), 'name' => mb_substr(trim((string)$x['name']), 0, 60),
+    'inv' => array_values(array_filter(array_map('strval', (array)($x['inv'] ?? [])), fn($v) => (bool)preg_match('/^i\d+$/', $v))), 'bat' => array_values(array_filter(array_map('strval', (array)($x['bat'] ?? [])), fn($v) => (bool)preg_match('/^i\d+$/', $v)))];
+  $o = ['pv' => ['steps' => $clean($w['pv']['steps'] ?? [])], 'wp' => ['steps' => $clean($w['wp']['steps'] ?? [])], 'systems' => $sys];
+  if (strlen(json_encode($o)) > 60000) fail('Zu viele Einträge.', 400);
+  ld_set('assistent', $o, (int)$u['id']); return $o;
+}
