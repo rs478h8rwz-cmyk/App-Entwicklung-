@@ -143,6 +143,7 @@ function viewAngebot() {
     <div class="cardx voice ${OF.listening ? 'on' : ''}">
       <div class="vrow">${SR ? `<button class="mic" data-a="of-mic" aria-label="${OF.listening ? 'Aufnahme beenden' : 'Sprechen'}">${ic('mic', 30)}</button>` : ''}
         <div class="vtx"><b>${OF.listening ? 'Ich höre zu …' : 'Was bekommt der Kunde?'}</b><span>${SR ? 'Tippen und sprechen, z. B. „20 Module, 10er Speicher, Wallbox“' : 'Ins Feld tippen und das Mikrofon der Tastatur nutzen'}</span></div></div>
+      <div id="of-dict" class="dict" ${OF.dict ? '' : 'hidden'}><b>Sprechen über die Tastatur</b><span class="why muted small"></span><ol><li>Ins Feld unten tippen – die Tastatur geht auf.</li><li>Unten rechts auf der Tastatur das <b>Mikrofon</b> antippen und sprechen.</li><li>Fertig? Auf „Fertig“ bzw. außerhalb tippen – die Positionen entstehen automatisch.</li></ol>${ofSrBroken() ? '<button class="linkbtn" data-a="of-srretry">Spracherkennung per Knopf erneut versuchen</button>' : ''}</div>
       <textarea id="of-text" rows="3" placeholder="z. B. 22 Module, Hybrid-Wechselrichter 10 kW, 10er Speicher und eine Wallbox">${esc(OF.text)}</textarea>
       <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px"><button class="btn" data-a="of-parse">${ic('check', 18)}${d.pos.length ? 'Positionen ergänzen' : 'Positionen erstellen'}</button>${d.pos.length ? `<button class="btn s" data-a="of-std">${ic('refresh', 16)}Standard neu berechnen</button>` : ''}</div>
     </div>
@@ -197,26 +198,43 @@ function ofMicReset(parse) {
   if (r) { r.onresult = r.onerror = r.onend = r.onstart = r.onaudiostart = null; try { r.abort(); } catch (e) {} }
   ofMicUI(); if (parse && OF.text.trim()) ofParse();
 }
-function ofDictate() {   // Ersatz: Diktat über das Mikrofon der Tastatur
+/* Merken, ob die Spracherkennung auf diesem Gerät nicht geht (dann gleich Tastatur-Diktat) */
+const OF_SRKEY = 'ld-sr-broken';
+const ofSrBroken = () => { try { return localStorage.getItem(OF_SRKEY) || ''; } catch (e) { return ''; } };
+const ofSrMark = why => { try { if (why) localStorage.setItem(OF_SRKEY, why); else localStorage.removeItem(OF_SRKEY); } catch (e) {} };
+function ofDictate(why) {   // Ersatz: Diktat über das Mikrofon der Tastatur – mit Anleitung direkt im Feld
+  OF.dict = true; OF.dictStart = (OF.text || '').trim(); const box = $('#of-dict');
+  if (box) { box.hidden = false; box.querySelector('.why').textContent = why || ''; }
   const ta = $('#of-text'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
-  toast('Bitte das Mikrofon unten auf der Tastatur antippen und sprechen – danach „Positionen erstellen“.', 'ok', 6000);
 }
 function ofMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (OF.listening) return ofMicReset(true);                                  // zweiter Tipp: sofort beenden
-  if (!SR || (OF_IOS && (navigator.standalone || matchMedia('(display-mode: standalone)').matches)) || OF.srBroken) return ofDictate();
+  if (!SR) return ofDictate('Dieser Browser hat keine eingebaute Spracherkennung.');
+  if (ofSrBroken()) return ofDictate(ofSrBroken());
   const r = new SR(); r.lang = 'de-DE'; r.interimResults = true; r.continuous = !OF_IOS;   // iPhone: ein Satz am Stück
   const start = OF.text ? OF.text.trim() + ', ' : ''; let alive = false;
+  const fail = why => { if (OF.rec !== r) return; ofMicReset(false); ofSrMark(why); ofDictate(why); };
   r.onstart = r.onaudiostart = () => { alive = true; };
   r.onresult = e => { alive = true; let s = ''; for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; OF.text = start + s; const ta = $('#of-text'); if (ta) ta.value = OF.text; };
-  r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { OF.srBroken = true; toast('Spracherkennung nicht erlaubt – bitte das Diktat der Tastatur nutzen.'); } };
-  r.onend = () => ofMicReset(true);
+  r.onerror = e => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    if (e.error === 'not-allowed') return fail('Mikrofon für lumbra.desk nicht erlaubt (iPhone-Einstellungen → Safari → Mikrofon).');
+    if (e.error === 'service-not-allowed') return fail(OF_IOS ? 'Apple erlaubt die Spracherkennung in der Startbildschirm-App nicht – bzw. „Siri & Diktieren“ ist ausgeschaltet.' : 'Spracherkennung ist auf diesem Gerät gesperrt.');
+    fail('Spracherkennung meldet „' + e.error + '“.');
+  };
+  r.onend = () => { if (OF.rec === r) ofMicReset(true); };
   OF.rec = r; OF.listening = true; ofMicUI();
-  try { r.start(); } catch (e) { ofMicReset(false); OF.srBroken = true; return ofDictate(); }
+  try { r.start(); } catch (e) { return fail('Spracherkennung ließ sich nicht starten.'); }
   /* Wächter: startet die Erkennung nicht innerhalb von 4 s, abbrechen und auf das Tastatur-Diktat wechseln */
-  OF.micWatch = setTimeout(() => { if (OF.rec === r && !alive) { ofMicReset(false); OF.srBroken = true; ofDictate(); } }, 4000);
+  OF.micWatch = setTimeout(() => { if (OF.rec === r && !alive) fail(OF_IOS ? 'Die Spracherkennung startet in der Startbildschirm-App nicht.' : 'Die Spracherkennung startet nicht.'); }, 4000);
   OF.micMax = setTimeout(() => { if (OF.rec === r) ofMicReset(true); }, 90000);   // spätestens nach 90 s beenden
 }
+/* Tastatur-Diktat: wenn das Feld verlassen wird und neuer Text da ist, Positionen automatisch erstellen */
+document.addEventListener('focusout', e => {
+  if (!OF.dict || !e.target || e.target.id !== 'of-text') return;
+  const t = e.target.value.trim(); if (t && t !== OF.dictStart) { OF.text = e.target.value; OF.dictStart = t; setTimeout(ofParse, 50); }
+});
 function ofParse() {
   const txt = ($('#of-text') || {}).value || OF.text; OF.text = txt; if (!txt.trim()) return toast('Bitte erst sprechen oder etwas eintippen.');
   const neu = parseSpeech(txt, OF.cat.items), d = OF.edit.data;
@@ -415,6 +433,7 @@ document.addEventListener('click', async e => {
   try {
     switch (a.dataset.a) {
       case 'of-mic': return ofMic();
+      case 'of-srretry': ofSrMark(''); OF.dict = false; toast('Erneuter Versuch – jetzt das Mikrofon oben antippen.'); return ofRender();
       case 'of-parse': return ofParse();
       case 'of-std': d.pos = ofApplyPackages(d.pos.filter(p => !p.pkg || p.man)); toast('Standardleistungen neu berechnet.'); return ofRender();
       case 'of-del': d.pos.splice(i, 1); return ofRender();

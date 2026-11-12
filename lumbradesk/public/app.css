@@ -528,3 +528,8 @@ a.grow:active, button.grow:active { background: var(--raised); }
 .ofmeta label, .ofmeta input, .ofmeta textarea { min-width: 0; max-width: 100%; }
 .ofi-ro { flex: 1; min-width: 0; font-weight: 600; line-height: 1.3; padding: 2px 0; }
 .ofsum .sr > span:first-child { min-width: 0; } .ofsum .sr > span:last-child { white-space: nowrap; padding-left: 8px; }
+
+/* Tastatur-Diktat: Anleitung im Sprachfeld */
+.dict { margin: 10px 0; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--p) 8%, transparent); font-size: 14px; line-height: 1.45; }
+.dict > b { display: block; } .dict .why { display: block; margin-top: 2px; } .dict ol { margin: 6px 0 0 18px; padding: 0; }
+.linkbtn { border: 0; background: none; color: var(--p); font: inherit; font-size: 13px; padding: 6px 0 0; cursor: pointer; text-decoration: underline; }
