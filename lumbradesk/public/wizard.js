@@ -8,9 +8,14 @@ const wzItem = id => OF.cat.items.find(i => i.id === id);
 /* Schritte der gewählten Angebotsart (PV + WP: erst PV, dann WP) */
 const wzSteps = ot => (ot === 'pvwp' ? ['pv', 'wp'] : [ot]).flatMap(t => (wzCfg()[t] || { steps: [] }).steps.map(s => ({ ...s, key: t + ':' + s.id }))).filter(s => s.type !== 'auto');
 const wzAll = ot => (ot === 'pvwp' ? ['pv', 'wp'] : [ot]).flatMap(t => (wzCfg()[t] || { steps: [] }).steps.map(s => ({ ...s, key: t + ':' + s.id, t })));
-function wzOptions(s) {   // feste Positionen + alle Produkte der gewählten Kategorien
-  const fixed = (s.items || []).map(wzItem).filter(Boolean), ids = new Set(fixed.map(i => i.id));
-  return fixed.concat(OF.cat.items.filter(it => (s.cats || []).includes(it.cat) && it.kind === 'produkt' && !ids.has(it.id)));
+function wzOptions(s) {   // feste Positionen + alle Produkte der gewählten Kategorien, passend zu PV/WP
+  const t = (s.key || '').split(':')[0], fixed = (s.items || []).map(wzItem).filter(Boolean), ids = new Set(fixed.map(i => i.id));
+  let l = fixed.concat(OF.cat.items.filter(it => (s.cats || []).includes(it.cat) && it.kind === 'produkt' && !ids.has(it.id) && (!it.usage || it.usage === 'alle' || it.usage === t)));
+  /* Zusätze anderer Systeme ausblenden (z. B. Tesla-Notstrom, wenn EcoFlow gewählt ist) */
+  const W = OF.wz, chosen = W && Object.values(W.sys || {}).map(y => ((wzCfg().systems || []).find(x => x.id === y.sys) || {}).name).filter(Boolean);
+  if (chosen && chosen.length) { const norm = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''), names = (wzCfg().systems || []).map(x => norm(x.name)), mine = chosen.map(norm);
+    l = l.filter(it => { const m = norm(it.maker); return !m || !names.includes(m) || mine.includes(m); }); }
+  return l;
 }
 /* System: Wechselrichter/Speicher – eigene Liste oder automatisch alle Produkte mit diesem Hersteller */
 function wzSys(sys, cat) {
@@ -36,10 +41,11 @@ function ofWizHTML() {
     const Y = W.sys[s.key] || {}, sys = wzCfg().systems || [], cur = sys.find(x => x.id === Y.sys);
     if (!cur) body = `<div class="muted small wzq">Welches System?</div><div class="wzgrid">${sys.map(x => `<button class="wzopt big" data-wz="sys" data-v="${esc(x.id)}"><b>${esc(x.name)}</b><span>${wzSys(x, 'inv').length} Wechselrichter · ${wzSys(x, 'bat').length} Speicher</span></button>`).join('') || '<p class="muted">Noch keine Systeme – unter Mehr → Angebots-Assistent anlegen.</p>'}</div>`;
     else {
+      if (!Y.inv && !wzSys(cur, 'inv').length) Y.inv = { item: '', qty: 0 };   // System ohne eigenen Wechselrichter (z. B. Tesla Powerwall)
       const part = !Y.inv ? 'inv' : Y.bat === undefined ? 'bat' : null, list = part ? wzSys(cur, part) : [];
-      body = `<div class="wzchips"><button class="chip on" data-wz="sysreset">${esc(cur.name)} ✕</button>${Y.inv ? `<button class="chip on" data-wz="sysinv">${esc((wzItem(Y.inv.item) || {}).name || '')} ✕</button>` : ''}</div>`
+      body = `<div class="wzchips"><button class="chip on" data-wz="sysreset">${esc(cur.name)} ✕</button>${Y.inv && Y.inv.item ? `<button class="chip on" data-wz="sysinv">${esc((wzItem(Y.inv.item) || {}).name || '')} ✕</button>` : ''}</div>`
         + (part ? `<div class="muted small wzq">${part === 'inv' ? 'Wechselrichter-Größe' : 'Speichergröße'}</div><div class="wzgrid">${list.map(it => tile(it, false, `data-part="${part}"`)).join('')}${part === 'bat' ? '<button class="wzopt" data-wz="nobat"><b>Ohne Speicher</b><span>nur Wechselrichter</span></button>' : ''}${!list.length ? `<p class="muted small">Keine ${part === 'inv' ? 'Wechselrichter' : 'Speicher'} von ${esc(cur.name)} in der Produktdatenbank – unter Mehr → Produkte mit Hersteller „${esc(cur.name)}“ anlegen.</p>` : ''}</div>`
-          : `<p class="muted">Fertig: ${esc(cur.name)} · ${esc((wzItem(Y.inv.item) || {}).name || '')}${Y.bat ? ' · ' + esc((wzItem(Y.bat.item) || {}).name || '') + (Y.bat.qty > 1 ? ' × ' + numDe(Y.bat.qty) : '') : ' · ohne Speicher'}</p>`);
+          : `<p class="muted">Fertig: ${esc(cur.name)}${Y.inv.item ? ' · ' + esc((wzItem(Y.inv.item) || {}).name || '') : ''}${Y.bat ? ' · ' + esc((wzItem(Y.bat.item) || {}).name || '') + (Y.bat.qty > 1 ? ' × ' + numDe(Y.bat.qty) : '') : ' · ohne Speicher'}</p>`);
     }
   } else {
     const opts = wzOptions(s);
@@ -68,7 +74,7 @@ function wzBuild(W) {
       const it = wzItem(x.item); add(blk, it, x.qty);
       if (s.free && s.free.item === x.item && it) { const n = Math.min(s.free.n, x.qty); blk.push({ ...ofPos(it, n), name: s.free.text || `Rabatt: ${it.name}`, descr: '100 % Rabatt', price: -it.price, rab: true, pausch: false, unit: it.unit, qty: n }); }
     }
-    if (s.type === 'system') { const Y = W.sys[s.key] || {}; if (Y.inv) add(blk, wzItem(Y.inv.item), Y.inv.qty || 1); if (Y.bat) add(blk, wzItem(Y.bat.item), Y.bat.qty || 1); }
+    if (s.type === 'system') { const Y = W.sys[s.key] || {}, sy = (wzCfg().systems || []).find(x => x.id === Y.sys); if (sy) (sy.intro || []).forEach(id => add(blk, wzItem(id), 1)); if (Y.inv && Y.inv.item) add(blk, wzItem(Y.inv.item), Y.inv.qty || 1); if (Y.bat) add(blk, wzItem(Y.bat.item), Y.bat.qty || 1); }
     const total = sel.reduce((a, x) => a + x.qty, 0);
     if (total || s.type === 'auto') for (const l of s.links || []) { const q = l.qty === 'same' ? total : +l.qty; if (!q) continue; const tgt = l.place && l.place !== 'after' ? s.key.split(':')[0] + ':' + l.place : null; if (tgt && tgt !== s.key) (pend[tgt] = pend[tgt] || []).push([wzItem(l.item), q]); else add(blk, wzItem(l.item), q); }
     for (const [it, q] of pend[s.key] || []) add(blk, it, q); delete pend[s.key];
@@ -147,6 +153,7 @@ function viewAssistent() {
   const C = AS.cfg, tabs = [['pv', 'Photovoltaik'], ['wp', 'Wärmepumpe'], ['sys', 'Systeme']];
   let body = '';
   if (AS.tab === 'sys') body = `${C.systems.map((x, i) => `<div class="cardx asx"><div class="pkline" style="grid-template-columns:minmax(0,1fr) 32px"><input data-as="sysname" data-i="${i}" value="${esc(x.name)}" placeholder="z. B. EcoFlow"><button class="xbtn" data-asb="sysdel" data-v="${i}" aria-label="System löschen">${ic('x', 14)}</button></div>
+      <div class="muted small" style="margin-top:8px">Vorab ins Angebot (z. B. Vorstellung des Herstellers):</div><div class="chips2">${(x.intro || []).map(id => `<span class="chip on">${esc((wzItem(id) || {}).name || id)}<button type="button" data-asb="sysrm" data-i="${i}" data-c="intro" data-v="${esc(id)}" aria-label="entfernen">×</button></span>`).join('')}<select class="txsel" data-as="sysadd" data-i="${i}" data-c="intro">${asOpts('', '+ Position')}</select></div>
       ${['inv', 'bat'].map(c => { const own = (x[c] || []), auto = wzSys({ name: x.name, [c]: [] }, c); return `<div class="muted small" style="margin-top:8px">${c === 'inv' ? 'Wechselrichter' : 'Speicher'}: ${own.length ? 'eigene Auswahl' : `automatisch alle Produkte mit Hersteller „${esc(x.name)}“ (${auto.length})`}</div>
         <div class="chips2">${own.map(id => `<span class="chip on">${esc((wzItem(id) || {}).name || id)}<button type="button" data-asb="sysrm" data-i="${i}" data-c="${c}" data-v="${esc(id)}" aria-label="entfernen">×</button></span>`).join('')}<select class="txsel" data-as="sysadd" data-i="${i}" data-c="${c}">${asOpts('', '+ ' + (c === 'inv' ? 'Wechselrichter' : 'Speicher') + ' festlegen')}</select></div>`; }).join('')}</div>`).join('')}
     <button class="btn sm s" data-asb="sysnew">${ic('plus', 14)}System</button>`;

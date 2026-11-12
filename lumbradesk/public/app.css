@@ -581,3 +581,8 @@ a.grow:active, button.grow:active { background: var(--raised); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hp-body { fill: #2B3442; } :root:not([data-theme="light"]) .hp-edge { stroke: #3E4A5C; } :root:not([data-theme="light"]) .hp-ring { fill: #222A36; } :root:not([data-theme="light"]) .hp-side rect { fill: #252E3B; } :root:not([data-theme="light"]) .hp-side path { stroke: #3E4A5C; } }
 :root[data-theme="dark"] .hp-body { fill: #2B3442; } :root[data-theme="dark"] .hp-edge { stroke: #3E4A5C; } :root[data-theme="dark"] .hp-ring { fill: #222A36; } :root[data-theme="dark"] .hp-side rect { fill: #252E3B; } :root[data-theme="dark"] .hp-side path { stroke: #3E4A5C; }
 @media (prefers-reduced-motion: reduce) { .hp-fan { animation-duration: 3s; } }
+
+/* 4.4: Zuordnung PV/WP, Bild in der Liste */
+.utag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px; vertical-align: 2px; margin-left: 4px; }
+.utag.pv { background: #F5A62322; color: #B7791F; } .utag.wp { background: #3B82F622; color: #2563EB; }
+.rimg { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: #fff; flex: none; display: grid; place-items: center; } .rimg img { width: 100%; height: 100%; object-fit: contain; }

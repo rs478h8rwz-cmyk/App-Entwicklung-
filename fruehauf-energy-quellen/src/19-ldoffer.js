@@ -15,7 +15,7 @@ function ldOfferFacts(o) {
   const wps = pos.filter(p => p.cat === 'wp' && !/montage|demontage|installation|entsorgung|hydraulik/i.test(p.name || '') && (kwOf(p) > 0 || /wärmepumpe|waermepumpe/i.test(p.name || '')));
   const kwp = Math.round(mods.reduce((a, p) => a + p.qty * p.power, 0) / 10) / 100;
   return {
-    gross: o.gross, grossWP: Math.round(pos.filter(p => p.cat === 'wp').reduce((a, p) => a + gross(p), 0) * 100) / 100,
+    gross: o.gross, grossWP: Math.round(pos.filter(p => p.usage ? p.usage === 'wp' : p.cat === 'wp').reduce((a, p) => a + gross(p), 0) * 100) / 100,   // Zuordnung PV/WP aus lumbra.desk
     kwp: kwp || null, modules: mods.map(p => `${numFmt(p.qty)} × ${numFmt(p.power)} Wp ${p.name}`).join(' + '), bat: bats.reduce((a, p) => a + p.qty * p.power, 0) || null,
     hpKw: wps.length ? kwOf(wps[0]) || null : null, hpModel: wps.length ? wps[0].name : '', number: o.nr, date: String(o.created || '').slice(0, 10)
   };

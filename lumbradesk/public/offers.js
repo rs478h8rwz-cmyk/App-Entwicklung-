@@ -13,7 +13,7 @@ const numDe = n => (Math.round((n || 0) * 100) / 100).toLocaleString('de-DE', { 
 const parseNum = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
 async function ofCatalog(force) { if (!OF.cat || force) OF.cat = await api('of-catalog'); return OF.cat; }
 
-const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch, img: it.img || '' });
+const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch, img: it.img || '', usage: it.usage || '' });
 /* Pakete: feste Positionen je Angebotsart („immer“) oder nur, wenn bestimmte Kategorien/Produkte im Angebot sind („wenn“) */
 const OF_OTYPES = { pv: 'Photovoltaik', wp: 'Wärmepumpe', pvwp: 'PV + Wärmepumpe' };
 const ofTypeFits = (pk, ot) => pk.otype === 'alle' || ot === pk.otype || (ot === 'pvwp' && (pk.otype === 'pv' || pk.otype === 'wp'));
@@ -77,7 +77,7 @@ async function offLoad(view) {
     if (h[1] === 'neu') {
       const pid = h[2]; ST.cd = await api('crm-p&id=' + encodeURIComponent(pid));
       const ot = OF_OTYPES[ST.cd.customer.type] ? ST.cd.customer.type : 'pv';
-      if (!OF.edit || OF.edit.project !== pid || OF.edit.id) { OF.edit = { id: '', project: pid, nr: '', title: 'Angebot ' + OF_OTYPES[ot], status: 'entwurf', data: { otype: ot, pos: [], discount: 0, intro: ofTxDef('intro', ot), outro: ofTxDef('outro', ot), pay: ofTxDef('pay', ot), imgs: false, valid: ofIso(30), spoken: '' } }; OF.edit.data.pos = ofApplyPackages([]); }
+      if (!OF.edit || OF.edit.project !== pid || OF.edit.id) { OF.edit = { id: '', project: pid, nr: '', title: 'Angebot ' + OF_OTYPES[ot], status: 'entwurf', data: { otype: ot, pos: [], discount: 0, intro: ofTxDef('intro', ot), outro: ofTxDef('outro', ot), pay: ofTxDef('pay', ot), imgs: true, valid: ofIso(30), spoken: '' } }; OF.edit.data.pos = ofApplyPackages([]); }
     } else if (!OF.edit || OF.edit.id !== h[1]) { const o = await api('of-get&id=' + encodeURIComponent(h[1])); OF.edit = o; ST.cd = await api('crm-p&id=' + encodeURIComponent(o.project)); }
   }
   if (view === 'artikel' || view === 'produkte') await ofCatalog(true);
@@ -145,7 +145,7 @@ async function ofBuild() {
   const PH = { Kunde: c.name, Nummer: E.nr || '', Gültig: d.valid ? d.valid.split('-').reverse().join('.') : '', Betrag: eur2(T.gross), Datum: new Date().toLocaleDateString('de-DE') };
   const IMG = {}; if (d.imgs) for (const p of d.pos) if (p.img && !IMG[p.img]) { try { const b = await (await fetch('api/?r=cfg-file&id=' + encodeURIComponent(p.img), { credentials: 'same-origin' })).blob(); IMG[p.img] = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); } catch (e) {} }
   para(salut); if (d.intro) para(ofFill(d.intro, PH));
-  const mixed = d.pos.some(ofBr) && d.pos.some(p => !ofBr(p)), allBr = d.pos.length && d.pos.every(ofBr), wN = W - 2 * M - 62;
+  const mixed = d.pos.some(ofBr) && d.pos.some(p => !ofBr(p)), allBr = d.pos.length && d.pos.every(ofBr), wN = W - 2 * M - 84;   // Text endet vor der Spalte Einzelpreis
   const cols = [[M, 'Pos.'], [M + 12, 'Menge'], [M + 30, 'Bezeichnung'], [W - M - 30, 'Einzelpreis' + (mixed ? '' : allBr ? ' brutto' : ' netto')], [W - M, 'Gesamt']];
   const th = () => { doc.setFillColor(242, 243, 246); doc.rect(M, y - 4, W - 2 * M, 7, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...GR); cols.forEach(([x, l], i) => doc.text(l, x + (i >= 3 ? 0 : 1), y, { align: i >= 3 ? 'right' : 'left' })); y += 7; doc.setFont('helvetica', 'normal'); };
   th();
@@ -216,6 +216,7 @@ function ofItemForm(it) {
     <label class="sw" style="align-self:end;min-height:44px"><input type="checkbox" name="pausch" value="1" ${it.pausch ? 'checked' : ''}>Pauschalpreis</label>
     <label>USt.<select name="tax">${[0, 7, 19].map(t => `<option value="${t}" ${+it.tax === t ? 'selected' : ''}>${t} %</option>`).join('')}</select></label>
     <label>Einheit<input name="unit" value="${esc(it.unit || 'Stk')}"></label>
+    <label>Gehört zu<select name="usage">${[['pv', 'Photovoltaik'], ['wp', 'Wärmepumpe'], ['alle', 'beides']].map(([k, l]) => `<option value="${k}" ${(it.usage || 'alle') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <div class="imgup" style="grid-column:1/-1"><input type="hidden" name="img" value="${esc(it.img || '')}"><span class="imgprev">${it.img ? `<img src="api/?r=cfg-file&id=${esc(it.img)}" alt="">` : ic('box', 22)}</span>
       <span class="gmain"><b>Bild</b><span>${it.img ? 'erscheint im Angebot, wenn „Produktbilder im PDF“ an ist' : 'optional – Foto oder Datenblatt-Bild'}</span></span>
       <label class="btn sm s" style="cursor:pointer">${it.img ? 'Ändern' : 'Hinzufügen'}<input type="file" accept="image/*" data-imgup="1" hidden></label>${it.img ? '<button type="button" class="btn sm g" data-pk="img-del">Entfernen</button>' : ''}</div>
@@ -224,7 +225,7 @@ function ofItemForm(it) {
     ${prod ? '<p class="muted small" style="grid-column:1/-1;margin:0">PV-Module, Wechselrichter und Speicher: 0 % USt. (§ 12 Abs. 3 UStG).</p>' : ''}
     <div class="row" style="grid-column:1/-1;margin-top:12px"><button class="btn" type="submit">Speichern</button><button class="btn g" type="button" data-a="of-item-cancel">Abbrechen</button>${it.id ? `<button class="btn g danger" type="button" data-a="of-item-del" data-v="${esc(it.id)}">Löschen</button>` : ''}</div></form>`;
 }
-const ofRow = i => `<button class="grow" data-a="of-item-edit" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${[i.maker, i.kind === 'produkt' && i.power ? numDe(i.power) + ' ' + (OF_PCATS[i.cat] || ['', ''])[1] : '', i.pm === 'brutto' ? eur2(i.price * (1 + i.tax / 100)) + ' brutto' : eur2(i.price) + ' netto', i.pausch ? 'pauschal' : 'je ' + i.unit, i.tax + ' % USt.'].filter(Boolean).map(esc).join(' · ')}</span></span>${ic('next', 16)}</button>`;
+const ofRow = i => `<button class="grow" data-a="of-item-edit" data-v="${esc(i.id)}">${i.img ? `<span class="rimg"><img src="api/?r=cfg-file&id=${esc(i.img)}" alt=""></span>` : ''}<span class="gmain"><b>${esc(i.name)}${i.usage && i.usage !== 'alle' ? ` <span class="utag ${i.usage}">${i.usage === 'pv' ? 'PV' : 'WP'}</span>` : ''}</b><span>${[i.maker, i.kind === 'produkt' && i.power ? numDe(i.power) + ' ' + (OF_PCATS[i.cat] || ['', ''])[1] : '', i.pm === 'brutto' ? eur2(i.price * (1 + i.tax / 100)) + ' brutto' : eur2(i.price) + ' netto', i.pausch ? 'pauschal' : 'je ' + i.unit, i.tax + ' % USt.'].filter(Boolean).map(esc).join(' · ')}</span></span>${ic('next', 16)}</button>`;
 const ofEditBox = id => OF.itemEdit && (OF.itemEdit.id || '') === id ? `<div class="cardx">${ofItemForm(OF.itemEdit)}</div>` : '';
 
 function viewProdukte() {
