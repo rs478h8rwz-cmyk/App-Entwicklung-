@@ -1,0 +1,368 @@
+/* =========================================================
+   „Neu in dieser Version“ – erscheint einmal nach einem Update
+   Bei jeder neuen Version: id ändern und Punkte anpassen.
+   ========================================================= */
+const WN_IMG = {
+  house: () => `<div style="width:100%;height:100%">${houseSVG({ style: 'modern', dawn: false, light: 'off', pv: true, hp: true, car: true, bat: true, align: 'xMidYMax' })}</div>`,
+  sign: () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#0B1118"/><rect x="10" y="14" width="100" height="24" rx="12" fill="#ffffff" opacity=".9"/><text x="20" y="30" font-family="HandSig, cursive" font-size="11" fill="#1B2A4A">Münster, 07.11.</text><text x="20" y="35.5" font-size="3.6" fill="#64788A">Ort, Datum</text>
+    <rect x="10" y="44" width="100" height="24" rx="12" fill="#ffffff" opacity=".9"/><path d="M20 58 C28 48 32 62 40 54 S52 48 56 58 C60 64 66 50 76 56" fill="none" stroke="#1B2A4A" stroke-width="1.6" stroke-linecap="round"/><text x="20" y="65.5" font-size="3.6" fill="#64788A">Unterschrift</text></svg>`,
+  reviews: () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[[8, 10], [62, 10], [8, 44]].map(([x, y]) => `<rect x="${x}" y="${y}" width="50" height="28" rx="5" fill="#ffffff"/>${[0, 1, 2, 3, 4].map(i => `<path transform="translate(${x + 5 + i * 6} ${y + 5}) scale(0.22)" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" fill="#F5A524"/>`).join('')}<rect x="${x + 5}" y="${y + 13}" width="38" height="2.4" rx="1.2" fill="#C9D3DD"/><rect x="${x + 5}" y="${y + 18}" width="30" height="2.4" rx="1.2" fill="#C9D3DD"/><rect x="${x + 5}" y="${y + 23}" width="14" height="2.4" rx="1.2" fill="#0F2A3D"/>`).join('')}</svg>`,
+  discount: () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="10" y="10" width="100" height="60" rx="7" fill="#1C2530"/><rect x="16" y="17" width="88" height="22" rx="5" fill="#3A2F17" stroke="#F5A524" stroke-width="1"/><text x="22" y="27" font-size="6" font-weight="700" fill="#ffffff">Sonderrabatt</text><text x="22" y="34" font-size="4.4" fill="#C9D3DD">bis 21.11. – 500 €</text>
+    <rect x="86" y="23" width="14" height="8" rx="4" fill="#3FA98C"/><circle cx="96" cy="27" r="3" fill="#ffffff"/><rect x="16" y="45" width="88" height="9" rx="3" fill="#232E3A"/><rect x="16" y="57" width="88" height="9" rx="3" fill="#232E3A"/><text x="21" y="51.5" font-size="4" fill="#C9D3DD">Komplette PDF</text><text x="21" y="63.5" font-size="4" fill="#C9D3DD">Vertriebs-PDF</text></svg>`
+};
+WN_IMG.crm = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#12171D"/>${[['#7A8692', 8], ['#5B8DEF', 26], ['#F5A524', 44], ['#0E7C66', 62], ['#8B5CF6', 80], ['#2F9E44', 98]].map(([c, x], i) => `<rect x="${x}" y="10" width="15" height="4" rx="2" fill="${i < 4 ? c : '#2A323C'}"/>`).join('')}${[24, 42, 60].map((y, i) => `<circle cx="16" cy="${y + 5}" r="5" fill="#1F3A33"/><rect x="26" y="${y + 1}" width="${[62, 48, 70][i]}" height="4" rx="2" fill="#ECEFF3" opacity=".85"/><rect x="26" y="${y + 8}" width="${[40, 56, 34][i]}" height="3" rx="1.5" fill="#7A8692"/>`).join('')}<rect x="92" y="23" width="20" height="12" rx="6" fill="#4DB39C"/></svg>`;
+WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.roof() : WN_IMG.house());
+const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
+/* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
+const RELEASES = [
+  { version: '2.42', date: '2026-11-12', items: [
+    ['roof', 'Dachmaße mit der Karte abgleichen', 'Im Modulplan unter „Mit Karte abgleichen“: Kundenadresse oder eigenen Standort antippen – die App holt den Hausumriss aus OpenStreetMap und prüft, ob Trauf- und Hanglänge aus dem Foto zum Haus passen. Weicht es ab (z. B. schmalere Pfannen als angenommen), passt ein Tipp den Maßstab an.'],
+    ['roof', 'Selbst gemessen? Auch gut', 'Wer die Traufe z. B. in Google Maps mit „Entfernung messen“ ermittelt hat, trägt das Maß einfach ein – die App gleicht damit genauso ab.']
+  ] },
+  { version: '2.41', date: '2026-11-11', items: [
+    ['roof', 'Pfanne & Deckmaß prüfen', 'Im Schritt „Referenz“ erkennt der Modulplan grob die Pfannenart (Doppelmulde, einfache Welle, flach, Biber) und prüft über die Perspektive, ob Pfannenzahl und Deckmaß zum Foto passen – mit Vorschlag zum Übernehmen und Hinweis, wenn doppelt gezählt wurde.'],
+    ['roof', 'Dachfenster als Maßstab', 'Beim „Füllen“ wird ein erkanntes Dachfenster grob vermessen: Passt es zu einer üblichen Größe, wirkt der Maßstab plausibel – sonst kommt ein Hinweis. Das Deckmaß bitte trotzdem vor Ort bestätigen.']
+  ] },
+  { version: '2.40', date: '2026-11-11', items: [
+    ['roof', 'Störstellen automatisch aussparen', 'Beim Drücken von „Füllen“ erkennt der Modulplan Dachfenster, Schornstein, Gauben, Lüfter und Satellitenschüssel im Foto und lässt sie frei – rot schraffiert im Plan. Falsch erkannt? Im Werkzeug „Auswählen“ die rote Fläche antippen und entfernen.'],
+    ['modplan', 'Maximal belegen', 'Neuer Knopf „Maximal“: legt so viele Module wie möglich aufs Dach – hochkant und quer frei kombiniert, ohne Raster oder Magnet, Störstellen ausgespart. „Zurück“ macht es rückgängig.'],
+    ['roof', 'Feinjustier-Rad in der Dachmitte', 'Das Rad zum Feinjustieren erscheint jetzt mittig auf der Dachfläche – so verdeckt es keine der Ecken, die Sie gerade setzen.']
+  ] },
+  { version: '2.39', date: '2026-11-11', items: [
+    ['crm', 'Eigene Produktdatenbank fürs Angebot', 'Für Angebote gibt es in lumbra.desk jetzt einen eigenen Reiter „Produkte“. Er ist getrennt von dieser App – Ihre Produkte in der Wirtschaftlichkeit bleiben unverändert.'],
+    ['house', 'Neue Funktionen nach Freigabe', 'Der Knopf „Angebot“ erscheint erst, wenn der Admin die Funktion in lumbra.desk unter System freigeschaltet hat.']
+  ] },
+  { version: '2.38', date: '2026-11-11', items: [
+    ['crm', 'Angebot per Sprache', 'Oben im Kunden: „Angebot“ öffnet den Angebots-Editor in lumbra.desk. Einfach sprechen, z. B. „20 Module, 10er Speicher und eine Wallbox“ – Positionen, Standardleistungen und Summen entstehen automatisch, dann Mengen anpassen und als PDF senden.'],
+    ['house', 'Logbuch mit Markieren', 'Der Knopf heißt jetzt „Logbuch“. Dort Notizen festhalten und Kollegen markieren – sie bekommen die Nachricht per E-Mail.']
+  ] },
+  { version: '2.37', date: '2026-11-11', items: [
+    ['roof', 'Tutorial: Modulplan Schritt für Schritt', 'Das Tutorial erklärt den Modulplan jetzt in vier Schritten mit Beispielbildern – Foto, Dachfläche, Referenz und Belegen, auch auf dem Handy. Neu erklärt: Zuständig, Verlauf und das „l.“ zurück zu lumbra.desk.']
+  ] },
+  { version: '2.36', date: '2026-11-11', items: [
+    ['roof', 'Feinjustieren ohne Verdecken', 'Auf dem Handy springt das Feinjustier-Rad im Modulplan immer auf die gegenüberliegende Seite des Punkts, den Sie gerade verschieben – so bleibt die Ecke sichtbar.']
+  ] },
+  { version: '2.35', date: '2026-11-11', items: [
+    ['crm', 'Neues App-Symbol', 'Alle Apps tragen jetzt das lumbra.desk-Symbol „l.“. Auf dem Home-Bildschirm erscheint es, wenn Sie das Symbol einmal neu hinzufügen.']
+  ] },
+  { version: '2.34', date: '2026-11-11', items: [
+    ['roof', 'Modulplan auf dem Handy', 'Die Dachbelegung geht jetzt auch auf dem Handy: Foto direkt mit der Kamera, Ecken mit dem Finger ziehen, Werkzeuge unten griffbereit, Einstellungen zum Aufklappen. Hochkant und quer.'],
+    ['crm', 'Zurück zu lumbra.desk', 'Oben links führt das „l.“ jederzeit zurück zur lumbra.desk-Startseite mit allen Apps.']
+  ] },
+  { version: '2.33', date: '2026-11-11', items: [
+    ['crm', 'Alles auf dem Server', 'Sicherungsdateien, Konfigurationsdateien und Erinnerungen ans Sichern sind weg: Kunden liegen auf dem LumbraDesk-Server, nachts wird automatisch gesichert. Firmen-Einstellungen verteilt der Admin unter „Daten & Abgleich“.'],
+    ['house', 'Datenschutz aktualisiert', 'Der Standard-Datenschutztext nennt jetzt den eigenen LumbraDesk-Server bei IONOS in Deutschland.']
+  ] },
+  { version: '2.32', date: '2026-11-10', items: [
+    ['crm', 'Verlauf & Wiedervorlagen', 'Oben im Kunden neben „Zuständig“: „Verlauf“ öffnet den Kunden in LumbraDesk – mit Notizen, Anrufen, Terminen, Wiedervorlagen und Vertriebs-Stufe (Anfrage bis Abgeschlossen).']
+  ] },
+  { version: '2.31', date: '2026-11-10', items: [
+    ['house', 'Abgleich sicherer', 'Ein Kunde wird auf dem Gerät nur noch entfernt, wenn der Server bestätigt, dass er gelöscht oder einem Kollegen zugewiesen wurde – mit Hinweis, von wem. Fehlt er nur, wird er neu hochgeladen.'],
+    ['house', 'Papierkorb', 'Vom Abgleich entfernte Kunden liegen 30 Tage im Papierkorb (Einstellungen → Datensicherung) und lassen sich wiederherstellen.']
+  ] },
+  { version: '2.30', date: '2026-11-10', items: [
+    ['house', 'LumbraDesk: Kunden zentral', 'Unter LumbraDesk liegen alle Kunden auf dem Server – mit Angeboten, Fotos, Modulplan und Unterschriften. Jedes Gerät gleicht automatisch ab, offline wird später nachgereicht.'],
+    ['house', 'Kunden zuweisen', 'Oben im Kunden „Zuständig“ wählen: Der Kollege sieht den Kunden sofort, du behältst ihn in deiner Liste. Admin und Büro sehen alle Kunden, Vertrieb die eigenen.']
+  ] },
+  { version: '2.29', date: '2026-11-10', items: [
+    ['house', 'Kundenname ist Pflicht', 'Wer eine Schnellauslegung oder einen Modulplan für einen neuen Kunden startet, gibt zuerst Anrede und Namen ein – so landet kein „Neuer Kunde“ ohne Namen in der Liste.']
+  ] },
+  { version: '2.28', date: '2026-11-10', items: [
+    ['house', 'LumbraDesk: Firmen-Einstellungen für alle', 'Unter LumbraDesk lädt jedes Gerät automatisch den aktuellen Firmenstand – Design, Deckblatt, Förderung, Preise, Texte und Produkte mit Bildern. Admins ändern wie gewohnt und tippen „Für alle übernehmen“.']
+  ] },
+  { version: '2.27', date: '2026-11-10', items: [
+    ['house', 'Lücken zwischen den Modulen sichtbar', 'Die Module haben jetzt einen schmalen dunklen Rahmen mit feiner Alu-Kante – die Abstände zwischen den Modulen sind wieder klar zu sehen, auch beim Hineinzoomen.'],
+    ['house', 'Ein Gesamtbild der Belegung', 'Liegen mehrere Dachflächen im selben Foto, entsteht jetzt ein gemeinsames Bild – mit allen Modulen, den kompletten Strings über alle Flächen und allen Optimierern. Bestehende Kunden werden automatisch umgestellt.']
+  ] },
+  { version: '2.26', date: '2026-11-10', items: [
+    ['house', 'Stringplan', 'Neues Werkzeug „Strings“: Module der Reihe nach antippen – die App zieht die Stringlinie vom ersten zum nächsten Modul, nummeriert sie und zeigt kWp je String. Auch über mehrere Dachflächen, und im PDF-Bild der Belegung.'],
+    ['house', 'Optimierer setzen', 'Werkzeug „Optimierer“: Modul antippen setzt oder entfernt einen Optimierer – sichtbar am Modul, gezählt in der Fußzeile und im PDF.'],
+    ['house', 'Alle Dachflächen anklickbar', 'Module und Flächen anderer Dachflächen im selben Foto lassen sich direkt antippen – die App wechselt automatisch zur richtigen Fläche.'],
+    ['house', 'Sanfterer Magnet, klarere Bedienung', 'Der Magnet zieht nur noch bis 15 cm an Nachbarmodule – frei platzierte Module bleiben beweglich. Jedes Werkzeug zeigt nur seine Knöpfe und eine kurze Anleitung, oben im Bild steht, was ein Tipp gerade bewirkt.']
+  ] },
+  { version: '2.25', date: '2026-11-10', items: [
+    ['house', 'Module per Doppeltipp setzen', 'Ein Modul entsteht nur noch per Doppelklick bzw. Doppeltipp – ein einfacher Tipp verschiebt das Bild oder hebt die Auswahl auf. So entstehen keine Module aus Versehen.'],
+    ['house', 'Raster schnell korrigieren', 'Wurden Mulden als Pfannen gezählt, einfach eine Alternative wie ½ oder ⅔ der Zahl antippen oder mit −1 / +1 feinjustieren – das Raster rastet jedes Mal neu auf die Pfannenkanten ein.']
+  ] },
+  { version: '2.24', date: '2026-11-10', items: [
+    ['house', 'Dachpfannen scannen', '„Automatisch zählen und scannen“: Wie bei einem QR-Code-Scanner fährt eine Laserlinie über das Dach, die App sucht die sichtbaren Pfannenkanten und legt das gelbe Raster genau darauf.'],
+    ['house', 'Pfannen nummeriert zur Kontrolle', 'Danach werden die oberste Reihe (1, 2, 3 …) und die linke Spalte nach unten durchnummeriert – oben steht die Gesamtzahl. Beim Module-Belegen ist alles wieder weg.']
+  ] },
+  { version: '2.23', date: '2026-11-10', items: [
+    ['fireworks', 'Neujahrs-Feuerwerk', 'Beim ersten Öffnen im neuen Jahr gibt es ein Feuerwerk über den ganzen Bildschirm und einen Neujahrsgruß. Ein- und ausschalten oder vorab ansehen: Einstellungen → Ansicht & Tutorial.'],
+    ['house', 'Halloween noch gruseliger', 'Zu Halloween steht jetzt eine finstere Gestalt neben dem Haus, und ab und zu taucht ein Gruselgesicht mit Krallenhand am Fenster auf.'],
+    ['house', 'Modulbelegung: Raster folgt dem Deckmaß', 'Ändern Sie Deckbreite oder Decklänge, rechnet die App die Anzahl der Pfannen um und das gelbe Raster passt sich sofort an.'],
+    ['tutorial', 'Tutorial mit Beispielbildern', 'Die Anleitung erklärt jetzt in 18 Schritten jeden Ablauf – mit Beispielbild, „So geht’s“-Liste und Markierung, wohin man tippt. Wischen blättert weiter. Starten: Einstellungen → Ansicht & Tutorial.']
+  ] },
+  { version: '2.22', date: '2026-11-10', items: [
+    ['house', 'Nur Produkte aus dem Angebot', 'Die Produktseite im PDF zeigt nur noch die Produkte aus dem Angebot – Modul aus dem Modulplan und empfohlene Wärmepumpe aus der Schnellauslegung erscheinen dort nicht mehr zusätzlich.'],
+    ['sign', 'Vertriebs-PDF auch dunkel', 'Die Einstellung Hell / Gemischt / Dunkel für das Kundendokument gilt jetzt auch für das Vertriebs-PDF – Vorschau und PDF ändern sich sofort, auch bei bereits erstellten Kunden.'],
+    ['sign', 'Produktbilder im Vertriebs-PDF', 'Auf „Das bauen wir für Sie ein“ stehen jetzt die Bilder der Angebotsprodukte. Die zusätzliche Seite „Ihre Komponenten“ entfällt im Vertriebs-PDF – sie war doppelt.'],
+    ['house', 'Anlagenleistung korrekt', 'Behoben: Module aus Modulplan und Angebot wurden zusammengezählt (z. B. 15 × 485 W + 25 × 500 W = 19,775 kWp). Jetzt zählen nur die Angebotsmodule – Abweichungen zeigt die Warnung.']
+  ] },
+  { version: '2.21', date: '2026-11-10', items: [
+    ['house', 'Modulplan und Angebot abgleichen', 'Weichen Modulplan und Angebot voneinander ab (mehr oder weniger Module), erscheint eine rote Warnung – mit Wahl, ob mit Modulplan oder Angebot gerechnet wird. Ein später eingelesenes Angebot überschreibt einen übernommenen Modulplan nicht mehr.'],
+    ['house', 'Welche Module sind geplant?', 'Vor dem Belegen fragt der Modulplan nach dem Modul – das Modul aus dem Angebot ist vorausgewählt.'],
+    ['house', 'Förderung je Wohneinheit', 'Neu: „selbst bewohnt / nicht selbst bewohnt“. Klimageschwindigkeits- und Einkommensbonus werden nur für selbst bewohnte Wohneinheiten gerechnet (anteilig), Grundförderung für alle.'],
+    ['house', 'Verbrauch aus der Schnellauslegung', 'Wärmebedarf und Stromverbrauch der Wärmepumpe pro Jahr werden aus der Schnellauslegung übernommen (gekennzeichnet „aus Schnellauslegung“).']
+  ] },
+  { version: '2.20', date: '2026-11-09', items: [
+    ['house', 'Art der Berechnung ändern', 'Im Kunden oben auf „WP“, „PV“ oder „PV + WP“ tippen – so wird z. B. aus einem reinen Wärmepumpen-Kunden nachträglich PV + Wärmepumpe. Alle Eingaben bleiben erhalten.']
+  ] },
+  { version: '2.19', date: '2026-11-09', items: [
+    ['sign', 'PDF auf dem iPad', 'Behoben: Auf iPad und iPhone war im PDF das Haus auf dem Deckblatt stark vergrößert und die Haken bei „Angebot annehmen“ fehlten. Grafiken werden dort jetzt vor dem Erstellen in Bilder umgewandelt, Schriften sicher geladen.']
+  ] },
+  { version: '2.18', date: '2026-11-09', items: [
+    ['modplace', 'Weitere Fläche im selben Foto', '„+ Fläche“ zeichnet eine weitere Dachfläche im selben Bild ein; die anderen Flächen und ihre Module bleiben sichtbar. Für eine andere Ausrichtung gibt es „Neues Foto“.'],
+    ['modplace', 'Ecken rasten ein', 'Die Referenz-Ecken rasten magnetisch an den Ecken der Dachfläche ein – und Dachflächen-Ecken an den Ecken anderer Flächen im selben Foto.'],
+    ['modplace', 'Rot nur bei Überlappung', 'Module werden nur noch rot markiert, wenn sie übereinander liegen – nicht mehr im Randbereich.']
+  ] },
+  { version: '2.17', date: '2026-11-09', items: [
+    ['modplace', 'Module nicht mehr zu lang', 'Behoben: Die automatische Zählung konnte sich bei den Reihen verzählen – Module wirkten dann zu lang (hochkant) bzw. zu dick (quer). Jetzt wird geprüft, nach welchem Abstand sich das Pfannenmuster wirklich wiederholt. Neu: „÷2“ und „×2“ neben „Pfannen waagerecht“ für Doppelmulden-Pfannen.'],
+    ['quick', 'Nachträglich anpassen', 'Auf jeder Kundenkarte bleiben „Schnellauslegung“ und „Modulbelegung“ sichtbar – nach dem Erledigen als „… anpassen“ mit Häkchen.']
+  ] },
+  { version: '2.16', date: '2026-11-09', items: [
+    ['modplace', 'Pfannen automatisch zählen', 'Im Schritt „Referenz“ zählt „Automatisch zählen“ die Pfannen und Reihen im Foto selbst (ideal mit Drohnenfoto). Bei Doppelmulden-Pfannen (z. B. Frankfurter) werden zwei Mulden als eine Pfanne gezählt.'],
+    ['modplace', 'Kontrolle am Raster', 'Neuer Hinweis: Jedes gelbe Kästchen muss genau eine Pfanne sein – liegen zwei darin, ist die Anzahl zu klein und Module werden zu breit gezeichnet.']
+  ] },
+  { version: '2.15', date: '2026-11-09', items: [
+    ['quick', 'Schnellauslegung bei jedem Kunden', 'Auch bei reinen PV-Kunden (z. B. nach dem Modulplan) gibt es jetzt „Auch eine Wärmepumpe? – Schnellauslegung“. Beim Übernehmen wird der Kunde zu PV + Wärmepumpe; Modulplan und PV-Daten bleiben erhalten.'],
+    ['modplace', 'Direkt aus der Kundenübersicht', 'Jede Kundenkarte zeigt „Schnellauslegung“ und „Modulbelegung“, solange sie noch nicht gemacht sind. Eine Modulbelegung bei einem reinen Wärmepumpen-Kunden macht ihn zu PV + Wärmepumpe.'],
+    ['quick', 'Auslegungs-Übersicht repariert', 'Behoben: Die Zusammenfassung „Schnellauslegung vom …“ im Wärmepumpen-Bereich konnte einen Fehler auslösen.']
+  ] },
+  { version: '2.14', date: '2026-11-09', items: [
+    ['modplace', 'Zwei-Finger-Zoom im Modulplan', 'Behoben: Nach dem Zoomen im Dachbild mit zwei Fingern trafen Tipps im Menü rechts den falschen Knopf. Der Zoom bleibt jetzt im Bild, die Seite selbst bleibt immer bei 100 %.']
+  ] },
+  { version: '2.13', date: '2026-11-09', items: [
+    ['kbd', 'Knöpfe im Modulplan nach der Tastatur', 'Behoben: Nach einer Eingabe im Modulplan trafen Tipps auf dem iPad den falschen Knopf (z. B. „Auswählen“ statt „Wie auf dem Foto“).']
+  ] },
+  { version: '2.12', date: '2026-11-09', items: [
+    ['kbd', 'Alles wieder an', 'Die Tastatur-Probleme lagen am iPad (ein Neustart hilft). Deshalb sind ABC-Knopf, bewegter Hintergrund und Startanimation auch auf dem iPad wieder an, ebenso die feste Ansicht im Modulplan. Test-Schalter wurden zurückgesetzt.']
+  ] },
+  { version: '2.11', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur-Testseite', 'Unter Einstellungen → Ansicht → Tastatur-Hilfe gibt es eine Testseite: Dort lassen sich einzelne Teile der App testweise abschalten, um den iPad-Tastaturfehler einzugrenzen.']
+  ] },
+  { version: '2.10', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur auf dem iPad', 'Im Modulplan ist die Seite dahinter nicht mehr fixiert. Eingabefelder sind für das iPad jetzt ausdrücklich als Textfelder markiert – gegen einen bekannten Apple-Fehler, bei dem in Home-Bildschirm-Apps keine Tastatur erscheint.']
+  ] },
+  { version: '2.09', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur-Hilfe für das iPad', 'Auf dem iPad sind der Knopf „ABC Buchstaben“ und der bewegte Hintergrund ausgeschaltet. Unter Einstellungen → Ansicht → Tastatur-Hilfe: Testfeld und Schalter zum Eingrenzen.']
+  ] },
+  { version: '2.08', date: '2026-11-09', items: [
+    ['kbd', 'Tastatur auf dem iPad', 'Tastatur auf dem iPad: Der Knopf „ABC Buchstaben“ und der bewegte Hintergrund sind auf dem iPad ausgeschaltet; unter Einstellungen → Ansicht → Tastatur-Hilfe gibt es ein Testfeld und Schalter. Die Startanimation hat einen Knopf „Überspringen“ und endet sofort bei Berührung.']
+  ] },
+  { version: '2.07', date: '2026-11-09', items: [
+    ['anim', 'Startanimation', 'Beim Öffnen erscheint Ihr Haus – nacheinander kommen Photovoltaik, Speicher, Wärmepumpe und E-Auto dazu. Dann zoomt es auf Ihr Logo und hinein in die App. Logo und An/Aus unter Einstellungen → Startseite & Wetter.'],
+    ['modplace', 'Zurück-Knopf und ruhigere Bedienung', 'Behoben: Auf iPad und iPhone gingen schnell aufeinanderfolgende Tipps verloren oder landeten scheinbar woanders – jetzt reagiert jeder Knopf sofort. Im Modulplan gibt es unten „Zurück“ zum vorherigen Schritt; die Randabstände lassen sich auch beim Belegen ändern. Neue Module bleiben dort, wo Sie tippen – der Magnet verschiebt nur noch wenig.']
+  ] },
+  { version: '2.06', date: '2026-11-09', items: [
+    ['modplace', 'Magnet mit Raster', 'Der Magnet setzt Module jetzt exakt auf das Raster der Nachbarmodule (Modulmaß + 1,5 cm Fuge) – Reihen und Spalten stehen immer gerade. Am Dachrand und Randabstand rastet er nicht mehr ein. Für versetzte Module den Magnet ausschalten.'],
+    ['modplace', 'Kopieren und Einfügen', 'Ausgewählte Module kopieren und als Gruppe neben der Vorlage einfügen – dann verschieben und einrasten lassen. Am PC auch mit Strg+C / Strg+V.'],
+    ['modsave', 'Modulbilder automatisch zugeschnitten', 'Weiße oder durchsichtige Ränder am Bild für den Modulplan werden automatisch entfernt – das Modul füllt seine Fläche vollständig aus.']
+  ] },
+  { version: '2.05', date: '2026-11-09', items: [
+    ['modplan', 'Zoomen im Modulplan', 'Foto und Dach lassen sich vergrößern: zwei Finger am iPad, Mausrad am PC oder die Knöpfe −/+/Einpassen. So treffen Sie Ecken und Pfannenkanten genau. Dazu ein Feinjustier-Kreis: Ecke antippen, dann im Kreis ziehen – der Punkt bewegt sich ganz langsam (am PC auch mit den Pfeiltasten).'],
+    ['modplace', 'Bedienung verbessert', '„Weiter“ und die Modulauswahl stehen immer sichtbar in der unteren Leiste. Module lassen sich – auch bei Mehrfachauswahl – durch Antippen wieder abwählen; der Magnet greift früher.'],
+    ['modsave', 'Belegung als Foto beim Kunden', 'Beim Speichern und Übernehmen entsteht ein Foto mit eingezeichneten Modulen. Es liegt beim Kunden im Schritt „Angebot“ und in der PV-Karte.'],
+    ['layout', 'iPad-Startseite repariert', 'Das Start-Haus wird auf dem iPad nicht mehr übergroß dargestellt; die Kennzahlen stehen übersichtlich in zwei Zeilen. Lange Fenster (z. B. Schnellauslegung) werden oben nicht mehr abgeschnitten.']
+  ] },
+  { version: '2.04', date: '2026-11-08', items: [
+    ['modplace', 'Entzerrt oder wie auf dem Foto', 'Im Modulplan lässt sich die Ansicht umschalten: entzerrt (maßstäblich von vorn) oder perspektivisch auf dem Originalfoto – in beiden Ansichten Module setzen, auswählen und verschieben. Die gewählte Ansicht wird gemerkt.'],
+    ['modplan', 'Pfannenraster zur Kontrolle', 'Im Referenz-Schritt liegt ein Raster mit den gezählten Pfannen über dem Foto – passt es auf die Pfannenkanten, stimmen die Maße. Module erscheinen als schwarze Full-Black-Module exakt perspektivisch auf dem Foto. Module dürfen über eine kleine Referenzfläche hinaus gesetzt werden (z. B. bei Krüppelwalm) – maßgeblich ist die markierte Dachfläche.']
+  ] },
+  { version: '2.03', date: '2026-11-08', items: [
+    ['modplan', 'Modulplan für PV (iPad & PC)', 'Dach per Foto aufmessen: vier Ecken mit Lupe setzen, Pfannen als Referenz zählen – die App entzerrt das Dach und berechnet die Maße. Gängige Pfannentypen mit änderbaren Deckmaßen oder eigenes Maß.'],
+    ['modplace', 'Module belegen', 'Module hochkant oder quer setzen, mit Magnet (1,5 cm Fuge), Randabständen, Mehrfachauswahl und „Fläche füllen“. Unten laufen Modulanzahl und kWp mit; mehrere Dachflächen werden zusammengezählt.'],
+    ['modsave', 'Stände speichern & übernehmen', 'Zwischenstände sichern und wieder laden; mit einem Tipp gehen Module und kWp in die Berechnung. Für PV-Module können Länge, Breite und ein eigenes Bild für den Modulplan hinterlegt werden.']
+  ] },
+  { version: '2.02', date: '2026-11-08', items: [
+    ['animui', 'Lebendiger Hintergrund', 'Der Hintergrund der ganzen App bewegt sich jetzt sanft: weiche Farbflächen in Ihren Firmenfarben wandern ganz langsam. Im PDF bleibt alles ruhig.']
+  ] },
+  { version: '2.01', date: '2026-11-08', items: [
+    ['quick', 'Wärmepumpen-Auslegung', 'Bei jeder neuen Berechnung: Schnellauslegung mit Heizlast (aus Verbrauch, Baujahr oder W/m²), Heizsystem und Betriebsweise – abgeglichen auf die Wolf-Auslegung.'],
+    ['quickuse', 'Passende Wärmepumpe mit Bild', 'Die App wählt aus Ihren Produkten die passende Wärmepumpe – mit Diagramm, Bivalenz- und Inverterpunkt, Deckungsanteil und JAZ. Im PDF kurz als klar gekennzeichnete Ersteinschätzung.'],
+    ['plzte', 'PLZ, Ort und Normaußentemperatur', 'PLZ und Ort ergänzen sich automatisch; zu jeder PLZ die geschätzte Normaußentemperatur aus Lage und Höhe.'],
+    ['anim', 'Lebendige App', 'Animiertes Start-Haus mit Tag und Nacht, Wetter, Jahreszeiten, Feiertags-Schmuck – und überall stimmige Darstellung auf iPhone, Android, iPad und PC.']
+  ] },
+  { version: '1.67', date: '2026-11-08', items: [
+    ['prodstage', 'Bilder aller Wärmepumpen', 'In der Schnellauslegung und in der Einschätzung im PDF erscheint jetzt bei jeder gewählten Wärmepumpe ihr Bild – nicht nur bei Geräten, die schon in der Berechnung stehen.']
+  ] },
+  { version: '1.66', date: '2026-11-08', items: [
+    ['prodstage', 'Mit Produktbild', 'Die vorgeschlagene Wärmepumpe erscheint mit Bild aus Ihren Produkten – in der App und in der Einschätzung im PDF. Wärmepumpen aller Hersteller aus „Produkte“ stehen zur Auswahl.']
+  ] },
+  { version: '1.65', date: '2026-11-08', items: [
+    ['quickuse', 'Auslegung bei den Unterlagen', 'Wurde mit unserer Schnellauslegung ausgelegt, steht sie im Schritt „Angebot“ anstelle des Upload-Felds – klar als grobe Schätzung gekennzeichnet. Liegt schon eine eigene Auslegung (z. B. von Wolf) als Unterlage bei, bleibt diese maßgeblich.'],
+    ['quick', 'Heizlast berechnen gut sichtbar', 'Der Bereich „Heizlast berechnen“ ist jetzt farbig hervorgehoben und öffnet sich automatisch, solange noch keine Heizlast eingetragen ist.'],
+    ['prodpage', 'Kurz und klar im PDF', 'Im PDF steht die Auslegung kurz als „Erste Einschätzung zur Wärmepumpe“ – mit deutlichem Hinweis: grobe Schätzung, keine Heizlastberechnung. Abschaltbar in der Seitenauswahl.']
+  ] },
+  { version: '1.64', date: '2026-11-08', items: [
+    ['quick', 'Heizsystem wie bei Wolf', 'Betriebsweise (monovalent, monoenergetisch, bivalent …), Solarthermie, EVU-Sperrzeit und Heizkreise (Heizkörper / Fußbodenheizung / beides) mit Vorlauftemperatur.'],
+    ['quickuse', 'Passende Wärmepumpe', 'Die App wählt aus Ihren Produkten die passende Wärmepumpe: Diagramm mit Bivalenz- und Inverterpunkt, Deckungsanteil, JAZ, Wärme- und Strombedarf, Umweltwärme – abgeglichen auf die Wolf-Auslegung.'],
+    ['prodpage', 'Technische Auslegung im PDF', 'Die Auslegung erscheint als eigene Seite im PDF. Nach dem Hochladen eines Angebots wird automatisch ausgelegt, wenn Verbrauch und PLZ bekannt sind.']
+  ] },
+  { version: '1.63', date: '2026-11-08', items: [
+    ['quick', 'Zirkulation wie bei Wolf', 'Mit Zirkulationspumpe sinkt die Heizlast jetzt genauso wie bei der Wolf-Auslegung (3.000 l Öl, Hasbergen: ohne 13,7 kW, mit 12,5 kW). Ja/Nein-Auswahl deutlich farbig markiert.']
+  ] },
+  { version: '1.62', date: '2026-11-08', items: [
+    ['quick', 'Heizlast wie bei Wolf', 'Die Berechnung aus dem Verbrauch ist auf die Wolf-Auslegung abgeglichen (gleiche Eingaben → gleiche Heizlast, z. B. 3.000 l Öl in Hasbergen: 13,7 kW). Die Zirkulationspumpe senkt die Heizlast wie dort.'],
+    ['quickuse', 'Baujahr der Heizung', 'Neu: Baujahr der bisherigen Heizung (vor 1980, 1980–1995, seit 1995) – ältere Kessel haben einen geringeren Nutzungsgrad. Dazu Mittelwert des Verbrauchs und breitere Eingabefelder.']
+  ] },
+  { version: '1.61', date: '2026-11-08', items: [
+    ['plz', 'PLZ und Ort ergänzen sich', 'PLZ eintippen – der Ort wird ergänzt (bei mehreren Ortsteilen zur Auswahl). Ort eintippen – passende PLZ werden vorgeschlagen. Beim Kunden, im Unternehmen und in der Schnellauslegung.'],
+    ['plzte', 'Normaußentemperatur je PLZ', 'Zu jeder Postleitzahl zeigt die App die geschätzte Normaußentemperatur – aus Lage und Höhe des Ortes. Sie fließt direkt in die Schnellauslegung ein.']
+  ] },
+  { version: '1.60', date: '2026-11-08', items: [
+    ['quick', 'Schnellauslegung ausgebaut', 'Neu aufgebaut: Neubau/Bestand, Ein-/Mehrfamilienhaus, Standort-PLZ mit Normaußentemperatur, Dämmstandard mit Heizgrenztemperatur und Heizlast mit Regler.'],
+    ['quickuse', 'Heizlast berechnen', 'Heizlast unbekannt? Aus dem Verbrauch der letzten drei Jahre, aus Baujahr und Sanierungen (Fenster, Dach, Fassade, Kellerdecke) oder über W/m² ermitteln – dazu Warmwasser-Komfort, Zirkulation, Heizsystem und Sperrzeit.']
+  ] },
+  { version: '1.59', date: '2026-11-08', items: [
+    ['quick', 'Wärmepumpen-Schnellauslegung', 'Bei „Neue Berechnung“ fragt die App, ob zuerst eine Schnellauslegung gemacht werden soll: Wohnfläche, Gebäudestandard, Heizsystem und Personen ergeben Heizlast, empfohlene Geräteleistung und erwartete JAZ – live berechnet.'],
+    ['quickuse', 'Direkt übernommen', 'Mit einem Tipp entsteht daraus eine Wärmepumpen- oder PV + WP-Berechnung mit eingetragener Leistung und JAZ. Im Bereich „Neue Wärmepumpe“ sehen Sie die Auslegung und können neu auslegen.']
+  ] },
+  { version: '1.58', date: '2026-11-08', items: [
+    ['xmas', 'Weihnachtsmann und Rentier', 'Zur Weihnachtszeit zieht ab und zu der Weihnachtsmann mit dem Schlitten über den Himmel, und im Hintergrund taucht ein Rentier mit leuchtend roter Nase auf.'],
+    ['easter', 'Ostern', 'Rund um Ostern liegen bunte Eier im Gras und hängen am Baum, und ein Osterhase hoppelt über die Wiese hin und her.'],
+    ['halloween', 'Halloween', 'Vom 20. Oktober bis 1. November flackern Kürbisse an der Tür, Fledermäuse flattern in Wellen vorbei und ein kleines Gespenst kreist durchs Bild.'],
+    ['hometab', 'Alles einstellbar', 'Unter Einstellungen → Startseite & Wetter → Feiertags-Schmuck: Weihnachten, Ostern und Halloween jeweils Automatisch, Immer an (zum Testen) oder Aus.']
+  ] },
+  { version: '1.57', date: '2026-11-08', items: [
+    ['xmas', 'Weihnachtsschmuck', 'Vom 1. Dezember bis 6. Januar ist das Haus festlich geschmückt: Lichterkette, Kranz an der Tür und Tannenbaum mit Stern. Zum Testen lässt er sich jederzeit einschalten.'],
+    ['seasons', 'Jahreszeiten zum Sehen', 'Im Herbst fliegen Blätter, im Frühling Blüten und Blumen auf der Wiese, im Sommer Vögel, im Winter Raureif und Flocken. Gewitter mit Blitz.'],
+    ['hometab', 'Neuer Reiter „Startseite & Wetter“', 'Vorschau, Wetter, Jahreszeit und Weihnachtsschmuck jetzt gesammelt unter Einstellungen. Behoben: rote Striche bei Regen und die „Schneeflocke“ beim Winter.']
+  ] },
+  { version: '1.56', date: '2026-11-08', items: [
+    ['wxsnow', 'Wetter auf der Startseite', 'Das Haus zeigt jetzt Sonne, Wolken, Regen, Schnee, Wind, Gewitter oder Nebel – mit Schnee auf Dach und Wiese.'],
+    ['wxset', 'Echt oder selbst gewählt', 'Unter Einstellungen → Ansicht: Regler „Echte Wetterdaten“ holt das aktuelle Wetter für die Firmen-PLZ oder den Handy-Standort. Aus: Wetter und Jahreszeit selbst wählen. Die Bäume wechseln mit der Jahreszeit.']
+  ] },
+  { version: '1.55', date: '2026-11-08', items: [
+    ['layout', 'Passt auf jedes Gerät', 'Neu abgestimmt für iPhone und Android (hoch und quer), Foldables, iPad und PC: Im Querformat stehen Text und Haus nebeneinander, die Kopfleiste nimmt keinen Platz weg und nichts verschwindet hinter der Kamera-Aussparung.']
+  ] },
+  { version: '1.54', date: '2026-11-08', items: [
+    ['countscroll', 'Zahlen zählen jedes Mal neu', 'Scrollt eine Zahl aus dem Bild und wieder hinein, baut sie sich erneut von 0 auf.']
+  ] },
+  { version: '1.53', date: '2026-11-08', items: [
+    ['daynight', 'Tag und Nacht besser sichtbar', 'Sonne und Mond wechseln jetzt, während das Haus ganz zu sehen ist – am Ende steht die Sonne oben bzw. der Mond am Himmel, ohne dass das Bild schon weggescrollt ist. Der Sonnenschein ist rund und ohne Kante.']
+  ] },
+  { version: '1.52', date: '2026-11-08', items: [
+    ['daynight', 'Tag und Nacht beim Scrollen', 'Im Dunkel-Modus geht beim Herunterscrollen die Sonne unter, der Mond auf und im Haus geht das Licht an – im hellen Modus genau umgekehrt.'],
+    ['carhome', 'E-Auto auf der Startseite', 'Das Start-Haus hat jetzt Carport, E-Auto und Wallbox – mit fließendem Ladestrom. Die Sternschnuppen fliegen nun richtig herum.'],
+    ['countscroll', 'Zahlen bauen sich auf', 'Kennzahlen zählen von 0 hoch, sobald sie beim Scrollen ins Bild kommen.']
+  ] },
+  { version: '1.51', date: '2026-11-08', items: [
+    ['anim', 'Die App bewegt sich', 'Auf der Startseite geht die Sonne auf, Wolken ziehen, der Lüfter der Wärmepumpe dreht sich, die Solarmodule glänzen und im Dunkel-Modus fliegen Sternschnuppen.'],
+    ['animui', 'Sanfte Übergänge', 'Seiten und Kundenkarten blenden weich ein, Kennzahlen zählen hoch und Knöpfe geben beim Tippen nach. Wer am Gerät „Bewegung reduzieren“ eingestellt hat, bekommt alles ruhig.']
+  ] },
+  { version: '1.50', date: '2026-11-08', items: [
+    ['update', 'Aktualisieren klappt zuverlässig', '„Jetzt aktualisieren“ holt die neue Version jetzt direkt vom Server und startet die App frisch – auch auf dem iPhone. Ihre Daten bleiben erhalten.']
+  ] },
+  { version: '1.49', date: '2026-11-08', items: [
+    ['kbd', 'Zahlen oder Buchstaben', 'Zahlenfelder öffnen weiter die Zahlentastatur – über den Knopf „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben und zurück. Text wie „ca. 3.000 Liter“ wird als 3.000 gelesen.'],
+    ['prodsort', 'Produkte sortieren', 'Unter „Produkte“ sortieren nach Hersteller (Standard), Art oder Name – übersichtlich in Gruppen.']
+  ] },
+  { version: '1.47', date: '2026-11-08', items: [
+    ['prodstage', 'Produkte freigestellt', 'Produktbilder ohne Hintergrund stehen jetzt auf einer Bühne mit Lichtschein und Schatten – ohne weißen Kasten, im hellen und dunklen PDF.'],
+    ['prodauto', 'Produkte automatisch übernommen', 'Wird ein Produkt aus Ihrer Datenbank im Angebot erkannt, übernimmt die App sofort alle Angaben: Name, Leistung bzw. Kapazität, Garantie, Bild, Maße. Eine Wärmepumpe wird nur zugeordnet, wenn ihre Leistung zum Angebot passt.']
+  ] },
+  { version: '1.46', date: '2026-11-08', items: [
+    ['prodpage', 'Seite „Ihre Komponenten“', 'Neue PDF-Seite mit Bild, Kennwerten, Garantie und Ihrem Text zu jedem ausgewählten Produkt – in beiden PDF-Varianten.'],
+    ['prodedit', 'Produkte erweitert', 'Kopieren-Knopf, Kategorie Heizstab (mit Einschraubtiefe), Kapazität und Ladezyklen bei Speichern, MPP-Tracker bei Wechselrichtern, Garantie und freier Text für alle. Listenpreis entfällt.'],
+    ['prodmatch', 'Bessere Produkterkennung', 'Größen wie „10 kWh“ oder „12 kW“ müssen jetzt übereinstimmen – so wird die richtige Variante einer Serie erkannt.']
+  ] },
+  { version: '1.45', date: '2026-11-07', items: [
+    ['stats', 'Abschlussquote', 'Neue Kennzahlen in der Kundenübersicht: Kunden mit Berechnung, Abschlüsse, Abschlussquote in % und archivierte Kunden.']
+  ] },
+  { version: '1.44', date: '2026-11-07', items: [
+    ['won', 'Auftrag gewonnen?', 'Neuer Knopf auf jeder Kundenkarte – springt direkt zur Unterschrift im Projekt.'],
+    ['restore', 'Kunden-Archiv', 'Kunden werden jetzt archiviert statt gelöscht (mit Rückfrage). Im Filter „Archiv“ stellen Sie sie wieder her – endgültiges Löschen gibt es nur dort, mit 5 Sekunden „Wiederherstellen“.'],
+    ['back', 'Zurück-Knopf', 'Oben auf jeder Seite: aus der Kundenansicht zurück zu allen Kunden, aus Einstellungen und Produkten zurück zur Übersicht.']
+  ] },
+  { version: '1.43', date: '2026-11-07', items: [
+    ['amortfin', 'Amortisation mit Finanzierung', 'Drittes Feld bei der Amortisation – im Projekt unter „Finanzierung“ ein- und ausschaltbar.']
+  ] },
+  { version: '1.42', date: '2026-11-07', items: [
+    ['finance', 'Finanzierung verständlicher', 'Neu als Rechnung: neue Energiekosten + Kreditrate = Ihre monatlichen Kosten mit Finanzierung – direkt verglichen mit heute.'],
+    ['signauto', 'Unterschrift sofort gespeichert', 'Sobald unterschrieben ist, wird die Unterschrift automatisch übernommen und beide Haken werden gesetzt.'],
+    ['estimate', 'Solarstrom als Schätzwert', 'Erzeugter Strom steht jetzt überall als „ca.“ und ist auf volle 100 kWh abgerundet – damit niemand auf eine exakte Zahl festgelegt wird.']
+  ] },
+  { version: '1.41', date: '2026-11-07', items: [
+    ['version', 'Versionsnummern', 'Die App zeigt jetzt ihre Versionsnummer – unten auf jeder Seite, im Update-Hinweis und unter Einstellungen → Ansicht.'],
+    ['archive', 'Versionsarchiv', 'Alle bisherigen Versionen mit ihren Änderungen auf einen Blick – unter Einstellungen → Ansicht → Versionsarchiv.'],
+    ['tutorial', 'Tutorial aktualisiert', 'Neue Schritte zu App-Installation, Vertriebs-PDF, Rabatt-Fenster, Finanzierung, E-Mail-Versand und Updates – unter Einstellungen → Ansicht & Tutorial.']
+  ] },
+  { version: '1.40', date: '2026-11-07', items: [
+    ['house', 'Neues Deckblatt-Haus', 'Klassisch oder modern, Licht an oder aus. PV, Wärmepumpe, Speicher und E-Auto mit Wallbox erscheinen automatisch, wenn sie zum Angebot gehören.'],
+    ['sign', 'Schönere Unterschriftsfelder', 'Im dunklen PDF mit hellem Hintergrund – Form, Farbe und Stärke einstellbar. Ort und Datum in Handschrift.'],
+    ['reviews', '„Das sagen Kunden“', 'Neue letzte Seite mit Ihren Kundenbewertungen – pflegen unter Einstellungen → Dokument & Verkauf.'],
+    ['discount', 'Sonderrabatt nicht vergessen', 'Vor jeder PDF erscheint ein Fenster: Rabatt prüfen, Layout wählen, fertig.']
+  ] }
+];
+const WHATS_NEW = { version: RELEASES[0].version, id: RELEASES[0].version, date: RELEASES[0].date };
+const verNum = v => { const [a, b] = String(v || '0').split('.').map(Number); return (a || 0) * 1000 + (b || 0); };
+WN_IMG.version = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="22" y="26" width="76" height="28" rx="14" fill="#1C2530" stroke="#3FA98C" stroke-width="1.2"/><text x="60" y="44.5" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">Version ${RELEASES[0].version}</text></svg>`;
+WN_IMG.tutorial = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="30" y="12" width="60" height="56" rx="8" fill="#1C2530"/><rect x="50" y="20" width="20" height="20" rx="5" fill="#232E3A"/><path d="M56 30 h8 M60 26 v8" stroke="#C9D3DD" stroke-width="2" stroke-linecap="round"/><rect x="40" y="46" width="40" height="3" rx="1.5" fill="#C9D3DD"/><rect x="45" y="52" width="30" height="2.4" rx="1.2" fill="#5A6878"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${50 + i * 5}" cy="61" r="1.4" fill="${i === 1 ? '#3FA98C' : '#5A6878'}"/>`).join('')}</svg>`;
+WN_BG.estimate = '#F5F7FA'; WN_BG.prodsort = '#141B24'; WN_BG.kbd = '#F5F7FA'; WN_BG.update = '#141B24'; WN_BG.layout = '#141B24'; WN_BG.wxsnow = '#060B16';
+WN_BG.xmas = '#060B16'; WN_BG.seasons = '#A9D4F5'; WN_BG.hometab = '#141B24';
+const wnHouse = (opt, set) => {
+  const keep = { ...PERSONAL }; Object.assign(PERSONAL, { wxMode: 'preset' }, set);
+  const h = houseSVG({ anim: true, car: true, ...opt }).replace(' data-sky="1"', '');
+  Object.keys(set).concat('wxMode').forEach(k => { PERSONAL[k] = keep[k]; });
+  return `<div style="width:100%;height:100%" class="hero-anim">${h}</div>`;
+};
+WN_IMG.xmas = () => wnHouse({ dawn: true }, { wxKind: 'snow', wxSeason: 'winter', xmas: 'on' });
+WN_BG.easter = '#A9D4F5'; WN_BG.modplan = '#141B24'; WN_BG.modplace = '#141B24'; WN_BG.modsave = '#141B24';
+WN_IMG.modplan = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><polygon points="22,62 42,28 82,27 100,62" fill="#B5553D"/>${[[22,62],[42,28],[82,27],[100,62]].map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="4" fill="#3FA98C" stroke="#fff"/><text x="${x}" y="${y+2}" font-size="4.5" fill="#fff" text-anchor="middle">${i+1}</text>`).join('')}<circle cx="100" cy="18" r="13" fill="#000" stroke="#fff" stroke-width="1.5"/><path d="M94 18h12M100 12v12" stroke="#ff3b30"/></svg>`;
+WN_IMG.modplace = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="10" y="10" width="100" height="56" fill="#B5553D"/>${[0,1,2,3,4,5].map(c=>[0,1].map(r=>`<rect x="${16+c*15}" y="${15+r*24}" width="14" height="22" fill="#16223E" stroke="${c===2&&r===1?'#3FA98C':'#9fb'}" stroke-width="${c===2&&r===1?1.6:.4}"/>`).join('')).join('')}<text x="60" y="76" font-size="5.5" fill="#fff" text-anchor="middle">12 Module · 5,16 kWp</text></svg>`;
+WN_IMG.modsave = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${['Stand 2 · 29 Module','Stand 1 · 24 Module'].map((t,i)=>`<rect x="12" y="${12+i*16}" width="96" height="12" rx="3" fill="#1C2530"/><text x="16" y="${20+i*16}" font-size="5" fill="#fff">${t}</text><text x="104" y="${20+i*16}" font-size="5" fill="#3FA98C" text-anchor="end">Laden</text>`).join('')}<rect x="20" y="52" width="80" height="14" rx="7" fill="#3FA98C"/><text x="60" y="61" font-size="5.5" font-weight="700" fill="#fff" text-anchor="middle">In Berechnung übernehmen</text></svg>`; WN_BG.plz = '#141B24'; WN_BG.plzte = '#141B24';
+WN_IMG.plz = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="8" y="10" width="34" height="14" rx="3" fill="#1C2530" stroke="#3FA98C"/><text x="13" y="20" font-size="6.5" fill="#fff">49545</text><rect x="46" y="10" width="66" height="14" rx="3" fill="#1C2530" stroke="#2E3A47"/><text x="51" y="20" font-size="6.5" fill="#fff">Tecklenburg</text><rect x="46" y="28" width="66" height="40" rx="4" fill="#1C2530"/>${['49545 Tecklenburg', '49549 Ladbergen', '49525 Lengerich'].map((t, i) => `<text x="51" y="${40 + i * 11}" font-size="5.2" fill="${i ? '#9AA8B6' : '#fff'}">${t}</text>`).join('')}</svg>`;
+WN_IMG.plzte = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><path d="M10 62 L40 30 L58 46 L78 18 L110 62Z" fill="#1C2530" stroke="#2E3A47"/><circle cx="78" cy="18" r="3" fill="#7FD3FF"/><text x="82" y="16" font-size="6" font-weight="700" fill="#7FD3FF">−15,6 °C</text><circle cx="22" cy="50" r="3" fill="#3FA98C"/><text x="12" y="74" font-size="6" font-weight="700" fill="#3FA98C">−9,7 °C</text></svg>`; WN_BG.quick = '#141B24'; WN_BG.quickuse = '#141B24';
+WN_IMG.quick = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${['160 m²', 'Saniert', '45 °C', '4 Pers.'].map((t, i) => `<rect x="8" y="${8 + i * 16}" width="44" height="12" rx="3" fill="#1C2530" stroke="#2E3A47"/><text x="12" y="${16 + i * 16}" font-size="5.5" fill="#fff">${t}</text>`).join('')}<rect x="60" y="8" width="52" height="60" rx="5" fill="#1C2530"/><text x="64" y="20" font-size="4.6" fill="#9AA8B6">Heizlast</text><text x="108" y="20" font-size="5.2" font-weight="700" fill="#fff" text-anchor="end">9,6 kW</text><text x="64" y="32" font-size="4.6" fill="#9AA8B6">Warmwasser</text><text x="108" y="32" font-size="5.2" font-weight="700" fill="#fff" text-anchor="end">1,0 kW</text><line x1="64" y1="38" x2="108" y2="38" stroke="#2E3A47"/><text x="64" y="48" font-size="4.6" fill="#3FA98C">Empfohlen</text><text x="108" y="49" font-size="7" font-weight="700" fill="#3FA98C" text-anchor="end">10,1 kW</text><text x="64" y="61" font-size="4.6" fill="#9AA8B6">JAZ</text><text x="108" y="61" font-size="5.2" font-weight="700" fill="#fff" text-anchor="end">3,80</text></svg>`;
+WN_IMG.quickuse = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="10" y="12" width="100" height="22" rx="5" fill="#3FA98C"/><text x="60" y="26" font-size="7" font-weight="700" fill="#fff" text-anchor="middle">Als Wärmepumpe anlegen</text><rect x="10" y="42" width="100" height="26" rx="5" fill="#1C2530" stroke="#3FA98C" stroke-opacity=".5"/><text x="16" y="53" font-size="5" fill="#9AA8B6">Heizleistung</text><text x="104" y="54" font-size="6.5" font-weight="700" fill="#fff" text-anchor="end">10,1 kW</text><text x="16" y="63" font-size="5" fill="#9AA8B6">JAZ</text><text x="104" y="64" font-size="6.5" font-weight="700" fill="#fff" text-anchor="end">3,80</text></svg>`; WN_BG.halloween = '#060B16';
+WN_IMG.easter = () => wnHouse({ dawn: false }, { wxKind: 'sun', wxSeason: 'spring', xmas: 'off', easter: 'on', halloween: 'off' });
+WN_IMG.halloween = () => wnHouse({ dawn: true }, { wxKind: 'cloud', wxSeason: 'autumn', xmas: 'off', easter: 'off', halloween: 'on' });
+WN_IMG.seasons = () => wnHouse({ dawn: false }, { wxKind: 'wind', wxSeason: 'autumn', xmas: 'off' });
+WN_IMG.hometab = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="8" y="10" width="38" height="60" rx="4" fill="#1C2530"/>${['Ansicht', 'Startseite', 'Profil', 'Daten'].map((t, i) => `<rect x="11" y="${14 + i * 13}" width="32" height="10" rx="3" fill="${i === 1 ? '#3FA98C' : '#141B24'}"/><text x="14" y="${20.6 + i * 13}" font-size="4.6" fill="#fff">${t}</text>`).join('')}<rect x="52" y="10" width="60" height="34" rx="4" fill="#2A3B55"/><polygon points="72,26 82,18 92,26" fill="#C8553D"/><rect x="74" y="26" width="16" height="12" fill="#EEF3F7"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${73 + i * 4}" cy="27" r="1" fill="${['#FF4D4D', '#FFD34D', '#4DD2FF', '#7CFF6B', '#FF4D4D'][i]}"/>`).join('')}<rect x="52" y="50" width="28" height="8" rx="4" fill="#1C2530" stroke="#3FA98C"/><text x="56" y="55.6" font-size="4.4" fill="#fff">Schnee</text><rect x="84" y="50" width="28" height="8" rx="4" fill="#1C2530"/><text x="88" y="55.6" font-size="4.4" fill="#fff">Advent</text></svg>`; WN_BG.wxset = '#A9D4F5';
+WN_IMG.wxsnow = () => `<div style="width:100%;height:100%" class="hero-anim">${(() => { const k = PERSONAL.wxKind, m = PERSONAL.wxMode; PERSONAL.wxKind = 'snow'; PERSONAL.wxMode = 'preset'; const h = houseSVG({ dawn: true, anim: true, car: true }).replace(' data-sky="1"', ''); PERSONAL.wxKind = k; PERSONAL.wxMode = m; return h; })()}</div>`;
+WN_IMG.wxset = () => `<div style="width:100%;height:100%" class="hero-anim">${(() => { const k = PERSONAL.wxKind, m = PERSONAL.wxMode; PERSONAL.wxKind = 'rain'; PERSONAL.wxMode = 'preset'; const h = houseSVG({ dawn: false, anim: true, car: true }).replace(' data-sky="1"', ''); PERSONAL.wxKind = k; PERSONAL.wxMode = m; return h; })()}</div>`;
+WN_IMG.layout = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="6" y="14" width="24" height="44" rx="4" fill="#1C2530" stroke="#3FA98C"/><rect x="36" y="24" width="44" height="24" rx="4" fill="#1C2530" stroke="#3FA98C"/><rect x="86" y="10" width="28" height="38" rx="3" fill="#1C2530" stroke="#3FA98C"/><rect x="40" y="28" width="17" height="3" rx="1.5" fill="#fff"/><rect x="60" y="28" width="16" height="16" rx="2" fill="#E59A5C"/><rect x="10" y="20" width="16" height="3" rx="1.5" fill="#fff"/><rect x="10" y="36" width="16" height="14" rx="2" fill="#E59A5C"/><rect x="90" y="15" width="20" height="3" rx="1.5" fill="#fff"/><rect x="90" y="24" width="20" height="18" rx="2" fill="#E59A5C"/><text x="60" y="70" font-size="6" fill="#9AA8B6" text-anchor="middle">iPhone · quer · iPad · PC</text></svg>`; WN_BG.anim = '#060B16'; WN_BG.daynight = '#060B16'; WN_BG.carhome = '#A9D4F5'; WN_BG.countscroll = '#141B24';
+WN_IMG.daynight = () => `<div style="width:100%;height:100%" class="hero-anim">${houseSVG({ dawn: true, anim: true, car: true }).replace(' data-sky="1"', '').replace('class="ha-moon" opacity="0"', 'class="ha-moon" opacity="1" transform="translate(470 90)"').replace('class="ha-lit" opacity="0"', 'class="ha-lit" opacity="1"').replace('class="ha-sunpos"', 'class="ha-sunpos" transform="translate(0 120)"').replace('class="ha-night" width', 'class="ha-night" opacity=".5" width').replace('fill="#03060E" opacity="0"', 'fill="#03060E"')}</div>`;
+WN_IMG.carhome = () => `<div style="width:100%;height:100%" class="hero-anim">${houseSVG({ dawn: false, anim: true, car: true }).replace(' data-sky="1"', '')}</div>`;
+WN_IMG.countscroll = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[['0 €', 14, 0.35], ['6.240 €', 34, 0.7], ['12.480 €', 54, 1]].map(([t, y, o]) => `<rect x="14" y="${y - 10}" width="92" height="15" rx="4" fill="#1C2530"/><text x="60" y="${y + 0.5}" font-size="7.5" font-weight="700" fill="#3FA98C" opacity="${o}" text-anchor="middle">${t}</text>`).join('')}<path d="M110 16 V60" stroke="#3FA98C" stroke-width="1.5" stroke-dasharray="2 3"/><path d="M107 56 L110 62 L113 56" fill="none" stroke="#3FA98C" stroke-width="1.5"/></svg>`; WN_BG.animui = '#141B24';
+WN_IMG.anim = () => `<div style="width:100%;height:100%" class="hero-anim">${houseSVG({ dawn: true, anim: true })}</div>`;
+WN_IMG.animui = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[0, 1, 2].map(i => `<rect x="12" y="${10 + i * 22}" width="96" height="16" rx="4" fill="#1C2530" opacity="${1 - i * 0.3}" transform="translate(0 ${i * 3})"/><rect x="18" y="${15 + i * 22 + i * 3}" width="${40 - i * 8}" height="3" rx="1.5" fill="#fff" opacity="${0.9 - i * 0.25}"/><text x="96" y="${21 + i * 22 + i * 3}" font-size="6" font-weight="700" fill="#3FA98C" text-anchor="end">${['12.480 €', '8.300 €', '2.100 €'][i]}</text>`).join('')}</svg>`;
+WN_IMG.update = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><circle cx="60" cy="32" r="14" fill="none" stroke="#3FA98C" stroke-width="3" stroke-dasharray="70 18"/><path d="M70 20 l4 -6 l3 8 z" fill="#3FA98C"/><rect x="14" y="56" width="92" height="16" rx="5" fill="#1C2530"/><text x="20" y="66" font-size="5.2" font-weight="700" fill="#fff">Version 1.50</text><rect x="64" y="59" width="38" height="10" rx="5" fill="#3FA98C"/><text x="68" y="65.6" font-size="4.4" font-weight="700" fill="#fff">Aktualisieren</text></svg>`;
+WN_IMG.kbd = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="10" y="14" width="100" height="16" rx="4" fill="#fff" stroke="#D5DCE3"/><text x="15" y="25" font-size="6" fill="#1B2733">ca. 3.000</text><text x="92" y="25" font-size="5" fill="#8A96A3">Liter</text><rect x="70" y="4" width="40" height="8" rx="4" fill="#3FA98C"/><text x="74" y="9.6" font-size="4.4" font-weight="700" fill="#fff">ABC Buchstaben</text><rect x="6" y="38" width="108" height="38" rx="4" fill="#D9DEE4"/>${[0,1,2].map(r=>[0,1,2].map(c=>`<rect x="${12+c*34}" y="${42+r*11}" width="30" height="9" rx="2" fill="#fff"/><text x="${25+c*34}" y="${48.6+r*11}" font-size="5.4" fill="#1B2733">${r*3+c+1}</text>`).join('')).join('')}</svg>`;
+WN_IMG.prodsort = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[['Hersteller', 1], ['Art', 0], ['Name', 0]].map(([t, on], i) => `<rect x="${8 + i * 36}" y="10" width="${t.length * 3 + 10}" height="10" rx="5" fill="#1C2530" stroke="${on ? '#3FA98C' : '#2E3A47'}"/><text x="${13 + i * 36}" y="16.8" font-size="4.6" fill="#ffffff">${t}</text>`).join('')}<text x="8" y="32" font-size="5.4" font-weight="700" fill="#ffffff">EcoFlow</text>${[0, 1, 2].map(i => `<rect x="${8 + i * 36}" y="36" width="32" height="18" rx="3" fill="#1C2530"/>`).join('')}<text x="8" y="64" font-size="5.4" font-weight="700" fill="#ffffff">Wolf</text><rect x="8" y="67" width="32" height="10" rx="3" fill="#1C2530"/></svg>`; WN_BG.prodstage = '#0B1118'; WN_BG.prodauto = '#141B24';
+WN_IMG.prodstage = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><defs><radialGradient id="wg" cx="50%" cy="58%" r="60%"><stop offset="0" stop-color="#3FA98C" stop-opacity=".35"/><stop offset="1" stop-color="#0B1118" stop-opacity="0"/></radialGradient><radialGradient id="ws"><stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs><rect width="120" height="80" fill="#0B1118"/><rect width="120" height="80" fill="url(#wg)"/><ellipse cx="60" cy="66" rx="30" ry="3" fill="url(#ws)"/><path d="M48 20 L72 16 L72 62 L48 66 Z" fill="#9AA3AD"/><path d="M48 20 L72 16 L72 22 L48 26 Z" fill="#C9D0D6"/></svg>`;
+WN_IMG.prodauto = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="8" y="14" width="44" height="52" rx="5" fill="#1C2530"/><text x="13" y="26" font-size="4.6" fill="#8A97A6">Angebot</text><rect x="13" y="31" width="34" height="3" rx="1.5" fill="#C9D3DD"/><rect x="13" y="38" width="26" height="3" rx="1.5" fill="#5A6878"/><path d="M56 40 h10 m-4 -4 l4 4 l-4 4" stroke="#3FA98C" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="70" y="14" width="44" height="52" rx="5" fill="#173A33" stroke="#3FA98C"/><text x="75" y="26" font-size="4.6" fill="#3FA98C">Produkt</text>${['Name', 'Kapazität', 'Garantie', 'Bild'].map((t, i) => `<text x="75" y="${36 + i * 7}" font-size="4.4" fill="#ffffff">✓ ${t}</text>`).join('')}</svg>`; WN_BG.prodpage = '#F5F7FA'; WN_BG.prodedit = '#141B24'; WN_BG.prodmatch = '#141B24';
+WN_IMG.prodpage = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[[8, 'Speicher'], [62, 'Wechselrichter']].map(([x, k]) => `<rect x="${x}" y="10" width="50" height="60" rx="5" fill="#ffffff"/><rect x="${x + 14}" y="15" width="22" height="22" rx="3" fill="#6B7785"/><text x="${x + 4}" y="46" font-size="4.2" font-weight="700" fill="#0E7C66">${k}</text><rect x="${x + 4}" y="50" width="40" height="3" rx="1.5" fill="#0F2A3D"/><rect x="${x + 4}" y="56" width="30" height="2.4" rx="1.2" fill="#C9D3DD"/><rect x="${x + 4}" y="61" width="34" height="2.4" rx="1.2" fill="#9ED3C4"/>`).join('')}</svg>`;
+WN_IMG.prodedit = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="14" y="10" width="92" height="60" rx="6" fill="#1C2530"/>${['Kapazität  15 kWh', 'Ladezyklen  6.000', 'Garantie  15 Jahre'].map((t, i) => `<text x="22" y="${26 + i * 11}" font-size="5.6" fill="#C9D3DD">${t}</text>`).join('')}<rect x="22" y="56" width="30" height="9" rx="4.5" fill="#232E3A"/><text x="37" y="62" text-anchor="middle" font-size="4.4" fill="#ffffff">Kopieren</text></svg>`;
+WN_IMG.prodmatch = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[['Ocean 2 Speicher 5 kWh', false], ['Ocean 2 Speicher 10 kWh', true], ['Ocean 2 Speicher 15 kWh', false]].map(([t, on], i) => `<rect x="12" y="${12 + i * 20}" width="96" height="15" rx="4" fill="${on ? '#173A33' : '#1C2530'}" ${on ? 'stroke="#3FA98C"' : ''}/><text x="20" y="${22 + i * 20}" font-size="5.4" fill="${on ? '#ffffff' : '#8A97A6'}">${t}</text>`).join('')}</svg>`; WN_BG.stats = '#141B24';
+WN_IMG.stats = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[['Erhalten', '24'], ['Abschlüsse', '9'], ['Quote', '38 %'], ['Archiv', '3']].map(([k, v], i) => `<rect x="${6 + (i % 2) * 55}" y="${10 + Math.floor(i / 2) * 32}" width="53" height="28" rx="4" fill="${i === 2 ? '#173A33' : '#1C2530'}"/><text x="${11 + (i % 2) * 55}" y="${20 + Math.floor(i / 2) * 32}" font-size="4.6" fill="#8A97A6">${k}</text><text x="${11 + (i % 2) * 55}" y="${31 + Math.floor(i / 2) * 32}" font-size="8.5" font-weight="700" fill="${i === 2 ? '#3FA98C' : '#ffffff'}">${v}</text>`).join('')}</svg>`; WN_BG.restore = '#141B24';
+WN_IMG.restore = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="8" y="46" width="104" height="22" rx="5" fill="#1C2530"/><text x="14" y="59.5" font-size="5.2" font-weight="700" fill="#ffffff">„Kunde“ gelöscht.</text><rect x="70" y="51" width="38" height="11" rx="5.5" fill="#ECEFF3"/><text x="89" y="58.3" text-anchor="middle" font-size="4.3" font-weight="600" fill="#0A0E13">Wiederherstellen</text><rect x="8" y="66" width="62" height="2" fill="#3FA98C"/></svg>`; WN_BG.won = '#141B24'; WN_BG.back = '#141B24';
+WN_IMG.won = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="12" y="10" width="96" height="60" rx="7" fill="#1C2530"/><circle cx="26" cy="24" r="7" fill="#2E8A78"/><rect x="38" y="20" width="44" height="4" rx="2" fill="#C9D3DD"/><rect x="38" y="27" width="30" height="3" rx="1.5" fill="#5A6878"/><rect x="20" y="48" width="80" height="13" rx="6.5" fill="#232E3A" stroke="#3FA98C"/><text x="60" y="56.8" text-anchor="middle" font-size="5.4" font-weight="700" fill="#ffffff">Auftrag gewonnen?</text></svg>`;
+WN_IMG.back = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/><rect x="20" y="28" width="56" height="20" rx="6" fill="#1C2530"/><path d="M34 38 h-7 m3 -3.5 l-3.5 3.5 l3.5 3.5" stroke="#ffffff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="38" y="40.6" font-size="7" font-weight="600" fill="#ffffff">Zurück</text></svg>`; WN_BG.amortfin = '#F5F7FA';
+WN_IMG.amortfin = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[['gleichbleibend', '11,2 J.', '#ffffff', '#0F2A3D'], ['steigend', '8,7 J.', '#0E7C66', '#ffffff'], ['mit Finanzierung', '6,1 J.', '#E2F0ED', '#0F2A3D']].map(([k, v, bg, c], i) => `<rect x="${6 + i * 37}" y="24" width="34" height="32" rx="4" fill="${bg}"/><text x="${10 + i * 37}" y="33" font-size="4" fill="${c}" opacity=".8">${k}</text><text x="${10 + i * 37}" y="46" font-size="8.5" font-weight="700" fill="${c}">${v}</text>`).join('')}</svg>`; WN_BG.finance = '#F5F7FA'; WN_BG.signauto = '#F5F7FA';
+WN_IMG.finance = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/>${[[6, 'Energie', '208 €', '#ffffff', '#0F2A3D'], [44, 'Rate', '306 €', '#ffffff', '#0F2A3D'], [82, 'Gesamt', '514 €', '#0E7C66', '#ffffff']].map(([x, k, v, bg, c]) => `<rect x="${x}" y="22" width="32" height="26" rx="4" fill="${bg}"/><text x="${x + 4}" y="31" font-size="4.6" fill="${c}" opacity=".8">${k}</text><text x="${x + 4}" y="42" font-size="8" font-weight="700" fill="${c}">${v}</text>`).join('')}<text x="40" y="39" font-size="8" font-weight="700" fill="#8A97A6">+</text><text x="78" y="39" font-size="8" font-weight="700" fill="#8A97A6">=</text><text x="6" y="62" font-size="5" fill="#0E7C66" font-weight="700">41 € weniger als heute (555 €)</text></svg>`;
+WN_IMG.signauto = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="14" y="12" width="92" height="34" rx="5" fill="#ffffff" stroke="#DCE6EE"/><path d="M24 36 C32 22 38 40 46 30 S60 22 64 34 C68 40 76 26 86 32" fill="none" stroke="#1B2A4A" stroke-width="1.8" stroke-linecap="round"/>${[52, 62].map(y => `<rect x="14" y="${y}" width="6" height="6" rx="1.2" fill="#0E7C66"/><path d="M15.4 ${y + 3} l1.6 1.6 l3 -3.2" stroke="#fff" stroke-width="1.1" fill="none"/><rect x="24" y="${y + 2}" width="${y === 52 ? 70 : 50}" height="2.2" rx="1.1" fill="#C9D3DD"/>`).join('')}</svg>`;
+WN_IMG.estimate = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#F5F7FA"/><rect x="14" y="18" width="92" height="44" rx="7" fill="#ffffff"/><text x="22" y="32" font-size="5.6" fill="#64788A">Solarstrom im Jahr (geschätzt)</text><text x="22" y="50" font-size="12" font-weight="700" fill="#0F2A3D">ca. 10.500 kWh</text></svg>`;
+WN_BG.version = '#141B24'; WN_BG.tutorial = '#141B24'; WN_BG.archive = '#141B24';
+WN_IMG.archive = () => `<svg viewBox="0 0 120 80" width="100%" height="100%"><rect width="120" height="80" fill="#141B24"/>${[0, 1, 2, 3].map(i => `<text x="22" y="${22 + i * 13}" font-size="6.5" font-weight="700" fill="${i ? '#C9D3DD' : '#3FA98C'}">1.${41 - i}</text><rect x="40" y="${17 + i * 13}" width="${58 - i * 6}" height="3" rx="1.5" fill="#5A6878"/>`).join('')}</svg>`;
+function showWhatsNew(all) {
+  const seen = verNum(PERSONAL.seenRelease), list = (all ? RELEASES : RELEASES.filter(r => verNum(r.version) > seen)).slice(0, all ? 5 : 3);
+  const show = list.length ? list : [RELEASES[0]];
+  const block = r => `<div class="mono text-[12px] text-ink3 mt-6 first:mt-0">Version ${r.version} · ${deDate(r.date)}</div>
+    <div class="space-y-4 mt-3">${r.items.map(([img, t, x]) => `<div class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start"><div class="w-full sm:w-[120px] h-[130px] sm:h-[80px] shrink-0 rounded-xl overflow-hidden border border-line" style="background:${WN_BG[img] || 'transparent'}">${WN_IMG[img] ? WN_IMG[img]() : ''}</div><div class="min-w-0"><div class="font-semibold text-[15px]">${esc(t)}</div><div class="text-[13px] text-ink2 mt-0.5 leading-relaxed">${esc(x)}</div></div></div>`).join('')}</div>`;
+  modal(`<div><h3 class="h-font text-[26px] pr-8">Neu in Version ${RELEASES[0].version}</h3>${show.length > 1 ? `<p class="text-[13px] text-ink3 mt-1">Dazu die Neuerungen der letzten ${show.length - 1 === 1 ? 'Version' : show.length - 1 + ' Versionen'}.</p>` : ''}
+    <div class="mt-5">${show.map(block).join('<div class="border-t border-line mt-6"></div>')}</div>
+    <div class="flex justify-end mt-6"><button class="btn-p" data-a="modal-close">Alles klar</button></div></div>`);
+  PERSONAL.seenRelease = RELEASES[0].version; savePersonal();
+}
+function maybeWhatsNew() {
+  if (verNum(PERSONAL.seenRelease) >= verNum(RELEASES[0].version)) return;
+  if (!PERSONAL.seenRelease && !PROJECTS.length && !PERSONAL.lastBackup) { PERSONAL.seenRelease = RELEASES[0].version; savePersonal(); return; } // ganz neue Installation: nichts zeigen
+  if ($('#modal') && $('#modal').innerHTML.trim()) { setTimeout(maybeWhatsNew, 1500); return; }
+  showWhatsNew();
+}
+/* Einstellungen → Ansicht: Neuigkeiten erneut ansehen */
+const _setAnsicht17 = SET.ansicht;
+SET.ansicht = () => _setAnsicht17() + sCard('sparkle', 'Neuigkeiten', `Sie nutzen Version ${WHATS_NEW.version} vom ${deDate(WHATS_NEW.date)}`, `<div class="flex flex-wrap gap-2"><button class="btn-s" data-a="whatsnew-all">${ic('sparkle', 16)}Was ist neu?</button><button class="btn-g" data-a="archive">${ic('clock', 16)}Versionsarchiv</button></div>`);

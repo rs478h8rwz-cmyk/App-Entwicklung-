@@ -1,0 +1,6 @@
+private/config.php
+private/sessions/
+dist/
+private/mail.php
+private/pfiles/
+private/files/

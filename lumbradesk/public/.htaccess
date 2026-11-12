@@ -1,0 +1,27 @@
+# LumbraDesk – Webserver-Einstellungen (IONOS / Apache)
+Options -Indexes
+RewriteEngine On
+# Immer HTTPS
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Wetter und PVGIS für die Wirtschaftlichkeits-App (früher Netlify-Weiterleitung)
+RewriteRule ^(wetter|pvgis)/(.*)$ proxy.php?svc=$1&path=$2 [QSA,L]
+# Stempeluhr und Abnahme nutzen dieselben Bibliotheken wie die Wirtschaftlichkeit
+RewriteRule ^(stempel|abnahme)/vendor/(.*)$ rechner/vendor/$2 [L]
+# Server-Ordner (Zugangsdaten, Sitzungen) nie ausliefern
+RewriteRule ^private(/|$) - [F]
+# Versteckte Dateien sperren
+RewriteRule (^|/)\. - [F]
+<FilesMatch "\.(ini|log|sql)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "same-origin"
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+</IfModule>
+<FilesMatch "\.(html|js|css)$">
+  Header set Cache-Control "no-cache"
+</FilesMatch>

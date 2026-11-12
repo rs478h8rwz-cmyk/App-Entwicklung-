@@ -1,0 +1,18 @@
+{
+  "hinweis": "Firmenweite Vorgaben – gelten für alle Mitarbeiter. Firmensitz bestimmt die Feiertage (bundesland: NI = Niedersachsen). Betriebsurlaub: von/bis (inklusive), abzug=true zieht die Tage vom Urlaubsanspruch ab. stand: Datum dieser Vorgabe – neuere Änderungen vom Büro (in der App) haben Vorrang.",
+  "betriebsurlaub": [
+    {
+      "name": "Betriebsurlaub Weihnachten",
+      "von": "2026-12-18",
+      "bis": "2027-01-04",
+      "abzug": true
+    }
+  ],
+  "firmensitz": {
+    "name": "Frühauf Solar",
+    "strasse": "Im Hamme 1",
+    "ort": "49205 Hasbergen",
+    "bundesland": "NI"
+  },
+  "stand": "2026-11-10T00:00:00.000Z"
+}

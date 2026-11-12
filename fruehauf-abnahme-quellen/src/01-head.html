@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Frühauf – Abnahme & Service</title>
+<meta name="description" content="Baustellen-Abnahme und Serviceprotokolle für DC, AC und SHK">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0A0E13">
+<meta name="color-scheme" content="dark light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Abnahme">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="vendor/fonts.css">
+<script src="vendor/tailwind.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['var(--fb)', 'system-ui', 'sans-serif'], head: ['var(--fh)', 'Georgia', 'serif'], mono: ['var(--fm)', 'ui-monospace', 'monospace'] },
+      colors: {
+        p: 'rgb(var(--p-rgb) / <alpha-value>)', s: 'rgb(var(--s-rgb) / <alpha-value>)',
+        ink: 'var(--ink)', ink2: 'var(--ink2)', ink3: 'var(--ink3)',
+        bg: 'var(--bg)', card: 'var(--card)', raised: 'var(--raised)', field: 'var(--field)', line: 'var(--line)', line2: 'var(--line2)',
+        ember: 'var(--old)', tred: 'var(--t-red)', tyel: 'var(--t-yel)', tgrn: 'var(--p-light)', 'yel-ink': 'var(--yel-ink)', 'red-ink': 'var(--red-ink)'
+      }
+    }
+  }
+}
+</script>
+<style>
+:root{
+  --p:#0E7C66; --p-rgb:14 124 102; --s:#F5A524; --s-rgb:245 165 36; --old:#D9482B;
+  --p-light:rgba(14,124,102,.16); --yel-ink:#F2C46B; --red-ink:#F08A6E;
+  --ink:#ECEFF3; --ink2:#A7B2BE; --ink3:#76828F; --bg:#0A0E13; --card:#10161D; --raised:#171E27; --field:#0C1117;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12); --t-red:rgba(217,72,43,.14); --t-yel:rgba(245,165,36,.13);
+  --btn:#ECEFF3; --btn-ink:#0A0E13; --btn-h:#ffffff; --hl:#0F2E2A;
+  --fb:"Geist"; --fh:"Instrument Serif"; --fm:"Geist Mono"; --hw:400; --r:14px; --rb:10px;
+  --ease:cubic-bezier(0.22,1,0.36,1);
+}
+html,body{-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
+body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom);background:var(--bg);color:var(--ink);font-family:var(--fb),system-ui,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+input,select,textarea,button{font-family:inherit}
+select option{background:var(--card);color:var(--ink)}
+@media (pointer:coarse){ input,select,textarea{font-size:16px!important} }
+.h-font{font-family:var(--fh),Georgia,serif;font-weight:var(--hw);letter-spacing:-0.01em}
+.mono{font-family:var(--fm),ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
+input[type=checkbox]{accent-color:rgb(var(--p-rgb));width:18px;height:18px}
+input[type=date],input[type=time]{color-scheme:var(--scheme,dark)}
+input.inp[type=date],input.inp[type=time]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;text-align:left}
+input.inp[type=date]::-webkit-date-and-time-value,input.inp[type=time]::-webkit-date-and-time-value{text-align:left;margin:0}
+label{min-width:0}
+:focus-visible{outline:2px solid rgb(var(--p-rgb)/.6);outline-offset:2px}
+.fade-in{animation:fi .32s var(--ease)}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#toasts{top:calc(env(safe-area-inset-top) + 12px)!important}
+button,a,[data-a],.chip,.btn-p,.btn-s,.btn-g,.opt{touch-action:manipulation}
+input,textarea,select{touch-action:auto!important;-webkit-user-select:text;user-select:text}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 14px;border-radius:var(--rb);border:1px solid var(--line2);background:var(--field);color:var(--ink);text-align:left;font-size:15px;font-weight:500;transition:border-color .15s,background-color .15s,transform .12s}
+.opt:active{transform:scale(.99)}
+.opt .dot{width:20px;height:20px;border-radius:999px;border:2px solid var(--line2);flex-shrink:0;display:grid;place-items:center}
+.opt.on{border-color:rgb(var(--p-rgb));background:rgb(var(--p-rgb)/.10)}
+.opt.on .dot{border-color:rgb(var(--p-rgb));background:rgb(var(--p-rgb))}
+.opt.on .dot:after{content:"";width:7px;height:7px;border-radius:9px;background:#fff}
+.sig-wrap{position:relative;border-radius:var(--r);background:#fff;border:1px solid var(--line2);overflow:hidden}
+.sig-wrap canvas{display:block;width:100%;height:220px;touch-action:none}
+.sig-wrap .ph{position:absolute;inset:0;display:grid;place-items:center;color:#9AA7B3;font-size:14px;pointer-events:none}
+.sig-wrap .base{position:absolute;left:20px;right:20px;bottom:44px;border-top:1px dashed #C8D2DA;pointer-events:none}
+.prog{height:4px;border-radius:9px;background:var(--line2);overflow:hidden}
+.prog>i{display:block;height:100%;background:rgb(var(--p-rgb));border-radius:9px;transition:width .35s var(--ease)}
+.thumbs{display:grid;place-items:center;padding:22px;border-radius:var(--r);background:rgb(var(--p-rgb)/.08);color:rgb(var(--p-rgb))}
+</style>
+<style type="text/tailwindcss">
+@layer components{
+  .card{@apply bg-card rounded-[var(--r)] border border-line;box-shadow:inset 0 1px 0 rgba(255,255,255,var(--hi,.03));}
+  .btn-p{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,transform] duration-150 select-none whitespace-nowrap active:scale-[.98] disabled:opacity-40;background:var(--btn);color:var(--btn-ink);}
+  .btn-p:hover{background:var(--btn-h)}
+  .btn-s{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-5 h-11 font-medium text-[14px] transition-[background-color,transform] duration-150 select-none whitespace-nowrap bg-raised text-ink border border-line2 hover:border-ink3 active:scale-[.98] disabled:opacity-40;}
+  .btn-g{@apply inline-flex items-center justify-center gap-2 rounded-[var(--rb)] px-3 h-9 font-medium text-[13px] transition-colors duration-150 text-ink2 hover:bg-raised hover:text-ink disabled:opacity-30;}
+  .lbl{@apply block text-[13px] font-medium text-ink2 mb-2;}
+  .inp{@apply w-full h-11 rounded-[var(--rb)] bg-field border border-line2 px-4 text-[15px] text-ink outline-none transition-[border-color,box-shadow] duration-150 focus:border-p focus:ring-4 focus:ring-p/15 placeholder:text-ink3;}
+  .inp-req{@apply border-ember ring-4 ring-[rgba(217,72,43,0.14)];}
+  textarea.inp{@apply h-auto py-3 leading-relaxed;}
+  .hint{@apply text-[12px] text-ink3 mt-2 leading-snug;}
+  .badge{@apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium;}
+  .chip{@apply inline-flex items-center gap-1.5 rounded-[var(--rb)] px-3 h-8 text-[13px] font-medium bg-raised border border-line2 text-ink2 transition-colors duration-150 hover:border-p hover:text-ink;}
+  .seg{@apply inline-flex p-1 rounded-[var(--rb)] bg-field border border-line gap-1;}
+  .seg>button{@apply rounded-[calc(var(--rb)-3px)] px-4 h-9 text-[13px] font-medium text-ink3 transition-colors duration-150 whitespace-nowrap hover:text-ink2;}
+  .seg>button.on{@apply bg-raised text-ink;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px var(--line2);}
+  .sec-t{@apply text-[20px] text-ink leading-tight;font-family:var(--fh),Georgia,serif;font-weight:var(--hw);}
+  .navl{@apply inline-flex items-center gap-2 rounded-[var(--rb)] px-3 h-9 text-[14px] font-medium text-ink2 transition-colors duration-150 hover:text-ink hover:bg-raised whitespace-nowrap;}
+  .navl.on{@apply bg-raised text-ink;box-shadow:0 0 0 1px var(--line2);}
+  .icon-box{@apply w-9 h-9 rounded-[var(--rb)] bg-raised border border-line text-ink2 grid place-items-center shrink-0;}
+  .kpi{@apply rounded-[calc(var(--r)-4px)] bg-raised p-4;}
+}
+</style>
+</head>
+<body class="min-h-screen antialiased">
+<div id="app"></div>
+<div id="toasts" class="fixed top-3 left-1/2 -translate-x-1/2 z-[80] flex flex-col items-center gap-2 pointer-events-none w-[92vw] max-w-md"></div>
+<div id="modal"></div>
+<script>
