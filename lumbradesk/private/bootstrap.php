@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '3.4';
+const LD_VERSION = '4.0';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -17,6 +17,7 @@ const LD_APPS = [
 /* Neue Funktionen: erst für alle frei, wenn der Admin den Haken setzt (Admins sehen sie immer zum Testen) */
 const LD_FEATURES = [
   'angebote' => ['Angebote per Sprache', 'Angebote mit Positionen beim Kunden, Produktdatenbank, Leistungen & Pakete, Knopf „Angebot“ in der Wirtschaftlichkeit'],
+  'rechnungen' => ['Rechnungen & Mahnwesen', 'Rechnungen, Abschlags- und Schlussrechnungen aus dem Angebot, E-Rechnung (XRechnung) und Mahnungen'],
   'markieren' => ['Logbuch: Kollegen markieren', 'Beim Logbuch-Eintrag Kollegen markieren – sie bekommen die Nachricht per E-Mail'],
 ];
 function ld_flags(): array {

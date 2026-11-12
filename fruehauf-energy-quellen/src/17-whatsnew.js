@@ -15,6 +15,11 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.0', date: '2026-11-12', items: [
+    ['crm', 'Angebot: PDF hochladen oder selbst erstellen', 'Im Schritt „Angebot“ wählen Sie: vorhandenes Angebot als PDF hinzufügen – oder das Angebot direkt in lumbra.desk erstellen (auch per Sprache). Ein Tipp auf „Übernehmen“ holt Preis, Nummer, kWp, Module, Speicher und Wärmepumpe in die Berechnung; bei PV + Wärmepumpe aufgeteilt nach Positionen.'],
+    ['prodpage', 'Angebote mit festen und bedingten Positionen', 'In lumbra.desk unter „Leistungen & Pakete“: Pakete je Angebotsart (PV oder Wärmepumpe) – „immer im Angebot“ oder „nur wenn“ eine Kategorie bzw. ein bestimmtes Produkt gewählt ist. Dazu Textbausteine für Einleitung, Schluss und Zahlungsbedingungen sowie Produktbilder im PDF.'],
+    ['stats', 'Rechnungen, E-Rechnung und Mahnwesen', 'Aus dem Angebot entstehen Rechnung, Abschlags- und Schlussrechnung; Nummernkreise für Angebote und Rechnungen legen Sie selbst fest. Jede Rechnung gibt es auch als E-Rechnung (XRechnung), offene Posten werden mit Zahlungserinnerung und Mahnungen verfolgt.']
+  ] },
   { version: '2.45', date: '2026-11-12', items: [
     ['quick', 'Aufstellort direkt in der Schnellauslegung', 'Die Wärmepumpen-Schnellauslegung hat jetzt Abschnitt 5 „Aufstellort & Abstand“: Bundesland aus der PLZ, Abstand zur Grundstücksgrenze nach Landesbauordnung und die TA-Lärm-Werte. Das Bundesland wird in den Kunden übernommen.'],
     ['house', 'Auch im Kunden', 'Im Schritt „Daten“ steht die Karte „Aufstellort & Abstand zum Nachbarn“ direkt unter „Neue Wärmepumpe“ – mit Rechner für den nötigen Abstand zum Nachbarfenster.']

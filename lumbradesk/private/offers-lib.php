@@ -18,6 +18,13 @@ function of_tables(): void {
   if (!in_array('pm', $ic, true)) $pdo->exec("ALTER TABLE offer_items ADD COLUMN pm VARCHAR(6) NOT NULL DEFAULT 'netto', ADD COLUMN pausch TINYINT(1) NOT NULL DEFAULT 0");
   if (!in_array('kind', $ic, true)) $pdo->exec("ALTER TABLE offer_items ADD COLUMN kind VARCHAR(10) NOT NULL DEFAULT 'leistung', ADD COLUMN maker VARCHAR(120) NOT NULL DEFAULT ''");
   $pdo->exec("CREATE TABLE IF NOT EXISTS offer_packages (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, name VARCHAR(200) NOT NULL, trig VARCHAR(20) NOT NULL DEFAULT 'mod', pos_lines MEDIUMTEXT NOT NULL, active TINYINT(1) NOT NULL DEFAULT 1) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $pc = array_column($pdo->query('SHOW COLUMNS FROM offer_packages')->fetchAll(), 'Field');
+  if (!in_array('otype', $pc, true)) {   // 3.0: Angebotsart, immer/wenn, Bedingung (Kategorien oder Produkte)
+    $pdo->exec("ALTER TABLE offer_packages ADD COLUMN otype VARCHAR(6) NOT NULL DEFAULT 'alle', ADD COLUMN mode VARCHAR(6) NOT NULL DEFAULT 'wenn', ADD COLUMN cond TEXT NULL");
+    foreach ($pdo->query('SELECT id, trig FROM offer_packages')->fetchAll() as $r) $pdo->prepare('UPDATE offer_packages SET cond = ?, otype = ? WHERE id = ?')->execute([json_encode(['cats' => [$r['trig']], 'items' => []]), $r['trig'] === 'wp' ? 'wp' : ($r['trig'] === 'mod' ? 'pv' : 'alle'), $r['id']]);
+  }
+  $ic2 = array_column($pdo->query('SHOW COLUMNS FROM offer_items')->fetchAll(), 'Field');
+  if (!in_array('img', $ic2, true)) $pdo->exec("ALTER TABLE offer_items ADD COLUMN img VARCHAR(64) NOT NULL DEFAULT ''");
   $pdo->exec("CREATE TABLE IF NOT EXISTS offers (id VARCHAR(40) PRIMARY KEY, project_id VARCHAR(40) NOT NULL, nr VARCHAR(40) NOT NULL DEFAULT '', title VARCHAR(200) NOT NULL DEFAULT '', status VARCHAR(12) NOT NULL DEFAULT 'entwurf', data MEDIUMTEXT NOT NULL, net DECIMAL(12,2) NOT NULL DEFAULT 0, gross DECIMAL(12,2) NOT NULL DEFAULT 0, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_by INT UNSIGNED NULL, deleted TINYINT(1) NOT NULL DEFAULT 0, INDEX (project_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
   $pdo->exec("CREATE TABLE IF NOT EXISTS ld_numbers (k VARCHAR(40) PRIMARY KEY, n INT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB");
   /* Startbestand: typische Leistungen eines PV/WP-Betriebs (Preise bitte anpassen) */
@@ -51,7 +58,7 @@ function of_tables(): void {
 function of_catalog(): array {
   of_tables(); $out = [];
   foreach (db()->query('SELECT * FROM offer_items WHERE active = 1 ORDER BY kind DESC, cat, name')->fetchAll() as $r)
-    $out[] = ['id' => 'i' . $r['id'], 'kind' => $r['kind'], 'name' => $r['name'], 'maker' => (string)$r['maker'], 'descr' => (string)$r['descr'], 'unit' => $r['unit'], 'price' => (float)$r['price'], 'tax' => (float)$r['tax'], 'cat' => $r['cat'], 'words' => $r['words'], 'power' => $r['power'] !== null ? (float)$r['power'] : null, 'pm' => $r['pm'], 'pausch' => (bool)$r['pausch']];
+    $out[] = ['id' => 'i' . $r['id'], 'kind' => $r['kind'], 'name' => $r['name'], 'maker' => (string)$r['maker'], 'descr' => (string)$r['descr'], 'unit' => $r['unit'], 'price' => (float)$r['price'], 'tax' => (float)$r['tax'], 'cat' => $r['cat'], 'words' => $r['words'], 'power' => $r['power'] !== null ? (float)$r['power'] : null, 'pm' => $r['pm'], 'pausch' => (bool)$r['pausch'], 'img' => (string)($r['img'] ?? '')];
   return $out;
 }
 /* Einmalig übernehmen: Produkte aus der Wirtschaftlichkeit in die Angebots-Produktdatenbank kopieren (danach unabhängig) */
@@ -69,7 +76,7 @@ function of_import_rechner(): int {
 }
 function of_packages(): array {
   of_tables();
-  return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'trig' => $r['trig'], 'lines' => json_decode($r['pos_lines'], true) ?: [], 'active' => (bool)$r['active']], db()->query('SELECT * FROM offer_packages ORDER BY id')->fetchAll());
+  return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'trig' => $r['trig'], 'otype' => $r['otype'] ?? 'alle', 'mode' => $r['mode'] ?? 'wenn', 'cond' => (json_decode((string)($r['cond'] ?? ''), true) ?: ['cats' => [$r['trig']], 'items' => []]) + ['cats' => [], 'items' => []], 'lines' => json_decode($r['pos_lines'], true) ?: [], 'active' => (bool)$r['active']], db()->query('SELECT * FROM offer_packages ORDER BY id')->fetchAll());
 }
 function of_item_save(array $b): array {
   of_tables(); $id = (int)preg_replace('/\D/', '', (string)($b['id'] ?? '')); $kind = ($b['kind'] ?? '') === 'produkt' ? 'produkt' : 'leistung';
@@ -77,25 +84,24 @@ function of_item_save(array $b): array {
   $pow = isset($b['power']) && $b['power'] !== '' && $b['power'] !== null && is_numeric($b['power']) ? (float)$b['power'] : null;
   $v = [$kind, mb_substr(trim((string)($b['name'] ?? '')), 0, 200), mb_substr(trim((string)($b['maker'] ?? '')), 0, 120), mb_substr(trim((string)($b['descr'] ?? '')), 0, 2000), mb_substr(trim((string)($b['unit'] ?? 'Stk')), 0, 20) ?: 'Stk', round((float)($b['price'] ?? 0), 4), in_array((float)($b['tax'] ?? 19), [0.0, 7.0, 19.0], true) ? (float)$b['tax'] : 19, $cat, mb_substr(mb_strtolower(trim((string)($b['words'] ?? ''))), 0, 300), $pow, ($b['pm'] ?? '') === 'brutto' ? 'brutto' : 'netto', !empty($b['pausch']) ? 1 : 0];
   if ($v[1] === '') fail('Bitte einen Namen eingeben.', 400);
+  $img = preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string)($b['img'] ?? '')) ? $b['img'] : '';
+  if ($id) db()->prepare('UPDATE offer_items SET img = ? WHERE id = ?')->execute([$img, $id]);
   if ($id) db()->prepare('UPDATE offer_items SET kind = ?, name = ?, maker = ?, descr = ?, unit = ?, price = ?, tax = ?, cat = ?, words = ?, power = ?, pm = ?, pausch = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')->execute(array_merge($v, [$id]));
-  else { db()->prepare('INSERT INTO offer_items (kind, name, maker, descr, unit, price, tax, cat, words, power, pm, pausch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($v); $id = (int)db()->lastInsertId(); }
+  else { db()->prepare('INSERT INTO offer_items (kind, name, maker, descr, unit, price, tax, cat, words, power, pm, pausch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($v); $id = (int)db()->lastInsertId(); db()->prepare('UPDATE offer_items SET img = ? WHERE id = ?')->execute([$img, $id]); }
   return ['id' => 'i' . $id];
 }
 function of_package_save(array $b): void {
   of_tables(); $id = (int)($b['id'] ?? 0); $name = mb_substr(trim((string)($b['name'] ?? '')), 0, 200); if ($name === '') fail('Bitte einen Namen eingeben.', 400);
-  $trig = isset(OF_CATS[$b['trig'] ?? '']) ? $b['trig'] : 'mod';
-  $lines = array_values(array_filter(array_map(fn($l) => ['item' => (string)($l['item'] ?? ''), 'rule' => in_array($l['rule'] ?? '', ['fix', 'perMod', 'perKwp'], true) ? $l['rule'] : 'fix', 'qty' => max(0, (float)($l['qty'] ?? 1))], (array)($b['lines'] ?? [])), fn($l) => $l['item'] !== ''));
-  $json = json_encode($lines); $act = empty($b['off']) ? 1 : 0;
-  if ($id) db()->prepare('UPDATE offer_packages SET name = ?, trig = ?, pos_lines = ?, active = ? WHERE id = ?')->execute([$name, $trig, $json, $act, $id]);
-  else db()->prepare('INSERT INTO offer_packages (name, trig, pos_lines, active) VALUES (?, ?, ?, ?)')->execute([$name, $trig, $json, $act]);
+  $otype = in_array($b['otype'] ?? '', ['pv', 'wp', 'alle'], true) ? $b['otype'] : 'alle'; $mode = ($b['mode'] ?? '') === 'immer' ? 'immer' : 'wenn';
+  $c = (array)($b['cond'] ?? []); $cond = ['cats' => array_values(array_filter((array)($c['cats'] ?? []), fn($k) => isset(OF_CATS[$k]))), 'items' => array_values(array_filter(array_map('strval', (array)($c['items'] ?? [])), fn($v) => (bool)preg_match('/^i?\d+$/', $v)))];
+  if ($mode === 'wenn' && !$cond['cats'] && !$cond['items']) fail('Bitte eine Bedingung wählen (Kategorie oder Produkt) – oder „immer“.', 400);
+  $lines = array_values(array_filter(array_map(fn($l) => ['item' => (string)($l['item'] ?? ''), 'rule' => in_array($l['rule'] ?? '', ['fix', 'perMod', 'perKwp', 'perKw'], true) ? $l['rule'] : 'fix', 'qty' => max(0, (float)($l['qty'] ?? 1))], (array)($b['lines'] ?? [])), fn($l) => $l['item'] !== ''));
+  if (!$lines) fail('Bitte mindestens eine Position hinzufügen.', 400);
+  $json = json_encode($lines); $act = empty($b['off']) ? 1 : 0; $trig = $cond['cats'][0] ?? 'mod'; $cj = json_encode($cond);
+  if ($id) db()->prepare('UPDATE offer_packages SET name = ?, trig = ?, pos_lines = ?, active = ?, otype = ?, mode = ?, cond = ? WHERE id = ?')->execute([$name, $trig, $json, $act, $otype, $mode, $cj, $id]);
+  else db()->prepare('INSERT INTO offer_packages (name, trig, pos_lines, active, otype, mode, cond) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$name, $trig, $json, $act, $otype, $mode, $cj]);
 }
-function of_number(): string {
-  of_tables(); $k = 'AN-' . gmdate('Y'); $pdo = db(); $pdo->beginTransaction();
-  $st = $pdo->prepare('SELECT n FROM ld_numbers WHERE k = ? FOR UPDATE'); $st->execute([$k]); $n = $st->fetchColumn();
-  if ($n === false) { $n = 0; $pdo->prepare('INSERT INTO ld_numbers (k, n) VALUES (?, 0)')->execute([$k]); }
-  $n = (int)$n + 1; $pdo->prepare('UPDATE ld_numbers SET n = ? WHERE k = ?')->execute([$n, $k]); $pdo->commit();
-  return $k . '-' . str_pad((string)$n, 4, '0', STR_PAD_LEFT);
-}
+function of_number(): string { require_once __DIR__ . '/belege-lib.php'; return num_take('an'); }
 function of_out(array $r, bool $full = true): array {
   $n = user_names();
   return ['id' => $r['id'], 'project' => $r['project_id'], 'nr' => $r['nr'], 'title' => $r['title'], 'status' => $r['status'], 'net' => (float)$r['net'], 'gross' => (float)$r['gross'],
@@ -111,13 +117,13 @@ function of_save(array $u, array $b): array {
   foreach (array_slice((array)($d['pos'] ?? []), 0, 300) as $x) {
     if (!is_array($x)) continue;
     $pos[] = ['item' => mb_substr((string)($x['item'] ?? ''), 0, 40), 'name' => mb_substr(trim((string)($x['name'] ?? '')), 0, 300), 'descr' => mb_substr(trim((string)($x['descr'] ?? '')), 0, 2000), 'qty' => round((float)($x['qty'] ?? 0), 2), 'unit' => mb_substr((string)($x['unit'] ?? 'Stk'), 0, 20),
-      'price' => round((float)($x['price'] ?? 0), 4), 'tax' => in_array((float)($x['tax'] ?? 19), [0.0, 7.0, 19.0], true) ? (float)$x['tax'] : 19, 'pkg' => !empty($x['pkg']), 'pm' => ($x['pm'] ?? '') === 'brutto' ? 'brutto' : 'netto', 'pausch' => !empty($x['pausch']), 'cat' => mb_substr((string)($x['cat'] ?? ''), 0, 10)];
+      'price' => round((float)($x['price'] ?? 0), 4), 'tax' => in_array((float)($x['tax'] ?? 19), [0.0, 7.0, 19.0], true) ? (float)$x['tax'] : 19, 'pkg' => !empty($x['pkg']), 'pm' => ($x['pm'] ?? '') === 'brutto' ? 'brutto' : 'netto', 'pausch' => !empty($x['pausch']), 'cat' => mb_substr((string)($x['cat'] ?? ''), 0, 10), 'img' => preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string)($x['img'] ?? '')) ? $x['img'] : '', 'power' => isset($x['power']) && is_numeric($x['power']) ? (float)$x['power'] : null];
   }
   $disc = max(0, min(100, (float)($d['discount'] ?? 0)));
   $net = 0; $tax = [];   // je Position netto oder brutto (Steuer enthalten)
   foreach ($pos as $x) { $t = $x['tax'] / 100; $l = $x['pm'] === 'brutto' ? $x['qty'] * round($x['price'] * (1 + $t), 2) / (1 + $t) : $x['qty'] * $x['price']; $l *= 1 - $disc / 100; $net += $l; $tax[(string)$x['tax']] = ($tax[(string)$x['tax']] ?? 0) + $l * $t; }
   $gross = $net + array_sum($tax);
-  $data = ['pos' => $pos, 'discount' => $disc, 'intro' => mb_substr((string)($d['intro'] ?? ''), 0, 4000), 'outro' => mb_substr((string)($d['outro'] ?? ''), 0, 4000), 'valid' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['valid'] ?? '')) ? $d['valid'] : '', 'spoken' => mb_substr((string)($d['spoken'] ?? ''), 0, 4000)];
+  $data = ['pos' => $pos, 'discount' => $disc, 'intro' => mb_substr((string)($d['intro'] ?? ''), 0, 4000), 'outro' => mb_substr((string)($d['outro'] ?? ''), 0, 4000), 'valid' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['valid'] ?? '')) ? $d['valid'] : '', 'spoken' => mb_substr((string)($d['spoken'] ?? ''), 0, 4000), 'otype' => in_array($d['otype'] ?? '', ['pv', 'wp', 'pvwp'], true) ? $d['otype'] : 'pv', 'pay' => mb_substr((string)($d['pay'] ?? ''), 0, 4000), 'imgs' => !empty($d['imgs'])];
   $status = isset(OF_STATUS[$b['status'] ?? '']) ? $b['status'] : 'entwurf'; $title = mb_substr(trim((string)($b['title'] ?? '')), 0, 200) ?: 'Angebot';
   $id = (string)($b['id'] ?? '');
   if ($id !== '' && valid_id($id)) {

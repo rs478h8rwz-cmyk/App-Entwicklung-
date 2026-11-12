@@ -4071,7 +4071,7 @@ const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
   ['download', '1 · LumbraDesk aufs Handy', 'Öffnen Sie lumbradesk.de und legen Sie es auf den Home-Bildschirm – iPhone: Safari → Teilen → „Zum Home-Bildschirm“, Android: Chrome → Menü ⋮ → „App installieren“. Angemeldet bleiben Sie auch ohne Internet bis zu 14 Tage.'],
   ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Abschnitt 5 zeigt zur PLZ, wie nah die Außeneinheit nach Landesbauordnung an die Grundstücksgrenze darf. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Zusätzlich gibt es den „Modulplan“ – auch auf dem Handy: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen – „Füllen“ spart Dachfenster, Schornstein & Co. automatisch aus, „Maximal“ holt die größte Modulzahl heraus. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
-  ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
+  ['upload', '3 · Angebot hochladen oder erstellen', 'Ziehen Sie das Angebot als PDF oder Foto hinein – oder erstellen Sie es mit „Selbst erstellen“ in lumbra.desk und holen es per „Übernehmen“ in die Berechnung. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung; darunter zeigt „Aufstellort & Abstand“ die Regel der Landesbauordnung für das Bundesland des Kunden (z. B. NRW: an die Grenze, Niedersachsen: grundsätzlich 3 m) und den nötigen Abstand zum Nachbarfenster nach TA Lärm. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
   ['file', '6 · PDF erstellen', 'Vor jeder PDF prüfen Sie kurz den Sonderrabatt und wählen die komplette PDF oder die kompakte Vertriebs-PDF. Danach senden Sie sie per E-Mail – oder der Kunde unterschreibt direkt auf dem Gerät; die Unterschrift wird sofort gespeichert und die Haken gesetzt.'],
@@ -4260,7 +4260,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261112193338';
+const APP_VERSION = '20261112200106';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4310,7 +4310,10 @@ function guideCard() {
     + sec('3 · Dach planen nur mit dem Handy',
       ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch), dann <b>Pfanne &amp; Deckmaß prüfen</b> und <b>Mit Karte abgleichen</b> – bzw. Maß eingeben. Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'],
       ['Kunde öffnen → Photovoltaik → <b>Modulplan erstellen</b>.', '<b>Foto aufnehmen</b>, die vier Punkte auf die Dachecken ziehen (Rad „fein“ für genaues Setzen).', '<b>Referenz</b>: Pfannen zählen (oder automatisch), dann <b>Pfanne &amp; Deckmaß prüfen</b> und <b>Mit Karte abgleichen</b> – bzw. Maß eingeben. Einstellungen über das Zahnrad.', '<b>Füllen</b> (spart Dachfenster, Schornstein & Co. aus) oder <b>Maximal</b> für die größte Anzahl – oder doppelt tippen zum Setzen → <b>Übernehmen</b>. Quer halten gibt mehr Platz.'])
-    + sec('4 · App aktualisieren',
+    + sec('4 · Angebot erstellen und abrechnen',
+      ['Kunde öffnen → Schritt <b>Angebot</b> → <b>Selbst erstellen</b> (öffnet lumbra.desk).', 'Ins Handy sprechen, z. B. „20 Module, 10er Speicher, Wallbox“ – feste Positionen und Pakete kommen automatisch dazu; Mengen anpassen, Texte wählen, <b>Speichern</b>.', 'Zurück in der Wirtschaftlichkeit: <b>Übernehmen</b> – Preis, kWp, Speicher und Wärmepumpe stehen in der Berechnung.', 'Auftrag erhalten? Im Angebot <b>Rechnung erstellen</b> → Abschlag, Rechnung oder Schlussrechnung → <b>Festschreiben</b> → PDF bzw. E-Rechnung senden. Offene Posten unter <b>Rechnungen</b>.'],
+      ['Kunde öffnen → Schritt <b>Angebot</b> → <b>Selbst erstellen</b> (öffnet lumbra.desk).', 'Ins Handy sprechen, z. B. „20 Module, 10er Speicher, Wallbox“ – feste Positionen und Pakete kommen automatisch dazu; Mengen anpassen, Texte wählen, <b>Speichern</b>.', 'Zurück in der Wirtschaftlichkeit: <b>Übernehmen</b> – Preis, kWp, Speicher und Wärmepumpe stehen in der Berechnung.', 'Auftrag erhalten? Im Angebot <b>Rechnung erstellen</b> → Abschlag, Rechnung oder Schlussrechnung → <b>Festschreiben</b> → PDF bzw. E-Rechnung senden. Offene Posten unter <b>Rechnungen</b>.'])
+    + sec('5 · App aktualisieren',
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.'],
       ['Gibt es eine neue Version, erscheint unten <b>„Neue Version verfügbar“</b>.', 'Auf <b>Jetzt aktualisieren</b> tippen – Ihre Daten bleiben erhalten.']));
 }
@@ -4675,6 +4678,11 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.0', date: '2026-11-12', items: [
+    ['crm', 'Angebot: PDF hochladen oder selbst erstellen', 'Im Schritt „Angebot“ wählen Sie: vorhandenes Angebot als PDF hinzufügen – oder das Angebot direkt in lumbra.desk erstellen (auch per Sprache). Ein Tipp auf „Übernehmen“ holt Preis, Nummer, kWp, Module, Speicher und Wärmepumpe in die Berechnung; bei PV + Wärmepumpe aufgeteilt nach Positionen.'],
+    ['prodpage', 'Angebote mit festen und bedingten Positionen', 'In lumbra.desk unter „Leistungen & Pakete“: Pakete je Angebotsart (PV oder Wärmepumpe) – „immer im Angebot“ oder „nur wenn“ eine Kategorie bzw. ein bestimmtes Produkt gewählt ist. Dazu Textbausteine für Einleitung, Schluss und Zahlungsbedingungen sowie Produktbilder im PDF.'],
+    ['stats', 'Rechnungen, E-Rechnung und Mahnwesen', 'Aus dem Angebot entstehen Rechnung, Abschlags- und Schlussrechnung; Nummernkreise für Angebote und Rechnungen legen Sie selbst fest. Jede Rechnung gibt es auch als E-Rechnung (XRechnung), offene Posten werden mit Zahlungserinnerung und Mahnungen verfolgt.']
+  ] },
   { version: '2.45', date: '2026-11-12', items: [
     ['quick', 'Aufstellort direkt in der Schnellauslegung', 'Die Wärmepumpen-Schnellauslegung hat jetzt Abschnitt 5 „Aufstellort & Abstand“: Bundesland aus der PLZ, Abstand zur Grundstücksgrenze nach Landesbauordnung und die TA-Lärm-Werte. Das Bundesland wird in den Kunden übernommen.'],
     ['house', 'Auch im Kunden', 'Im Schritt „Daten“ steht die Karte „Aufstellort & Abstand zum Nachbarn“ direkt unter „Neue Wärmepumpe“ – mit Rechner für den nötigen Abstand zum Nachbarfenster.']
@@ -5403,6 +5411,76 @@ main{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
   #modal>div,#modal .card{max-height:none}
 }
 </style>`);
+/* ---------- Angebot: PDF hochladen ODER in lumbra.desk erstellen und übernehmen (Wirtschaftlichkeit 3.0) ----------
+   Ein in lumbra.desk erstelltes Angebot liefert Preis, Nummer, kWp, Module, Speicher und Wärmepumpe direkt –
+   ohne PDF-Erkennung. Bei PV + Wärmepumpe wird der Preis nach Positionen aufgeteilt (Kategorie „Wärmepumpe“ → WP-Anteil). */
+const LDOF = {};
+async function ldOffersLoad(pid, force) {
+  if (!(typeof LD === 'object' && LD.on && (LD.features || {}).angebote)) return null;
+  if (LDOF[pid] && !force && Date.now() - LDOF[pid].at < 30000) return LDOF[pid].list;
+  const r = await ldApi('of-list&p=' + encodeURIComponent(pid)); LDOF[pid] = { at: Date.now(), list: r.ok && r.j ? r.j.offers || [] : [] }; return LDOF[pid].list;
+}
+function ldOfferFacts(o) {
+  const d = o.data || {}, f = 1 - (+d.discount || 0) / 100, pos = d.pos || [];
+  const gross = p => { const t = (+p.tax || 0) / 100, u = p.pm === 'brutto' ? Math.round(p.price * (1 + t) * 100) / 100 : p.price * (1 + t); return u * p.qty * f; };
+  const kwOf = p => +p.power > 0 ? +p.power : (m => m ? +m[1].replace(',', '.') : 0)(/(\d+(?:[.,]\d+)?)\s*kW(?!h|p)/i.exec(p.name || ''));   // Leistung oder aus dem Namen („9 kW“)
+  const mods = pos.filter(p => p.cat === 'mod' && +p.power >= 100), bats = pos.filter(p => p.cat === 'bat' && +p.power > 0);
+  const wps = pos.filter(p => p.cat === 'wp' && !/montage|demontage|installation|entsorgung|hydraulik/i.test(p.name || '') && (kwOf(p) > 0 || /wärmepumpe|waermepumpe/i.test(p.name || '')));
+  const kwp = Math.round(mods.reduce((a, p) => a + p.qty * p.power, 0) / 10) / 100;
+  return {
+    gross: o.gross, grossWP: Math.round(pos.filter(p => p.cat === 'wp').reduce((a, p) => a + gross(p), 0) * 100) / 100,
+    kwp: kwp || null, modules: mods.map(p => `${numFmt(p.qty)} × ${numFmt(p.power)} Wp ${p.name}`).join(' + '), bat: bats.reduce((a, p) => a + p.qty * p.power, 0) || null,
+    hpKw: wps.length ? kwOf(wps[0]) || null : null, hpModel: wps.length ? wps[0].name : '', number: o.nr, date: String(o.created || '').slice(0, 10)
+  };
+}
+const numFmt = n => String(Math.round(n * 100) / 100).replace('.', ',');
+function ldOfferApply(p, o) {
+  const r = ldOfferFacts(o);
+  if (p.type === 'pvwp') { setFrom(p, 'offer.grossWP', r.grossWP || null); setFrom(p, 'offer.grossPV', Math.round((r.gross - (r.grossWP || 0)) * 100) / 100); }
+  else setFrom(p, 'offer.gross', r.gross);
+  setFrom(p, 'offer.number', r.number); setFrom(p, 'offer.date', r.date);
+  if (hasPV(p) && r.kwp) { p.offerPv = { kwp: r.kwp, modules: r.modules, n: modCount(r.modules), w: modWatt(r.modules) }; if (!(p.roof && p.roof.applied)) { setFrom(p, 'pv.kwp', r.kwp); setFrom(p, 'pv.modules', r.modules); } }
+  if (hasPV(p)) setFrom(p, 'pv.bat', r.bat);
+  if (hasWP(p)) { setFrom(p, 'hp.kw', r.hpKw); setFrom(p, 'hp.model', r.hpModel); }
+  p.ldOffer = { id: o.id, nr: o.nr, gross: o.gross, at: Date.now() };
+  saveProject(p);
+  return r;
+}
+async function ldOfferTake(p, oid) {
+  const r = await ldApi('of-get&id=' + encodeURIComponent(oid)); if (!r.ok || !r.j) throw new Error((r.j && r.j.error) || 'Angebot nicht gefunden');
+  if (r.j.project !== p.id) throw new Error('Das Angebot gehört zu einem anderen Kunden.');
+  const f = ldOfferApply(p, r.j);
+  toast(`Angebot ${r.j.nr} übernommen: ${eur(r.j.gross)}${f.kwp ? ` · ${num(f.kwp, 2)} kWp` : ''}${f.bat ? ` · Speicher ${num(f.bat, 1)} kWh` : ''}${f.hpKw ? ` · WP ${num(f.hpKw, 1)} kW` : ''}${p.type === 'pvwp' ? ' – Aufteilung PV/WP bitte prüfen' : ''}.`, 'ok', 6000);
+}
+/* Auswahl im Schritt „Angebot“ */
+function ldOfferChoice(p) {
+  if (!(typeof LD === 'object' && LD.on && (LD.features || {}).angebote)) return '';
+  const L = LDOF[p.id] ? LDOF[p.id].list : null; if (!L) setTimeout(() => ldOffersLoad(p.id).then(() => { if (curProject() && curProject().id === p.id) render(); }), 0);
+  const cur = p.ldOffer && p.ldOffer.id;
+  return `<div class="card p-5 sm:p-6">${cardHead('file', 'Angebot', 'Vorhandenes Angebot als PDF hochladen – oder das Angebot direkt in lumbra.desk erstellen.')}
+    <div class="grid sm:grid-cols-2 gap-3">
+      <a class="rounded-[calc(var(--r)-4px)] border border-line p-4 flex items-center gap-3 hover:border-p" href="#ld-upload" data-a="ldof-up"><span class="icon-box">${ic('upload', 18)}</span><span><b class="block text-[15px]">PDF hinzufügen</b><span class="text-[13px] text-ink3">Angebot hochladen – wird automatisch erkannt</span></span></a>
+      <a class="rounded-[calc(var(--r)-4px)] border-2 border-p p-4 flex items-center gap-3" href="../#/angebot/neu/${encodeURIComponent(p.id)}"><span class="icon-box">${ic('file', 18)}</span><span><b class="block text-[15px]">Selbst erstellen</b><span class="text-[13px] text-ink3">in lumbra.desk – auch per Sprache, mit Paketen</span></span></a></div>
+    ${L === null ? '<p class="hint mt-3">Lade Angebote aus lumbra.desk …</p>' : L.length ? `<div class="mt-4"><div class="text-[13px] font-semibold mb-2">Angebote dieses Kunden in lumbra.desk</div><div class="space-y-2">${L.map(o => `<div class="flex items-center gap-3 rounded-[calc(var(--r)-4px)] bg-bg px-4 py-3"><div class="flex-1 min-w-0"><b class="text-[14px]">${esc(o.nr)} · ${esc(o.title)}</b><div class="text-[12.5px] text-ink3">${eur(o.gross)} brutto${cur === o.id ? ' · <span class="text-p font-semibold">übernommen</span>' : ''}</div></div><a class="btn-s !h-9 !px-3 !text-[13px]" href="../#/angebot/${encodeURIComponent(o.id)}">Öffnen</a><button class="btn-p !h-9 !px-3 !text-[13px]" data-a="ldof-take" data-id="${esc(o.id)}">${cur === o.id ? 'Neu übernehmen' : 'Übernehmen'}</button></div>`).join('')}</div></div>` : ''}</div>`;
+}
+const _step1Ld = step1;
+step1 = function (p) { return ldOfferChoice(p) + `<div id="ld-upload">${_step1Ld(p)}</div>`; };
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('[data-a="ldof-take"],[data-a="ldof-up"]'); if (!a) return; e.preventDefault(); e.stopImmediatePropagation();
+  const p = curProject(); if (!p) return;
+  if (a.dataset.a === 'ldof-up') { const z = $('#ld-upload'); if (z) z.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  a.disabled = true; try { await ldOfferTake(p, a.dataset.id); render(); } catch (err) { toast(err.message, 'warn'); a.disabled = false; }
+}, true);
+/* Rücksprung aus lumbra.desk: rechner/?ldOffer=<id>#projekt/<pid>/1 → automatisch übernehmen */
+(function () {
+  const oid = new URLSearchParams(location.search).get('ldOffer'); if (!oid) return;
+  history.replaceState(null, '', location.pathname + location.hash);
+  let n = 0; const t = setInterval(async () => {
+    if (++n > 60) return clearInterval(t);
+    if (!(typeof LD === 'object' && LD.ready && curProject())) return; clearInterval(t);
+    try { await ldOfferTake(curProject(), oid); delete LDOF[curProject().id]; render(); } catch (err) { toast(err.message, 'warn'); }
+  }, 500);
+})();
 /* =========================================================
    LumbraDesk: Firmen-Einstellungen für alle Geräte
    - Läuft nur, wenn die App unter LumbraDesk (…/rechner/) mit Login geöffnet ist.
@@ -8612,7 +8690,7 @@ const TUT_STEPS = [
   ['newcalc', 'Neue Berechnung starten', 'Alle Kunden sehen Sie unter „Kunden“. Für einen neuen Kunden tippen Sie oben rechts auf „Neue Berechnung“.', ['Oben auf „Kunden“ tippen.', 'Rechts oben „+ Neue Berechnung“ antippen.', 'Einen bestehenden Kunden öffnen Sie, indem Sie ihn in der Liste antippen.']],
   ['type', 'Art der Berechnung wählen', 'Wählen Sie, was der Kunde bekommt: nur Wärmepumpe, nur Photovoltaik oder beides zusammen.', ['Passende Karte antippen – z. B. „PV + Wärmepumpe“.', 'Später ändern? Im Kunden oben auf die Art (z. B. „WP“) und dann „ändern“ tippen – alle Eingaben bleiben erhalten.']],
   ['quick', 'Schnellauslegung Wärmepumpe', 'Die App fragt, ob Sie die Wärmepumpe schnell auslegen möchten. Sie geben ein paar Eckdaten ein und bekommen Heizlast und eine passende Wärmepumpe vorgeschlagen.', ['Wohnfläche, Baujahr, Verbrauch und Dämmung eintragen – oder die Heizlast direkt.', 'Rechts erscheint die Empfehlung → „Übernehmen“.', 'Später jederzeit in der Kundenübersicht: „Schnellauslegung anpassen“.']],
-  ['upload', 'Angebot hochladen', 'Ziehen Sie das Angebot als PDF hinein oder machen Sie ein Foto davon. Die App liest Kunde, Preise, Anlagendaten, Garantien und Produkte automatisch aus.', ['Auf die gestrichelte Fläche tippen und das Angebot wählen.', 'Erkannte Werte kurz prüfen – sie sind mit „aus Angebot“ markiert.', 'Erkannte Produkte aus Ihrer Datenbank werden automatisch übernommen.']],
+  ['upload', 'Angebot hochladen oder erstellen', 'Ziehen Sie das Angebot als PDF hinein oder machen Sie ein Foto davon – oder erstellen Sie es direkt in lumbra.desk. Die App übernimmt Kunde, Preise, Anlagendaten und Produkte automatisch.', ['„PDF hinzufügen“: auf die gestrichelte Fläche tippen und das Angebot wählen.', '„Selbst erstellen“: öffnet den Angebots-Editor in lumbra.desk (auch per Sprache). Zurück in der Wirtschaftlichkeit „Übernehmen“ antippen.', 'Erkannte Werte kurz prüfen – sie sind mit „aus Angebot“ markiert.']],
   ['data', 'Daten prüfen und ergänzen', 'Oben sehen Sie, wo Sie gerade sind: Angebot → Kunde → Daten → Ergebnis. Fehlt etwas, tragen Sie es einfach ein. Kleine Schilder zeigen, woher ein Wert stammt.', ['Grün „aus Angebot“, blau „Schnellauslegung“ oder „Modulplan“.', 'PLZ eintippen – der Ort wird automatisch ergänzt.', 'Rote Warnung = Werte passen nicht zusammen. Bitte auswählen, welcher Wert stimmt.', 'Mit „Weiter“ zum nächsten Schritt.']],
   ['roof', 'Modulplan – Dach planen', 'Mit dem Modulplan legen Sie die Module direkt auf ein Foto des Dachs – am iPad, PC oder zur Not nur mit dem Handy. So sieht der Kunde, wie seine Anlage aussieht, und Modulzahl und kWp kommen direkt in die Berechnung.', ['Im Kunden im Bereich Photovoltaik „Modulplan erstellen“ antippen (oder in der Kundenübersicht „Modulbelegung“).', 'Neuer Kunde? Zuerst Name eingeben – dann geht es los.', 'Vier Schritte: 1 Foto · 2 Fläche · 3 Referenz · 4 Belegen.']],
   ['roofphoto', 'Modulplan: Foto und Dachfläche', 'Fotografieren Sie die Dachfläche möglichst frontal und ohne 0,5×-Weitwinkel. Dann ziehen Sie die vier Punkte genau auf die Ecken der Fläche.', ['„Foto aufnehmen“ öffnet direkt die Kamera – oder „Aus der Mediathek wählen“.', 'Punkte 1–4 mit dem Finger auf die Ecken ziehen: 1 unten links an der Rinne, 2 oben links am First, 3 oben rechts, 4 unten rechts.', 'Zum genauen Treffen: Lupe beim Ziehen, mit zwei Fingern zoomen, das runde Rad „fein“ schiebt den Punkt millimetergenau.', 'Das Rad erscheint mittig auf der Dachfläche – es verdeckt keine der Ecken.']],

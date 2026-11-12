@@ -64,10 +64,10 @@ function shell(inner) {
   const crm = typeof isCrm === 'function' && isCrm(), adm = ST.user.role === 'admin';
   const off = ['admin', 'buero'].includes(ST.user.role);
   const base = [['home', 'Start']].concat(crm ? [['kunden', 'Kunden'], ['aufgaben', 'Aufgaben']] : []).concat(off ? [['protokolle', 'Protokolle']] : []);
-  const prod = off && (ST.features || {}).angebote ? [['produkte', 'Produkte']] : [];   // Produktdatenbank fürs Angebot
+  const prod = (off && (ST.features || {}).angebote ? [['produkte', 'Produkte']] : []).concat(off && (ST.features || {}).rechnungen ? [['rechnungen', 'Rechnungen']] : []);   // Produktdatenbank fürs Angebot
   const nav = base.concat(prod, adm ? [['users', 'Benutzer'], ['audit', 'Änderungen'], ['system', 'System']] : []);
   const tabs = (adm ? base.filter(x => x[0] !== 'protokolle') : base.concat(prod)).concat(adm ? [['mehr', 'Mehr']] : []);
-  const cur = ST.view === 'kunde' || ST.view === 'angebot' ? 'kunden' : ST.view === 'artikel' || (adm && ST.view === 'produkte') ? 'mehr' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view) || (adm && ST.view === 'protokolle');
+  const cur = ST.view === 'kunde' || ST.view === 'angebot' ? 'kunden' : ST.view === 'artikel' || ST.view === 'belege' || (adm && (ST.view === 'produkte' || ST.view === 'rechnungen')) ? 'mehr' : ST.view === 'rechnung' ? 'rechnungen' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view) || (adm && ST.view === 'protokolle');
   const link = ([k, l]) => `<a href="#/${k}" class="navl ${cur === k || (k === 'mehr' && inMehr) ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`;
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
     ${nav.length > 1 ? `<nav class="side">${nav.map(link).join('')}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
@@ -156,18 +156,19 @@ async function route() {
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/'); ST.view = parts[0]; const arg = decodeURIComponent(parts[1] || '');
   if (!ST.user) return void ($('#app').innerHTML = ST.view === 'vergessen' ? viewForgot() : viewLogin());
   if (ST.user.mustChange) return void ($('#app').innerHTML = viewNewPw());
-  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel', 'produkte'];
+  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel', 'produkte', 'rechnungen', 'rechnung', 'belege'];
   if (!(ST.view === 'home' || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin') || (offViews.includes(ST.view) && ['admin', 'buero'].includes(ST.user.role)))) ST.view = 'home';
   try {
     if (isCrm() && (crmViews.includes(ST.view) || ST.view === 'home')) await crmLoad(ST.view, arg);
     if (ST.view === 'protokolle' || ST.view === 'kunde') await protLoad(ST.view, arg);
     if (['kunde', 'angebot', 'artikel', 'produkte'].includes(ST.view)) await offLoad(ST.view);
+    if (typeof reLoad === 'function' && ['kunde', 'rechnungen', 'rechnung', 'belege'].includes(ST.view)) await reLoad(ST.view, arg);
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
     if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); ST.feat = (await api('features')).list; }
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
   if (seq !== ST.seq) return;
-  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel, produkte: viewProdukte };
+  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel, produkte: viewProdukte, rechnungen: viewRechnungen, rechnung: viewRechnung, belege: viewBelege };
   $('#app').innerHTML = shell((V[ST.view] || viewHome)());
 }
 window.addEventListener('hashchange', route);

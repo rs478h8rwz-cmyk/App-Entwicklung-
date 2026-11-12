@@ -363,11 +363,50 @@ try {
       $n = of_import_rechner(); audit((int)$me['id'], 'angebot_produkte', $n . ' Produkte aus der Wirtschaftlichkeit übernommen'); json_out(['ok' => true, 'n' => $n]);
     }
 
+    /* ---------- Belege: Einstellungen, Bilder, Rechnungen, Mahnwesen ---------- */
+    case 'POST of-file': {
+      $me = require_role(['admin', 'buero']); require_feature($me, 'angebote'); $id = (string)($_SERVER['HTTP_X_FILE_ID'] ?? '');
+      if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('Ungültige Datei', 400);
+      $type = strtolower(trim(explode(';', (string)($_SERVER['CONTENT_TYPE'] ?? ''))[0])); if (!in_array($type, ['image/jpeg', 'image/png', 'image/webp'], true)) fail('Bitte ein Bild (JPG, PNG oder WebP).', 400);
+      $f = files_dir() . '/' . $id; if (is_file($f . '.bin')) json_out(['ok' => true, 'existed' => true]);
+      $raw = file_get_contents('php://input') ?: ''; if ($raw === '' || strlen($raw) > 8 * 1024 * 1024) fail('Bild leer oder zu groß (max. 8 MB)', 400);
+      file_put_contents($f . '.bin', $raw, LOCK_EX); file_put_contents($f . '.json', json_encode(['type' => $type, 'name' => 'produktbild', 'size' => strlen($raw)]), LOCK_EX);
+      json_out(['ok' => true]);
+    }
+    case 'GET belege-cfg': {
+      $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/belege-lib.php';
+      json_out(['nummern' => num_out(), 'texte' => tx_all(), 'kinds' => TX_KINDS, 'mahn' => mahn_cfg()]);
+    }
+    case 'POST belege-cfg': {
+      $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/belege-lib.php'; $b = body(); $part = (string)($b['part'] ?? '');
+      if ($part === 'nummern') { $o = num_save($u, (array)($b['value'] ?? [])); audit((int)$u['id'], 'belege_einstellungen', 'Nummernkreise'); json_out(['ok' => true, 'nummern' => $o]); }
+      if ($part === 'texte') { $o = tx_save($u, (array)($b['value'] ?? [])); audit((int)$u['id'], 'belege_einstellungen', 'Textbausteine'); json_out(['ok' => true, 'texte' => $o]); }
+      if ($part === 'mahn') { $o = mahn_save($u, (array)($b['value'] ?? [])); audit((int)$u['id'], 'belege_einstellungen', 'Mahnwesen'); json_out(['ok' => true, 'mahn' => $o]); }
+      fail('Unbekannt', 400);
+    }
+    case 'GET re-list': { $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; $pid = (string)($_GET['p'] ?? ''); json_out(['list' => re_list($u, valid_id($pid) ? $pid : ''), 'kinds' => RE_KIND, 'status' => RE_STATUS, 'mahn' => mahn_cfg()]); }
+    case 'GET re-get': { $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; json_out(re_out(re_get((string)($_GET['id'] ?? '')))); }
+    case 'POST re-save': { $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; json_out(re_save($u, body())); }
+    case 'POST re-final': { $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; json_out(re_final($u, (string)(body()['id'] ?? ''))); }
+    case 'POST re-paid': { $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; $b = body(); json_out(re_paid($u, (string)($b['id'] ?? ''), (float)($b['amount'] ?? 0), (string)($b['date'] ?? ''))); }
+    case 'POST re-storno': { $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; json_out(re_storno($u, (string)(body()['id'] ?? ''))); }
+    case 'POST re-dun': { $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; json_out(re_dun($u, (string)(body()['id'] ?? ''))); }
+    case 'POST re-del': {
+      $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; $r = re_get((string)(body()['id'] ?? ''));
+      if ($r['status'] !== 'entwurf') fail('Nur Entwürfe können gelöscht werden – festgeschriebene Rechnungen bitte stornieren.', 400);
+      db()->prepare('DELETE FROM invoices WHERE id = ?')->execute([$r['id']]); json_out(['ok' => true]);
+    }
+    case 'GET re-xml': {
+      $u = require_role(['admin', 'buero']); require_feature($u, 'rechnungen'); require_once LD_PRIV_DIR . '/belege-lib.php'; $id = (string)($_GET['id'] ?? ''); $x = re_xml($id); $r = re_get($id);
+      header('Content-Type: application/xml; charset=utf-8'); header('Content-Disposition: attachment; filename="XRechnung_' . preg_replace('/[^\w-]/', '_', $r['nr']) . '.xml"'); echo $x; exit;
+    }
+
     /* ---------- Angebote ---------- */
     case 'GET of-catalog': {
       $u = require_role(['admin', 'buero', 'vertrieb']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php';
       $row = cfg_row(); $cfg = $row ? json_decode((string)$row['data'], true) : []; $co = (array)(($cfg['settings'] ?? [])['company'] ?? []);
-      json_out(['items' => of_catalog(), 'packages' => of_packages(), 'cats' => OF_CATS, 'status' => OF_STATUS, 'company' => array_intersect_key($co, array_flip(['name', 'ceo', 'register', 'street', 'zip', 'city', 'phone', 'email', 'web', 'taxNo', 'vatId', 'bank', 'iban', 'bic', 'logoFile']))]);
+      require_once LD_PRIV_DIR . '/belege-lib.php';
+      json_out(['texte' => tx_all(), 'nextNr' => num_peek('an')['nr'], 'items' => of_catalog(), 'packages' => of_packages(), 'cats' => OF_CATS, 'status' => OF_STATUS, 'company' => array_intersect_key($co, array_flip(['name', 'ceo', 'register', 'street', 'zip', 'city', 'phone', 'email', 'web', 'taxNo', 'vatId', 'bank', 'iban', 'bic', 'logoFile']))]);
     }
     case 'POST of-item': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(['ok' => true] + of_item_save(body())); }
     case 'POST of-item-del': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('UPDATE offer_items SET active = 0 WHERE id = ?')->execute([(int)preg_replace('/\D/', '', (string)(body()['id'] ?? ''))]); json_out(['ok' => true]); }

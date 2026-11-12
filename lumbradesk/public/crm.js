@@ -123,6 +123,7 @@ function viewKunde() {
           <p class="muted small" style="margin:8px 0 0">Tippe auf eine Stufe, um sie zu setzen. Wird später in der Wirtschaftlichkeit „Gesendet“ oder „Unterschrieben“ gewählt, rückt die Stufe automatisch mit.</p></div>
 
         ${typeof offerCard === 'function' ? offerCard() : ''}
+        ${typeof invoiceCard === 'function' ? invoiceCard() : ''}
         <div class="card sec"><h2>Wiedervorlagen</h2>
           ${open.length ? `<div class="tlist">${open.map(taskRow).join('')}</div>` : '<p class="muted">Keine offenen Wiedervorlagen.</p>'}
           ${taskForm(c.id)}
@@ -219,7 +220,7 @@ function homeDue() {
 }
 /* Handy: „Mehr“ für die Admin-Seiten */
 function viewMehr() {
-  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[...((ST.features || {}).angebote ? [['produkte', 'Produkte', 'Produktdatenbank fürs Angebot: Module, Speicher, Wechselrichter …'], ['artikel', 'Leistungen & Pakete', 'Montage, Elektro & Co. und die Standardpakete']] : []), ['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Änderungen', 'Wer hat wann was im System gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k === 'artikel' || k === 'produkte' ? 'box' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
+  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[...((ST.features || {}).angebote ? [['produkte', 'Produkte', 'Produktdatenbank fürs Angebot: Module, Speicher, Wechselrichter …'], ['artikel', 'Leistungen & Pakete', 'Montage, Elektro & Co. – feste und bedingte Positionen'], ['belege', 'Nummern & Texte', 'Nummernkreise, Textbausteine, Mahnwesen']] : []), ...((ST.features || {}).rechnungen ? [['rechnungen', 'Rechnungen', 'Offene Posten, E-Rechnung, Mahnungen']] : []), ['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Änderungen', 'Wer hat wann was im System gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k === 'artikel' || k === 'produkte' ? 'box' : k === 'belege' || k === 'rechnungen' ? 'offer' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
 }
 
 /* ---------- Laden ---------- */

@@ -62,23 +62,38 @@ function parseSpeech(text, items) {
   }
   return out;
 }
-const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch });
-/* Standardpakete anhand der Positionen ergänzen bzw. Mengen nachziehen */
+const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch, img: it.img || '' });
+/* Pakete: feste Positionen je Angebotsart („immer“) oder nur, wenn bestimmte Kategorien/Produkte im Angebot sind („wenn“) */
+const OF_OTYPES = { pv: 'Photovoltaik', wp: 'Wärmepumpe', pvwp: 'PV + Wärmepumpe' };
+const ofTypeFits = (pk, ot) => pk.otype === 'alle' || ot === pk.otype || (ot === 'pvwp' && (pk.otype === 'pv' || pk.otype === 'wp'));
+function ofPkgHit(pk, base, ot) {
+  if (!pk.active || !ofTypeFits(pk, ot)) return false;
+  if (pk.mode === 'immer') return true;
+  const c = pk.cond || { cats: [pk.trig], items: [] };
+  return base.some(p => (c.cats || []).includes(p.cat) || (c.items || []).some(id => id === p.item || 'i' + id === p.item));
+}
 function ofApplyPackages(pos) {
-  const C = OF.cat, items = Object.fromEntries(C.items.map(i => [i.id.replace(/^i/, ''), i]).concat(C.items.map(i => [i.id, i])));
+  const C = OF.cat, ot = (OF.edit && OF.edit.data.otype) || 'pv', items = Object.fromEntries(C.items.map(i => [i.id.replace(/^i/, ''), i]).concat(C.items.map(i => [i.id, i])));
   const base = pos.filter(p => !p.pkg), mods = base.filter(p => p.cat === 'mod' && (p.power || 0) >= 100), nMod = mods.reduce((a, p) => a + p.qty, 0), kwp = mods.reduce((a, p) => a + p.qty * p.power, 0) / 1000;
+  const kwWp = base.filter(p => p.cat === 'wp' && p.power).reduce((a, p) => a + p.qty * p.power, 0);
   const keep = pos.filter(p => p.pkg && p.man), next = [];
-  for (const pk of C.packages.filter(p => p.active)) {
-    if (!base.some(p => p.cat === pk.trig)) continue;
+  for (const pk of C.packages) {
+    if (!ofPkgHit(pk, base, ot)) continue;
     for (const l of pk.lines) {
       const it = items[String(l.item)] || items['i' + l.item]; if (!it) continue;
-      const q = l.rule === 'perMod' ? nMod * l.qty : l.rule === 'perKwp' ? Math.round(kwp * l.qty * 100) / 100 : l.qty; if (!q) continue;
-      if (keep.some(k => k.item === it.id) || base.some(b => b.item === it.id)) continue;
+      const q = l.rule === 'perMod' ? nMod * l.qty : l.rule === 'perKwp' ? Math.round(kwp * l.qty * 100) / 100 : l.rule === 'perKw' ? Math.round(kwWp * l.qty * 100) / 100 : l.qty; if (!q) continue;
+      if (keep.some(k => k.item === it.id) || base.some(b => b.item === it.id) || next.some(b => b.item === it.id)) continue;
       next.push({ ...ofPos(it, q), pkg: pk.name });
     }
   }
   return base.concat(keep, next);
 }
+/* Textbausteine: Standard je Art und Angebotsart */
+const ofTx = (kind, ot) => ((OF.cat && OF.cat.texte) || []).filter(t => t.kind === kind && (t.otype === 'alle' || t.otype === ot || (ot === 'pvwp' && t.otype !== 'alle')));
+const ofTxDef = (kind, ot) => { const l = ofTx(kind, ot); const sp = l.filter(t => t.def && t.otype !== 'alle'); return (ot === 'pvwp' && sp.length > 1) ? sp.map(t => t.text).join('\n') : ((sp[0] || l.find(t => t.def) || l[0] || {}).text || ''); };
+/* Platzhalter in Texten: {Kunde} {Nummer} {Datum} {Betrag} {Fällig} {Gültig} */
+const ofFill = (t, v) => String(t || '').replace(/\{(Kunde|Nummer|Datum|Betrag|Fällig|Gültig|Angebot)\}/g, (m, k) => v[k] !== undefined ? v[k] : m);
+
 /* Preisart je Position (aus dem Produkt): netto (zzgl. USt., z. B. PV) oder brutto (inkl. USt., z. B. Wärmepumpe). Intern immer netto gespeichert. */
 const ofBr = p => p.pm === 'brutto';
 const ofUp = p => ofBr(p) ? Math.round(p.price * (1 + p.tax / 100) * 100) / 100 : p.price;
@@ -110,7 +125,8 @@ async function offLoad(view) {
     await ofCatalog(); ST.ofStatus = OF.cat.status;
     if (h[1] === 'neu') {
       const pid = h[2]; ST.cd = await api('crm-p&id=' + encodeURIComponent(pid));
-      if (!OF.edit || OF.edit.project !== pid || OF.edit.id) OF.edit = { id: '', project: pid, nr: '', title: 'Angebot ' + (ST.cd.customer.type === 'wp' ? 'Wärmepumpe' : 'Photovoltaik'), status: 'entwurf', data: { pos: [], discount: 0, intro: 'vielen Dank für Ihr Interesse. Gerne bieten wir Ihnen folgende Leistungen an:', outro: 'Wir freuen uns auf Ihren Auftrag. Bei Fragen sind wir jederzeit für Sie da.', valid: ofIso(30), spoken: '' } };
+      const ot = OF_OTYPES[ST.cd.customer.type] ? ST.cd.customer.type : 'pv';
+      if (!OF.edit || OF.edit.project !== pid || OF.edit.id) { OF.edit = { id: '', project: pid, nr: '', title: 'Angebot ' + OF_OTYPES[ot], status: 'entwurf', data: { otype: ot, pos: [], discount: 0, intro: ofTxDef('intro', ot), outro: ofTxDef('outro', ot), pay: ofTxDef('pay', ot), imgs: false, valid: ofIso(30), spoken: '' } }; OF.edit.data.pos = ofApplyPackages([]); }
       OF.text = '';
     } else if (!OF.edit || OF.edit.id !== h[1]) { const o = await api('of-get&id=' + encodeURIComponent(h[1])); OF.edit = o; ST.cd = await api('crm-p&id=' + encodeURIComponent(o.project)); OF.text = o.data.spoken || ''; }
   }
@@ -130,6 +146,7 @@ function viewAngebot() {
       <textarea id="of-text" rows="3" placeholder="z. B. 22 Module, Hybrid-Wechselrichter 10 kW, 10er Speicher und eine Wallbox">${esc(OF.text)}</textarea>
       <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px"><button class="btn" data-a="of-parse">${ic('check', 18)}${d.pos.length ? 'Positionen ergänzen' : 'Positionen erstellen'}</button>${d.pos.length ? `<button class="btn s" data-a="of-std">${ic('refresh', 16)}Standard neu berechnen</button>` : ''}</div>
     </div>
+    <div class="ofmode"><span class="muted small">Angebotsart</span><div class="seg">${Object.entries(OF_OTYPES).map(([k, l]) => `<button data-a="of-otype" data-v="${k}" class="${(d.otype || 'pv') === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <section class="h-sec"><h2>Positionen</h2><span class="muted small">${d.pos.length} Position${d.pos.length === 1 ? '' : 'en'}</span></section>
 
     <div class="glist ofl">${d.pos.map((p, i) => `<div class="ofp ${p.check ? 'chk-me' : ''}">
@@ -150,7 +167,10 @@ function viewAngebot() {
     <section class="h-sec"><h2>Angaben</h2></section>
     <div class="cardx form-grid ofmeta"><label>Betreff<input data-of="title" value="${esc(E.title)}"></label><label>Gültig bis<input type="date" data-of="valid" value="${esc(d.valid)}"></label>
       <label>Status<select data-of="status">${Object.entries(ST.ofStatus).map(([k, l]) => `<option value="${k}" ${E.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label style="grid-column:1/-1">Einleitung<textarea rows="2" data-of="intro">${esc(d.intro)}</textarea></label><label style="grid-column:1/-1">Schlusstext<textarea rows="2" data-of="outro">${esc(d.outro)}</textarea></label></div>
+      ${[['intro', 'Einleitung'], ['outro', 'Schlusstext'], ['pay', 'Zahlungsbedingungen']].map(([k, l]) => { const tl = ofTx(k, d.otype || 'pv'); return `<label style="grid-column:1/-1"><span class="flex-lbl">${l}${tl.length ? `<select class="txsel" data-a2="of-tx" data-k="${k}"><option value="">Textbaustein …</option>${tl.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select>` : ''}</span><textarea rows="${k === 'outro' ? 3 : 2}" data-of="${k}">${esc(d[k] || '')}</textarea></label>`; }).join('')}
+      <label class="sw" style="grid-column:1/-1"><input type="checkbox" data-of="imgs" ${d.imgs ? 'checked' : ''}>Produktbilder im PDF zeigen</label>
+      <p class="muted small" style="grid-column:1/-1;margin:0">Platzhalter: {Kunde}, {Nummer}, {Gültig}, {Betrag} – werden im PDF ersetzt.</p></div>
+    ${E.id ? `<div class="row" style="flex-wrap:wrap;gap:8px;margin-top:12px">${(ST.features || {}).rechnungen && ['admin', 'buero'].includes(ST.user.role) ? `<a class="btn s" href="#/rechnung/neu/${esc(E.id)}">${ic('offer', 16)}Rechnung erstellen</a>` : ''}<a class="btn s" href="rechner/?ldOffer=${esc(E.id)}#projekt/${esc(E.project)}/1">${ic('calc', 16)}In Wirtschaftlichkeit übernehmen</a></div>` : ''}
     <div class="ofbar"><button class="btn" data-a="of-save">${ic('check', 18)}Speichern</button><button class="btn s" data-a="of-prev" ${d.pos.length ? '' : 'disabled'}>${ic('offer', 18)}Vorschau</button><button class="btn s" data-a="of-pdf" ${d.pos.length ? '' : 'disabled'} aria-label="PDF teilen">PDF</button>${E.id ? `<button class="btn g danger" data-a="of-delete">${ic('x', 16)}</button>` : ''}</div>`;
 }
 function ofSug() {
@@ -219,19 +239,22 @@ async function ofBuild() {
   meta.forEach(([k, v], i) => { doc.setTextColor(...GR); doc.text(k, 132, 52 + i * 5); doc.setTextColor(...INK); doc.text(String(v), W - M, 52 + i * 5, { align: 'right' }); });
   doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text(E.title || 'Angebot', M, 84); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
   let y = 92; const salut = /^Familie/i.test(c.name) ? `Sehr geehrte ${c.name},` : /^Frau/i.test(c.name) ? `Sehr geehrte ${c.name},` : /^Herr/i.test(c.name) ? `Sehr geehrter ${c.name},` : 'Sehr geehrte Damen und Herren,';
-  const para = t => { const l = doc.splitTextToSize(t, W - 2 * M); doc.text(l, M, y); y += l.length * 4.6 + 3; };
-  para(salut); if (d.intro) para(d.intro);
+  const para = t => { for (const ln of doc.splitTextToSize(t, W - 2 * M)) { if (y > 272) { doc.addPage(); head(); y = 40; } doc.text(ln, M, y); y += 4.6; } y += 3; };   // bricht vor der Fußzeile um
+  const PH = { Kunde: c.name, Nummer: E.nr || '', Gültig: d.valid ? d.valid.split('-').reverse().join('.') : '', Betrag: eur2(T.gross), Datum: new Date().toLocaleDateString('de-DE') };
+  const IMG = {}; if (d.imgs) for (const p of d.pos) if (p.img && !IMG[p.img]) { try { const b = await (await fetch('api/?r=cfg-file&id=' + encodeURIComponent(p.img), { credentials: 'same-origin' })).blob(); IMG[p.img] = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); } catch (e) {} }
+  para(salut); if (d.intro) para(ofFill(d.intro, PH));
   const mixed = d.pos.some(ofBr) && d.pos.some(p => !ofBr(p)), allBr = d.pos.length && d.pos.every(ofBr), wN = W - 2 * M - 62;
   const cols = [[M, 'Pos.'], [M + 12, 'Menge'], [M + 30, 'Bezeichnung'], [W - M - 30, 'Einzelpreis' + (mixed ? '' : allBr ? ' brutto' : ' netto')], [W - M, 'Gesamt']];
   const th = () => { doc.setFillColor(242, 243, 246); doc.rect(M, y - 4, W - 2 * M, 7, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...GR); cols.forEach(([x, l], i) => doc.text(l, x + (i >= 3 ? 0 : 1), y, { align: i >= 3 ? 'right' : 'left' })); y += 7; doc.setFont('helvetica', 'normal'); };
   th();
   d.pos.forEach((p, i) => {
-    const nl = doc.splitTextToSize(p.name, wN), dl = p.descr && !p.check ? doc.splitTextToSize(p.descr, wN) : [], h = nl.length * 4.4 + dl.length * 3.6 + 3;
+    const im = d.imgs && p.img && IMG[p.img], iw = im ? 16 : 0, nl = doc.splitTextToSize(p.name, wN - iw), dl = p.descr && !p.check ? doc.splitTextToSize(p.descr, wN - iw) : [], h = Math.max(nl.length * 4.4 + dl.length * 3.6 + 3, im ? 18 : 0);
     if (y + h > 262) { doc.addPage(); head(); y = 40; th(); }
-    doc.setFontSize(9.5); doc.setTextColor(...INK); doc.text(String(i + 1), M + 1, y); doc.text(p.pausch ? 'pauschal' : `${numDe(p.qty)} ${p.unit}`, M + 12, y); doc.text(nl, M + 30, y);
+    if (im) { try { const pr = doc.getImageProperties(im), s0 = Math.min(14 / pr.width, 14 / pr.height); doc.addImage(im, M + 30, y - 3, pr.width * s0, pr.height * s0); } catch (e) {} }
+    doc.setFontSize(9.5); doc.setTextColor(...INK); doc.text(String(i + 1), M + 1, y); doc.text(p.pausch ? 'pauschal' : `${numDe(p.qty)} ${p.unit}`, M + 12, y); doc.text(nl, M + 30 + iw, y);
     if (!p.pausch) doc.text(eur2(ofUp(p)), W - M - 30, y, { align: 'right' }); doc.text(eur2(ofLine(p)), W - M, y, { align: 'right' });
     if (mixed) { doc.setFontSize(7); doc.setTextColor(...GR); doc.text(ofBr(p) ? 'brutto' : 'netto', W - M, y + 3.4, { align: 'right' }); doc.setFontSize(9.5); doc.setTextColor(...INK); }
-    if (dl.length) { doc.setFontSize(8); doc.setTextColor(...GR); doc.text(dl, M + 30, y + nl.length * 4.4); }
+    if (dl.length) { doc.setFontSize(8); doc.setTextColor(...GR); doc.text(dl, M + 30 + iw, y + nl.length * 4.4); }
     y += h; doc.setDrawColor(...LN); doc.line(M, y - 2, W - M, y - 2); y += 2;
   });
   if (y > 230) { doc.addPage(); head(); y = 40; }
@@ -240,7 +263,8 @@ async function ofBuild() {
   Object.entries(T.tax).sort().forEach(([r, v]) => sr(`USt. ${numDe(+r)} %`, eur2(v))); sr('Gesamt brutto', eur2(T.gross), true);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); y += 4;
   if (T.tax['0'] !== undefined) { doc.setFontSize(8.5); doc.setTextColor(...GR); para('Für Photovoltaikanlagen und Stromspeicher auf bzw. an Wohngebäuden gilt der Nullsteuersatz nach § 12 Abs. 3 UStG.'); doc.setFontSize(10); doc.setTextColor(...INK); }
-  if (d.outro) para(d.outro); para('Mit freundlichen Grüßen'); para(ST.user.name);
+  if (d.pay) { doc.setFont('helvetica', 'bold'); para('Zahlungsbedingungen'); y -= 2; doc.setFont('helvetica', 'normal'); para(ofFill(d.pay, PH)); }
+  if (d.outro) para(ofFill(d.outro, PH)); para('Mit freundlichen Grüßen'); para(ST.user.name);
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setDrawColor(...LN); doc.line(M, 280, W - M, 280); doc.setFontSize(7); doc.setTextColor(...GR);
     doc.text([co.name, co.ceo ? 'Geschäftsführung: ' + co.ceo : '', co.register].filter(Boolean).join(' · '), M, 284); doc.text([co.bank, co.iban ? 'IBAN ' + co.iban : '', co.bic ? 'BIC ' + co.bic : ''].filter(Boolean).join(' · '), M, 288);
@@ -290,6 +314,9 @@ function ofItemForm(it) {
     <label class="sw" style="align-self:end;min-height:44px"><input type="checkbox" name="pausch" value="1" ${it.pausch ? 'checked' : ''}>Pauschalpreis</label>
     <label>USt.<select name="tax">${[0, 7, 19].map(t => `<option value="${t}" ${+it.tax === t ? 'selected' : ''}>${t} %</option>`).join('')}</select></label>
     <label>Einheit<input name="unit" value="${esc(it.unit || 'Stk')}"></label>
+    <div class="imgup" style="grid-column:1/-1"><input type="hidden" name="img" value="${esc(it.img || '')}"><span class="imgprev">${it.img ? `<img src="api/?r=cfg-file&id=${esc(it.img)}" alt="">` : ic('box', 22)}</span>
+      <span class="gmain"><b>Bild</b><span>${it.img ? 'erscheint im Angebot, wenn „Produktbilder im PDF“ an ist' : 'optional – Foto oder Datenblatt-Bild'}</span></span>
+      <label class="btn sm s" style="cursor:pointer">${it.img ? 'Ändern' : 'Hinzufügen'}<input type="file" accept="image/*" data-imgup="1" hidden></label>${it.img ? '<button type="button" class="btn sm g" data-pk="img-del">Entfernen</button>' : ''}</div>
     <label style="grid-column:1/-1">Beschreibung (steht im Angebot)<textarea name="descr" rows="2" placeholder="${prod ? 'z. B. Maße, Garantie, Besonderheiten' : ''}">${esc(it.descr || '')}</textarea></label>
     <label style="grid-column:1/-1">Stichwörter für die Spracheingabe (Komma)<input name="words" value="${esc(it.words || '')}" placeholder="${prod ? 'z. B. trina, glas glas' : 'z. B. gerüst, absturzsicherung'}"></label>
     ${prod ? '<p class="muted small" style="grid-column:1/-1;margin:0">PV-Module, Wechselrichter und Speicher: 0 % USt. (§ 12 Abs. 3 UStG).</p>' : ''}
@@ -308,18 +335,78 @@ function viewProdukte() {
     ${all.length > 6 ? `<input id="of-pq" class="search" type="search" placeholder="Produkt suchen …" value="${esc(OF.pq || '')}" style="width:100%;margin-bottom:8px">` : ''}
     <div id="of-plist">${groups.map(([k, l]) => `<section class="h-sec"><h2>${OF_PCATS[k][0]}</h2><span class="muted small">${l.length}</span></section><div class="glist">${l.map(i => ofRow(i) + ofEditBox(i.id)).join('')}</div>`).join('') || `<div class="cardx muted">${all.length ? 'Nichts gefunden.' : 'Noch keine Produkte. Lege eins an oder übernimm die Produkte einmalig aus der Wirtschaftlichkeit – danach sind beide Listen unabhängig.'}</div>`}</div>`;
 }
+const PK_RULES = { fix: 'feste Menge', perMod: 'je Modul', perKwp: 'je kWp', perKw: 'je kW Wärmepumpe' };
+const PK_OT = { pv: 'Photovoltaik', wp: 'Wärmepumpe', alle: 'alle Angebote' };
+function pkSummary(pk, C) {
+  const c = pk.cond || {}, conds = (c.cats || []).map(k => C.cats[k]).concat((c.items || []).map(id => (C.items.find(i => i.id === id || i.id === 'i' + id) || {}).name).filter(Boolean));
+  return `${PK_OT[pk.otype] || 'alle Angebote'} · ${pk.mode === 'immer' ? 'immer im Angebot' : 'nur wenn: ' + (conds.join(', ') || '–')}${pk.active ? '' : ' · aus'}`;
+}
+function pkForm(pk) {
+  const C = OF.cat, c = pk.cond, it = id => C.items.find(i => i.id === id || i.id === 'i' + id);
+  const opts = sel => `<option value="">– Position wählen –</option>${['produkt', 'leistung'].map(k => `<optgroup label="${k === 'produkt' ? 'Produkte' : 'Leistungen'}">${C.items.filter(i => (i.kind || 'leistung') === k).map(i => `<option value="${esc(i.id)}" ${sel && (sel === i.id || 'i' + sel === i.id) ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</optgroup>`).join('')}`;
+  return `<div class="cardx pkf"><label>Name<input data-pkf="name" value="${esc(pk.name || '')}" placeholder="z. B. Standard Wärmepumpe"></label>
+    <div class="pkrow"><span class="lbl2">Für</span><div class="seg">${Object.entries(PK_OT).map(([k, l]) => `<button type="button" data-pk="otype" data-v="${k}" class="${pk.otype === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div class="pkrow"><span class="lbl2">Wann</span><div class="seg">${[['immer', 'Immer im Angebot'], ['wenn', 'Nur wenn …']].map(([k, l]) => `<button type="button" data-pk="mode" data-v="${k}" class="${pk.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    ${pk.mode === 'wenn' ? `<div class="pkcond"><div class="muted small">… eine dieser Kategorien im Angebot ist:</div><div class="chips2">${Object.entries(C.cats).map(([k, l]) => `<button type="button" class="chip ${c.cats.includes(k) ? 'on' : ''}" data-pk="cat" data-v="${k}">${l}</button>`).join('')}</div>
+      <div class="muted small" style="margin-top:8px">… oder eines dieser Produkte:</div><div class="chips2">${c.items.map(id => `<span class="chip on">${esc((it(id) || {}).name || id)}<button type="button" data-pk="citem-del" data-v="${esc(id)}" aria-label="entfernen">×</button></span>`).join('')}<select data-pkf="citem" class="txsel">${opts('')}</select></div></div>` : ''}
+    <div class="muted small" style="margin:12px 0 6px">Positionen, die dann ins Angebot kommen:</div>
+    ${pk.lines.map((l, i) => `<div class="pkline"><select data-pkf="litem" data-i="${i}">${opts(l.item)}</select><input data-pkf="lqty" data-i="${i}" inputmode="decimal" value="${numDe(l.qty)}"><select data-pkf="lrule" data-i="${i}">${Object.entries(PK_RULES).map(([k, t]) => `<option value="${k}" ${l.rule === k ? 'selected' : ''}>${t}</option>`).join('')}</select><button type="button" class="xbtn" data-pk="line-del" data-v="${i}" aria-label="Position entfernen">${ic('x', 14)}</button></div>`).join('')}
+    <button type="button" class="btn sm s" data-pk="line-add">${ic('plus', 14)}Position</button>
+    <label class="sw" style="margin-top:12px"><input type="checkbox" data-pkf="active" ${pk.active ? 'checked' : ''}>Paket aktiv</label>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px"><button class="btn" type="button" data-pk="save">Speichern</button><button class="btn g" type="button" data-pk="cancel">Abbrechen</button>${pk.id ? '<button class="btn g danger" type="button" data-pk="del">Löschen</button>' : ''}</div></div>`;
+}
 function viewArtikel() {
-  const C = OF.cat; if (!C) return ''; const own = C.items.filter(i => i.kind !== 'produkt');
-  return `<section class="hero"><h1>Leistungen &amp; Pakete</h1><p class="muted">Montage, Elektro, Gerüst & Co. – und welche Standardleistungen automatisch ins Angebot kommen.</p></section>
-    <section class="h-sec"><h2>Standardpakete</h2></section>
-    <div class="glist">${C.packages.map(pk => `<div class="grow" style="align-items:flex-start"><span class="gic">${ic('box', 16)}</span><span class="gmain"><b>${esc(pk.name)}</b><span>wenn im Angebot: ${esc(C.cats[pk.trig] || pk.trig)}</span>
-      <span style="white-space:normal;margin-top:4px">${pk.lines.map(l => { const it = C.items.find(i => i.id === 'i' + l.item || i.id === l.item); return it ? `${esc(it.name)} (${l.rule === 'perMod' ? l.qty + ' je Modul' : l.rule === 'perKwp' ? l.qty + ' je kWp' : l.qty + ' ' + esc(it.unit)})` : ''; }).filter(Boolean).join(' · ')}</span></span></div>`).join('')}</div>
-    <p class="muted small" style="margin:8px 4px 0">Pakete ändern: bitte kurz Bescheid geben – die Zusammenstellung passe ich gern an (Bearbeiten in der App folgt).</p>
+  const C = OF.cat; if (!C) return ''; const own = C.items.filter(i => i.kind !== 'produkt'), E = OF.pk;
+  return `<section class="hero"><h1>Leistungen &amp; Pakete</h1><p class="muted">Montage, Elektro, Gerüst & Co. – und welche Positionen automatisch ins Angebot kommen.</p></section>
+    <section class="h-sec"><h2>Pakete</h2><button class="btn sm" data-pk="new">${ic('plus', 16)}Neu</button></section>
+    ${E && !E.id ? pkForm(E) : ''}
+    <div class="glist">${C.packages.map(pk => `<button class="grow" data-pk="edit" data-v="${pk.id}" style="align-items:flex-start"><span class="gic">${ic('box', 16)}</span><span class="gmain"><b>${esc(pk.name)}</b><span>${esc(pkSummary(pk, C))}</span>
+      <span style="white-space:normal;margin-top:4px">${pk.lines.map(l => { const it = C.items.find(i => i.id === 'i' + l.item || i.id === l.item); return it ? `${esc(it.name)} (${l.rule === 'fix' ? numDe(l.qty) + ' ' + esc(it.unit) : numDe(l.qty) + ' ' + PK_RULES[l.rule]})` : ''; }).filter(Boolean).join(' · ')}</span></span>${ic('next', 16)}</button>${E && E.id === pk.id ? pkForm(E) : ''}`).join('') || '<div class="grow muted small">Noch keine Pakete</div>'}</div>
+    <p class="muted small" style="margin:8px 4px 0">„Immer“: feste Positionen in jedem Angebot dieser Art (z. B. Inbetriebnahme). „Nur wenn“: kommt dazu, sobald z. B. ein Speicher oder ein bestimmtes Produkt im Angebot ist.</p>
     <section class="h-sec"><h2>Leistungen</h2><button class="btn sm" data-a="of-item-new">${ic('plus', 16)}Neu</button></section>
     ${ofEditBox('')}
     <div class="glist">${own.map(i => ofRow(i) + ofEditBox(i.id)).join('')}</div>
     <p class="muted small" style="margin:8px 4px 0">Produkte (Module, Speicher …) pflegst du unter Mehr → Produkte.</p>`;
 }
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-pk]'); if (!a || !OF.cat) return; e.preventDefault();
+  const k = a.dataset.pk, v = a.dataset.v, P = OF.pk;
+  try {
+    if (k === 'img-del') { const f = $('#f-of-item'); if (f) { f.img.value = ''; OF.itemEdit = { ...OF.itemEdit, ...Object.fromEntries(new FormData(f)), img: '' }; ofRedraw(); } return; }
+    if (k === 'new') { OF.pk = { id: 0, name: '', otype: 'pv', mode: 'immer', cond: { cats: [], items: [] }, lines: [{ item: '', rule: 'fix', qty: 1 }], active: true }; return ofRedraw(); }
+    if (k === 'edit') { const pk = OF.cat.packages.find(x => String(x.id) === v); OF.pk = OF.pk && OF.pk.id === pk.id ? null : JSON.parse(JSON.stringify(pk)); ofRedraw(); const f = $('.pkf'); if (f) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
+    if (!P) return;
+    if (k === 'cancel') { OF.pk = null; return ofRedraw(); }
+    if (k === 'otype') P.otype = v; if (k === 'mode') P.mode = v;
+    if (k === 'cat') P.cond.cats = P.cond.cats.includes(v) ? P.cond.cats.filter(x => x !== v) : P.cond.cats.concat(v);
+    if (k === 'citem-del') P.cond.items = P.cond.items.filter(x => x !== v);
+    if (k === 'line-add') P.lines.push({ item: '', rule: 'fix', qty: 1 });
+    if (k === 'line-del') P.lines.splice(+v, 1);
+    if (k === 'save') { await api('of-package', { id: P.id, name: P.name, otype: P.otype, mode: P.mode, cond: P.cond, lines: P.lines.filter(l => l.item).map(l => ({ ...l, item: String(l.item).replace(/^i/, '') })), off: !P.active }); OF.pk = null; await ofCatalog(true); toast('Paket gespeichert.'); }
+    if (k === 'del') { if (!confirm('Paket löschen?')) return; await api('of-package-del', { id: P.id }); OF.pk = null; await ofCatalog(true); toast('Paket gelöscht.'); }
+    ofRedraw();
+  } catch (err) { toast(err.message); }
+});
+document.addEventListener('input', e => { const el = e.target, P = OF.pk; if (!P || !el.dataset || !el.dataset.pkf) return; const k = el.dataset.pkf, i = +el.dataset.i;
+  if (k === 'name') P.name = el.value; if (k === 'lqty') P.lines[i].qty = parseNum(el.value); });
+document.addEventListener('change', async e => { const el = e.target;
+  if (el.dataset && el.dataset.imgup) {   // Produktbild: verkleinern und hochladen
+    const file = el.files && el.files[0]; if (!file) return; const f = el.closest('form');
+    try {
+      const img = await new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = URL.createObjectURL(file); });
+      const k = Math.min(1, 900 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86)), id = 'oi' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      const res = await fetch('api/?r=of-file', { method: 'POST', credentials: 'same-origin', headers: { 'X-Lumbra': '1', 'X-File-Id': id, 'Content-Type': 'image/jpeg' }, body: blob });
+      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).error) || 'Hochladen fehlgeschlagen');
+      OF.itemEdit = { ...OF.itemEdit, ...Object.fromEntries(new FormData(f)), img: id }; ofRedraw(); toast('Bild hinzugefügt – „Speichern“ nicht vergessen.');
+    } catch (err) { toast(err.message || 'Bild konnte nicht geladen werden.'); }
+    return;
+  }
+  const P = OF.pk; if (!P || !el.dataset || !el.dataset.pkf) return; const k = el.dataset.pkf, i = +el.dataset.i;
+  if (k === 'litem') P.lines[i].item = el.value; if (k === 'lrule') P.lines[i].rule = el.value; if (k === 'active') P.active = el.checked;
+  if (k === 'citem' && el.value) { if (!P.cond.items.includes(el.value)) P.cond.items.push(el.value); ofRedraw(); }
+});
 
 /* ---------- Bedienung ---------- */
 document.addEventListener('click', async e => {
@@ -331,6 +418,10 @@ document.addEventListener('click', async e => {
       case 'of-parse': return ofParse();
       case 'of-std': d.pos = ofApplyPackages(d.pos.filter(p => !p.pkg || p.man)); toast('Standardleistungen neu berechnet.'); return ofRender();
       case 'of-del': d.pos.splice(i, 1); return ofRender();
+      case 'of-otype': { const old = d.otype || 'pv', nt = a.dataset.v; if (nt === old) return;
+        for (const k of ['intro', 'outro', 'pay']) if (!d[k] || d[k] === ofTxDef(k, old)) d[k] = ofTxDef(k, nt);   // nur unveränderte Standardtexte tauschen
+        d.otype = nt; if (/^Angebot (Photovoltaik|Wärmepumpe|PV \+ Wärmepumpe)$/.test(E.title)) E.title = 'Angebot ' + OF_OTYPES[nt];
+        d.pos = ofApplyPackages(d.pos.filter(p => !p.pkg || p.man)); toast('Angebotsart: ' + OF_OTYPES[nt] + ' – feste Positionen angepasst.'); return ofRender(); }
       case 'of-pm': { const p = d.pos[i]; p.pm = ofBr(p) ? 'netto' : 'brutto'; return ofRender(); }
       case 'of-q': { const p = d.pos[i]; p.qty = Math.max(0, Math.round((p.qty + +a.dataset.v) * 100) / 100); if (p.pkg) p.man = true; const inp = $(`[data-of="qty"][data-i="${i}"]`); if (inp) inp.value = numDe(p.qty);
         if (p.cat === 'mod' && !p.pkg) d.pos = ofApplyPackages(d.pos), ofRender(); else ofSumPaint(); return; }
@@ -363,11 +454,12 @@ document.addEventListener('input', e => {
   if (k === 'price' && ofBr(d.pos[i])) { const p = d.pos[i]; p.price = Math.round(parseNum(el.value) / (1 + p.tax / 100) * 10000) / 10000; ofSumPaint(); }
   else if (k === 'qty' || k === 'price') { d.pos[i][k] = parseNum(el.value); if (k === 'qty' && d.pos[i].pkg) d.pos[i].man = true; ofSumPaint(); }
   else if (k === 'name') d.pos[i].name = el.value;
+  else if (k === 'imgs') d.imgs = el.checked;
   else if (k === 'discount') { d.discount = Math.max(0, Math.min(100, parseNum(el.value))); ofSumPaint(); }
   else if (k === 'title' || k === 'status') OF.edit[k] = el.value;
   else d[k] = el.value;
 });
-document.addEventListener('change', e => { const el = e.target; if (el.name === 'cat' && el.closest('#f-of-item') && OF.itemEdit && OF.itemEdit.kind === 'produkt') { const d = Object.fromEntries(new FormData(el.closest('form'))); OF.itemEdit = { ...OF.itemEdit, ...d, power: d.power === '' || d.power === undefined ? null : parseNum(d.power), price: parseNum(d.price), tax: ofTaxFor(d.cat), pm: d.cat === 'wp' ? 'brutto' : 'netto', pausch: !!d.pausch }; ofRedraw(); return; } if (el.dataset && el.dataset.of === 'status' && OF.edit) OF.edit.status = el.value; if (el.dataset && el.dataset.of === 'qty' && OF.edit) { const p = OF.edit.data.pos[+el.dataset.i]; if (p && p.cat === 'mod' && !p.pkg) { OF.edit.data.pos = ofApplyPackages(OF.edit.data.pos); ofRender(); } } });
+document.addEventListener('change', e => { const el = e.target; if (el.dataset && el.dataset.a2 === 'of-tx' && OF.edit && el.value) { const t = ((OF.cat || {}).texte || []).find(x => x.id === el.value); if (t) { OF.edit.data[el.dataset.k] = t.text; const ta = $(`textarea[data-of="${el.dataset.k}"]`); if (ta) ta.value = t.text; } el.value = ''; return; } if (el.name === 'cat' && el.closest('#f-of-item') && OF.itemEdit && OF.itemEdit.kind === 'produkt') { const d = Object.fromEntries(new FormData(el.closest('form'))); OF.itemEdit = { ...OF.itemEdit, ...d, power: d.power === '' || d.power === undefined ? null : parseNum(d.power), price: parseNum(d.price), tax: ofTaxFor(d.cat), pm: d.cat === 'wp' ? 'brutto' : 'netto', pausch: !!d.pausch }; ofRedraw(); return; } if (el.dataset && el.dataset.of === 'status' && OF.edit) OF.edit.status = el.value; if (el.dataset && el.dataset.of === 'qty' && OF.edit) { const p = OF.edit.data.pos[+el.dataset.i]; if (p && p.cat === 'mod' && !p.pkg) { OF.edit.data.pos = ofApplyPackages(OF.edit.data.pos); ofRender(); } } });
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'f-of-item') return; e.preventDefault(); e.stopImmediatePropagation();
   const f = e.target, d = Object.fromEntries(new FormData(f)); d.id = f.dataset.id; d.tax = +d.tax; d.price = f.dataset.last === 'g' ? Math.round(parseNum(d.pgross) / (1 + d.tax / 100) * 10000) / 10000 : parseNum(d.price); delete d.pgross; d.pausch = !!d.pausch; if (d.power !== undefined) d.power = d.power === '' ? '' : parseNum(d.power);
