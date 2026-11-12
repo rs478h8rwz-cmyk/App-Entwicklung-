@@ -4070,7 +4070,7 @@ async function saveSignature(p, auto) {
 const TUTORIAL = [
   ['sun', 'Willkommen', 'In wenigen Minuten erstellen Sie mit dieser App eine Wirtschaftlichkeitsberechnung für Photovoltaik, Wärmepumpe oder beides – als PDF, das Ihre Kunden verstehen.'],
   ['download', '1 · LumbraDesk aufs Handy', 'Öffnen Sie lumbradesk.de und legen Sie es auf den Home-Bildschirm – iPhone: Safari → Teilen → „Zum Home-Bildschirm“, Android: Chrome → Menü ⋮ → „App installieren“. Angemeldet bleiben Sie auch ohne Internet bis zu 14 Tage.'],
-  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Zusätzlich gibt es den „Modulplan“ – auch auf dem Handy: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen – „Füllen“ spart Dachfenster, Schornstein & Co. automatisch aus, „Maximal“ holt die größte Modulzahl heraus. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
+  ['plus', '2 · Neue Berechnung', 'Tippen Sie auf „Neue Berechnung“. Die App fragt zuerst, ob Sie eine Wärmepumpen-Schnellauslegung machen möchten: Gebäude, Standort und Dämmstandard eingeben, die Heizlast direkt eintragen oder aus Verbrauch, Baujahr oder W/m² berechnen, dazu Warmwasser und Heizsystem – passende Leistung und JAZ werden übernommen. Abschnitt 5 zeigt zur PLZ, wie nah die Außeneinheit nach Landesbauordnung an die Grundstücksgrenze darf. Die App schlägt dabei die passende Wärmepumpe aus Ihren Produkten vor; die Auslegung steht als grobe Schätzung im Schritt „Angebot“ und kurz, klar als Schätzung gekennzeichnet, im PDF. Zusätzlich gibt es den „Modulplan“ – auch auf dem Handy: Dach per Foto aufmessen (Ecken mit Lupe, Pfannen zählen – auch automatisch) und Module belegen – „Füllen“ spart Dachfenster, Schornstein & Co. automatisch aus, „Maximal“ holt die größte Modulzahl heraus. Danach wählen Sie Wärmepumpe, Photovoltaik oder PV + Wärmepumpe. Beides lässt sich später jederzeit nachholen – direkt über die Knöpfe auf der Kundenkarte. Die Art (WP, PV oder PV + WP) ändern Sie im Kunden oben mit einem Tipp auf das Kürzel.'],
   ['upload', '3 · Angebot hochladen', 'Ziehen Sie das Angebot als PDF oder Foto hinein. Kunde, Preise, Anlagendaten, Hersteller, Garantien, Ansprechpartner und Ihre Produkte aus der Datenbank werden automatisch erkannt – bitte kurz prüfen. Erkannte Produkte werden mit allen Angaben aus Ihrer Datenbank übernommen und erscheinen mit Bild auf der PDF-Seite „Ihre Komponenten“.'],
   ['calc', '4 · Daten ergänzen', 'PLZ eintippen – der Ort wird ergänzt (und umgekehrt). Bei der Wärmepumpe brauchen Sie Baujahr und Verbrauch der alten Heizung; darunter zeigt „Aufstellort & Abstand“ die Regel der Landesbauordnung für das Bundesland des Kunden (z. B. NRW: an die Grenze, Niedersachsen: grundsätzlich 3 m) und den nötigen Abstand zum Nachbarfenster nach TA Lärm. Bei PV geben Sie Dachflächen, Ausrichtung und auf Wunsch E-Auto oder Heizstab an. Zahlenfelder öffnen die Zahlentastatur – mit „ABC Buchstaben“ am Feld wechseln Sie jederzeit zu Buchstaben.'],
   ['chart', '5 · Ergebnis zeigen', 'Sie sehen Ersparnis, Amortisation und Förderung. Mit dem Monatsregler zeigen Sie einen Tag im Winter oder Sommer. Varianten vergleichen Sie direkt – und mit „Finanzierung“ zeigen Sie: neue Energiekosten + Kreditrate = monatliche Kosten, verglichen mit heute.'],
@@ -4260,7 +4260,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261112193030';
+const APP_VERSION = '20261112193338';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4675,8 +4675,12 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '2.45', date: '2026-11-12', items: [
+    ['quick', 'Aufstellort direkt in der Schnellauslegung', 'Die Wärmepumpen-Schnellauslegung hat jetzt Abschnitt 5 „Aufstellort & Abstand“: Bundesland aus der PLZ, Abstand zur Grundstücksgrenze nach Landesbauordnung und die TA-Lärm-Werte. Das Bundesland wird in den Kunden übernommen.'],
+    ['house', 'Auch im Kunden', 'Im Schritt „Daten“ steht die Karte „Aufstellort & Abstand zum Nachbarn“ direkt unter „Neue Wärmepumpe“ – mit Rechner für den nötigen Abstand zum Nachbarfenster.']
+  ] },
   { version: '2.44', date: '2026-11-12', items: [
-    ['house', 'Aufstellort leichter zu finden', 'Die Karte „Aufstellort & Abstand zum Nachbarn“ steht jetzt im Schritt „Daten“ direkt unter „Neue Wärmepumpe“ – auch bei PV + Wärmepumpe nicht mehr ganz unten.']
+    ['house', 'Aufstellort leichter zu finden', 'Die Karte „Aufstellort & Abstand zum Nachbarn“ steht im Schritt „Daten“ direkt unter „Neue Wärmepumpe“.']
   ] },
   { version: '2.43', date: '2026-11-12', items: [
     ['house', 'Aufstellort & Abstand je Bundesland', 'Bei der Wärmepumpe zeigt die App jetzt passend zur Kundenadresse, wie nah die Außeneinheit an die Grundstücksgrenze darf – z. B. NRW: direkt an die Grenze, Niedersachsen: grundsätzlich mind. 3 m (Ausnahme nur unter Bedingungen). Mit Paragraph und Rechtsstand.'],
@@ -6233,6 +6237,7 @@ function quickHTML() {
       ${QS.hsys !== 'hk' ? `<div class="rounded-[calc(var(--r)-4px)] border border-line p-3"><div class="text-[12px] text-ink3">Heizkreis ${QS.hsys === 'both' ? 2 : 1} · Fußbodenheizung</div><span class="lbl !mt-2">Vorlauftemperatur</span>${qSel('flowFBH', QH.flowFBH)}</div>` : ''}
     </div>`)}
   ${sec(4, 'Ergebnis & Wärmepumpe', `<div id="q-result">${qResultHTML(r)}</div>`)}
+  ${typeof qLandHTML === 'function' ? sec(5, 'Aufstellort & Abstand zum Nachbarn', `<div id="q-land">${qLandHTML()}</div>`) : ''}
   </div>
   ${QPID ? '' : `<div class="mt-6">${custNameField()}</div>`}
   <div class="flex flex-col sm:flex-row gap-3 mt-6">${QPID
@@ -6247,6 +6252,7 @@ function quickLive() {
   set('q-mload', isNum(m) ? num(m, 2) + ' kW' : '–'); set('q-pers', QS.persons); set('q-sperr', (QS.sperr || 0) + ' Std.');
   const av = $('#q-avg'); if (av) av.innerHTML = qAvgText();
   const hint = $('#q-r-from'); if (hint) hint.textContent = qLoadFrom();
+  const ql = $('#q-land'); if (ql && typeof qLandHTML === 'function' && !(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.qi === 'land')) ql.innerHTML = qLandHTML();
 }
 function qTeInfo() {
   if (isNum(QS.teAuto)) return `Normaußentemperatur ca. <b>${num(QS.teAuto, 1)} °C</b>${isNum(QS.teH) ? ` (geschätzt aus Lage und ${num(QS.teH)} m Höhe)` : ' (geschätzt)'}. Feld leer lassen = dieser Wert; genauer Wert nach DIN/TS 12831-1.`;
@@ -6266,6 +6272,7 @@ async function quickZip() {
 function quickDialog(pid) {
   const p = pid ? findProject(pid) : null; QPID = p ? p.id : null;
   QS = { ...QD, reno: [], ...(p && p.quick && p.quick.v === 2 ? clone(p.quick.state) : {}) };
+  if (p && p.hp && p.hp.land && !QS.land) QS.land = p.hp.land;   // Bundesland aus dem Kunden
   if (p && !(p.quick && p.quick.v === 2)) {
     if (p.customer.zip) { QS.zip = p.customer.zip; QS.city = p.customer.city || ''; }
     const h = p.heating;
@@ -6290,6 +6297,7 @@ function quickApplyTo(p) {
   p.quick = { v: 2, state: clone(QS), load: Math.round(r.load * 100) / 100, total: Math.round(r.total * 100) / 100, jaz: Math.round(r.jaz * 100) / 100, te: qTe(), date: isoToday() };
   p.quick.prod = pr ? pr.name : ''; p.quick.bv = r.sim ? r.sim.bv : null; p.quick.deck = r.sim ? r.sim.deck : null;
   p.hp.kw = pr ? pr.power : p.quick.total; p.hp.jaz = p.quick.jaz;
+  if (QS.land) p.hp.land = QS.land;   // Bundesland des Aufstellorts aus der Schnellauslegung
   /* Jahresverbrauch aus der Simulation: Wärmebedarf und Strombedarf der Wärmepumpe (inkl. Heizstab) */
   const sim = r.sim; if (sim && sim.total > 0) {
     const el = Math.round(sim.eWP + (sim.isEl ? sim.rod : 0));
@@ -8993,6 +9001,16 @@ function wpLandCard(p, R) {
     <p class="hint">Ohne Gewähr. Ein Bebauungsplan oder eine Gemeindesatzung kann anderes festlegen – im Zweifel beim Bauamt nachfragen. Die Grenzbebauung zählt mit Garage und Carport zusammen.</p></div>`;
 }
 document.addEventListener('change', e => { const el = e.target; if (el && el.dataset && el.dataset.b === 'p:hp.land') setTimeout(() => { if (typeof render === 'function') render(); }, 0); });
+
+/* Schnellauslegung: Abschnitt „Aufstellort & Abstand“ (Bundesland aus der PLZ der Schnellauslegung) */
+function qLandHTML() {
+  const auto = wpLandFromPlz(QS.zip), code = QS.land || auto, L = WP_LAND[code];
+  const opts = [['', auto ? `Automatisch: ${WP_LAND[auto][0]}` : 'Bitte wählen']].concat(Object.entries(WP_LAND).map(([k, v]) => [k, v[0]]));
+  return `<div class="grid sm:grid-cols-2 gap-3 items-end"><div><span class="lbl">Bundesland des Aufstellorts</span>${qSel('land', opts)}</div>
+      ${L ? `<div class="rounded-[calc(var(--r)-4px)] bg-p/10 px-4 py-3"><div class="text-[12px] text-ink3">Abstand zur Grundstücksgrenze</div><div class="text-[22px] font-semibold leading-tight">${esc(L[1])}</div></div>` : ''}</div>
+    ${L ? `<p class="text-[14px] mt-3 leading-relaxed">${esc(L[2])}</p><p class="hint">${esc(L[3])} · Rechtsstand ${WP_LAND_STAND}${!QS.land ? ' · aus der PLZ geschätzt – bitte prüfen' : ''}</p>` : '<p class="hint !mt-0">PLZ oben eingeben oder Bundesland wählen.</p>'}
+    <p class="hint">Zusätzlich gilt bundesweit die TA Lärm: am Nachbarfenster nachts höchstens 35 dB(A) (reines Wohngebiet) bzw. 40 dB(A) (allgemeines Wohngebiet). Ohne Gewähr – Bebauungsplan und Bauamt gehen vor.</p>`;
+}
 
 /* =========================================================
    Router & Rendern

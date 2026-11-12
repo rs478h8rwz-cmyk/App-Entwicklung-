@@ -148,6 +148,7 @@ function quickHTML() {
       ${QS.hsys !== 'hk' ? `<div class="rounded-[calc(var(--r)-4px)] border border-line p-3"><div class="text-[12px] text-ink3">Heizkreis ${QS.hsys === 'both' ? 2 : 1} · Fußbodenheizung</div><span class="lbl !mt-2">Vorlauftemperatur</span>${qSel('flowFBH', QH.flowFBH)}</div>` : ''}
     </div>`)}
   ${sec(4, 'Ergebnis & Wärmepumpe', `<div id="q-result">${qResultHTML(r)}</div>`)}
+  ${typeof qLandHTML === 'function' ? sec(5, 'Aufstellort & Abstand zum Nachbarn', `<div id="q-land">${qLandHTML()}</div>`) : ''}
   </div>
   ${QPID ? '' : `<div class="mt-6">${custNameField()}</div>`}
   <div class="flex flex-col sm:flex-row gap-3 mt-6">${QPID
@@ -162,6 +163,7 @@ function quickLive() {
   set('q-mload', isNum(m) ? num(m, 2) + ' kW' : '–'); set('q-pers', QS.persons); set('q-sperr', (QS.sperr || 0) + ' Std.');
   const av = $('#q-avg'); if (av) av.innerHTML = qAvgText();
   const hint = $('#q-r-from'); if (hint) hint.textContent = qLoadFrom();
+  const ql = $('#q-land'); if (ql && typeof qLandHTML === 'function' && !(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.qi === 'land')) ql.innerHTML = qLandHTML();
 }
 function qTeInfo() {
   if (isNum(QS.teAuto)) return `Normaußentemperatur ca. <b>${num(QS.teAuto, 1)} °C</b>${isNum(QS.teH) ? ` (geschätzt aus Lage und ${num(QS.teH)} m Höhe)` : ' (geschätzt)'}. Feld leer lassen = dieser Wert; genauer Wert nach DIN/TS 12831-1.`;
@@ -181,6 +183,7 @@ async function quickZip() {
 function quickDialog(pid) {
   const p = pid ? findProject(pid) : null; QPID = p ? p.id : null;
   QS = { ...QD, reno: [], ...(p && p.quick && p.quick.v === 2 ? clone(p.quick.state) : {}) };
+  if (p && p.hp && p.hp.land && !QS.land) QS.land = p.hp.land;   // Bundesland aus dem Kunden
   if (p && !(p.quick && p.quick.v === 2)) {
     if (p.customer.zip) { QS.zip = p.customer.zip; QS.city = p.customer.city || ''; }
     const h = p.heating;
@@ -205,6 +208,7 @@ function quickApplyTo(p) {
   p.quick = { v: 2, state: clone(QS), load: Math.round(r.load * 100) / 100, total: Math.round(r.total * 100) / 100, jaz: Math.round(r.jaz * 100) / 100, te: qTe(), date: isoToday() };
   p.quick.prod = pr ? pr.name : ''; p.quick.bv = r.sim ? r.sim.bv : null; p.quick.deck = r.sim ? r.sim.deck : null;
   p.hp.kw = pr ? pr.power : p.quick.total; p.hp.jaz = p.quick.jaz;
+  if (QS.land) p.hp.land = QS.land;   // Bundesland des Aufstellorts aus der Schnellauslegung
   /* Jahresverbrauch aus der Simulation: Wärmebedarf und Strombedarf der Wärmepumpe (inkl. Heizstab) */
   const sim = r.sim; if (sim && sim.total > 0) {
     const el = Math.round(sim.eWP + (sim.isEl ? sim.rod : 0));

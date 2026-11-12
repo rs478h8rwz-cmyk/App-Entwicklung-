@@ -55,3 +55,13 @@ function wpLandCard(p, R) {
     <p class="hint">Ohne Gewähr. Ein Bebauungsplan oder eine Gemeindesatzung kann anderes festlegen – im Zweifel beim Bauamt nachfragen. Die Grenzbebauung zählt mit Garage und Carport zusammen.</p></div>`;
 }
 document.addEventListener('change', e => { const el = e.target; if (el && el.dataset && el.dataset.b === 'p:hp.land') setTimeout(() => { if (typeof render === 'function') render(); }, 0); });
+
+/* Schnellauslegung: Abschnitt „Aufstellort & Abstand“ (Bundesland aus der PLZ der Schnellauslegung) */
+function qLandHTML() {
+  const auto = wpLandFromPlz(QS.zip), code = QS.land || auto, L = WP_LAND[code];
+  const opts = [['', auto ? `Automatisch: ${WP_LAND[auto][0]}` : 'Bitte wählen']].concat(Object.entries(WP_LAND).map(([k, v]) => [k, v[0]]));
+  return `<div class="grid sm:grid-cols-2 gap-3 items-end"><div><span class="lbl">Bundesland des Aufstellorts</span>${qSel('land', opts)}</div>
+      ${L ? `<div class="rounded-[calc(var(--r)-4px)] bg-p/10 px-4 py-3"><div class="text-[12px] text-ink3">Abstand zur Grundstücksgrenze</div><div class="text-[22px] font-semibold leading-tight">${esc(L[1])}</div></div>` : ''}</div>
+    ${L ? `<p class="text-[14px] mt-3 leading-relaxed">${esc(L[2])}</p><p class="hint">${esc(L[3])} · Rechtsstand ${WP_LAND_STAND}${!QS.land ? ' · aus der PLZ geschätzt – bitte prüfen' : ''}</p>` : '<p class="hint !mt-0">PLZ oben eingeben oder Bundesland wählen.</p>'}
+    <p class="hint">Zusätzlich gilt bundesweit die TA Lärm: am Nachbarfenster nachts höchstens 35 dB(A) (reines Wohngebiet) bzw. 40 dB(A) (allgemeines Wohngebiet). Ohne Gewähr – Bebauungsplan und Bauamt gehen vor.</p>`;
+}
