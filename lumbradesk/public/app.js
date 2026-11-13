@@ -133,6 +133,9 @@ function viewSystem() {
   const y = ST.sys || {};
   return `<section class="hero"><h1>System</h1><p class="muted">LumbraDesk ${esc(y.version || '')} · PHP ${esc(y.php || '')}</p></section>
     ${featureCard().replace('card sec', 'card')}
+    <div class="card sec"><h2>KI-Bildanalyse</h2><p class="muted">Für den Zählerschrank-Check: Die Fotos werden zur Auswertung an Claude (Anthropic) geschickt. Dafür wird ein API-Schlüssel von console.anthropic.com gebraucht – er bleibt auf dem Server und wird nie angezeigt. Kosten je Check: wenige Cent.</p>
+      <p style="margin:8px 0 0">${ST.ai && ST.ai.on ? `<span class="badge p">eingerichtet ${esc(ST.ai.hint)}</span>` : '<span class="badge">nicht eingerichtet – der Check funktioniert dann ohne KI (Fragen von Hand)</span>'}</p>
+      <form id="f-ai" class="row" style="margin-top:10px" autocomplete="off"><input name="key" type="password" autocomplete="new-password" placeholder="sk-ant-…" style="max-width:420px;flex:1 1 220px"><button class="btn" type="submit">Speichern</button>${ST.ai && ST.ai.on ? '<button class="btn g danger" type="button" data-a="ai-off">Entfernen</button>' : ''}</form></div>
     <div class="card sec"><h2>Update einspielen</h2><p class="muted">Die Update-Datei (lumbradesk-update.zip) hier auswählen – sie wird direkt auf dem Server eingespielt. Zugangsdaten, Benutzer und Daten bleiben erhalten.</p>
       <form id="f-update" class="row" style="margin-top:12px"><input type="file" name="zip" accept=".zip,application/zip" required style="height:auto;padding:10px;max-width:420px;flex:1 1 220px"><button class="btn" type="submit">Update einspielen</button></form>
       ${y.zip === false ? '<p class="note err">Auf dem Server fehlt die ZIP-Unterstützung.</p>' : ''}<p class="muted" style="font-size:13px">Max. Dateigröße laut Server: ${esc(y.maxUpload || '–')}</p><div id="upd-msg"></div></div>
@@ -182,7 +185,7 @@ async function route() {
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/'); ST.view = parts[0]; const arg = decodeURIComponent(parts[1] || '');
   if (!ST.user) return void ($('#app').innerHTML = ST.view === 'vergessen' ? viewForgot() : viewLogin());
   if (ST.user.mustChange) return void ($('#app').innerHTML = viewNewPw());
-  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], allViews = ['home', 'plantafel'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel', 'produkte', 'rechnungen', 'rechnung', 'belege', 'assistent'];
+  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], allViews = ['home', 'plantafel', 'zaehler'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel', 'produkte', 'rechnungen', 'rechnung', 'belege', 'assistent'];
   if (!(allViews.includes(ST.view) || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin') || (offViews.includes(ST.view) && ['admin', 'buero'].includes(ST.user.role)))) ST.view = 'home';
   try {
     if (isCrm() && (crmViews.includes(ST.view) || ST.view === 'home')) await crmLoad(ST.view, arg);
@@ -190,12 +193,13 @@ async function route() {
     if (['kunde', 'angebot', 'artikel', 'produkte', 'assistent'].includes(ST.view)) await offLoad(ST.view === 'assistent' ? 'artikel' : ST.view);
     if (typeof reLoad === 'function' && ['kunde', 'rechnungen', 'rechnung', 'belege'].includes(ST.view)) await reLoad(ST.view, arg);
     if (ST.view === 'plantafel' && typeof planLoad === 'function') await planLoad();
+    if (ST.view === 'zaehler' && typeof zsLoad === 'function') await zsLoad(arg);
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
-    if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); ST.feat = (await api('features')).list; }
+    if (ST.view === 'system') { ST.ai = await api('ai-cfg').catch(() => null); ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); ST.feat = (await api('features')).list; }
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
   if (seq !== ST.seq) return;
-  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel, produkte: viewProdukte, rechnungen: viewRechnungen, rechnung: viewRechnung, belege: viewBelege, assistent: viewAssistent, plantafel: typeof viewPlan === 'function' ? viewPlan : viewHome };
+  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel, produkte: viewProdukte, rechnungen: viewRechnungen, rechnung: viewRechnung, belege: viewBelege, assistent: viewAssistent, plantafel: typeof viewPlan === 'function' ? viewPlan : viewHome, zaehler: typeof viewZaehler === 'function' ? viewZaehler : viewHome };
   $('#app').innerHTML = shell((V[ST.view] || viewHome)());
 }
 window.addEventListener('hashchange', route);

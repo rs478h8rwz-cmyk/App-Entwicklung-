@@ -507,6 +507,15 @@ try {
       $people = db()->query("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name")->fetchAll();
       json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'stages' => STAGES, 'customers' => crm_list($u), 'team' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name']], $team), 'people' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'role' => $r['role']], $people)]);
     }
+    /* ---------- Zählerschrank-Check ---------- */
+    case 'GET zs-vnb': { require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(zs_vnb((string)($_GET['q'] ?? ''))); }
+    case 'GET zs-list': { $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; $p = (string)($_GET['p'] ?? ''); json_out(['list' => zs_list($u, valid_id($p) ? $p : ''), 'tabs' => zs_tabs(), 'ai' => zs_ai_status()['on']]); }
+    case 'GET zs-get': { $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(zs_get($u, (int)($_GET['id'] ?? 0))); }
+    case 'POST zs-save': { $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(['ok' => true, 'check' => zs_save($u, body())]); }
+    case 'POST zs-ai': { require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(['ok' => true, 'ai' => zs_ai((array)(body()['photos'] ?? []))]); }
+    case 'GET ai-cfg': { require_role(['admin']); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(zs_ai_status()); }
+    case 'POST ai-cfg': { $u = require_role(['admin']); require_once LD_PRIV_DIR . '/zs-lib.php'; $o = zs_ai_key_save($u, (string)(body()['key'] ?? '')); audit((int)$u['id'], 'ki_schluessel', $o['on'] ? 'gesetzt' : 'entfernt'); json_out(['ok' => true] + $o); }
+    case 'POST zs-tabs': { $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/zs-lib.php'; $o = zs_tabs_save($u, (array)(body()['list'] ?? [])); audit((int)$u['id'], 'zaehlercheck', 'TAB-Liste gespeichert'); json_out(['ok' => true, 'tabs' => $o]); }
     /* ---------- Plantafel ---------- */
     case 'GET plan': {
       $u = require_user(); require_once LD_PRIV_DIR . '/plan-lib.php';

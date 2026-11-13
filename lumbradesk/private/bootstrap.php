@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '4.9';
+const LD_VERSION = '5.0';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -12,6 +12,7 @@ const LD_APPS = [
   ['key' => 'calc', 'name' => 'Wirtschaftlichkeit', 'text' => 'Berechnungen, Angebote, Modulplan, Stringplan', 'url' => 'rechner/', 'roles' => ['admin', 'buero', 'vertrieb']],
   ['key' => 'modul', 'name' => 'Modulbelegung', 'text' => 'Modulplan direkt öffnen – Dach belegen, Module zählen', 'url' => 'rechner/?start=modul', 'roles' => ['admin', 'buero', 'vertrieb']],
   ['key' => 'quick', 'name' => 'Schnellauslegung', 'text' => 'Wärmepumpen-Schnellauslegung direkt öffnen', 'url' => 'rechner/?start=schnell', 'roles' => ['admin', 'buero', 'vertrieb']],
+  ['key' => 'zaehler', 'name' => 'Zählerschrank-Check', 'text' => 'Zählerschrank fotografieren und nach VDE-AR-N 4100 / FNN-Hinweis bewerten', 'url' => '#/zaehler', 'roles' => ['admin', 'buero', 'vertrieb', 'monteur']],
   ['key' => 'stempel', 'name' => 'Stempeluhr', 'text' => 'Arbeitszeit, Urlaub, Stundenzettel', 'url' => 'stempel/', 'roles' => ['admin', 'buero', 'vertrieb', 'monteur']],
   ['key' => 'abnahme', 'name' => 'Abnahme & Service', 'text' => 'Abnahmeprotokolle, Service-Einsätze, Fotos, Unterschrift', 'url' => 'abnahme/', 'roles' => ['admin', 'buero', 'monteur']],
 ];

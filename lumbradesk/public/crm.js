@@ -129,6 +129,7 @@ function viewKunde() {
           <p class="muted small" style="margin:8px 0 0">Tippe auf eine Stufe, um sie zu setzen. Wird später in der Wirtschaftlichkeit „Gesendet“ oder „Unterschrieben“ gewählt, rückt die Stufe automatisch mit.</p></div>
 
         ${typeof offerCard === 'function' ? offerCard() : ''}
+        <div class="card sec"><div class="of-head"><h2>Zählerschrank</h2><a class="btn sm" href="#/zaehler/neu/${esc(c.id)}">${ic('zaehler', 16)}Check starten</a></div><div id="k-zs"><p class="muted small" style="margin:0">Foto aufnehmen und prüfen, ob der Zählerschrank für PV, Wärmepumpe oder Wallbox passt.</p></div></div>
         ${typeof invoiceCard === 'function' ? invoiceCard() : ''}
         <div class="card sec"><h2>Wiedervorlagen</h2>
           ${open.length ? `<div class="tlist">${open.map(taskRow).join('')}</div>` : '<p class="muted">Keine offenen Wiedervorlagen.</p>'}
@@ -232,6 +233,7 @@ function viewMehr() {
 /* ---------- Laden ---------- */
 async function crmLoad(view, arg) {
   if (view === 'kunden' || view === 'aufgaben') { const j = await api('crm'); ST.crm = j.customers; ST.crmAll = j.all; ST.team = j.team; }
+  if (view === 'kunde') api('zs-list&p=' + encodeURIComponent(arg)).then(j => { const el = $('#k-zs'); if (el && j.list.length && typeof ZS_RES === 'object') el.innerHTML = `<div class="clist flat">${j.list.map(x => `<a class="crow" href="#/zaehler/${x.id}"><span class="evi" style="color:${ZS_RES[x.result][2]}">${ic('zaehler', 18)}</span><div class="cmain"><b>${esc(ZS_RES[x.result][0])}</b><span class="muted">${utc(x.at).toLocaleDateString('de-DE')}${x.fields ? ' · Empfehlung ' + x.fields + '-feldig' : ''}</span></div>${ic('next', 18)}</a>`).join('')}</div>`; }).catch(() => {});
   if (view === 'kunde') { ST.hrs = null; api('st-sites&p=' + encodeURIComponent(arg)).then(h => { ST.hrs = h; const el = $('#k-hrs'); if (el && ST.view === 'kunde') el.outerHTML = hoursCard(); }).catch(() => {}); ST.cd = null; try { const [d, t] = await Promise.all([api('crm-p&id=' + encodeURIComponent(arg)), ST.team ? null : api('tasks')]); ST.cd = d; if (t) ST.team = t.team; } catch (e) { if (e.status === 401) throw e; toast(e.message); } }
   if (view === 'home') { try { ST.dash = await api('dash'); } catch (e) { if (e.status === 401) throw e; ST.dash = null; } }
   if (view === 'aufgaben' || view === 'home') { const j = await api('tasks&scope=' + (view === 'home' ? 'meine' : CR.tscope)); ST.tasks = j.tasks; ST.tasksAll = j.all; ST.remind = j.remind; ST.team = j.team; }
