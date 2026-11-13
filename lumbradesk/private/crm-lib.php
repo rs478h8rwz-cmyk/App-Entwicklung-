@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 const STAGES = ['anfrage' => 'Anfrage', 'termin' => 'Termin', 'angebot' => 'Angebot', 'auftrag' => 'Auftrag', 'montage' => 'Montage', 'fertig' => 'Abgeschlossen', 'verloren' => 'Verloren'];
-const EVENT_KINDS = ['notiz' => 'Notiz', 'anruf' => 'Anruf', 'termin' => 'Termin', 'email' => 'E-Mail', 'stufe' => 'Stufe', 'zuweisung' => 'Zuweisung', 'aufgabe' => 'Aufgabe'];
+const EVENT_KINDS = ['notiz' => 'Notiz', 'anruf' => 'Anruf', 'termin' => 'Termin', 'email' => 'E-Mail', 'stufe' => 'Stufe', 'zuweisung' => 'Zuweisung', 'aufgabe' => 'Aufgabe', 'check' => 'Checkliste'];
 
 function crm_tables(): void {
   static $done = false; if ($done) return; $done = true;
@@ -21,6 +21,10 @@ function crm_tables(): void {
   if (!in_array('ref', $ecols, true)) $pdo->exec("ALTER TABLE crm_events ADD COLUMN ref VARCHAR(40) NULL");
   if (!in_array('pin_note', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN pin_note TEXT NULL, ADD COLUMN pin_by INT UNSIGNED NULL, ADD COLUMN pin_at DATETIME NULL");
   $pdo->exec("CREATE TABLE IF NOT EXISTS crm_files (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(40) NOT NULL, fid VARCHAR(40) NOT NULL, name VARCHAR(200) NOT NULL, type VARCHAR(100) NOT NULL, size INT UNSIGNED NOT NULL, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX (project_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $fc = array_column($pdo->query('SHOW COLUMNS FROM crm_files')->fetchAll(), 'Field');
+  if (!in_array('tag', $fc, true)) $pdo->exec("ALTER TABLE crm_files ADD COLUMN tag VARCHAR(24) NULL, ADD INDEX (project_id, tag)");
+  if (!in_array('checks', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN checks TEXT NULL");
+  $pdo->exec("CREATE TABLE IF NOT EXISTS ld_notifs (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id INT UNSIGNED NOT NULL, by_id INT UNSIGNED NULL, project_id VARCHAR(40) NULL, title VARCHAR(200) NOT NULL, text TEXT NOT NULL, url VARCHAR(300) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, read_at DATETIME NULL, INDEX (user_id, read_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
   $mc = $pdo->query("SHOW TABLES LIKE 'crm_mails'")->fetchColumn();
   if ($mc && !in_array('docs', array_column($pdo->query('SHOW COLUMNS FROM crm_mails')->fetchAll(), 'Field'), true)) $pdo->exec("ALTER TABLE crm_mails ADD COLUMN docs VARCHAR(500) NOT NULL DEFAULT '' AFTER files");
   $pdo->exec("CREATE TABLE IF NOT EXISTS sys_docs (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, fid VARCHAR(40) NOT NULL, name VARCHAR(200) NOT NULL, type VARCHAR(100) NOT NULL, size INT UNSIGNED NOT NULL, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -85,7 +89,11 @@ function crm_project(array $u, string $id): array {
   crm_tables(); if (!valid_id($id)) fail('Ungültiger Kunde', 400);
   $st = db()->prepare('SELECT ' . CRM_FIELDS . ', p.deleted FROM projects p WHERE p.id = ?'); $st->execute([$id]); $r = $st->fetch();
   if (!$r || $r['deleted']) fail('Kunde nicht gefunden – evtl. gelöscht oder noch nicht abgeglichen.', 404);
-  if (!can_see_project($u, ['owner_id' => $r['owner_id'], 'created_by' => $r['created_by']])) fail('Keine Berechtigung für diesen Kunden', 403);
+  if (!can_see_project($u, ['owner_id' => $r['owner_id'], 'created_by' => $r['created_by']])) {
+    /* Wer im Logbuch markiert wurde, darf den Kunden öffnen (sonst führt die Benachrichtigung ins Leere) */
+    $m = db()->prepare('SELECT 1 FROM crm_events WHERE project_id = ? AND FIND_IN_SET(?, mentions) LIMIT 1'); $m->execute([$id, (string)$u['id']]);
+    if (!$m->fetchColumn()) fail('Keine Berechtigung für diesen Kunden', 403);
+  }
   return $r;
 }
 
@@ -112,7 +120,8 @@ function crm_detail(array $u, string $id): array {
   $ev = db()->prepare('SELECT * FROM crm_events WHERE project_id = ? ORDER BY at DESC, id DESC LIMIT 500'); $ev->execute([$id]);
   $tk = db()->prepare('SELECT * FROM crm_tasks WHERE project_id = ? ORDER BY done_at IS NOT NULL, due, id'); $tk->execute([$id]);
   $people = array_map(fn($x) => ['id' => (int)$x['id'], 'name' => $x['name']], db()->query('SELECT id, name FROM users WHERE active = 1 ORDER BY name')->fetchAll());
-  return ['people' => $people, 'customer' => crm_row_out($r), 'events' => array_map('crm_event_out', $ev->fetchAll()), 'tasks' => array_map('crm_task_out', $tk->fetchAll())];
+  $c = crm_row_out($r);
+  return ['people' => $people, 'check' => crm_checklist($id, (string)($c['stage'] ?? '')), 'customer' => $c, 'events' => array_map('crm_event_out', $ev->fetchAll()), 'tasks' => array_map('crm_task_out', $tk->fetchAll())];
 }
 
 /* Aufgaben, die ein Benutzer sehen darf: eigene (zuständig/angelegt) + bei Admin/Büro alle */
@@ -224,6 +233,7 @@ function crm_mention(array $u, string $pid, int $eventId, array $ids, string $ki
   db()->prepare('UPDATE crm_events SET mentions = ? WHERE id = ?')->execute([implode(',', array_column($to, 'id')), $eventId]);
   $p = project_row($pid); $cust = $p ? $p['name'] : 'Kunde'; $sent = [];
   foreach ($to as $r) {
+    notif_add((int)$r['id'], (int)$u['id'], $pid, $u['name'] . ' hat dich markiert · ' . $cust, $text, '#/kunde/' . rawurlencode($pid));
     try {
       [$t, $h] = mail_tpl('Hallo ' . explode(' ', $r['name'])[0] . ',', $u['name'] . ' hat dich bei ' . $cust . ' markiert' . ($kind !== 'notiz' ? ' (' . (EVENT_KINDS[$kind] ?? $kind) . ')' : '') . ":\n\n„" . $text . '“', 'Kunde öffnen', base_url() . '/#/kunde/' . rawurlencode($pid), 'Die Nachricht steht im Logbuch des Kunden.');
       send_mail($r['email'], $u['name'] . ' hat dich markiert: ' . $cust, $t, str_replace("\n", '<br>', $h)); $sent[] = $r['name'];
@@ -328,17 +338,30 @@ function crm_pin(array $u, string $pid, string $text): void {
 const CRM_FILE_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'];
 function crm_files(string $pid): array {
   $n = user_names(); $st = db()->prepare('SELECT * FROM crm_files WHERE project_id = ? ORDER BY id DESC'); $st->execute([$pid]);
-  return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'type' => $r['type'], 'size' => (int)$r['size'], 'by' => $n[(int)$r['created_by']] ?? '', 'at' => $r['created_at']], $st->fetchAll());
+  return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'type' => $r['type'], 'size' => (int)$r['size'], 'by' => $n[(int)$r['created_by']] ?? '', 'at' => $r['created_at'], 'tag' => $r['tag'] ?? null], $st->fetchAll());
+}
+/* Datei beim Kunden ablegen. Mit Kennung (z. B. „wirt“, „zs“, „angebot“) ersetzt sie die vorige Datei derselben Art – so hängt in der Checkliste immer die aktuelle PDF. */
+function crm_file_store(string $pid, int $uid, string $name, string $type, string $bin, ?string $tag = null): int {
+  crm_tables();
+  if ($tag !== null && !preg_match('/^[a-z0-9_-]{1,24}$/', $tag)) $tag = null;
+  if ($tag !== null) {
+    $old = db()->prepare('SELECT id, fid FROM crm_files WHERE project_id = ? AND tag = ?'); $old->execute([$pid, $tag]);
+    foreach ($old->fetchAll() as $o) { db()->prepare('DELETE FROM crm_files WHERE id = ?')->execute([$o['id']]); $f = files_dir() . '/' . $o['fid']; @unlink($f . '.bin'); @unlink($f . '.json'); }
+  }
+  $name = mb_substr(preg_replace('/[\\\\\/:*?"<>|\r\n]+/', '_', trim($name)), 0, 180) ?: 'Datei';
+  $fid = 'cf-' . bin2hex(random_bytes(10)); $f = files_dir() . '/' . $fid;
+  file_put_contents($f . '.bin', $bin); file_put_contents($f . '.json', json_encode(['type' => $type, 'name' => $name, 'size' => strlen($bin)]));
+  db()->prepare('INSERT INTO crm_files (project_id, fid, name, type, size, created_by, tag) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$pid, $fid, $name, $type, strlen($bin), $uid, $tag]);
+  return (int)db()->lastInsertId();
 }
 function crm_file_up(array $u, array $b): array {
   $pid = (string)($b['project'] ?? ''); crm_project($u, $pid);
   $type = (string)($b['type'] ?? ''); if (!in_array($type, CRM_FILE_TYPES, true)) fail('Dieser Dateityp wird nicht unterstützt (Fotos, PDF, Word, Excel).', 400);
   $bin = base64_decode((string)($b['data'] ?? ''), true); if ($bin === false || $bin === '') fail('Datei leer oder beschädigt.', 400);
   if (strlen($bin) > 15 * 1024 * 1024) fail('Die Datei ist größer als 15 MB.', 400);
-  $name = mb_substr(preg_replace('/[\\\\\/:*?"<>|\r\n]+/', '_', trim((string)($b['name'] ?? 'Datei'))), 0, 180) ?: 'Datei';
-  $fid = 'cf-' . bin2hex(random_bytes(10)); $f = files_dir() . '/' . $fid;
-  file_put_contents($f . '.bin', $bin); file_put_contents($f . '.json', json_encode(['type' => $type, 'name' => $name, 'size' => strlen($bin)]));
-  db()->prepare('INSERT INTO crm_files (project_id, fid, name, type, size, created_by) VALUES (?, ?, ?, ?, ?, ?)')->execute([$pid, $fid, $name, $type, strlen($bin), $u['id']]);
+  $tag = isset($b['tag']) && preg_match('/^[a-z0-9_-]{1,24}$/', (string)$b['tag']) ? (string)$b['tag'] : null;
+  crm_file_store($pid, (int)$u['id'], (string)($b['name'] ?? 'Datei'), $type, $bin, $tag);
+  if ($tag !== null && isset(CHECK_TAG_L[$tag])) crm_add_event($pid, (int)$u['id'], 'check', CHECK_TAG_L[$tag] . ' als PDF beim Kunden abgelegt.');
   return crm_files($pid);
 }
 function crm_file_row(array $u, int $id): array {
@@ -429,3 +452,89 @@ function mail_sig_for(array $u): array {
   return ['own' => is_string($own) ? $own : '', 'company' => mail_sig_company(), 'text' => strtr($t, ['{Name}' => $u['name'], '{E-Mail}' => $u['email']])];
 }
 function mail_sig_save(array $u, string $text, bool $company): void { $t = mb_substr(str_replace("\r", '', $text), 0, 2000); if ($company) ld_set('mail_sig', $t, (int)$u['id']); else ld_set('usig_' . (int)$u['id'], $t, (int)$u['id']); }
+
+/* ---------- Checkliste beim Kunden ----------
+   Je nach Art (PV, Wärmepumpe, beides) die Schritte bis zur Montage. Vieles erkennt das System selbst
+   (Modulplan, Auslegung, Zählerschrank-Check, Angebot, Auftrag, Abnahme); alles lässt sich auch von Hand abhaken.
+   Ist eine PDF dazu abgelegt (Kennung in crm_files.tag), hängt sie direkt am Punkt. */
+const CHECK_TAG_L = ['wirt' => 'Wirtschaftlichkeitsberechnung', 'zs' => 'Zählerschrank-Prüfbericht', 'angebot' => 'Angebot'];
+const CHECK_ITEMS = [
+  'roof' => ['Dachbelegung geprüft', 'pv'], 'wp' => ['Wärmepumpe ausgelegt', 'wp'], 'zs' => ['Zählerschrank geprüft', ''],
+  'wirt' => ['Wirtschaftlichkeit berechnet', ''], 'angebot' => ['Angebot erstellt', ''], 'auftrag' => ['Auftrag unterschrieben', ''],
+  'netz' => ['Netzanmeldung gestellt', 'pv'], 'foerder' => ['Förderantrag gestellt (BEG)', 'wp'], 'abnahme' => ['Abnahme / Inbetriebnahme', ''],
+];
+function crm_checklist(string $pid, string $stage): array {
+  crm_tables(); $p = project_row($pid); if (!$p) return [];
+  $d = json_decode((string)$p['data'], true) ?: []; $type = (string)($d['type'] ?? '');
+  $hasPv = $type !== 'wp'; $hasWp = in_array($type, ['wp', 'pvwp', ''], true);
+  $man = json_decode((string)($p['checks'] ?? ''), true) ?: []; $n = user_names(); $pdo = db();
+  $files = []; $fq = $pdo->prepare('SELECT id, name, tag, created_at FROM crm_files WHERE project_id = ? AND tag IS NOT NULL'); $fq->execute([$pid]);
+  foreach ($fq->fetchAll() as $f) $files[$f['tag']] = ['id' => (int)$f['id'], 'name' => $f['name'], 'at' => $f['created_at']];
+  $num = fn($v, $dec = 1) => number_format((float)$v, $dec, ',', '.');
+  $auto = [];
+  /* Modulplan */
+  $mods = 0; foreach ((array)($d['roof']['faces'] ?? []) as $f) $mods += count((array)($f['mods'] ?? []));
+  if ($mods) $auto['roof'] = ['detail' => $mods . ' Module im Modulplan' . (!empty($d['pv']['kwp']) ? ' · ' . $num($d['pv']['kwp'], 2) . ' kWp' : '')];
+  /* Wärmepumpe: Schnellauslegung oder technische Unterlagen */
+  $q = $d['quick'] ?? null; $tech = count(array_filter((array)($d['docs'] ?? []), fn($x) => ($x['role'] ?? '') === 'tech'));
+  if (is_array($q) && ($q['v'] ?? 0) == 2) $auto['wp'] = ['detail' => 'Schnellauslegung' . (!empty($d['hp']['kw']) ? ': ' . $num($d['hp']['kw']) . ' kW' : '') . (!empty($d['hp']['jaz']) ? ', JAZ ' . $num($d['hp']['jaz'], 2) : '')];
+  elseif ($tech) $auto['wp'] = ['detail' => $tech . ' technische Unterlage(n) in der Wirtschaftlichkeit'];
+  /* Zählerschrank-Check */
+  if ($pdo->query("SHOW TABLES LIKE 'zs_checks'")->fetchColumn()) {
+    $z = $pdo->prepare('SELECT id, result, created_at, created_by FROM zs_checks WHERE project_id = ? ORDER BY id DESC LIMIT 1'); $z->execute([$pid]);
+    if ($r = $z->fetch()) $auto['zs'] = ['detail' => ['ok' => 'Passt', 'fix' => 'Passt mit Nachrüstung', 'neu' => 'Neuer Zählerschrank nötig', 'pruefen' => 'Vor Ort prüfen'][$r['result']] ?? '', 'ref' => (string)$r['id'], 'at' => $r['created_at'], 'by' => $n[(int)$r['created_by']] ?? ''];
+  }
+  /* Wirtschaftlichkeit: PDF erstellt oder Angebot gesendet */
+  if (isset($files['wirt'])) $auto['wirt'] = ['detail' => 'PDF erstellt', 'at' => $files['wirt']['at']];
+  elseif (in_array($d['status'] ?? '', ['gesendet', 'unterschrieben'], true)) $auto['wirt'] = ['detail' => 'An den Kunden gesendet'];
+  /* Angebot (Angebote in lumbra.desk oder Angebotsnummer aus der Wirtschaftlichkeit) */
+  if ($pdo->query("SHOW TABLES LIKE 'offers'")->fetchColumn()) {
+    $o = $pdo->prepare('SELECT id, nr, gross, status FROM offers WHERE project_id = ? AND deleted = 0 ORDER BY updated_at DESC LIMIT 1'); try { $o->execute([$pid]); $r = $o->fetch(); } catch (Throwable $e) { $r = null; }
+    if ($r) $auto['angebot'] = ['detail' => $r['nr'] . ' · ' . number_format((float)$r['gross'], 2, ',', '.') . ' €', 'ref' => (string)$r['id']];
+  }
+  if (!isset($auto['angebot']) && !empty($d['offer']['number'])) $auto['angebot'] = ['detail' => 'Angebot ' . $d['offer']['number']];
+  /* Auftrag */
+  if (in_array($stage, ['auftrag', 'montage', 'fertig'], true) || ($d['status'] ?? '') === 'unterschrieben') $auto['auftrag'] = ['detail' => ($d['status'] ?? '') === 'unterschrieben' && !empty($d['statusDate']) ? 'Unterschrieben am ' . date('d.m.Y', strtotime((string)$d['statusDate'])) : 'Stufe „' . (STAGES[$stage] ?? 'Auftrag') . '“'];
+  /* Abnahme-Protokoll */
+  if ($pdo->query("SHOW TABLES LIKE 'abnahme_prots'")->fetchColumn()) {
+    $a = $pdo->prepare('SELECT id, nr, datum, monteur FROM abnahme_prots WHERE project_id = ? ORDER BY datum DESC LIMIT 1'); try { $a->execute([$pid]); $r = $a->fetch(); } catch (Throwable $e) { $r = null; }
+    if ($r) $auto['abnahme'] = ['detail' => trim($r['nr'] . ($r['datum'] ? ' · ' . date('d.m.Y', strtotime($r['datum'])) : '') . ($r['monteur'] ? ' · ' . $r['monteur'] : ''), ' ·'), 'ref' => (string)$r['id']];
+  }
+  $out = [];
+  foreach (CHECK_ITEMS as $k => [$label, $for]) {
+    if (($for === 'pv' && !$hasPv) || ($for === 'wp' && !$hasWp)) continue;
+    $m = $man[$k] ?? null; $a = $auto[$k] ?? null;
+    $file = $files[$k] ?? $files['chk-' . $k] ?? (in_array($k, ['roof', 'wp'], true) && $a ? ($files['wirt'] ?? null) : null);
+    $out[] = ['key' => $k, 'label' => $label, 'done' => (bool)($a || $m), 'auto' => (bool)$a, 'manual' => (bool)$m,
+      'detail' => $a['detail'] ?? ($m ? 'Abgehakt von ' . ($n[(int)($m['by'] ?? 0)] ?? '–') : ''), 'at' => $a['at'] ?? ($m['at'] ?? null), 'ref' => $a['ref'] ?? null, 'file' => $file];
+  }
+  return $out;
+}
+function crm_check_set(array $u, string $pid, string $key, bool $done): void {
+  if (!isset(CHECK_ITEMS[$key])) fail('Unbekannter Punkt.', 400);
+  $p = project_row($pid); $man = json_decode((string)($p['checks'] ?? ''), true) ?: [];
+  if ($done) $man[$key] = ['by' => (int)$u['id'], 'at' => gmdate('Y-m-d H:i:s')]; else unset($man[$key]);
+  db()->prepare('UPDATE projects SET checks = ? WHERE id = ?')->execute([json_encode($man), $pid]);
+  crm_add_event($pid, (int)$u['id'], 'check', CHECK_ITEMS[$key][0] . ($done ? ' – abgehakt.' : ' – wieder offen.'));
+}
+
+/* ---------- Benachrichtigungen in der App (Glocke) ---------- */
+function notif_add(int $to, ?int $by, ?string $pid, string $title, string $text, string $url): void {
+  crm_tables();
+  db()->prepare('INSERT INTO ld_notifs (user_id, by_id, project_id, title, text, url, created_at) VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())')
+    ->execute([$to, $by, $pid, mb_substr($title, 0, 200), mb_substr($text, 0, 2000), mb_substr($url, 0, 300)]);
+}
+function notif_list(array $u): array {
+  crm_tables(); $n = user_names(); $uid = (int)$u['id'];
+  $st = db()->prepare('SELECT * FROM ld_notifs WHERE user_id = ? ORDER BY id DESC LIMIT 40'); $st->execute([$uid]);
+  $c = db()->prepare('SELECT COUNT(*) FROM ld_notifs WHERE user_id = ? AND read_at IS NULL'); $c->execute([$uid]);
+  return ['unread' => (int)$c->fetchColumn(), 'list' => array_map(fn($r) => ['id' => (int)$r['id'], 'title' => $r['title'], 'text' => $r['text'], 'url' => $r['url'], 'by' => $n[(int)$r['by_id']] ?? '', 'at' => $r['created_at'], 'read' => $r['read_at'] !== null], $st->fetchAll())];
+}
+function notif_read(array $u, int $id): void {
+  crm_tables();
+  if ($id > 0) db()->prepare('UPDATE ld_notifs SET read_at = UTC_TIMESTAMP() WHERE id = ? AND user_id = ? AND read_at IS NULL')->execute([$id, $u['id']]);
+  else db()->prepare('UPDATE ld_notifs SET read_at = UTC_TIMESTAMP() WHERE user_id = ? AND read_at IS NULL')->execute([$u['id']]);
+}
+function notif_unread(int $uid): int {
+  try { crm_tables(); $c = db()->prepare('SELECT COUNT(*) FROM ld_notifs WHERE user_id = ? AND read_at IS NULL'); $c->execute([$uid]); return (int)$c->fetchColumn(); } catch (Throwable $e) { return 0; }
+}

@@ -15,6 +15,10 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.8', date: '2026-11-13', items: [
+    ['crm', 'PDF liegt automatisch beim Kunden', 'Jede fertige PDF wird zusätzlich beim Kunden in lumbra.desk unter „Dateien & Fotos“ abgelegt und hängt dort an der Checkliste (Wirtschaftlichkeit, Dachbelegung, Wärmepumpe). Die vorige PDF wird ersetzt.'],
+    ['roof', 'Direkt aus der Checkliste öffnen', 'In der Checkliste beim Kunden öffnen „Modulplan erstellen“ und „Jetzt auslegen“ die Wirtschaftlichkeit direkt beim richtigen Kunden.']
+  ] },
   { version: '3.7', date: '2026-11-13', items: [
     ['crm', 'Vorhandene Kunden werden erkannt', 'Beim Modulplan, bei der Schnellauslegung und im Kundenschritt schlägt die App beim Tippen vorhandene Kunden aus dem CRM von lumbra.desk vor – mit Kundennummer und Ort. Ein Tipp verknüpft mit dem vorhandenen Kunden, statt ihn doppelt anzulegen.']
   ] },

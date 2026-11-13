@@ -1,6 +1,12 @@
 /* LumbraDesk – CRM: Kunden-Übersicht (Liste + Pipeline), Kundenseite mit Logbuch und Wiedervorlagen, Aufgaben */
 'use strict';
 Object.assign(IC, {
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  liste: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/>',
+  grid: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+  fan: '<path d="M12 12c0-3 1-7 4-7s3 4 0 5.5M12 12c3 0 7 1 7 4s-4 3-5.5 0M12 12c0 3-1 7-4 7s-3-4 0-5.5M12 12c-3 0-7-1-7-4s4-3 5.5 0"/><circle cx="12" cy="12" r="1.2"/>',
+  pdf: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 14h6M9 17h4"/>',
+  clip: '<path d="m21 11-8.6 8.6a5 5 0 0 1-7-7l8.5-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.3-2.3l7.9-8"/>',
   kunden: '<path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/>',
   aufgaben: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 15l2.5 2.5L15 13"/>',
   mehr: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
@@ -25,7 +31,7 @@ const STG = ['anfrage', 'termin', 'angebot', 'auftrag', 'montage', 'fertig', 've
 const STG_L = { anfrage: 'Anfrage', termin: 'Termin', angebot: 'Angebot', auftrag: 'Auftrag', montage: 'Montage', fertig: 'Abgeschlossen', verloren: 'Verloren' };
 const STG_C = { anfrage: '#7A8692', termin: '#5B8DEF', angebot: '#F5A524', auftrag: '#0E7C66', montage: '#8B5CF6', fertig: '#2F9E44', verloren: '#C2412A' };
 const TYPE_L = { pv: 'PV', wp: 'Wärmepumpe', pvwp: 'PV + WP', speicher: 'Speicher', wb: 'Wallbox' };
-const KIND_L = { protokoll: 'Protokoll', notiz: 'Notiz', anruf: 'Anruf', termin: 'Termin', email: 'E-Mail', stufe: 'Stufe geändert', zuweisung: 'Zuweisung', aufgabe: 'Wiedervorlage' };
+const KIND_L = { protokoll: 'Protokoll', notiz: 'Notiz', anruf: 'Anruf', termin: 'Termin', email: 'E-Mail', stufe: 'Stufe geändert', zuweisung: 'Zuweisung', aufgabe: 'Wiedervorlage', check: 'Checkliste' };
 const CR = { ment: new Set(), scope: 'meine', adv: '', stage: '', q: '', mode: 'liste', tscope: 'meine', kind: 'notiz', archiv: false };
 try { Object.assign(CR, JSON.parse(localStorage.getItem('ld-crm') || '{}'), { q: '' }); } catch (e) {}
 const crSave = () => { try { localStorage.setItem('ld-crm', JSON.stringify({ scope: CR.scope, adv: CR.adv, mode: CR.mode, tscope: CR.tscope })); } catch (e) {} };
@@ -123,13 +129,14 @@ function viewKunde() {
           ${c.total || c.offerNo ? `<span>${ic('calc', 18)}<span>Angebot${c.offerNo ? ' ' + esc(c.offerNo) : ''}${c.total ? ' · <b>' + euro(c.total) + '</b>' : ''}</span></span>` : ''}
         </div><a class="btn s" style="width:100%;margin-top:14px" href="${rechnerUrl(c)}">${ic('calc', 18)}In der Wirtschaftlichkeit öffnen</a>
         <p class="muted small" style="margin:10px 0 0">Kontaktdaten und Angebot änderst du in der Wirtschaftlichkeit.${c.created ? ' Angelegt ' + utc(c.created).toLocaleDateString('de-DE') + ' von ' + esc(c.byName) + '.' : ''}</p></div>
+        ${checkCard(c, D.check || [])}
 
         <div class="card sec"><h2>Vertriebs-Stufe</h2>
           <div class="steps">${STG.slice(0, 6).map((s, i) => `<button class="step ${s === c.stage ? 'on' : i < cur && c.stage !== 'verloren' ? 'past' : ''}" style="--c:${STG_C[s]}" data-a="crm-set-stage" data-v="${s}"><i></i><span>${STG_L[s]}</span></button>`).join('')}</div>
           <div class="row" style="margin-top:12px">${c.stage === 'verloren' ? `<span class="muted small">Als verloren markiert.</span><button class="btn g sm" data-a="crm-set-stage" data-v="anfrage">Wieder aufnehmen</button>` : `<button class="btn g sm danger" data-a="crm-set-stage" data-v="verloren">Als verloren markieren</button>`}</div>
           <p class="muted small" style="margin:8px 0 0">Tippe auf eine Stufe, um sie zu setzen. Wird später in der Wirtschaftlichkeit „Gesendet“ oder „Unterschrieben“ gewählt, rückt die Stufe automatisch mit.</p></div>
 
-        <div class="card sec" id="k-files"><div class="of-head"><h2>Dateien &amp; Fotos</h2><label class="btn sm">${ic('plus', 16)}Hochladen<input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" data-cf="${esc(c.id)}" class="zs-file"></label></div><div id="k-fl">${filesHTML()}</div></div>
+        <div class="card sec" id="k-files"><div class="of-head"><h2>Dateien &amp; Fotos</h2><label class="btn sm cf-up">${ic('plus', 16)}Hochladen<input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" data-cf="${esc(c.id)}" class="zs-file"></label></div><div id="k-fl">${filesHTML()}</div></div>
         ${typeof offerCard === 'function' ? offerCard() : ''}
         <div class="card sec"><div class="of-head"><h2>Zählerschrank</h2><a class="btn sm" href="#/zaehler/neu/${esc(c.id)}">${ic('zaehler', 16)}Check starten</a></div><div id="k-zs"><p class="muted small" style="margin:0">Foto aufnehmen und prüfen, ob der Zählerschrank für PV, Wärmepumpe oder Wallbox passt.</p></div></div>
         ${typeof invoiceCard === 'function' ? invoiceCard() : ''}
@@ -153,9 +160,9 @@ function viewKunde() {
     </div>`;
 }
 function mentionChips() {
-  if (!(ST.features || {}).markieren) return '';
-  const ppl = ((ST.cd && ST.cd.people) || []).filter(x => x.id !== ST.user.id); if (!ppl.length) return '';
-  return `<div class="ment"><span class="muted small">Markieren – bekommt eine E-Mail:</span><div class="chips">${ppl.map(x => `<button type="button" class="chip ${CR.ment.has(x.id) ? 'on' : ''}" data-a="crm-ment" data-v="${x.id}">@${esc(x.name.split(' ')[0])}</button>`).join('')}</div></div>`;
+  const ppl = ((ST.cd && ST.cd.people) || []).filter(x => x.id !== ST.user.id);
+  if (!ppl.length) return `<p class="muted small" style="margin:0">Kollegen markieren: Sobald weitere Benutzer angelegt sind, kannst du sie hier antippen – sie bekommen eine E-Mail und eine Benachrichtigung in der App.</p>`;
+  return `<div class="ment"><span class="muted small">Kollegen markieren – bekommen eine E-Mail und eine Benachrichtigung in der App:</span><div class="chips">${ppl.map(x => `<button type="button" class="chip ${CR.ment.has(x.id) ? 'on' : ''}" data-a="crm-ment" data-v="${x.id}">@${esc(x.name.split(' ')[0])}</button>`).join('')}</div></div>`;
 }
 function evRow(e) {
   const mine = e.user === ST.user.id || ST.user.role === 'admin', manual = ['notiz', 'anruf', 'termin', 'email'].includes(e.kind);
@@ -372,13 +379,14 @@ function cfShrink(file) {   // Fotos vor dem Hochladen verkleinern (max. 2400 px
 const cfB64 = file => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(new Error('Datei nicht lesbar')); r.readAsDataURL(file); });
 document.addEventListener('change', async e => {
   const el = e.target; if (!(el.dataset && el.dataset.cf && el.files && el.files.length)) return;
-  const pid = el.dataset.cf, files = [...el.files]; el.value = ''; let n = 0;
+  const pid = el.dataset.cf, tag = el.dataset.cft || undefined, files = [...el.files]; el.value = ''; let n = 0;
   for (const f of files) {
     try { const small = await cfShrink(f); const name = small && !/\.jpe?g$/i.test(f.name) ? f.name.replace(/\.[^.]+$/, '') + '.jpg' : f.name;
-      const j = await api('crm-file-up', { project: pid, name, type: small ? 'image/jpeg' : (f.type || 'application/octet-stream'), data: small || await cfB64(f) }); ST.cfiles = j.files; n++;
+      const j = await api('crm-file-up', { project: pid, name, tag, type: small ? 'image/jpeg' : (f.type || 'application/octet-stream'), data: small || await cfB64(f) }); ST.cfiles = j.files; n++;
       const box = $('#k-fl'); if (box) box.innerHTML = filesHTML(); } catch (err) { toast(`${f.name}: ${err.message}`); }
   }
   if (n) toast(n === 1 ? 'Datei hochgeladen.' : `${n} Dateien hochgeladen.`);
+  if (n && tag) crmReload();   // Checkliste zeigt die neue Datei
 });
 /* ---------- E-Mail an den Kunden ---------- */
 function cmSheet(inner) { const o = document.createElement('div'); o.id = 'kd-sheet'; o.className = 'kdsheet'; o.innerHTML = `<div class="kdbox cm-box">${inner}</div>`; kdClose(); document.body.appendChild(o); o.addEventListener('click', e => { if (e.target === o) kdClose(); }); return o; }
@@ -472,4 +480,39 @@ document.addEventListener('change', async e => {
   if (el.dataset && el.dataset.mvup && el.files && el.files.length) { const fs = [...el.files]; el.value = '';
     for (const f of fs) { try { const j = await api('sys-doc-up', { name: f.name, type: f.type || 'application/octet-stream', data: await cfB64(f) }); MV.cfg.docs = j.docs; } catch (err) { toast(`${f.name}: ${err.message}`); } }
     mvRender(); toast('Hochgeladen.'); }
+});
+
+/* ---------- Checkliste beim Kunden (lumbra.desk 5.7) ----------
+   Punkte je nach Art (PV, Wärmepumpe, beides). Erkannt wird automatisch (Modulplan, Auslegung, Zählerschrank-Check,
+   Angebot, Auftrag, Abnahme); alles andere hakt man ab. Liegt eine PDF dazu, ist sie direkt am Punkt. */
+const CHK_IC = { roof: 'grid', wp: 'fan', zs: 'zaehler', wirt: 'calc', angebot: 'offer', auftrag: 'aufgabe', netz: 'pin', foerder: 'mail', abnahme: 'protokoll' };
+function chkLink(c, it) {
+  const id = encodeURIComponent(c.id), F = ST.features || {};
+  switch (it.key) {
+    case 'roof': return [`rechner/?start=roof&id=${id}`, it.done ? 'Modulplan öffnen' : 'Modulplan erstellen'];
+    case 'wp': return [`rechner/?start=quick&id=${id}`, it.done ? 'Auslegung ansehen' : 'Jetzt auslegen'];
+    case 'zs': return it.ref ? [`#/zaehler/${encodeURIComponent(it.ref)}`, 'Check öffnen'] : [`#/zaehler/neu/${id}`, 'Check starten'];
+    case 'wirt': return [rechnerUrl(c), it.done ? 'Öffnen' : 'Berechnen'];
+    case 'angebot': return it.ref ? [`#/angebot/${encodeURIComponent(it.ref)}`, 'Angebot öffnen'] : F.angebote ? [`#/angebot/neu/${id}`, 'Angebot erstellen'] : [rechnerUrl(c), 'Öffnen'];
+    case 'abnahme': return it.ref && typeof canOpenProt === 'function' && canOpenProt() ? [`abnahme/#/p/${encodeURIComponent(it.ref)}`, 'Protokoll öffnen'] : null;
+  }
+  return null;
+}
+function checkCard(c, L) {
+  if (!L.length) return '';
+  const done = L.filter(x => x.done).length, pct = Math.round(100 * done / L.length);
+  return `<div class="card sec" id="k-check"><div class="of-head"><h2>Checkliste</h2><span class="muted small">${done} von ${L.length} erledigt</span></div>
+    <div class="chk-bar"><i style="width:${pct}%"></i></div>
+    <div class="chk-l">${L.map(it => { const ln = chkLink(c, it);
+      return `<div class="chk-i ${it.done ? 'on' : ''}"><button class="chk-b" data-a="chk-tog" data-v="${it.key}" ${it.auto ? `disabled title="Automatisch erkannt"` : `title="${it.done ? 'Wieder öffnen' : 'Abhaken'}"`} aria-label="${esc(it.label)}">${it.done ? ic('check', 16) : ''}</button>
+        <div class="chk-t"><b>${ic(CHK_IC[it.key] || 'liste', 15)}${esc(it.label)}</b><span class="muted small">${it.done ? esc(it.detail || 'Erledigt') + (it.at ? ' · ' + utc(it.at).toLocaleDateString('de-DE') : '') : 'Offen'}</span></div>
+        <div class="chk-a">${ln ? `<a class="btn ${it.done ? 's' : ''} sm" href="${ln[0]}">${esc(ln[1])}</a>` : ''}${it.file ? `<a class="btn s sm" href="${cfUrl(it.file)}" target="_blank" rel="noopener" title="${esc(it.file.name)}">${ic('pdf', 15)}PDF</a>` : `<label class="btn g sm cf-up chk-clip" title="PDF oder Foto zu diesem Punkt ablegen" aria-label="Datei anhängen">${ic('clip', 16)}<input type="file" accept="application/pdf,image/*" data-cf="${esc(c.id)}" data-cft="chk-${it.key}" class="zs-file"></label>`}</div></div>`; }).join('')}</div>
+    <p class="muted small" style="margin:10px 0 0">Grün = erledigt. Automatisch erkannte Punkte kommen aus Modulplan, Auslegung, Zählerschrank-Check, Angebot und Abnahme; die übrigen hakst du ab. Mit der Büroklammer legst du eine PDF zum Punkt ab.</p></div>`;
+}
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('[data-a="chk-tog"]'); if (!a || a.disabled || !ST.cd) return;
+  const it = (ST.cd.check || []).find(x => x.key === a.dataset.v); if (!it) return;
+  if (it.manual && !confirm(`„${it.label}“ wieder auf offen setzen?`)) return;
+  a.disabled = true;
+  try { crmApplyDetail(await api('crm-check', { id: ST.cd.customer.id, key: it.key, done: !it.done })); crmReload(); } catch (err) { toast(err.message); a.disabled = false; }
 });

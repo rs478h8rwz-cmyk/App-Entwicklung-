@@ -229,6 +229,7 @@ async function ofBuild() {
 }
 async function ofPdf(pre) {
   const { blob, name } = pre || await ofBuild();
+  if (OF.edit && OF.edit.project) ldAttach(OF.edit.project, blob, name, 'angebot');   // für die Checkliste beim Kunden ablegen
   if (!await ldShare(blob, name)) return;
   const pv = $('#of-prev'); if (pv) { pv.remove(); document.documentElement.style.overflow = ''; }   // nach dem Speichern: zurück zur vorherigen Ansicht
   toast('PDF gespeichert.'); setTimeout(() => ldBack('#/kunde/' + OF.edit.project), 400);

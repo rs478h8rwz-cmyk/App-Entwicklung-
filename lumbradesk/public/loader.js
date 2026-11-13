@@ -14,9 +14,9 @@ const LOADER = { n: 0, t: null };
 function loaderShow(text) {
   let el = document.getElementById('ld-loader');
   if (!el) { el = document.createElement('div'); el.id = 'ld-loader'; el.setAttribute('role', 'status'); el.innerHTML = `<div class="ldl-box">${LOADER_SVG}<span class="ldl-t"></span></div>`; document.body.appendChild(el); }
-  el.querySelector('.ldl-t').textContent = text || 'Lädt …'; requestAnimationFrame(() => el.classList.add('on'));
+  el.querySelector('.ldl-t').textContent = text || 'Lädt …'; LOADER.want = true; requestAnimationFrame(() => { if (LOADER.want) el.classList.add('on'); });   // nicht wieder einschalten, wenn inzwischen ausgeblendet
 }
-function loaderHide() { if (LOADER.boot) return; const el = document.getElementById('ld-loader'); if (el) el.classList.remove('on', 'boot'); }   // Start-Animation läuft zu Ende
+function loaderHide() { if (LOADER.boot) return; LOADER.want = false; const el = document.getElementById('ld-loader'); if (el) el.classList.remove('on', 'boot'); }   // Start-Animation läuft zu Ende
 /* Zähler: mehrere gleichzeitige Ladevorgänge → eine Anzeige */
 function loadStart(text) { LOADER.n++; if (LOADER.n === 1) { clearTimeout(LOADER.t); LOADER.t = setTimeout(() => { if (LOADER.n > 0) loaderShow(text); }, 300); } }
 function loadEnd() { LOADER.n = Math.max(0, LOADER.n - 1); if (!LOADER.n) { clearTimeout(LOADER.t); loaderHide(); } }

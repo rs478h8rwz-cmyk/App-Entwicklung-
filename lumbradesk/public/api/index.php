@@ -59,7 +59,7 @@ try {
       if (!$u) json_out(['user' => null]);
       try { require_once LD_PRIV_DIR . '/backup-lib.php'; backup_if_due(); } catch (Throwable $e) {}
       $apps = array_values(array_filter(LD_APPS, fn($a) => in_array($u['role'], $a['roles'], true)));
-      json_out(['user' => user_out($u), 'apps' => $u['must_change'] ? [] : $apps, 'roles' => ROLES, 'features' => ld_features_for($u)]);
+      json_out(['user' => user_out($u), 'apps' => $u['must_change'] ? [] : $apps, 'roles' => ROLES, 'features' => ld_features_for($u), 'unread' => (function () use ($u) { require_once LD_PRIV_DIR . '/crm-lib.php'; return notif_unread((int)$u['id']); })()]);
     }
     case 'POST login': {
       $b = body(); $email = mb_strtolower(trim((string)($b['email'] ?? ''))); $pw = (string)($b['password'] ?? '');
@@ -513,6 +513,7 @@ try {
     case 'GET zs-list': { $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; $p = (string)($_GET['p'] ?? ''); json_out(['list' => zs_list($u, valid_id($p) ? $p : ''), 'tabs' => zs_tabs(), 'ai' => zs_ai_status()['on']]); }
     case 'GET zs-get': { $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(zs_get($u, (int)($_GET['id'] ?? 0))); }
     case 'POST zs-save': { $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(['ok' => true, 'check' => zs_save($u, body())]); }
+    case 'POST zs-pdf': { $u = require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; zs_pdf($u, body()); json_out(['ok' => true]); }
     case 'POST zs-ai': { require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(['ok' => true, 'ai' => zs_ai((array)(body()['photos'] ?? []))]); }
     case 'GET ai-cfg': { require_role(['admin']); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(zs_ai_status()); }
     case 'POST ai-cfg': { $u = require_role(['admin']); require_once LD_PRIV_DIR . '/zs-lib.php'; $o = zs_ai_key_save($u, (string)(body()['key'] ?? '')); audit((int)$u['id'], 'ki_schluessel', $o['on'] ? 'gesetzt' : 'entfernt'); json_out(['ok' => true] + $o); }
@@ -541,6 +542,9 @@ try {
       $o = plan_res_save((array)(body()['list'] ?? [])); audit((int)$u['id'], 'plantafel', 'Zeilen gespeichert'); json_out(['ok' => true, 'res' => $o]);
     }
     /* ---------- Kunde: Dateien & Fotos, E-Mail, wichtige Notiz ---------- */
+    case 'POST crm-check': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body(); $id = (string)($b['id'] ?? ''); crm_project($u, $id); crm_check_set($u, $id, (string)($b['key'] ?? ''), !empty($b['done'])); json_out(crm_detail($u, $id)); }
+    case 'GET notifs': { $u = require_user(); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(notif_list($u)); }
+    case 'POST notifs-read': { $u = require_user(); require_once LD_PRIV_DIR . '/crm-lib.php'; notif_read($u, (int)(body()['id'] ?? 0)); json_out(notif_list($u)); }
     case 'GET crm-files': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $p = (string)($_GET['p'] ?? ''); crm_project($u, $p); json_out(['files' => crm_files($p)]); }
     case 'POST crm-file-up': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(['ok' => true, 'files' => crm_file_up($u, body())]); }
     case 'POST crm-file-del': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(['ok' => true, 'files' => crm_file_del($u, (int)(body()['id'] ?? 0))]); }
@@ -604,7 +608,7 @@ try {
       crm_project($u, $id);
       $at = (string)($b['at'] ?? ''); $at = preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', $at) && strtotime($at . ' UTC') ? gmdate('Y-m-d H:i:s', strtotime($at . ' UTC')) : null;
       crm_add_event($id, (int)$u['id'], $kind, $text, $at);
-      $sent = []; if (!empty($b['mentions']) && ld_feature($u, 'markieren')) $sent = crm_mention($u, $id, (int)db()->lastInsertId(), (array)$b['mentions'], $kind, $text);
+      $sent = []; if (!empty($b['mentions'])) $sent = crm_mention($u, $id, (int)db()->lastInsertId(), (array)$b['mentions'], $kind, $text);
       json_out(crm_detail($u, $id) + ['mailed' => $sent]);
     }
     case 'POST crm-event-del': {

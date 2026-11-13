@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '5.6';
+const LD_VERSION = '5.7';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -21,7 +21,6 @@ const LD_APPS = [
 const LD_FEATURES = [
   'angebote' => ['Angebote mit Assistent', 'Angebots-Assistent beim Kunden, Produktdatenbank, Leistungen & Pakete, Knopf „Angebot“ in der Wirtschaftlichkeit'],
   'rechnungen' => ['Rechnungen & Mahnwesen', 'Rechnungen, Abschlags- und Schlussrechnungen aus dem Angebot, E-Rechnung (XRechnung) und Mahnungen'],
-  'markieren' => ['Logbuch: Kollegen markieren', 'Beim Logbuch-Eintrag Kollegen markieren – sie bekommen die Nachricht per E-Mail'],
 ];
 function ld_flags(): array {
   static $f = null; if ($f !== null) return $f; $f = [];

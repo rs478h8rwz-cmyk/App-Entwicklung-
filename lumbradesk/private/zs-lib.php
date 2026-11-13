@@ -209,3 +209,13 @@ function zs_ai(array $photos): array {
   $out = json_decode($txt, true); if (!is_array($out)) fail('Die KI-Antwort war nicht lesbar – bitte erneut versuchen.', 502);
   $out['model'] = (string)($r['model'] ?? ZS_AI_MODEL); return $out;
 }
+
+/* Prüfbericht (PDF) des Checks beim Kunden ablegen – erscheint in „Dateien & Fotos“ und an der Checkliste */
+function zs_pdf(array $u, array $b): void {
+  zs_tables(); require_once __DIR__ . '/crm-lib.php';
+  $st = db()->prepare('SELECT project_id, title FROM zs_checks WHERE id = ?'); $st->execute([(int)($b['id'] ?? 0)]); $r = $st->fetch();
+  if (!$r || !$r['project_id']) return;
+  $bin = base64_decode((string)($b['data'] ?? ''), true); if ($bin === false || $bin === '' || substr($bin, 0, 4) !== '%PDF') fail('PDF leer oder beschädigt.', 400);
+  if (strlen($bin) > 15 * 1024 * 1024) fail('Die PDF ist größer als 15 MB.', 400);
+  crm_file_store($r['project_id'], (int)$u['id'], (string)($b['name'] ?? 'Zaehlerschrank-Check.pdf'), 'application/pdf', $bin, 'zs');
+}

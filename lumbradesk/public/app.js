@@ -71,7 +71,7 @@ function shell(inner) {
   const cur = ST.view === 'kunde' || ST.view === 'angebot' ? 'kunden' : ST.view === 'artikel' || ST.view === 'belege' || ST.view === 'assistent' || ST.view === 'vorlagen' || (adm && (ST.view === 'produkte' || ST.view === 'rechnungen')) ? 'mehr' : ST.view === 'rechnung' ? 'rechnungen' : ST.view, inMehr = ['users', 'audit', 'system', 'mehr'].includes(ST.view) || (adm && ST.view === 'protokolle');
   const link = ([k, l]) => `<a href="#/${k}" class="navl ${cur === k || (k === 'mehr' && inMehr) ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`;
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
-    ${nav.length > 1 ? `<nav class="side">${nav.map(link).join('')}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
+    ${nav.length > 1 ? `<nav class="side">${nav.map(link).join('')}</nav>` : '<span style="margin-left:auto"></span>'}${nfBell(20)}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
     ${sideBar(cur, inMehr, crm, off, adm)}
     <main class="wrap ${tabs.length > 1 ? 'has-tabs' : ''}">${inner}</main>${tabs.length > 1 ? `<nav class="tabs">${tabs.map(link).join('')}</nav>` : ''}`;
 }
@@ -90,7 +90,7 @@ function sideBar(cur, inMehr, crm, off, adm) {
       ${grp('Verwaltung', adm ? [item('users', 'Benutzer'), item('audit', 'Änderungen'), item('system', 'System')] : [])}
       ${apps.length ? `<div class="sbg"><div class="sbt">Apps</div>${apps.map(a => `<a class="sbl sba" href="${esc(a.url)}">${typeof appIcon === 'function' ? appIcon(a.key) : ''}<span>${esc(a.name)}</span></a>`).join('')}</div>` : ''}
     </nav>
-    <div class="sb-me"><span class="av">${ini}</span><span class="sb-who"><b>${esc(ST.user.name)}</b><span>${esc(ST.user.roleName)}</span></span><button class="btn g sm" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 18)}</button></div></aside>`;
+    <div class="sb-me"><span class="av">${ini}</span><span class="sb-who"><b>${esc(ST.user.name)}</b><span>${esc(ST.user.roleName)}</span></span>${nfBell(18)}<button class="btn g sm" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 18)}</button></div></aside>`;
 }
 document.addEventListener('submit', e => {
   if (e.target.id !== 'sb-q') return; e.preventDefault();
@@ -179,7 +179,7 @@ async function load() {
   /* Start: Wärmepumpe 3 Sekunden – angemeldet bleibt man über „angemeldet bleiben“ (Server, 180 Tage) */
   const t0 = Date.now(); LOADER.boot = true; loaderShow('lumbra.desk startet …'); const lb = document.getElementById('ld-loader'); if (lb) lb.classList.add('boot');
   const bootEnd = () => { LOADER.boot = false; loaderHide(); };
-  try { const j = await api('me'); ST.user = j.user; ST.apps = j.apps || []; ST.roles = j.roles || {}; ST.features = j.features || {}; }
+  try { const j = await api('me'); ST.user = j.user; ST.apps = j.apps || []; ST.roles = j.roles || {}; ST.features = j.features || {}; ST.unread = j.unread || 0; }
   catch (e) { bootEnd(); $('#app').innerHTML = `<main class="auth"><div class="card">${brand('')}<p class="note err">${esc(e.message)}</p></div></main>`; return; }
   if (!ST.user) { bootEnd(); return route().catch(e => ldBootFail(e)); }
   await route().catch(e => ldBootFail(e));
@@ -263,8 +263,40 @@ function showTemp(name, email, pw) {
   el.innerHTML = `<div class="note ok" style="margin-top:14px"><b>Zugang für ${esc(name)}</b><br>Anmeldung: <b>${location.origin}${location.pathname}</b><br>E-Mail: ${esc(email)}<br>Einmal-Passwort: <span class="pw">${esc(pw)}</span><br><span style="font-size:13px">Nur jetzt sichtbar – bitte persönlich weitergeben. Beim ersten Anmelden wird ein eigenes Passwort festgelegt.</span></div>`;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+/* PDF beim Kunden ablegen (Checkliste: ersetzt die vorige PDF derselben Art) – läuft im Hintergrund */
+const blobB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(new Error('Datei nicht lesbar')); r.readAsDataURL(b); });
+async function ldAttach(pid, blob, name, tag) {
+  if (!pid || !blob || blob.size > 15 * 1024 * 1024) return false;
+  try { await api('crm-file-up', { project: pid, name, type: 'application/pdf', tag, data: await blobB64(blob) }); return true; } catch (e) { console.warn('PDF ablegen', e); return false; }
+}
+/* ---------- Benachrichtigungen (Glocke): Markierungen im Logbuch usw. ---------- */
+const nfBell = n => `<button class="btn g sm nf-bell" data-a="nf-open" title="Benachrichtigungen" aria-label="Benachrichtigungen">${ic('bell', n)}<i class="nf-n" ${ST.unread ? '' : 'hidden'}>${ST.unread > 9 ? '9+' : ST.unread || ''}</i></button>`;
+function nfBadge() { document.querySelectorAll('.nf-n').forEach(el => { el.hidden = !ST.unread; el.textContent = ST.unread > 9 ? '9+' : ST.unread || ''; }); }
+function nfAgo(at) { const m = Math.round((Date.now() - utc(at).getTime()) / 60000); return m < 1 ? 'gerade eben' : m < 60 ? `vor ${m} Min.` : m < 1440 ? `vor ${Math.round(m / 60)} Std.` : utc(at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+async function nfOpen() {
+  document.getElementById('nf-pan')?.remove();
+  const o = document.createElement('div'); o.id = 'nf-pan'; o.innerHTML = `<div class="nf-box"><div class="nf-h"><b>Benachrichtigungen</b><button class="btn g sm" data-a="nf-all">Alle gelesen</button><button class="xbtn" data-a="nf-x" aria-label="Schließen">${ic('x', 16)}</button></div><div class="nf-l"><p class="muted small" style="padding:16px">Lädt …</p></div></div>`;
+  document.body.appendChild(o);
+  o.addEventListener('click', e => { if (e.target === o) o.remove(); });
+  try { const j = await api('notifs'); ST.unread = j.unread; nfBadge(); nfDraw(j.list); } catch (err) { o.querySelector('.nf-l').innerHTML = `<p class="note err">${esc(err.message)}</p>`; }
+}
+function nfDraw(L) {
+  const box = document.querySelector('#nf-pan .nf-l'); if (!box) return;
+  box.innerHTML = L.length ? L.map(n => `<a class="nf-i ${n.read ? '' : 'new'}" href="${esc(n.url || '#/home')}" data-a="nf-go" data-id="${n.id}"><span class="nf-d"></span><span class="nf-t"><b>${esc(n.title)}</b><span>${esc(n.text)}</span><span class="muted small">${nfAgo(n.at)}</span></span></a>`).join('')
+    : '<p class="muted small" style="padding:16px 18px">Noch keine Benachrichtigungen. Wenn dich ein Kollege im Logbuch markiert, erscheint es hier – und du bekommst eine E-Mail.</p>';
+}
+setInterval(async () => { if (!ST.user || document.hidden) return; try { const j = await api('notifs'); if (j.unread > (ST.unread || 0)) toast(j.list.find(x => !x.read)?.title || 'Neue Benachrichtigung'); ST.unread = j.unread; nfBadge(); } catch (e) {} }, 60000);
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-a^="nf-"]'); if (!a) return;
+  const k = a.dataset.a;
+  if (k === 'nf-open') { e.preventDefault(); return nfOpen(); }
+  if (k === 'nf-x') return document.getElementById('nf-pan')?.remove();
+  if (k === 'nf-all') { const j = await api('notifs-read', { id: 0 }).catch(() => null); if (j) { ST.unread = j.unread; nfBadge(); nfDraw(j.list); } return; }
+  if (k === 'nf-go') { document.getElementById('nf-pan')?.remove(); api('notifs-read', { id: +a.dataset.id }).then(j => { ST.unread = j.unread; nfBadge(); }).catch(() => {}); }
+});
 document.addEventListener('click', async e => {
   const a = e.target.closest('[data-a]'); if (!a) return;
+  if (a.dataset.a.startsWith('nf-')) return;
   try {
     if (a.dataset.a.startsWith('crm-')) return await crmClick(a);
     if (a.dataset.a === 'logout') { await api('logout', {}); ST.user = null; location.hash = ''; return route(); }

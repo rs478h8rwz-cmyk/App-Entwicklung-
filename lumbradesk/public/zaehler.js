@@ -362,7 +362,9 @@ document.addEventListener('click', async e => {
     if (k === 'ans') { ZS.a[a.dataset.q] = v; const y = scrollY; zsRender(); return scrollTo(0, y); }
     if (k === 'done-t') { ZS.showDone = !ZS.showDone; return zsRender(); }
     if (k === 'eval') { ZS.step = 'ergebnis'; zsRender(); return scrollTo(0, 0); }
-    if (k === 'save') { a.disabled = true; const { R, data } = zsData(); const j = await api('zs-save', { project: ZS.cust ? ZS.cust.id : '', title: ZS.cust ? ZS.cust.name : (ZS.addr || 'Zählerschrank-Check'), result: R.result, data, photos: ZS.photos }); toast('Check gespeichert' + (ZS.cust ? ' – im Logbuch des Kunden vermerkt.' : '.')); zsReset(); ZS.list = null; location.hash = '#/zaehler/' + j.check.id; return; }
+    if (k === 'save') { a.disabled = true; const { R, data } = zsData(); const j = await api('zs-save', { project: ZS.cust ? ZS.cust.id : '', title: ZS.cust ? ZS.cust.name : (ZS.addr || 'Zählerschrank-Check'), result: R.result, data, photos: ZS.photos }); toast('Check gespeichert' + (ZS.cust ? ' – im Logbuch vermerkt, Prüfbericht liegt beim Kunden.' : '.'));
+      if (ZS.cust) zsPdf(j.check).then(async b => api('zs-pdf', { id: j.check.id, name: b.name, data: await blobB64(b.blob) })).catch(err => console.warn('Prüfbericht ablegen', err));
+      zsReset(); ZS.list = null; location.hash = '#/zaehler/' + j.check.id; return; }
     if (k === 'pdf') return await zsPreview(ZS.view);
     if (k === 'tabs') return zsTabs();
     if (k === 'light') return zsLight(ZS.photos[+v]);
