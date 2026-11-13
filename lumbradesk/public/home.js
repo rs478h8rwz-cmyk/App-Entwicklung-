@@ -13,6 +13,7 @@ const homeDate = () => new Date().toLocaleDateString('de-DE', { weekday: 'long',
 viewHome = function () {
   const crm = typeof isCrm === 'function' && isCrm(), first = esc(ST.user.name.split(' ')[0]);
   const apps = ST.apps.filter(a => a.url);
+  if (isDesk()) return homeDesk(crm, first, apps);
   return `<section class="h-top"><div class="h-date"><i></i>${esc(homeDate())}</div><h1 class="h-title">${crm ? 'Heute' : 'Hallo ' + first}</h1></section>
     <section class="h-apps">${apps.map(a => `<a class="app" href="${esc(a.url)}">${appIcon(a.key)}<span class="app-l">${esc(a.name)}</span></a>`).join('') || '<p class="muted">Für deine Rolle sind noch keine Apps freigeschaltet.</p>'}</section>
     ${crm ? homeCrm() : ''}
@@ -41,8 +42,8 @@ function smoothPath(P) {   // monotone Kurve (Fritsch-Carlson): weich, aber ohne
   return d;
 }
 /* Monatsbalken: Auftragsvolumen, aktueller Monat hervorgehoben, Ø-Linie */
-function revBars(S) {
-  const W = 360, H = 150, top = 22, bot = 18, n = S.length, gap = innerWidth < 760 ? 4 : 6, bw = (W - gap * (n - 1)) / n, max = Math.max(1, ...S.map(x => x.wonSum));
+function revBars(S, W = 360, H = 150) {
+  const top = 22, bot = 18, n = S.length, gap = innerWidth < 760 ? 4 : W > 500 ? 14 : 6, bw = (W - gap * (n - 1)) / n, max = Math.max(1, ...S.map(x => x.wonSum));
   const vals = S.filter(x => x.wonSum > 0), avg = vals.length ? vals.reduce((a, x) => a + x.wonSum, 0) / vals.length : 0, y = v => top + (H - top - bot) * (1 - v / max);
   return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Auftragsvolumen je Monat">
     ${S.map((x, i) => { const X = i * (bw + gap), h = Math.max(x.wonSum ? 4 : 2, H - bot - y(x.wonSum)), last = i === n - 1; return `<g><title>${monS(x.m)}: ${eur0(x.wonSum)} · ${x.won} Auftr${x.won === 1 ? 'ag' : 'äge'}</title><rect x="${X}" y="${H - bot - h}" width="${bw}" height="${h}" rx="4" class="${last ? 'b-a' : x.wonSum ? 'b-n' : 'b-0'}"/><text x="${X + bw / 2}" y="${H - 4}" class="ax" text-anchor="middle">${monS(x.m)}</text></g>`; }).join('')}
@@ -109,4 +110,37 @@ function homeDueCard() {
   const due = (ST.tasks || []).filter(t => !t.done && t.due <= today() && t.assignee === ST.user.id);
   return `<section class="h-sec"><h2>${due.some(t => t.due < today()) ? 'Fällig' : 'Heute fällig'}</h2><a href="#/aufgaben">Alle</a></section>
     <div class="glist due-l">${due.length ? due.slice(0, 6).map(taskRow).join('') : `<div class="grow empty-g"><span class="gic ok">${ic('aufgabe', 16)}</span><span class="gmain"><b>Alles erledigt</b><span>Neue Wiedervorlagen beim Kunden oder unter Aufgaben</span></span></div>`}</div>`;
+}
+
+/* ---------- PC-Dashboard: Raster über die volle Breite ---------- */
+function homeDesk(crm, first, apps) {
+  const h = new Date().getHours(), hi = h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend', D = crm ? ST.dash : null;
+  const head = `<header class="dk-head"><div><div class="h-date"><i></i>${esc(homeDate())}</div><h1 class="dk-title">${hi}, ${first}</h1></div>
+    <div class="dk-apps">${apps.map(a => `<a class="dk-app" href="${esc(a.url)}">${appIcon(a.key)}<span>${esc(a.name)}</span></a>`).join('')}</div></header>`;
+  const konto = `<div class="dkc dk-s12 dk-konto"><div class="dkc-h"><h3>Konto</h3></div><div class="dk-kr"><span class="av sm">${esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span><span class="gmain"><b>${esc(ST.user.name)}</b><span class="muted small">${esc(ST.user.email)} · ${esc(ST.user.roleName)}</span></span>
+      <details class="pwbox"><summary class="btn s sm">${ic('key', 16)}Passwort ändern</summary><form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn" type="submit" style="margin-top:12px">Speichern</button></div></form></details></div></div>`;
+  if (!D) return `${head}<div class="dk">${crm ? `<div class="dkc dk-s12">${homeDueCard()}</div>` : ''}${konto}</div>`;
+  const k = D.kpi, S = D.series || [], y = D.year, chg = D.wonPrevSame > 0 ? Math.round((D.wonYear - D.wonPrevSame) / D.wonPrevSame * 100) : null;
+  const st = D.stages.filter(x => x.key !== 'verloren'), tot = st.reduce((a, x) => a + x.n, 0) || 1, lost = (D.stages.find(x => x.key === 'verloren') || {}).n || 0;
+  const due = (ST.tasks || []).filter(t => !t.done && t.due <= today() && t.assignee === ST.user.id);
+  const kpi = (l, v, sub, href, cls = '') => `<a class="dkc dk-s3 dk-kpi ${cls}" href="${href}"><span class="dk-l">${l}</span><b>${v}</b><span class="dk-sub">${sub}</span></a>`;
+  return `${head}<div class="dk">
+    ${kpi(`Auftragsvolumen ${y}`, eur0(D.wonYear), chg !== null ? `<span class="chg ${chg >= 0 ? 'up' : 'dn'}">${chg >= 0 ? '+' : ''}${chg} %</span> ggü. ${+y - 1}` : `${k.wonMonth} Auftr${k.wonMonth === 1 ? 'ag' : 'äge'} diesen Monat`, '#/kunden')}
+    ${kpi('Offene Angebote', eur0(k.offersSum), `${k.offers} Angebot${k.offers === 1 ? '' : 'e'} in Arbeit`, '#/kunden')}
+    ${kpi('Abschlussquote', k.rate === null ? '–' : k.rate + ' %', k.decided ? `aus ${k.decided} Entscheidungen` : 'noch keine Entscheidungen', '#/kunden')}
+    ${kpi('Wiedervorlagen', k.overdue ? k.overdue + ' überfällig' : k.dueToday ? k.dueToday + ' heute' : 'Alles erledigt', k.dueToday && k.overdue ? `${k.dueToday} heute fällig` : 'Meine Aufgaben', '#/aufgaben', k.overdue ? 'bad' : '')}
+    ${D.vacReq ? `<a class="dkc dk-s12 dk-banner" href="stempel/#/einstellungen/team"><span class="bdot"></span><b>${D.vacReq} Urlaubsantrag${D.vacReq === 1 ? '' : 'e'} offen</b><span class="muted">Genehmigen in der Stempeluhr</span>${ic('next', 16)}</a>` : ''}
+    <div class="dkc dk-s8"><div class="dkc-h"><h3>Auftragsvolumen je Monat</h3><span class="muted small">letzte 12 Monate</span></div><div class="hbars dk-bars">${S.length ? revBars(S, 620, 210) : ''}</div></div>
+    <div class="dkc dk-s4 dk-due"><div class="dkc-h"><h3>${due.some(t => t.due < today()) ? 'Fällig' : 'Heute fällig'}</h3><a href="#/aufgaben">Alle</a></div>
+      <div class="glist due-l">${due.length ? due.slice(0, 7).map(taskRow).join('') : `<div class="grow empty-g"><span class="gic ok">${ic('aufgabe', 16)}</span><span class="gmain"><b>Alles erledigt</b><span>Neue Wiedervorlagen beim Kunden oder unter Aufgaben</span></span></div>`}</div></div>
+    <div class="dkc dk-s12"><div class="dkc-h"><h3>Pipeline</h3><span class="muted small">${tot} aktive Kunden${lost ? ` · ${lost} verloren` : ''}</span></div>
+      <div class="dk-pipe">${st.map(x => `<a class="dk-st" href="#/kunden" data-a="crm-go-stage" data-v="${x.key}" style="--c:${STG_C[x.key]}"><span class="dk-stl"><i></i>${STG_L[x.key]}</span><b>${x.n}</b><span class="muted small">${x.sum ? euro(x.sum) : '–'}</span><span class="dk-stb"><i style="width:${Math.round(x.n / tot * 100)}%"></i></span></a>`).join('')}</div></div>
+    <div class="dkc dk-s7"><div class="dkc-h"><h3>Angebote und Aufträge</h3><span class="leg"><i class="la"></i>Aufträge <i class="lb"></i>Neue Angebote</span></div>${S.length ? lineChart(S) : ''}</div>
+    <div class="dkc dk-s5"><div class="dkc-h"><h3>Aktivität im Team</h3><span class="muted small">letzte Wochen</span></div>${heatMap(D.heat || [])}</div>
+    <div class="dkc ${D.all && D.team.length ? 'dk-s7' : 'dk-s12'}"><div class="dkc-h"><h3>Letzte Aktivitäten</h3><a href="#/kunden">Kunden</a></div>
+      ${D.recent.length ? `<div class="glist">${D.recent.slice(0, 6).map(e => `<a class="grow" href="#/kunde/${esc(e.project)}"><span class="gic">${ic(e.kind, 16)}</span><span class="gmain"><b>${esc(e.projectName)}</b><span>${esc(e.text.length > 90 ? e.text.slice(0, 90) + ' …' : e.text)}</span></span><span class="tag t-${KIND_TONE[e.kind] || 'n'}">${esc(KIND_L[e.kind] || e.kind)}</span></a>`).join('')}</div>` : '<p class="muted">Noch keine Aktivitäten.</p>'}</div>
+    ${D.all && D.team.length ? `<div class="dkc dk-s5"><div class="dkc-h"><h3>Team</h3><a href="stempel/#/einstellungen/auswertung">Stunden</a></div>
+      <table class="dk-tbl"><thead><tr><th>Name</th><th>Kunden</th><th>Aufträge</th><th>7 Tage</th><th>Überfällig</th></tr></thead><tbody>${D.team.map(t => `<tr><td><span class="dk-tn"><span class="av sm">${esc(t.name.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase())}</span>${esc(t.name)}</span></td><td>${t.active}</td><td>${t.won}</td><td>${t.acts}</td><td class="${t.overdue ? 'bad' : ''}">${t.overdue || '–'}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${konto}
+  </div>`;
 }

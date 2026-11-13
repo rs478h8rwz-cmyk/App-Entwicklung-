@@ -72,8 +72,33 @@ function shell(inner) {
   const link = ([k, l]) => `<a href="#/${k}" class="navl ${cur === k || (k === 'mehr' && inMehr) ? 'on' : ''}">${ic(k, 22)}<span>${l}</span></a>`;
   return `<header class="top"><div class="in">${brand(ST.user.name + ' · ' + ST.user.roleName)}
     ${nav.length > 1 ? `<nav class="side">${nav.map(link).join('')}</nav>` : '<span style="margin-left:auto"></span>'}<button class="btn g sm out" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 20)}<span class="hide-sm">Abmelden</span></button></div></header>
+    ${sideBar(cur, inMehr, crm, off, adm)}
     <main class="wrap ${tabs.length > 1 ? 'has-tabs' : ''}">${inner}</main>${tabs.length > 1 ? `<nav class="tabs">${tabs.map(link).join('')}</nav>` : ''}`;
 }
+/* ---------- PC-Ansicht: Seitenleiste mit Suche, Bereichen, Apps und Konto (ab 1100 px, siehe app.css) ---------- */
+const isDesk = () => window.matchMedia('(min-width: 1100px)').matches;
+function sideBar(cur, inMehr, crm, off, adm) {
+  const F = ST.features || {}, item = (k, l, icn, href) => `<a href="${href || '#/' + k}" class="sbl ${cur === k || (k === 'mehr' && inMehr) ? 'on' : ''}">${ic(icn || k, 18)}<span>${l}</span></a>`;
+  const grp = (t, l) => l.length ? `<div class="sbg"><div class="sbt">${t}</div>${l.join('')}</div>` : '';
+  const ini = esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase());
+  const apps = (ST.apps || []).filter(a => a.url);
+  return `<aside class="sb"><a class="sb-brand" href="#/home"><span class="wm" role="img" aria-label="lumbra.desk"></span></a>
+    ${crm ? `<form class="sb-q" id="sb-q">${ic('search', 16)}<input name="q" type="search" placeholder="Kunde suchen …" autocomplete="off" value="${esc(typeof CR === 'object' && cur === 'kunden' ? CR.q || '' : '')}"></form>` : ''}
+    <nav class="sbn">
+      ${grp('Übersicht', [item('home', 'Dashboard'), ...(crm ? [item('kunden', 'Kunden'), item('aufgaben', 'Aufgaben')] : [])])}
+      ${grp('Vertrieb & Büro', off ? [item('protokolle', 'Protokolle'), ...(F.angebote ? [item('produkte', 'Produkte', 'produkte'), item('artikel', 'Leistungen & Pakete', 'box'), item('assistent', 'Angebots-Assistent', 'box')] : []), ...(F.rechnungen ? [item('rechnungen', 'Rechnungen', 'offer')] : []), ...(F.angebote ? [item('belege', 'Nummern & Texte', 'offer')] : [])] : [])}
+      ${grp('Verwaltung', adm ? [item('users', 'Benutzer'), item('audit', 'Änderungen'), item('system', 'System')] : [])}
+      ${apps.length ? `<div class="sbg"><div class="sbt">Apps</div>${apps.map(a => `<a class="sbl sba" href="${esc(a.url)}">${typeof appIcon === 'function' ? appIcon(a.key) : ''}<span>${esc(a.name)}</span></a>`).join('')}</div>` : ''}
+    </nav>
+    <div class="sb-me"><span class="av">${ini}</span><span class="sb-who"><b>${esc(ST.user.name)}</b><span>${esc(ST.user.roleName)}</span></span><button class="btn g sm" data-a="logout" title="Abmelden" aria-label="Abmelden">${ic('out', 18)}</button></div></aside>`;
+}
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'sb-q') return; e.preventDefault();
+  const q = e.target.q.value.trim(); if (typeof CR === 'object') CR.q = q;
+  if (ST.view === 'kunden') route(); else location.hash = '#/kunden';
+});
+/* Beim Wechsel zwischen Handy- und PC-Breite neu zeichnen (Dashboard und Listen haben eigene PC-Ansichten) */
+{ let wasDesk = isDesk(); window.addEventListener('resize', () => { const d = isDesk(); if (d !== wasDesk && ST.user && ['home', 'kunden'].includes(ST.view)) route(); wasDesk = d; }); }
 function viewHome() {
   const h = new Date().getHours(), gr = h < 11 ? 'Guten Morgen' : h < 18 ? 'Hallo' : 'Guten Abend';
   return `<section class="hero"><h1>${gr}, ${esc(ST.user.name.split(' ')[0])}.</h1><p class="muted">${typeof isCrm === 'function' && isCrm() ? 'Dein Überblick für heute.' : 'Deine Apps – gleiche Bedienung wie gewohnt.'}</p></section>

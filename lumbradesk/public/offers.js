@@ -121,10 +121,10 @@ function viewAngebot() {
     <div class="ofmode"><span class="muted small">Angebotsart</span><div class="seg">${Object.entries(OF_OTYPES).map(([k, l]) => `<button data-a="of-otype" data-v="${k}" class="${(d.otype || 'pv') === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <section class="h-sec"><h2>Positionen</h2><span class="muted small">${d.pos.length} Position${d.pos.length === 1 ? '' : 'en'}</span></section>
 
-    <div class="glist ofl">${d.pos.length ? ofGroups(d.pos).map(G => `${G.sec ? `<div class="ofsec"><b>Pos. ${G.nr} · ${esc(G.sec.name)}</b><span>${eur2(G.rows.reduce((a, [p]) => a + (p.opt ? 0 : ofLine(p)), 0))}</span></div>` : ''}${G.rows.map(([p, i], k) => ofRowHTML(p, i, G.nr ? `${G.nr}.${String(k + 1).padStart(3, '0')}` : String(k + 1).padStart(3, '0'))).join('')}`).join('') : '<div class="grow empty-g"><span class="gic">' + ic('plus', 16) + '</span><span class="gmain"><b>Noch keine Positionen</b><span>Assistent starten oder unten hinzufügen</span></span></div>'}
+    <div class="of-cols"><div class="of-main"><div class="glist ofl">${d.pos.length ? ofGroups(d.pos).map(G => `${G.sec ? `<div class="ofsec"><b>Pos. ${G.nr} · ${esc(G.sec.name)}</b><span>${eur2(G.rows.reduce((a, [p]) => a + (p.opt ? 0 : ofLine(p)), 0))}</span></div>` : ''}${G.rows.map(([p, i], k) => ofRowHTML(p, i, G.nr ? `${G.nr}.${String(k + 1).padStart(3, '0')}` : String(k + 1).padStart(3, '0'))).join('')}`).join('') : '<div class="grow empty-g"><span class="gic">' + ic('plus', 16) + '</span><span class="gmain"><b>Noch keine Positionen</b><span>Assistent starten oder unten hinzufügen</span></span></div>'}
       <div class="ofadd"><div class="srch">${ic('search', 18)}<input id="of-q" placeholder="Artikel oder Leistung hinzufügen …" value="${esc(OF.q)}" autocomplete="off"></div><div id="of-sug">${ofSug()}</div></div>
-    </div>
-    <div class="cardx sec ofsum">
+    </div></div>
+    <aside class="of-side"><div class="cardx sec ofsum">
       <div class="sr"><span>Zwischensumme netto</span><span>${eur2(T.sub)}</span></div>
       <div class="sr"><span>Rabatt <input class="ofi-disc" inputmode="decimal" data-of="discount" value="${numDe(d.discount)}"> %</span><span>${T.disc ? '−' + eur2(T.disc) : '–'}</span></div>
       <div class="sr"><span>Netto</span><span>${eur2(T.net)}</span></div>
@@ -136,7 +136,7 @@ function viewAngebot() {
       <label>Status<select data-of="status">${Object.entries(ST.ofStatus).map(([k, l]) => `<option value="${k}" ${E.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${[['intro', 'Einleitung'], ['outro', 'Schlusstext'], ['pay', 'Zahlungsbedingungen']].map(([k, l]) => { const tl = ofTx(k, d.otype || 'pv'); return `<label style="grid-column:1/-1"><span class="flex-lbl">${l}${tl.length ? `<select class="txsel" data-a2="of-tx" data-k="${k}"><option value="">Textbaustein …</option>${tl.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select>` : ''}</span><textarea rows="${k === 'outro' ? 3 : 2}" data-of="${k}">${esc(d[k] || '')}</textarea></label>`; }).join('')}
       <label class="sw" style="grid-column:1/-1"><input type="checkbox" data-of="imgs" ${d.imgs ? 'checked' : ''}>Produktbilder im PDF zeigen</label>
-      <p class="muted small" style="grid-column:1/-1;margin:0">Platzhalter: {Kunde}, {Nummer}, {Gültig}, {Betrag} – werden im PDF ersetzt.</p></div>
+      <p class="muted small" style="grid-column:1/-1;margin:0">Platzhalter: {Kunde}, {Nummer}, {Gültig}, {Betrag} – werden im PDF ersetzt.</p></div></aside></div>
     ${E.id ? `<div class="row" style="flex-wrap:wrap;gap:8px;margin-top:12px">${(ST.features || {}).rechnungen && ['admin', 'buero'].includes(ST.user.role) ? `<a class="btn s" href="#/rechnung/neu/${esc(E.id)}">${ic('offer', 16)}Rechnung erstellen</a>` : ''}<a class="btn s" href="rechner/?ldOffer=${esc(E.id)}#projekt/${esc(E.project)}/1">${ic('calc', 16)}In Wirtschaftlichkeit übernehmen</a></div>` : ''}
     <div class="ofbar"><button class="btn" data-a="of-save">${ic('check', 18)}Speichern</button><button class="btn s" data-a="of-prev" ${d.pos.length ? '' : 'disabled'}>${ic('offer', 18)}Vorschau</button><button class="btn s" data-a="of-pdf" ${d.pos.length ? '' : 'disabled'} aria-label="PDF teilen">PDF</button>${E.id ? `<button class="btn g danger" data-a="of-delete">${ic('x', 16)}</button>` : ''}</div>`;
 }

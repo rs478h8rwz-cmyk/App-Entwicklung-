@@ -83,8 +83,14 @@ function crmList(rows) {
   const shown = CR.stage ? rows.filter(c => c.stage === CR.stage) : rows;
   shown.sort((a, b) => (a.nextDue || '9999').localeCompare(b.nextDue || '9999') || (b.last || b.upd || '').localeCompare(a.last || a.upd || ''));
   return `<div class="chips stg-chips"><button class="chip ${!CR.stage ? 'on' : ''}" data-a="crm-stage-f" data-v="">Alle · ${rows.length}</button>${STG.filter(s => cnt[s]).map(s => `<button class="chip ${CR.stage === s ? 'on' : ''}" data-a="crm-stage-f" data-v="${s}"><i class="dot" style="background:${STG_C[s]}"></i>${STG_L[s]} · ${cnt[s]}</button>`).join('')}</div>
-    ${shown.length ? `<div class="card clist">${shown.map(crmRow).join('')}</div>` : '<p class="muted" style="padding:20px 4px">Keine Kunden für diese Auswahl.</p>'}`;
+    ${!shown.length ? '<p class="muted" style="padding:20px 4px">Keine Kunden für diese Auswahl.</p>' : typeof isDesk === 'function' && isDesk() ? crmTable(shown) : `<div class="card clist">${shown.map(crmRow).join('')}</div>`}`;
 }
+/* PC-Ansicht: Tabelle mit allen wichtigen Spalten */
+function crmTable(rows) {
+  return `<div class="card dk-ctbl"><table><thead><tr><th>Kunde</th><th>Ort</th><th>Stufe</th><th>Art</th><th>Zuständig</th><th class="r">Volumen</th><th>Wiedervorlage</th><th>Zuletzt</th></tr></thead><tbody>
+    ${rows.map(c => `<tr data-href="#/kunde/${esc(c.id)}"><td><a href="#/kunde/${esc(c.id)}"><b>${esc(c.name)}</b></a>${c.archived ? ' <span class="badge">Archiv</span>' : ''}</td><td class="muted">${esc([c.zip, c.city].filter(Boolean).join(' ') || '–')}</td><td>${stageBadge(c.stage)}</td><td>${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : '–'}</td><td>${esc(c.ownerName || '')}</td><td class="r">${c.total ? euro(c.total) : '–'}</td><td>${c.nextDue ? `<span class="due ${dueCls(c.nextDue)}">${ic('aufgaben', 14)}${dueLabel(c.nextDue)}</span>` : '<span class="muted">–</span>'}</td><td class="muted">${esc(ago(c.last || c.upd))}</td></tr>`).join('')}</tbody></table></div>`;
+}
+document.addEventListener('click', e => { const tr = e.target.closest && e.target.closest('tr[data-href]'); if (tr && !e.target.closest('a,button')) location.hash = tr.dataset.href; });
 function crmRow(c) {
   return `<a class="crow" href="#/kunde/${esc(c.id)}"><div class="cmain"><b>${esc(c.name)}</b><span class="muted">${esc([c.zip, c.city].filter(Boolean).join(' ') || 'Ort fehlt')}${c.total ? ' · ' + euro(c.total) : ''}</span>
     <div class="cmeta">${stageBadge(c.stage)}${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : ''}${ST.user.id !== c.owner ? `<span class="badge">${esc(c.ownerName)}</span>` : ''}${c.archived ? '<span class="badge">Archiv</span>' : ''}</div></div>
