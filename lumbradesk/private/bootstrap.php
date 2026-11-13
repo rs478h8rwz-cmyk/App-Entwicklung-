@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '5.5';
+const LD_VERSION = '5.6';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -239,7 +239,7 @@ function base_url(): string {
   return $b !== '' ? $b : 'https://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'lumbradesk.de'));
 }
 /* kleine SMTP-Verbindung (STARTTLS 587, SSL 465) – ohne Zusatzbibliothek */
-function smtp_send(array $c, string $to, string $subject, string $text, string $html): void {
+function smtp_send(array $c, string $to, string $subject, string $text, string $html, array $opt = []): void {
   $host = ($c['enc'] === 'ssl' ? 'ssl://' : '') . $c['host'];
   $s = @stream_socket_client($host . ':' . (int)$c['port'], $errno, $err, 15);
   if (!$s) throw new RuntimeException("Keine Verbindung zum Mailserver ($err)");
@@ -249,23 +249,31 @@ function smtp_send(array $c, string $to, string $subject, string $text, string $
   $cmd('', [220]); $ehlo = 'EHLO ' . (parse_url(base_url(), PHP_URL_HOST) ?: 'localhost'); $cmd($ehlo, [250]);
   if ($c['enc'] === 'tls') { $cmd('STARTTLS', [220]); if (!stream_socket_enable_crypto($s, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) throw new RuntimeException('TLS fehlgeschlagen'); $cmd($ehlo, [250]); }
   if ($c['user'] !== '') { $cmd('AUTH LOGIN', [334]); $cmd(base64_encode($c['user']), [334]); $cmd(base64_encode($c['pass']), [235]); }
-  $cmd('MAIL FROM:<' . $c['from'] . '>', [250]); $cmd('RCPT TO:<' . $to . '>', [250, 251]); $cmd('DATA', [354]);
-  $msg = mail_message($c, $to, $subject, $text, $html);
+  $cmd('MAIL FROM:<' . $c['from'] . '>', [250]); $cmd('RCPT TO:<' . $to . '>', [250, 251]); foreach ((array)($opt['bcc'] ?? []) as $bc) $cmd('RCPT TO:<' . $bc . '>', [250, 251]); $cmd('DATA', [354]);
+  $msg = mail_message($c, $to, $subject, $text, $html, $opt);
   fwrite($s, preg_replace('/^\./m', '..', $msg) . "\r\n.\r\n"); $cmd('', [250]); $cmd('QUIT', [221]); fclose($s);
 }
-function mail_message(array $c, string $to, string $subject, string $text, string $html): string {
+function mail_message(array $c, string $to, string $subject, string $text, string $html, array $opt = []): string {
   $b = 'ld' . bin2hex(random_bytes(8)); $enc = fn($s) => '=?UTF-8?B?' . base64_encode($s) . '?=';
-  return implode("\r\n", ['Date: ' . date('r'), 'From: ' . $enc($c['name'] ?: 'LumbraDesk') . ' <' . $c['from'] . '>', 'To: <' . $to . '>', 'Subject: ' . $enc($subject),
-    'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (substr(strrchr($c['from'], '@'), 1) ?: 'lumbradesk.de') . '>', 'MIME-Version: 1.0', 'Content-Type: multipart/alternative; boundary="' . $b . '"', '',
-    '--' . $b, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', chunk_split(base64_encode($text)),
-    '--' . $b, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', chunk_split(base64_encode($html)), '--' . $b . '--', '']);
+  $head = ['Date: ' . date('r'), 'From: ' . $enc($c['name'] ?: 'LumbraDesk') . ' <' . $c['from'] . '>', 'To: <' . $to . '>', 'Subject: ' . $enc($subject),
+    'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (substr(strrchr($c['from'], '@'), 1) ?: 'lumbradesk.de') . '>', 'MIME-Version: 1.0'];
+  if (!empty($opt['reply']) && filter_var($opt['reply'], FILTER_VALIDATE_EMAIL)) $head[] = 'Reply-To: ' . (!empty($opt['replyName']) ? $enc($opt['replyName']) . ' ' : '') . '<' . $opt['reply'] . '>';
+  $alt = ['--' . $b, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', chunk_split(base64_encode($text)),
+    '--' . $b, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', chunk_split(base64_encode($html)), '--' . $b . '--', ''];
+  $att = (array)($opt['att'] ?? []);
+  if (!$att) return implode("\r\n", array_merge($head, ['Content-Type: multipart/alternative; boundary="' . $b . '"', ''], $alt));
+  $m = 'lm' . bin2hex(random_bytes(8)); $parts = ['--' . $m, 'Content-Type: multipart/alternative; boundary="' . $b . '"', '', implode("\r\n", $alt)];
+  foreach ($att as $a) { $n = preg_replace('/[\r\n"]/', '', (string)$a['name']);
+    $parts = array_merge($parts, ['--' . $m, 'Content-Type: ' . (preg_match('#^[\w.+-]+/[\w.+-]+$#', (string)$a['type']) ? $a['type'] : 'application/octet-stream') . '; name="' . $enc($n) . '"', 'Content-Transfer-Encoding: base64', 'Content-Disposition: attachment; filename="' . $enc($n) . '"', '', chunk_split(base64_encode((string)$a['data']))]); }
+  $parts[] = '--' . $m . '--'; $parts[] = '';
+  return implode("\r\n", array_merge($head, ['Content-Type: multipart/mixed; boundary="' . $m . '"', ''], $parts));
 }
-function send_mail(string $to, string $subject, string $text, string $html): void {
+function send_mail(string $to, string $subject, string $text, string $html, array $opt = []): void {
   $c = mail_cfg();
   if ($c['from'] === '') throw new RuntimeException('Absender-Adresse fehlt (System → E-Mail).');
-  if ($c['pass'] !== '' || $c['enc'] === 'none') { smtp_send($c, $to, $subject, $text, $html); return; }
+  if ($c['pass'] !== '' || $c['enc'] === 'none') { smtp_send($c, $to, $subject, $text, $html, $opt); return; }
   /* ohne SMTP-Passwort: PHP-Mailfunktion von IONOS */
-  $m = mail_message($c, $to, $subject, $text, $html); [$head, $body] = explode("\r\n\r\n", $m, 2);
+  $m = mail_message($c, $to, $subject, $text, $html, $opt); [$head, $body] = explode("\r\n\r\n", $m, 2); if (!empty($opt['bcc'])) $head .= "\r\nBcc: " . implode(', ', (array)$opt['bcc']);
   $head = preg_replace('/^(To|Subject): .*\r\n/m', '', $head . "\r\n");
   if (!@mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, rtrim($head), '-f' . $c['from'])) throw new RuntimeException('E-Mail konnte nicht versendet werden (PHP-Mail). Bitte unter System das Postfach-Passwort eintragen.');
 }
@@ -301,4 +309,33 @@ function send_invite(array $u, bool $reset = false): void {
     ? mail_tpl("Hallo $first,", 'du hast ein neues Passwort für LumbraDesk angefordert. Über den Knopf legst du es fest.', 'Neues Passwort festlegen', $url, 'Der Link gilt 2 Stunden. Wenn du das nicht angefordert hast, ignoriere diese E-Mail einfach – dein Passwort bleibt unverändert.')
     : mail_tpl("Hallo $first,", 'für dich wurde ein Zugang zu LumbraDesk von Frühauf Solar angelegt. Über den Knopf legst du dein eigenes Passwort fest – danach kannst du dich mit deiner E-Mail-Adresse anmelden.', 'Passwort festlegen', $url, 'Der Link gilt 3 Tage und kann nur einmal benutzt werden.');
   send_mail($u['email'], $reset ? 'LumbraDesk: neues Passwort festlegen' : 'Dein Zugang zu LumbraDesk', $text, $html);
+}
+
+/* ---------- Eigenes Postfach je Benutzer (z. B. Outlook/Microsoft 365) ----------
+   Passwort verschlüsselt (AES-256-GCM); der Schlüssel liegt nur auf dem Server in private/files/.umk (nicht im Update-Paket). */
+function umail_key(): string {
+  $f = files_dir() . '/.umk';
+  if (!is_file($f)) { file_put_contents($f, base64_encode(random_bytes(32)), LOCK_EX); @chmod($f, 0600); }
+  return base64_decode(trim((string)file_get_contents($f)));
+}
+function umail_enc(string $p): string { $iv = random_bytes(12); $tag = ''; $c = openssl_encrypt($p, 'aes-256-gcm', umail_key(), OPENSSL_RAW_DATA, $iv, $tag); return base64_encode($iv . $tag . $c); }
+function umail_dec(string $e): string { $b = base64_decode($e, true); if ($b === false || strlen($b) < 29) return ''; $r = openssl_decrypt(substr($b, 28), 'aes-256-gcm', umail_key(), OPENSSL_RAW_DATA, substr($b, 0, 12), substr($b, 12, 16)); return $r === false ? '' : $r; }
+function umail_get(int $uid): ?array { $c = ld_get('umail_' . $uid, null); return is_array($c) && !empty($c['from']) ? $c : null; }
+function umail_out(int $uid): array { $c = umail_get($uid); return $c ? ['on' => true, 'from' => $c['from'], 'name' => $c['name'], 'host' => $c['host'], 'port' => (int)$c['port'], 'enc' => $c['enc'], 'user' => $c['user'], 'hasPass' => $c['pass'] !== ''] : ['on' => false]; }
+function umail_save(array $u, array $b): array {
+  if (!empty($b['remove'])) { ld_set('umail_' . (int)$u['id'], null, (int)$u['id']); return umail_out((int)$u['id']); }
+  $old = umail_get((int)$u['id']) ?: ['pass' => ''];
+  $from = trim((string)($b['from'] ?? '')); if (!filter_var($from, FILTER_VALIDATE_EMAIL)) fail('Bitte eine gültige Absender-Adresse eingeben.', 400);
+  $host = trim((string)($b['host'] ?? '')); if (!preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/i', $host)) fail('Bitte den Mailserver (SMTP) angeben, z. B. smtp.office365.com.', 400);
+  $enc = in_array($b['enc'] ?? '', ['tls', 'ssl'], true) ? $b['enc'] : 'tls'; $port = (int)($b['port'] ?? 0) ?: ($enc === 'ssl' ? 465 : 587);
+  $pw = (string)($b['pass'] ?? ''); $c = ['from' => $from, 'name' => mb_substr(trim((string)($b['name'] ?? $u['name'])), 0, 80) ?: $u['name'], 'host' => $host, 'port' => $port, 'enc' => $enc,
+    'user' => trim((string)($b['user'] ?? '')) ?: $from, 'pass' => $pw !== '' ? umail_enc($pw) : (string)$old['pass']];
+  if ($c['pass'] === '') fail('Bitte das Passwort (bzw. App-Passwort) eingeben.', 400);
+  ld_set('umail_' . (int)$u['id'], $c, (int)$u['id']); return umail_out((int)$u['id']);
+}
+/* Senden im Namen des Benutzers: eigenes Postfach, sonst Firmenpostfach mit Antwort an den Benutzer */
+function send_mail_as(array $u, string $to, string $subject, string $text, string $html, array $opt = []): string {
+  $c = umail_get((int)$u['id']);
+  if ($c) { $c['pass'] = umail_dec($c['pass']); if ($c['pass'] === '') throw new RuntimeException('Passwort des eigenen Postfachs nicht lesbar – bitte unter Konto neu eintragen.'); unset($opt['reply'], $opt['replyName']); smtp_send($c, $to, $subject, $text, $html, $opt); return $c['from']; }
+  send_mail($to, $subject, $text, $html, $opt + ['reply' => $u['email'], 'replyName' => $u['name']]); return (string)mail_cfg()['from'];
 }

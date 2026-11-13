@@ -18,6 +18,13 @@ function crm_tables(): void {
   if (!in_array('stage', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN stage VARCHAR(20) NULL, ADD COLUMN stage_at DATETIME NULL");
   $ecols = array_column($pdo->query('SHOW COLUMNS FROM crm_events')->fetchAll(), 'Field');
   if (!in_array('mentions', $ecols, true)) $pdo->exec("ALTER TABLE crm_events ADD COLUMN mentions VARCHAR(500) NULL");
+  if (!in_array('ref', $ecols, true)) $pdo->exec("ALTER TABLE crm_events ADD COLUMN ref VARCHAR(40) NULL");
+  if (!in_array('pin_note', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN pin_note TEXT NULL, ADD COLUMN pin_by INT UNSIGNED NULL, ADD COLUMN pin_at DATETIME NULL");
+  $pdo->exec("CREATE TABLE IF NOT EXISTS crm_files (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(40) NOT NULL, fid VARCHAR(40) NOT NULL, name VARCHAR(200) NOT NULL, type VARCHAR(100) NOT NULL, size INT UNSIGNED NOT NULL, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX (project_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $mc = $pdo->query("SHOW TABLES LIKE 'crm_mails'")->fetchColumn();
+  if ($mc && !in_array('docs', array_column($pdo->query('SHOW COLUMNS FROM crm_mails')->fetchAll(), 'Field'), true)) $pdo->exec("ALTER TABLE crm_mails ADD COLUMN docs VARCHAR(500) NOT NULL DEFAULT '' AFTER files");
+  $pdo->exec("CREATE TABLE IF NOT EXISTS sys_docs (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, fid VARCHAR(40) NOT NULL, name VARCHAR(200) NOT NULL, type VARCHAR(100) NOT NULL, size INT UNSIGNED NOT NULL, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $pdo->exec("CREATE TABLE IF NOT EXISTS crm_mails (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(40) NOT NULL, to_addr VARCHAR(200) NOT NULL, subject VARCHAR(300) NOT NULL, body MEDIUMTEXT NOT NULL, files VARCHAR(500) NOT NULL DEFAULT '', docs VARCHAR(500) NOT NULL DEFAULT '', status VARCHAR(12) NOT NULL, error VARCHAR(500) NULL, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX (project_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
   if (!in_array('stage_base', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN stage_base VARCHAR(20) NULL");
   if (!in_array('kdnr', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN kdnr VARCHAR(30) NULL, ADD COLUMN gewerk VARCHAR(12) NULL, ADD INDEX (kdnr)");
   $ucols = array_column($pdo->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field');
@@ -37,7 +44,7 @@ function crm_stage(?string $stored, ?string $base, string $derived): string {
   return $stored !== 'verloren' && array_search($derived, $o, true) > array_search($stored, $o, true) ? $derived : $stored;
 }
 
-const CRM_FIELDS = "p.id, p.kdnr, p.gewerk, p.owner_id, p.created_by, p.assigned_by, p.assigned_at, p.updated_at, p.stage, p.stage_at, p.stage_base, p.name,
+const CRM_FIELDS = "p.id, p.kdnr, p.gewerk, p.pin_note, p.pin_by, p.pin_at, p.owner_id, p.created_by, p.assigned_by, p.assigned_at, p.updated_at, p.stage, p.stage_at, p.stage_base, p.name,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.type')) AS type, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.status')) AS status, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.statusDate')) AS status_date,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.step')) AS step, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.archived')) AS archived,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.created')) AS created_ms,
@@ -51,7 +58,7 @@ function crm_row_out(array $r, array $extra = []): array {
   $n = user_names(); $total = (float)crm_val($r['total'] ?: $r['gross']);
   $derived = crm_derived(crm_val($r['status']) ?: 'offen', $total > 0 || crm_val($r['offer_no']) !== '');
   return [
-    'id' => $r['id'], 'kdnr' => (string)($r['kdnr'] ?? ''), 'gewerk' => (string)($r['gewerk'] ?? ''), 'name' => $r['name'] ?: 'Ohne Namen', 'type' => crm_val($r['type']), 'status' => crm_val($r['status']) ?: 'offen',
+    'id' => $r['id'], 'pin' => (string)($r['pin_note'] ?? ''), 'pinBy' => !empty($r['pin_by']) ? ($n[(int)$r['pin_by']] ?? '') : '', 'pinAt' => $r['pin_at'] ?? null, 'kdnr' => (string)($r['kdnr'] ?? ''), 'gewerk' => (string)($r['gewerk'] ?? ''), 'name' => $r['name'] ?: 'Ohne Namen', 'type' => crm_val($r['type']), 'status' => crm_val($r['status']) ?: 'offen',
     'step' => (int)crm_val($r['step']) ?: 1, 'archived' => crm_val($r['archived']) === 'true',
     'street' => crm_val($r['street']), 'zip' => crm_val($r['zip']), 'city' => crm_val($r['city']), 'phone' => crm_val($r['phone']), 'email' => crm_val($r['email']),
     'total' => $total ?: null, 'offerNo' => crm_val($r['offer_no']),
@@ -85,7 +92,7 @@ function crm_project(array $u, string $id): array {
 function crm_event_out(array $e): array {
   $n = user_names();
   $men = array_values(array_filter(array_map('intval', explode(',', (string)($e['mentions'] ?? '')))));
-  return ['id' => (int)$e['id'], 'kind' => $e['kind'], 'text' => $e['text'], 'at' => $e['at'], 'user' => $e['user_id'] ? (int)$e['user_id'] : null, 'userName' => $e['user_id'] ? ($n[(int)$e['user_id']] ?? '') : 'System',
+  return ['id' => (int)$e['id'], 'ref' => (string)($e['ref'] ?? ''), 'kind' => $e['kind'], 'text' => $e['text'], 'at' => $e['at'], 'user' => $e['user_id'] ? (int)$e['user_id'] : null, 'userName' => $e['user_id'] ? ($n[(int)$e['user_id']] ?? '') : 'System',
     'mentions' => array_map(fn($i) => ['id' => $i, 'name' => $n[$i] ?? ''], $men)];
 }
 function crm_task_out(array $t): array {
@@ -311,3 +318,114 @@ function crm_new(array $u, array $b): array {
   audit((int)$u['id'], 'kunde_angelegt', "$nr $full");
   return ['id' => $id, 'kdnr' => $nr];
 }
+
+/* ---------- Wichtige Notiz (immer oben beim Kunden) ---------- */
+function crm_pin(array $u, string $pid, string $text): void {
+  crm_project($u, $pid); $t = trim(mb_substr($text, 0, 2000));
+  db()->prepare('UPDATE projects SET pin_note = ?, pin_by = ?, pin_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$t !== '' ? $t : null, $u['id'], $pid]);
+}
+/* ---------- Dateien & Fotos beim Kunden ---------- */
+const CRM_FILE_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'];
+function crm_files(string $pid): array {
+  $n = user_names(); $st = db()->prepare('SELECT * FROM crm_files WHERE project_id = ? ORDER BY id DESC'); $st->execute([$pid]);
+  return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'type' => $r['type'], 'size' => (int)$r['size'], 'by' => $n[(int)$r['created_by']] ?? '', 'at' => $r['created_at']], $st->fetchAll());
+}
+function crm_file_up(array $u, array $b): array {
+  $pid = (string)($b['project'] ?? ''); crm_project($u, $pid);
+  $type = (string)($b['type'] ?? ''); if (!in_array($type, CRM_FILE_TYPES, true)) fail('Dieser Dateityp wird nicht unterstützt (Fotos, PDF, Word, Excel).', 400);
+  $bin = base64_decode((string)($b['data'] ?? ''), true); if ($bin === false || $bin === '') fail('Datei leer oder beschädigt.', 400);
+  if (strlen($bin) > 15 * 1024 * 1024) fail('Die Datei ist größer als 15 MB.', 400);
+  $name = mb_substr(preg_replace('/[\\\\\/:*?"<>|\r\n]+/', '_', trim((string)($b['name'] ?? 'Datei'))), 0, 180) ?: 'Datei';
+  $fid = 'cf-' . bin2hex(random_bytes(10)); $f = files_dir() . '/' . $fid;
+  file_put_contents($f . '.bin', $bin); file_put_contents($f . '.json', json_encode(['type' => $type, 'name' => $name, 'size' => strlen($bin)]));
+  db()->prepare('INSERT INTO crm_files (project_id, fid, name, type, size, created_by) VALUES (?, ?, ?, ?, ?, ?)')->execute([$pid, $fid, $name, $type, strlen($bin), $u['id']]);
+  return crm_files($pid);
+}
+function crm_file_row(array $u, int $id): array {
+  $st = db()->prepare('SELECT * FROM crm_files WHERE id = ?'); $st->execute([$id]); $r = $st->fetch(); if (!$r) fail('Datei nicht gefunden.', 404);
+  crm_project($u, $r['project_id']); return $r;
+}
+function crm_file_del(array $u, int $id): array {
+  $r = crm_file_row($u, $id); db()->prepare('DELETE FROM crm_files WHERE id = ?')->execute([$id]);
+  $f = files_dir() . '/' . $r['fid']; @unlink($f . '.bin'); @unlink($f . '.json'); return crm_files($r['project_id']);
+}
+function crm_file_send(array $u, int $id, bool $dl): void {
+  $r = crm_file_row($u, $id); $f = files_dir() . '/' . $r['fid'] . '.bin'; if (!is_file($f)) fail('Datei nicht gefunden.', 404);
+  header('Content-Type: ' . $r['type']); header('Content-Length: ' . filesize($f)); header('Cache-Control: private, max-age=86400');
+  header('Content-Disposition: ' . ($dl ? 'attachment' : 'inline') . "; filename*=UTF-8''" . rawurlencode($r['name'])); readfile($f); exit;
+}
+/* ---------- E-Mail an den Kunden (wird im Logbuch gespeichert und ist dort lesbar) ---------- */
+function crm_mail_send(array $u, array $b): array {
+  $pid = (string)($b['project'] ?? ''); $p = crm_project($u, $pid);
+  $to = trim((string)($b['to'] ?? '')); if (!filter_var($to, FILTER_VALIDATE_EMAIL)) fail('Bitte eine gültige E-Mail-Adresse eingeben.', 400);
+  $subject = trim(mb_substr((string)($b['subject'] ?? ''), 0, 300)); if ($subject === '') fail('Bitte einen Betreff eingeben.', 400);
+  $body = mb_substr((string)($b['body'] ?? ''), 0, 50000); if (trim($body) === '') fail('Bitte einen Text eingeben.', 400);
+  $att = []; $ids = []; $dids = []; $tot = 0;
+  foreach (array_slice((array)($b['files'] ?? []), 0, 10) as $fidN) { $r = crm_file_row($u, (int)$fidN); if ($r['project_id'] !== $pid) continue; $bin = (string)@file_get_contents(files_dir() . '/' . $r['fid'] . '.bin'); $tot += strlen($bin);
+    if ($tot > 20 * 1024 * 1024) fail('Die Anhänge sind zusammen größer als 20 MB.', 400); $att[] = ['name' => $r['name'], 'type' => $r['type'], 'data' => $bin]; $ids[] = (int)$r['id']; }
+  foreach (array_slice((array)($b['docs'] ?? []), 0, 10) as $dN) { $st = db()->prepare('SELECT * FROM sys_docs WHERE id = ?'); $st->execute([(int)$dN]); $r = $st->fetch(); if (!$r) continue;
+    $bin = (string)@file_get_contents(files_dir() . '/' . $r['fid'] . '.bin'); $tot += strlen($bin); if ($tot > 20 * 1024 * 1024) fail('Die Anhänge sind zusammen größer als 20 MB.', 400);
+    $att[] = ['name' => $r['name'], 'type' => $r['type'], 'data' => $bin]; $dids[] = (int)$r['id']; }
+  $html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#14181f">' . nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8')) . '</div>';
+  $opt = ['att' => $att]; if (!empty($b['copy'])) $opt['bcc'] = [$u['email']];
+  $status = 'gesendet'; $err = null;
+  try { send_mail_as($u, $to, $subject, $body, $html, $opt); } catch (Throwable $e) { $status = 'fehler'; $err = mb_substr($e->getMessage(), 0, 500); }
+  db()->prepare('INSERT INTO crm_mails (project_id, to_addr, subject, body, files, docs, status, error, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([$pid, $to, $subject, $body, implode(',', $ids), implode(',', $dids), $status, $err, $u['id']]);
+  $mid = (int)db()->lastInsertId();
+  if ($status === 'gesendet') {
+    db()->prepare('INSERT INTO crm_events (project_id, user_id, kind, text, at, ref) VALUES (?, ?, ?, ?, UTC_TIMESTAMP(), ?)')->execute([$pid, $u['id'], 'email', "E-Mail an $to: $subject" . (($na = count($ids) + count($dids)) ? ' (' . $na . ($na > 1 ? ' Anhänge' : ' Anhang') . ')' : ''), 'mail:' . $mid]);
+    audit((int)$u['id'], 'kunden_mail', $to);
+  } else fail('E-Mail nicht versendet: ' . $err, 502);
+  return ['id' => $mid];
+}
+function crm_mail_get(array $u, int $id): array {
+  $st = db()->prepare('SELECT * FROM crm_mails WHERE id = ?'); $st->execute([$id]); $r = $st->fetch(); if (!$r) fail('E-Mail nicht gefunden.', 404);
+  crm_project($u, $r['project_id']); $n = user_names(); $files = [];
+  if ($r['files'] !== '') { $q = db()->prepare('SELECT id, name, type FROM crm_files WHERE id = ?'); foreach (explode(',', $r['files']) as $fi) { $q->execute([(int)$fi]); if ($x = $q->fetch()) $files[] = ['id' => (int)$x['id'], 'name' => $x['name'], 'type' => $x['type']]; } }
+  $docs = []; if (($r['docs'] ?? '') !== '') { $q = db()->prepare('SELECT id, name, type FROM sys_docs WHERE id = ?'); foreach (explode(',', $r['docs']) as $di) { $q->execute([(int)$di]); if ($x = $q->fetch()) $docs[] = ['id' => (int)$x['id'], 'name' => $x['name'], 'type' => $x['type']]; } }
+  return ['docs' => $docs, 'id' => (int)$r['id'], 'to' => $r['to_addr'], 'subject' => $r['subject'], 'body' => $r['body'], 'files' => $files, 'by' => $n[(int)$r['created_by']] ?? '', 'at' => $r['created_at'], 'status' => $r['status']];
+}
+
+/* ---------- E-Mail-Vorlagen und Info-Dokumente (im System hochgeladen, an jede Mail anhängbar) ---------- */
+function mail_tpls(): array {
+  $l = ld_get('mail_tpls', null); if (is_array($l)) return $l;
+  return [['id' => 't1', 'name' => 'Angebot zusenden', 'subject' => '{Kundennummer} – Ihr Angebot von Frühauf', 'body' => "{Anrede}\n\nvielen Dank für das nette Gespräch. Anbei erhalten Sie wie besprochen Ihr Angebot.\nBei Fragen bin ich jederzeit für Sie da.\n\n{Signatur}", 'docs' => []],
+    ['id' => 't2', 'name' => 'Terminbestätigung', 'subject' => '{Kundennummer} – Terminbestätigung', 'body' => "{Anrede}\n\nhiermit bestätige ich unseren Termin am ___ um ___ Uhr in {Ort}.\n\n{Signatur}", 'docs' => []],
+    ['id' => 't3', 'name' => 'Unterlagen anfordern', 'subject' => '{Kundennummer} – Unterlagen für Ihr Projekt', 'body' => "{Anrede}\n\nfür die weitere Planung benötigen wir noch folgende Unterlagen:\n- Foto vom Zählerschrank (Tür offen)\n- letzte Stromrechnung\n- Grundriss bzw. Bauzeichnung\n\n{Signatur}", 'docs' => []]];
+}
+function mail_tpls_save(array $u, array $l): array {
+  $o = []; $ok = array_map('intval', array_column(db()->query('SELECT id FROM sys_docs')->fetchAll(), 'id'));
+  foreach (array_slice($l, 0, 50) as $x) { if (!is_array($x) || trim((string)($x['name'] ?? '')) === '') continue;
+    $o[] = ['id' => preg_match('/^[\w-]{1,16}$/', (string)($x['id'] ?? '')) ? $x['id'] : 't' . bin2hex(random_bytes(4)), 'name' => mb_substr(trim((string)$x['name']), 0, 80), 'subject' => mb_substr((string)($x['subject'] ?? ''), 0, 300), 'body' => mb_substr((string)($x['body'] ?? ''), 0, 20000),
+      'docs' => array_values(array_intersect(array_map('intval', (array)($x['docs'] ?? [])), $ok))]; }
+  ld_set('mail_tpls', $o, (int)$u['id']); return $o;
+}
+function sys_docs(): array {
+  crm_tables(); $n = user_names();
+  return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'type' => $r['type'], 'size' => (int)$r['size'], 'by' => $n[(int)$r['created_by']] ?? '', 'at' => $r['created_at']], db()->query('SELECT * FROM sys_docs ORDER BY name')->fetchAll());
+}
+function sys_doc_up(array $u, array $b): array {
+  crm_tables(); $type = (string)($b['type'] ?? ''); if (!in_array($type, CRM_FILE_TYPES, true)) fail('Dieser Dateityp wird nicht unterstützt (PDF, Fotos, Word, Excel).', 400);
+  $bin = base64_decode((string)($b['data'] ?? ''), true); if ($bin === false || $bin === '') fail('Datei leer oder beschädigt.', 400); if (strlen($bin) > 15 * 1024 * 1024) fail('Die Datei ist größer als 15 MB.', 400);
+  $name = mb_substr(preg_replace('/[\\\\\/:*?"<>|\r\n]+/', '_', trim((string)($b['name'] ?? 'Dokument'))), 0, 180) ?: 'Dokument';
+  $fid = 'sd-' . bin2hex(random_bytes(10)); $f = files_dir() . '/' . $fid; file_put_contents($f . '.bin', $bin); file_put_contents($f . '.json', json_encode(['type' => $type, 'name' => $name, 'size' => strlen($bin)]));
+  db()->prepare('INSERT INTO sys_docs (fid, name, type, size, created_by) VALUES (?, ?, ?, ?, ?)')->execute([$fid, $name, $type, strlen($bin), $u['id']]); return sys_docs();
+}
+function sys_doc_del(int $id): array {
+  crm_tables(); $st = db()->prepare('SELECT fid FROM sys_docs WHERE id = ?'); $st->execute([$id]); $fid = $st->fetchColumn();
+  if ($fid) { db()->prepare('DELETE FROM sys_docs WHERE id = ?')->execute([$id]); @unlink(files_dir() . '/' . $fid . '.bin'); @unlink(files_dir() . '/' . $fid . '.json'); }
+  return sys_docs();
+}
+function sys_doc_send(int $id): void {
+  crm_tables(); $st = db()->prepare('SELECT * FROM sys_docs WHERE id = ?'); $st->execute([$id]); $r = $st->fetch(); if (!$r) fail('Dokument nicht gefunden.', 404);
+  $f = files_dir() . '/' . $r['fid'] . '.bin'; if (!is_file($f)) fail('Dokument nicht gefunden.', 404);
+  header('Content-Type: ' . $r['type']); header('Content-Length: ' . filesize($f)); header("Content-Disposition: inline; filename*=UTF-8''" . rawurlencode($r['name'])); readfile($f); exit;
+}
+
+/* ---------- Signatur: eigene je Benutzer, sonst Firmen-Signatur ---------- */
+function mail_sig_company(): string { $s = ld_get('mail_sig', null); return is_string($s) ? $s : "Mit freundlichen Grüßen\n\n{Name}\nFrühauf Solar\n{E-Mail}"; }
+function mail_sig_for(array $u): array {
+  $own = ld_get('usig_' . (int)$u['id'], null); $t = is_string($own) && trim($own) !== '' ? $own : mail_sig_company();
+  return ['own' => is_string($own) ? $own : '', 'company' => mail_sig_company(), 'text' => strtr($t, ['{Name}' => $u['name'], '{E-Mail}' => $u['email']])];
+}
+function mail_sig_save(array $u, string $text, bool $company): void { $t = mb_substr(str_replace("\r", '', $text), 0, 2000); if ($company) ld_set('mail_sig', $t, (int)$u['id']); else ld_set('usig_' . (int)$u['id'], $t, (int)$u['id']); }

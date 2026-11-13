@@ -24,6 +24,8 @@ viewHome = function () {
       <div class="grow who"><span class="av">${esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span><div class="gmain"><b>${esc(ST.user.name)}</b><span>${esc(ST.user.email)} · ${esc(ST.user.roleName)}</span></div></div>
       <details class="pwbox grow-d"><summary class="grow">${ic('key', 18)}<span class="gmain">Passwort ändern</span>${ic('next', 16)}</summary>
         <form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn" type="submit" style="margin-top:12px">Passwort ändern</button></div></form></details>
+      <details class="pwbox grow-d" data-um="1"><summary class="grow">${ic('mail', 18)}<span class="gmain">Eigenes E-Mail-Postfach</span>${ic('next', 16)}</summary><div class="um-box"></div></details>
+      <details class="pwbox grow-d" data-sig="1"><summary class="grow">${ic('edit', 18)}<span class="gmain">Meine E-Mail-Signatur</span>${ic('next', 16)}</summary><div class="sig-box"></div></details>
       <button class="grow g-danger" data-a="logout">${ic('out', 18)}<span class="gmain">Abmelden</span></button>
     </div>`;
 };
@@ -120,7 +122,8 @@ function homeDesk(crm, first, apps) {
   const head = `<header class="dk-head"><div><div class="h-date"><i></i>${esc(homeDate())}</div><h1 class="dk-title">${hi}, ${first}</h1></div>
     <div class="dk-act">${crm ? kdBtn() : apps.map(a => `<a class="dk-app" href="${esc(a.url)}">${appIcon(a.key)}<span>${esc(a.name)}</span></a>`).join('')}</div></header>`;
   const konto = `<div class="dkc dk-s12 dk-konto"><div class="dkc-h"><h3>Konto</h3></div><div class="dk-kr"><span class="av sm">${esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span><span class="gmain"><b>${esc(ST.user.name)}</b><span class="muted small">${esc(ST.user.email)} · ${esc(ST.user.roleName)}</span></span>
-      <details class="pwbox"><summary class="btn s sm">${ic('key', 16)}Passwort ändern</summary><form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn" type="submit" style="margin-top:12px">Speichern</button></div></form></details></div></div>`;
+      <details class="pwbox"><summary class="btn s sm">${ic('key', 16)}Passwort ändern</summary><form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn" type="submit" style="margin-top:12px">Speichern</button></div></form></details>
+      <details class="pwbox" data-um="1"><summary class="btn s sm">${ic('mail', 16)}Eigenes E-Mail-Postfach</summary><div class="um-box"></div></details><details class="pwbox" data-sig="1"><summary class="btn s sm">${ic('edit', 16)}Meine E-Mail-Signatur</summary><div class="sig-box"></div></details></div></div>`;
   if (!D) return `${head}<div class="dk">${crm ? `<div class="dkc dk-s12">${homeDueCard()}</div>` : ''}${konto}</div>`;
   const k = D.kpi, S = D.series || [], y = D.year, chg = D.wonPrevSame > 0 ? Math.round((D.wonYear - D.wonPrevSame) / D.wonPrevSame * 100) : null;
   const st = D.stages.filter(x => x.key !== 'verloren'), tot = st.reduce((a, x) => a + x.n, 0) || 1, lost = (D.stages.find(x => x.key === 'verloren') || {}).n || 0;
@@ -146,3 +149,30 @@ function homeDesk(crm, first, apps) {
     ${konto}
   </div>`;
 }
+
+/* ---------- Eigenes E-Mail-Postfach (Absender für Kunden-Mails) ---------- */
+const UM_PRESETS = { m365: ['Outlook / Microsoft 365 (Firma)', 'smtp.office365.com', 587, 'tls'], outlook: ['Outlook.com / Hotmail (privat)', 'smtp-mail.outlook.com', 587, 'tls'], ionos: ['IONOS', 'smtp.ionos.de', 587, 'tls'], gmail: ['Gmail (App-Passwort)', 'smtp.gmail.com', 587, 'tls'], eigen: ['Eigener Server', '', 587, 'tls'] };
+function umHTML(u) {
+  const pre = Object.entries(UM_PRESETS).find(([, x]) => x[1] && x[1] === u.host); const k = pre ? pre[0] : (u.on ? 'eigen' : 'm365'), P = UM_PRESETS[k];
+  return `<form id="f-um" class="form-grid um-f" autocomplete="off">
+    <p class="muted small" style="grid-column:1/-1;margin:0">${u.on ? `Aktiv: E-Mails an Kunden gehen von <b>${esc(u.from)}</b> raus.` : 'Noch nicht eingetragen – E-Mails an Kunden gehen über das Firmenpostfach, Antworten an deine Adresse.'}</p>
+    <label style="grid-column:1/-1">Anbieter<select name="preset">${Object.entries(UM_PRESETS).map(([key, x]) => `<option value="${key}" ${key === k ? 'selected' : ''}>${x[0]}</option>`).join('')}</select></label>
+    <label>Absender-Adresse<input name="from" type="email" value="${esc(u.from || ST.user.email)}" required></label><label>Anzeigename<input name="name" value="${esc(u.name || ST.user.name)}"></label>
+    <label>Mailserver (SMTP)<input name="host" value="${esc(u.host || P[1])}" placeholder="smtp.office365.com" required></label><label>Port<input name="port" inputmode="numeric" value="${u.port || P[2]}"></label>
+    <label>Verschlüsselung<select name="enc"><option value="tls" ${(u.enc || P[3]) === 'tls' ? 'selected' : ''}>STARTTLS (587)</option><option value="ssl" ${(u.enc || P[3]) === 'ssl' ? 'selected' : ''}>SSL (465)</option></select></label><label>Benutzername<input name="user" value="${esc(u.user || '')}" placeholder="leer = Absender-Adresse"></label>
+    <label style="grid-column:1/-1">Passwort bzw. App-Passwort<input name="pass" type="password" autocomplete="new-password" placeholder="${u.hasPass ? '•••••••• (gespeichert – leer lassen zum Behalten)' : ''}"></label>
+    <p class="muted small" style="grid-column:1/-1;margin:0">Microsoft 365: Die „SMTP-Authentifizierung“ muss für das Postfach erlaubt sein (Admin-Center). Mit Zwei-Faktor-Anmeldung ein App-Passwort verwenden. Das Passwort wird verschlüsselt auf dem Server gespeichert.</p>
+    <div class="row" style="grid-column:1/-1;margin-top:6px"><button class="btn" type="submit">${ic('check', 16)}Speichern</button>${u.on ? `<button class="btn s" type="button" data-a="um-test">Testmail an mich</button><button class="btn g danger" type="button" data-a="um-off">Entfernen</button>` : ''}</div></form>`;
+}
+document.addEventListener('toggle', async e => { const d = e.target; if (!(d.dataset && d.dataset.um && d.open)) return; const box = d.querySelector('.um-box'); box.innerHTML = '<p class="muted small">Lädt …</p>'; try { box.innerHTML = umHTML(await api('umail')); } catch (err) { box.innerHTML = `<p class="note err">${esc(err.message)}</p>`; } }, true);
+document.addEventListener('change', e => { const el = e.target; if (el.name === 'preset' && el.closest('#f-um')) { const P = UM_PRESETS[el.value], f = el.form; if (P[1]) f.host.value = P[1]; f.port.value = P[2]; f.enc.value = P[3]; } });
+document.addEventListener('submit', async e => { if (e.target.id !== 'f-um') return; e.preventDefault(); const f = e.target; try { const u = await api('umail', { from: f.from.value, name: f.name.value, host: f.host.value, port: +f.port.value, enc: f.enc.value, user: f.user.value, pass: f.pass.value }); f.closest('.um-box').innerHTML = umHTML(u); toast('Postfach gespeichert – jetzt am besten „Testmail an mich“.'); } catch (err) { toast(err.message); } });
+document.addEventListener('click', async e => { const a = e.target.closest && e.target.closest('[data-a="um-test"],[data-a="um-off"]'); if (!a) return; e.preventDefault(); e.stopImmediatePropagation();
+  try { if (a.dataset.a === 'um-test') { a.disabled = true; a.textContent = 'Wird gesendet …'; const j = await api('umail-test', {}); toast(`Testmail von ${j.from} an ${j.to} gesendet.`); a.disabled = false; a.textContent = 'Testmail an mich'; }
+    else { if (!confirm('Eigenes Postfach entfernen?')) return; const u = await api('umail', { remove: true }); a.closest('.um-box').innerHTML = umHTML(u); toast('Entfernt.'); } } catch (err) { toast(err.message); a.disabled = false; a.textContent = 'Testmail an mich'; } }, true);
+
+/* Eigene E-Mail-Signatur (leer = Firmen-Signatur) */
+document.addEventListener('toggle', async e => { const d = e.target; if (!(d.dataset && d.dataset.sig && d.open)) return; const box = d.querySelector('.sig-box'); box.innerHTML = '<p class="muted small">Lädt …</p>';
+  try { const c = await api('mail-cfg'); box.innerHTML = `<form id="f-sig" style="padding:10px 4px 4px"><p class="muted small" style="margin:0 0 6px">Wird automatisch unter jede E-Mail an Kunden gesetzt. Leer lassen = Firmen-Signatur. Platzhalter: {Name}, {E-Mail}.</p><textarea name="text" rows="6" placeholder="${esc(c.sig.company)}">${esc(c.sig.own)}</textarea><button class="btn" type="submit" style="margin-top:8px">Signatur speichern</button></form>`; }
+  catch (err) { box.innerHTML = `<p class="note err">${esc(err.message)}</p>`; } }, true);
+document.addEventListener('submit', async e => { if (e.target.id !== 'f-sig') return; e.preventDefault(); try { await api('mail-sig', { text: e.target.text.value }); toast('Signatur gespeichert.'); } catch (err) { toast(err.message); } });

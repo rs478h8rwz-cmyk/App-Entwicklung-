@@ -540,6 +540,28 @@ try {
       $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/plan-lib.php';
       $o = plan_res_save((array)(body()['list'] ?? [])); audit((int)$u['id'], 'plantafel', 'Zeilen gespeichert'); json_out(['ok' => true, 'res' => $o]);
     }
+    /* ---------- Kunde: Dateien & Fotos, E-Mail, wichtige Notiz ---------- */
+    case 'GET crm-files': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $p = (string)($_GET['p'] ?? ''); crm_project($u, $p); json_out(['files' => crm_files($p)]); }
+    case 'POST crm-file-up': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(['ok' => true, 'files' => crm_file_up($u, body())]); }
+    case 'POST crm-file-del': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(['ok' => true, 'files' => crm_file_del($u, (int)(body()['id'] ?? 0))]); }
+    case 'GET crm-file': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_file_send($u, (int)($_GET['id'] ?? 0), !empty($_GET['dl'])); }
+    case 'POST crm-mail': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(['ok' => true] + crm_mail_send($u, body())); }
+    case 'GET crm-mail': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(crm_mail_get($u, (int)($_GET['id'] ?? 0))); }
+    case 'GET umail': { $u = require_user(); json_out(umail_out((int)$u['id'])); }
+    case 'POST umail': { $u = require_user(); $o = umail_save($u, body()); audit((int)$u['id'], 'eigenes_postfach', $o['on'] ? $o['from'] : 'entfernt'); json_out(['ok' => true] + $o); }
+    case 'POST umail-test': {
+      $u = require_user(); if (!umail_get((int)$u['id'])) fail('Noch kein eigenes Postfach eingetragen.', 400);
+      try { $from = send_mail_as($u, $u['email'], 'Testmail aus lumbra.desk', "Hallo {$u['name']},\n\ndiese Testmail wurde über dein eigenes Postfach gesendet. Es funktioniert.", '<p>Hallo ' . htmlspecialchars($u['name']) . ',</p><p>diese Testmail wurde über dein eigenes Postfach gesendet. Es funktioniert.</p>'); }
+      catch (Throwable $e) { fail('Test fehlgeschlagen: ' . $e->getMessage(), 502); }
+      json_out(['ok' => true, 'from' => $from, 'to' => $u['email']]);
+    }
+    case 'GET mail-cfg': { require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables(); $u = current_user(); json_out(['tpls' => mail_tpls(), 'docs' => sys_docs(), 'sig' => mail_sig_for($u)]); }
+    case 'POST mail-tpls': { $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables(); $o = mail_tpls_save($u, (array)(body()['list'] ?? [])); audit((int)$u['id'], 'mail_vorlagen', count($o) . ' Vorlagen'); json_out(['ok' => true, 'tpls' => $o]); }
+    case 'POST mail-sig': { $u = require_user(); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body(); $co = !empty($b['company']); if ($co && !in_array($u['role'], ['admin', 'buero'], true)) fail('Keine Berechtigung', 403); mail_sig_save($u, (string)($b['text'] ?? ''), $co); json_out(['ok' => true, 'sig' => mail_sig_for($u)]); }
+    case 'POST sys-doc-up': { $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(['ok' => true, 'docs' => sys_doc_up($u, body())]); }
+    case 'POST sys-doc-del': { $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/crm-lib.php'; json_out(['ok' => true, 'docs' => sys_doc_del((int)(body()['id'] ?? 0))]); }
+    case 'GET sys-doc': { require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; sys_doc_send((int)($_GET['id'] ?? 0)); }
+    case 'POST crm-pin': { $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body(); crm_pin($u, (string)($b['project'] ?? ''), (string)($b['text'] ?? '')); json_out(['ok' => true]); }
     case 'GET kd-cfg': {
       require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables();
       json_out(['gewerke' => kd_out()]);

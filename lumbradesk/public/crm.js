@@ -113,6 +113,7 @@ function viewKunde() {
   const cur = STG.indexOf(c.stage);
   return `<a class="backl" href="#/kunden">${ic('back', 18)}Kunden</a>
     <section class="hero" style="padding-top:8px"><h1>${esc(c.name)}</h1><div class="cmeta" style="margin-top:10px">${c.kdnr ? kdBadge(c) : `<button class="badge kd-set" data-a="kd-assign">${ic('plus', 12)}Kundennummer vergeben</button>`}${stageBadge(c.stage)}${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : ''}<span class="badge">Zuständig: ${esc(c.ownerName)}</span>${c.archived ? '<span class="badge">Archiv</span>' : ''}</div></section>
+    ${pinHTML(c)}
     <div class="kgrid">
       <div class="kcol">
         <div class="card"><div class="contact">
@@ -128,6 +129,7 @@ function viewKunde() {
           <div class="row" style="margin-top:12px">${c.stage === 'verloren' ? `<span class="muted small">Als verloren markiert.</span><button class="btn g sm" data-a="crm-set-stage" data-v="anfrage">Wieder aufnehmen</button>` : `<button class="btn g sm danger" data-a="crm-set-stage" data-v="verloren">Als verloren markieren</button>`}</div>
           <p class="muted small" style="margin:8px 0 0">Tippe auf eine Stufe, um sie zu setzen. Wird später in der Wirtschaftlichkeit „Gesendet“ oder „Unterschrieben“ gewählt, rückt die Stufe automatisch mit.</p></div>
 
+        <div class="card sec" id="k-files"><div class="of-head"><h2>Dateien &amp; Fotos</h2><label class="btn sm">${ic('plus', 16)}Hochladen<input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" data-cf="${esc(c.id)}" class="zs-file"></label></div><div id="k-fl">${filesHTML()}</div></div>
         ${typeof offerCard === 'function' ? offerCard() : ''}
         <div class="card sec"><div class="of-head"><h2>Zählerschrank</h2><a class="btn sm" href="#/zaehler/neu/${esc(c.id)}">${ic('zaehler', 16)}Check starten</a></div><div id="k-zs"><p class="muted small" style="margin:0">Foto aufnehmen und prüfen, ob der Zählerschrank für PV, Wärmepumpe oder Wallbox passt.</p></div></div>
         ${typeof invoiceCard === 'function' ? invoiceCard() : ''}
@@ -139,7 +141,7 @@ function viewKunde() {
         ${hoursCard()}
       </div>
       <div class="kcol">
-        <div class="card"><h2>Logbuch</h2>
+        <div class="card"><div class="of-head"><h2>Logbuch</h2>${c.email || true ? `<button class="btn sm" data-a="cm-new">${ic('mail', 16)}E-Mail senden</button>` : ''}</div>
           <form id="f-crm-ev" class="evform">
             <div class="seg kinds">${['notiz', 'anruf', 'termin', 'email'].map(k => `<button type="button" class="${CR.kind === k ? 'on' : ''}" data-a="crm-kind" data-v="${k}">${ic(k, 16)}<span>${KIND_L[k]}</span></button>`).join('')}</div>
             <textarea name="text" rows="3" placeholder="${{ notiz: 'Was gibt es Neues?', anruf: 'Worüber wurde gesprochen?', termin: 'Termin: wo, mit wem, Ergebnis …', email: 'Inhalt der E-Mail kurz zusammengefasst' }[CR.kind]}" required></textarea>
@@ -158,7 +160,7 @@ function mentionChips() {
 function evRow(e) {
   const mine = e.user === ST.user.id || ST.user.role === 'admin', manual = ['notiz', 'anruf', 'termin', 'email'].includes(e.kind);
   return `<div class="ev ${manual ? '' : 'auto'}"><span class="evi">${ic(e.kind, 16)}</span><div class="evb"><div class="evh"><b>${KIND_L[e.kind] || e.kind}</b><span class="muted small">${utc(e.at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${esc(e.userName)}</span>
-    ${mine && manual ? `<button class="xbtn" data-a="crm-ev-del" data-id="${e.id}" title="Eintrag löschen" aria-label="Eintrag löschen">${ic('x', 14)}</button>` : ''}</div><div class="evt">${esc(e.text)}</div>${(e.mentions || []).length ? `<div class="evm">${e.mentions.map(m => `<span>@${esc(m.name)}</span>`).join('')}</div>` : ''}</div></div>`;
+    ${mine && manual ? `<button class="xbtn" data-a="crm-ev-del" data-id="${e.id}" title="Eintrag löschen" aria-label="Eintrag löschen">${ic('x', 14)}</button>` : ''}</div><div class="evt">${esc(e.text)}</div>${e.ref && e.ref.startsWith('mail:') ? `<button class="btn g sm ev-mail" data-a="cm-show" data-id="${esc(e.ref.slice(5))}">${ic('mail', 14)}E-Mail anzeigen</button>` : ''}${(e.mentions || []).length ? `<div class="evm">${e.mentions.map(m => `<span>@${esc(m.name)}</span>`).join('')}</div>` : ''}</div></div>`;
 }
 function taskRow(t) {
   return `<div class="task ${t.done ? 'done' : ''}"><button class="chk" data-a="crm-task-done" data-id="${t.id}" data-v="${t.done ? 0 : 1}" aria-label="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? ic('aufgabe', 16) : ''}</button>
@@ -227,12 +229,13 @@ function homeDue() {
 }
 /* Handy: „Mehr“ für die Admin-Seiten */
 function viewMehr() {
-  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[...((ST.features || {}).angebote ? [['assistent', 'Angebots-Assistent', 'Fragen, Reihenfolge, Anhänge, Gratis-Mengen, Systeme'], ['produkte', 'Produkte', 'Produktdatenbank fürs Angebot: Module, Speicher, Wechselrichter …'], ['artikel', 'Leistungen & Pakete', 'Montage, Elektro & Co. – feste und bedingte Positionen'], ['belege', 'Nummern & Texte', 'Kundennummern, Nummernkreise, Textbausteine, Mahnwesen']] : []), ...((ST.features || {}).rechnungen ? [['rechnungen', 'Rechnungen', 'Offene Posten, E-Rechnung, Mahnungen']] : []), ['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Änderungen', 'Wer hat wann was im System gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k === 'artikel' || k === 'produkte' || k === 'assistent' ? 'box' : k === 'belege' || k === 'rechnungen' ? 'offer' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
+  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[...((ST.features || {}).angebote ? [['assistent', 'Angebots-Assistent', 'Fragen, Reihenfolge, Anhänge, Gratis-Mengen, Systeme'], ['produkte', 'Produkte', 'Produktdatenbank fürs Angebot: Module, Speicher, Wechselrichter …'], ['artikel', 'Leistungen & Pakete', 'Montage, Elektro & Co. – feste und bedingte Positionen'], ['belege', 'Nummern & Texte', 'Kundennummern, Nummernkreise, Textbausteine, Mahnwesen']] : []), ['vorlagen', 'E-Mail-Vorlagen & Dokumente', 'Vorlagen, Firmen-Signatur, Info-Dokumente zum Anhängen'], ...((ST.features || {}).rechnungen ? [['rechnungen', 'Rechnungen', 'Offene Posten, E-Rechnung, Mahnungen']] : []), ['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Änderungen', 'Wer hat wann was im System gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'vorlagen' ? 'mail' : k === 'stunden' ? 'stempel' : k === 'artikel' || k === 'produkte' || k === 'assistent' ? 'box' : k === 'belege' || k === 'rechnungen' ? 'offer' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
 }
 
 /* ---------- Laden ---------- */
 async function crmLoad(view, arg) {
   if (view === 'kunden' || view === 'aufgaben') { const j = await api('crm'); ST.crm = j.customers; ST.crmAll = j.all; ST.team = j.team; }
+  if (view === 'kunde') { ST.cfiles = null; api('crm-files&p=' + encodeURIComponent(arg)).then(j => { ST.cfiles = j.files; const el = $('#k-fl'); if (el) el.innerHTML = filesHTML(); }).catch(() => { ST.cfiles = []; }); }
   if (view === 'kunde') api('zs-list&p=' + encodeURIComponent(arg)).then(j => { const el = $('#k-zs'); if (el && j.list.length && typeof ZS_RES === 'object') el.innerHTML = `<div class="clist flat">${j.list.map(x => `<a class="crow" href="#/zaehler/${x.id}"><span class="evi" style="color:${ZS_RES[x.result][2]}">${ic('zaehler', 18)}</span><div class="cmain"><b>${esc(ZS_RES[x.result][0])}</b><span class="muted">${utc(x.at).toLocaleDateString('de-DE')}${x.fields ? ' · Empfehlung ' + x.fields + '-feldig' : ''}</span></div>${ic('next', 18)}</a>`).join('')}</div>`; }).catch(() => {});
   if (view === 'kunde') { ST.hrs = null; api('st-sites&p=' + encodeURIComponent(arg)).then(h => { ST.hrs = h; const el = $('#k-hrs'); if (el && ST.view === 'kunde') el.outerHTML = hoursCard(); }).catch(() => {}); ST.cd = null; try { const [d, t] = await Promise.all([api('crm-p&id=' + encodeURIComponent(arg)), ST.team ? null : api('tasks')]); ST.cd = d; if (t) ST.team = t.team; } catch (e) { if (e.status === 401) throw e; toast(e.message); } }
   if (view === 'home') { try { ST.dash = await api('dash'); } catch (e) { if (e.status === 401) throw e; ST.dash = null; } }
@@ -343,4 +346,130 @@ document.addEventListener('input', e => {
     const l = q.length >= 3 ? KD.all.filter(c => `${c.kdnr || ''} ${c.name}`.toLowerCase().includes(q)).slice(0, 4) : [];
     box.innerHTML = l.length ? `<div class="note" style="background:rgba(245,165,36,.1);margin:8px 0 0"><b>Diesen Kunden gibt es vielleicht schon:</b>${l.map(c => `<a class="kd-dl" href="#/kunde/${esc(c.id)}" data-a="kd-close"><b>${c.kdnr ? esc(c.kdnr) + ' · ' : ''}${esc(c.name)}</b><span>${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '))}</span></a>`).join('')}</div>` : '';
   }, 300);
+});
+
+/* ---------- Kunde: wichtige Notiz ---------- */
+function pinHTML(c) {
+  if (CRM_PIN_EDIT) return `<div class="pin-card edit"><b>${ic('alert', 16)}Wichtige Notiz</b><textarea id="pin-t" rows="3" placeholder="z. B. Hund im Garten, nur vormittags erreichbar, Zählerschrank im Keller …">${esc(c.pin || '')}</textarea><div class="row" style="margin-top:8px"><button class="btn sm" data-a="pin-save">${ic('check', 16)}Speichern</button><button class="btn g sm" data-a="pin-x">Abbrechen</button></div></div>`;
+  return c.pin ? `<div class="pin-card"><div class="pin-h"><b>${ic('alert', 16)}Wichtige Notiz</b><button class="btn g sm" data-a="pin-edit">Bearbeiten</button></div><div class="pin-t">${esc(c.pin)}</div>${c.pinBy ? `<span class="muted small">${esc(c.pinBy)}${c.pinAt ? ' · ' + utc(c.pinAt).toLocaleDateString('de-DE') : ''}</span>` : ''}</div>`
+    : `<button class="pin-add" data-a="pin-edit">${ic('plus', 14)}Wichtige Notiz hinzufügen – steht dann immer oben</button>`;
+}
+let CRM_PIN_EDIT = false;
+const pinRepaint = () => { const el = document.querySelector('.pin-card,.pin-add'); if (el && ST.cd) el.outerHTML = pinHTML(ST.cd.customer); };
+/* ---------- Kunde: Dateien & Fotos ---------- */
+const cfIsImg = f => /^image\//.test(f.type);
+const cfUrl = (f, dl) => `api/?r=crm-file&id=${f.id}${dl ? '&dl=1' : ''}`;
+function filesHTML() {
+  const L = ST.cfiles; if (L === null || L === undefined) return '<p class="muted small" style="margin:0">Lädt …</p>';
+  if (!L.length) return '<p class="muted small" style="margin:0">Noch keine Dateien. Fotos vom Dach, Zählerschrank, Heizraum, Grundrisse, Unterlagen – alles hier ablegen.</p>';
+  const kb = n => n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  return `<div class="cf-grid">${L.map(f => `<div class="cf-it">${cfIsImg(f) ? `<button class="cf-img" data-a="cf-show" data-id="${f.id}"><img src="${cfUrl(f)}" alt="${esc(f.name)}" loading="lazy"></button>` : `<a class="cf-doc" href="${cfUrl(f)}" target="_blank" rel="noopener">${ic('offer', 26)}<span>${esc((f.name.split('.').pop() || '').toUpperCase())}</span></a>`}
+    <div class="cf-m"><span title="${esc(f.name)}">${esc(f.name)}</span><small>${kb(f.size)} · ${esc(f.by)}</small></div><button class="xbtn cf-x" data-a="cf-del" data-id="${f.id}" aria-label="Datei löschen">${ic('x', 13)}</button></div>`).join('')}</div>`;
+}
+function cfShrink(file) {   // Fotos vor dem Hochladen verkleinern (max. 2400 px) – spart Speicher und Zeit
+  return new Promise(res => { if (!/^image\/(jpeg|png|webp|heic)/.test(file.type)) return res(null); const img = new Image(); img.onload = () => { const s = Math.min(1, 2400 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src); res(c.toDataURL('image/jpeg', 0.85).split(',')[1]); }; img.onerror = () => res(null); img.src = URL.createObjectURL(file); });
+}
+const cfB64 = file => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(new Error('Datei nicht lesbar')); r.readAsDataURL(file); });
+document.addEventListener('change', async e => {
+  const el = e.target; if (!(el.dataset && el.dataset.cf && el.files && el.files.length)) return;
+  const pid = el.dataset.cf, files = [...el.files]; el.value = ''; let n = 0;
+  for (const f of files) {
+    try { const small = await cfShrink(f); const name = small && !/\.jpe?g$/i.test(f.name) ? f.name.replace(/\.[^.]+$/, '') + '.jpg' : f.name;
+      const j = await api('crm-file-up', { project: pid, name, type: small ? 'image/jpeg' : (f.type || 'application/octet-stream'), data: small || await cfB64(f) }); ST.cfiles = j.files; n++;
+      const box = $('#k-fl'); if (box) box.innerHTML = filesHTML(); } catch (err) { toast(`${f.name}: ${err.message}`); }
+  }
+  if (n) toast(n === 1 ? 'Datei hochgeladen.' : `${n} Dateien hochgeladen.`);
+});
+/* ---------- E-Mail an den Kunden ---------- */
+function cmSheet(inner) { const o = document.createElement('div'); o.id = 'kd-sheet'; o.className = 'kdsheet'; o.innerHTML = `<div class="kdbox cm-box">${inner}</div>`; kdClose(); document.body.appendChild(o); o.addEventListener('click', e => { if (e.target === o) kdClose(); }); return o; }
+const MC = { cfg: null };
+function cmFill(t, c) {   // Platzhalter in Vorlagen
+  const salut = /^Familie/.test(c.name) ? `Sehr geehrte ${c.name},` : /^Frau/.test(c.name) ? `Sehr geehrte ${c.name},` : /^Herr/.test(c.name) ? `Sehr geehrter ${c.name},` : 'Sehr geehrte Damen und Herren,';
+  return String(t || '').replace(/\{(Anrede|Kunde|Kundennummer|Ort|Absender|Signatur)\}/g, (m, k) => ({ Anrede: salut, Kunde: c.name, Kundennummer: c.kdnr || '', Ort: c.city || '', Absender: ST.user.name, Signatur: MC.cfg ? MC.cfg.sig.text : ST.user.name })[k]).replace(/^\s*[–-]\s*/, '');
+}
+async function cmNew() {
+  const c = ST.cd.customer, me = ST.user; let um = null;
+  [MC.cfg, um] = await Promise.all([api('mail-cfg'), api('umail').catch(() => null)]);
+  const L = ST.cfiles || [], D = MC.cfg.docs, T = MC.cfg.tpls;
+  const chip = (n, v, label) => `<label class="chip"><input type="checkbox" name="${n}" value="${v}">${esc(label.length > 30 ? label.slice(0, 28) + '…' : label)}</label>`;
+  cmSheet(`<form id="f-cm"><div class="kd-h"><b>E-Mail an ${esc(c.name)}</b><button type="button" class="xbtn" data-a="kd-close" aria-label="Schließen">${ic('x', 16)}</button></div>
+    <p class="muted small" style="margin:0 2px 8px">Absender: <b>${um && um.on ? esc(um.from) + ' (eigenes Postfach)' : 'Firmenpostfach – Antworten gehen an ' + esc(me.email)}</b>${um && um.on ? '' : ' · <a href="#/home" data-a="kd-close">eigenes Postfach eintragen</a>'}</p>
+    ${T.length ? `<label>Vorlage<select name="tpl"><option value="">– freie E-Mail –</option>${T.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}</select></label>` : ''}
+    <label>An<input name="to" type="email" required value="${esc(c.email || '')}" placeholder="kunde@beispiel.de"></label>
+    <label>Betreff<input name="subject" required value="${esc(cmFill('{Kundennummer} – Ihr Projekt mit Frühauf', c))}"></label>
+    <label>Text<textarea name="body" rows="11">${esc(cmFill('{Anrede}\n\n\n\n{Signatur}', c))}</textarea></label>
+    <div class="cm-att">${L.length ? `<span class="muted small">Dateien des Kunden</span><div class="chips2">${L.map(f => chip('files', f.id, f.name)).join('')}</div>` : ''}
+      ${D.length ? `<span class="muted small" style="margin-top:6px">Info-Dokumente</span><div class="chips2">${D.map(d => chip('docs', d.id, d.name)).join('')}</div>` : `<span class="muted small">Info-Dokumente (Datenblätter, Förderinfos …) legst du unter Mehr → E-Mail-Vorlagen &amp; Dokumente ab.</span>`}</div>
+    <label class="sw" style="margin-top:10px"><input type="checkbox" name="copy" checked>Kopie an mich (${esc(me.email)})</label>
+    <div class="kd-act"><button type="button" class="btn s" data-a="kd-close">Abbrechen</button><button class="btn" type="submit">${ic('mail', 18)}Senden</button></div></form>`);
+}
+document.addEventListener('change', e => {
+  const el = e.target; if (!(el.name === 'tpl' && el.closest('#f-cm'))) return;
+  const f = el.form, c = ST.cd.customer, t = (MC.cfg.tpls || []).find(x => x.id === el.value);
+  if (!t) return; f.subject.value = cmFill(t.subject, c); let b = cmFill(t.body, c); if (!/\{Signatur\}/.test(t.body) && MC.cfg.sig.text && !b.includes(MC.cfg.sig.text)) b += '\n\n' + MC.cfg.sig.text; f.body.value = b;
+  f.querySelectorAll('[name=docs]').forEach(x => { x.checked = (t.docs || []).includes(+x.value); });
+});
+async function cmShow(id) {
+  const m = await api('crm-mail&id=' + encodeURIComponent(id));
+  cmSheet(`<div class="kd-h"><b>${esc(m.subject)}</b><button type="button" class="xbtn" data-a="kd-close" aria-label="Schließen">${ic('x', 16)}</button></div>
+    <p class="muted small" style="margin:0 0 10px">An ${esc(m.to)} · ${utc(m.at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${esc(m.by)}</p>
+    <div class="cm-body">${esc(m.body)}</div>${m.files.length || (m.docs || []).length ? `<div class="cm-att"><span class="muted small">Anhänge</span>${m.files.map(f => `<a class="cm-f" href="${cfUrl(f)}" target="_blank" rel="noopener">${ic('offer', 14)}${esc(f.name)}</a>`).join('')}${(m.docs || []).map(d => `<a class="cm-f" href="api/?r=sys-doc&id=${d.id}" target="_blank" rel="noopener">${ic('offer', 14)}${esc(d.name)} <span class="muted small">(Info-Dokument)</span></a>`).join('')}</div>` : ''}`);
+}
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'f-cm') return; e.preventDefault(); const f = e.target, b = f.querySelector('[type=submit]'); b.disabled = true; b.textContent = 'Wird gesendet …';
+  try { await api('crm-mail', { project: ST.cd.customer.id, to: f.to.value, subject: f.subject.value, body: f.body.value, files: [...f.querySelectorAll('[name=files]:checked')].map(x => +x.value), docs: [...f.querySelectorAll('[name=docs]:checked')].map(x => +x.value), copy: f.copy.checked }); kdClose(); toast('E-Mail gesendet – steht im Logbuch.'); crmReload(); }
+  catch (err) { toast(err.message); b.disabled = false; b.textContent = 'Senden'; }
+});
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('[data-a^="pin-"],[data-a^="cf-"],[data-a^="cm-"]'); if (!a) return; e.preventDefault();
+  const k = a.dataset.a;
+  try {
+    if (k === 'pin-edit') { CRM_PIN_EDIT = true; pinRepaint(); const t = $('#pin-t'); if (t) t.focus(); return; }
+    if (k === 'pin-x') { CRM_PIN_EDIT = false; return pinRepaint(); }
+    if (k === 'pin-save') { const t = $('#pin-t').value; await api('crm-pin', { project: ST.cd.customer.id, text: t }); ST.cd.customer.pin = t.trim(); ST.cd.customer.pinBy = ST.user.name; ST.cd.customer.pinAt = new Date().toISOString().slice(0, 19).replace('T', ' '); CRM_PIN_EDIT = false; pinRepaint(); return toast(t.trim() ? 'Notiz gespeichert.' : 'Notiz entfernt.'); }
+    if (k === 'cf-show') { const f = (ST.cfiles || []).find(x => x.id === +a.dataset.id); if (f && typeof zsLight === 'function') zsLight(cfUrl(f)); return; }
+    if (k === 'cf-del') { if (!confirm('Datei löschen?')) return; const j = await api('crm-file-del', { id: +a.dataset.id }); ST.cfiles = j.files; const box = $('#k-fl'); if (box) box.innerHTML = filesHTML(); return; }
+    if (k === 'cm-new') return await cmNew();
+    if (k === 'cm-show') return await cmShow(a.dataset.id);
+  } catch (err) { toast(err.message); }
+});
+window.addEventListener('hashchange', () => { CRM_PIN_EDIT = false; });
+
+/* ---------- Seite: E-Mail-Vorlagen, Firmen-Signatur, Info-Dokumente (Admin/Büro) ---------- */
+const MV = { cfg: null, edit: null };
+async function mvLoad() { MV.cfg = await api('mail-cfg'); MV.edit = MV.cfg.tpls.map(t => ({ ...t, docs: [...(t.docs || [])] })); }
+function viewVorlagen() {
+  const C = MV.cfg; if (!C) return '<p class="muted">Lädt …</p>'; const D = C.docs;
+  const kb = n => n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  return `<section class="hero"><h1>E-Mail-Vorlagen &amp; Dokumente</h1><p class="muted">Vorlagen für E-Mails an Kunden, die Firmen-Signatur und Info-Dokumente zum Anhängen.</p></section>
+    <section class="h-sec"><h2>Firmen-Signatur</h2></section>
+    <div class="cardx"><p class="muted small" style="margin:0 0 6px">Gilt für alle, die keine eigene Signatur eingetragen haben (eigene: Start → Konto). Platzhalter: {Name}, {E-Mail}.</p><textarea id="mv-sig" rows="6">${esc(C.sig.company)}</textarea><button class="btn" style="margin-top:10px" data-mv="sig">Signatur speichern</button></div>
+    <section class="h-sec"><h2>Info-Dokumente</h2><label class="btn sm" style="position:relative;overflow:hidden">${ic('plus', 16)}Hochladen<input type="file" multiple accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" class="zs-file" data-mvup="1"></label></section>
+    <div class="glist">${D.length ? D.map(d => `<div class="grow"><span class="gic">${ic('offer', 16)}</span><a class="gmain" href="api/?r=sys-doc&id=${d.id}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><b>${esc(d.name)}</b><span>${kb(d.size)} · ${esc(d.by)}</span></a><button class="xbtn" data-mv="doc-del" data-v="${d.id}" aria-label="Löschen">${ic('x', 14)}</button></div>`).join('') : '<div class="grow muted small">Noch keine Dokumente – z. B. Datenblätter, Förderinfos, Garantiebedingungen, Firmenvorstellung.</div>'}</div>
+    <section class="h-sec"><h2>Vorlagen</h2><button class="btn sm" data-mv="add">${ic('plus', 16)}Vorlage</button></section>
+    ${MV.edit.map((t, i) => `<div class="cardx txb"><div class="form-grid"><label>Name<input data-mt="${i}" data-k="name" value="${esc(t.name)}"></label><label>Betreff<input data-mt="${i}" data-k="subject" value="${esc(t.subject)}"></label>
+      <label style="grid-column:1/-1">Text<textarea rows="7" data-mt="${i}" data-k="body">${esc(t.body)}</textarea></label></div>
+      ${D.length ? `<div style="margin-top:8px"><span class="muted small">Immer anhängen:</span><div class="chips2">${D.map(d => `<label class="chip ${t.docs.includes(d.id) ? 'on' : ''}"><input type="checkbox" data-md="${i}" value="${d.id}" ${t.docs.includes(d.id) ? 'checked' : ''} style="position:absolute;opacity:0;pointer-events:none">${esc(d.name)}</label>`).join('')}</div></div>` : ''}
+      <button class="btn sm g danger" style="margin-top:8px" data-mv="del" data-v="${i}">Löschen</button></div>`).join('')}
+    <p class="muted small" style="margin:6px 4px 0">Platzhalter: {Anrede} (z. B. „Sehr geehrte Familie Müller,“), {Kunde}, {Kundennummer}, {Ort}, {Absender}, {Signatur}.</p>
+    <button class="btn" style="margin-top:10px" data-mv="save">Vorlagen speichern</button>`;
+}
+const mvRender = () => { const y = scrollY; $('#app main').innerHTML = viewVorlagen(); scrollTo(0, y); };
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('[data-mv]'); if (!a) return; e.preventDefault(); const k = a.dataset.mv, v = a.dataset.v;
+  try {
+    if (k === 'sig') { const j = await api('mail-sig', { company: true, text: $('#mv-sig').value }); MV.cfg.sig = j.sig; return toast('Firmen-Signatur gespeichert.'); }
+    if (k === 'add') { MV.edit.push({ id: '', name: 'Neue Vorlage', subject: '{Kundennummer} – ', body: '{Anrede}\n\n\n\n{Signatur}', docs: [] }); return mvRender(); }
+    if (k === 'del') { if (!confirm('Vorlage löschen?')) return; MV.edit.splice(+v, 1); return mvRender(); }
+    if (k === 'save') { const j = await api('mail-tpls', { list: MV.edit }); MV.cfg.tpls = j.tpls; MV.edit = j.tpls.map(t => ({ ...t, docs: [...(t.docs || [])] })); mvRender(); return toast('Vorlagen gespeichert.'); }
+    if (k === 'doc-del') { if (!confirm('Dokument löschen? Es wird aus allen Vorlagen entfernt.')) return; const j = await api('sys-doc-del', { id: +v }); MV.cfg.docs = j.docs; MV.edit.forEach(t => { t.docs = t.docs.filter(x => x !== +v); }); return mvRender(); }
+  } catch (err) { toast(err.message); }
+});
+document.addEventListener('input', e => { const el = e.target; if (el.dataset && el.dataset.mt !== undefined && MV.edit) MV.edit[+el.dataset.mt][el.dataset.k] = el.value; });
+document.addEventListener('change', async e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.md !== undefined && MV.edit) { const t = MV.edit[+el.dataset.md], id = +el.value; t.docs = el.checked ? [...new Set(t.docs.concat(id))] : t.docs.filter(x => x !== id); el.closest('.chip').classList.toggle('on', el.checked); return; }
+  if (el.dataset && el.dataset.mvup && el.files && el.files.length) { const fs = [...el.files]; el.value = '';
+    for (const f of fs) { try { const j = await api('sys-doc-up', { name: f.name, type: f.type || 'application/octet-stream', data: await cfB64(f) }); MV.cfg.docs = j.docs; } catch (err) { toast(`${f.name}: ${err.message}`); } }
+    mvRender(); toast('Hochgeladen.'); }
 });
