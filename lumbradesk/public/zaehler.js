@@ -22,7 +22,7 @@ const ZS_Q = [
   { id: 'trenn', q: 'Welche Trennvorrichtung ist vorhanden?', help: 'Bei Dreipunkt-Zählerplätzen ohne Zählersteckklemme muss eine laienbedienbare Trennvorrichtung im oberen Anschlussraum sein (FNN 6.5). Nach DIN VDE 0603 / VDE-AR-N 4100: selektive Überstrom-Schutzeinrichtung (SH-Schalter).', show: a => ['s43870', 's0603'].includes(a.bau), o: [['sh', 'SH-Schalter (selektiv)', 'z. B. 35 A / 50 A / 63 A'], ['hs', 'Hauptschalter', 'Lasttrennschalter'], ['nein', 'Keine', 'nur Schraubsicherungen'], ['unklar', 'Unklar', '']] },
   { id: 'zust', q: 'Zustand des Zählerschranks', help: 'Sichtprüfung: Beschädigungen, Farb- und Formveränderungen, fehlende Abdeckungen (FNN 6.1).', o: [['gut', 'In Ordnung', ''], ['maengel', 'Mängel', 'Abdeckung fehlt, lose, beschädigt'], ['brand', 'Schmorstellen / Verfärbung', 'Hitzeschäden']] },
   { id: 'phase', q: 'Wie ist der Zählerplatz angeschlossen?', help: 'Die Umstellung auf Drehstrom ist eine Änderung nach TAB Anhang G.', o: [['drei', 'Dreiphasig (Drehstrom)', ''], ['ein', 'Einphasig', ''], ['unklar', 'Unklar', '']] },
-  { id: 'platz', q: 'Platz für einen weiteren Zählerplatz?', help: 'Für den eigenen Zähler (Wärmepumpe / § 14a Modul 2) wird ein zusätzlicher Zählerplatz gebraucht.', show: (a, P) => zsMeters(P) > 1, o: [['frei', 'Freier Zählerplatz vorhanden', ''], ['anbau', 'Schrank kann erweitert werden', 'Anreihen möglich'], ['nein', 'Kein Platz', ''], ['unklar', 'Unklar', '']] },
+  { id: 'platz', q: 'Platz für einen weiteren Zählerplatz?', help: 'Für den eigenen Zähler (Wärmepumpe bzw. E-Auto, § 14a Modul 2) wird ein zusätzlicher Zählerplatz gebraucht.', show: (a, P) => zsMeters(P) > 1, o: [['frei', 'Freier Zählerplatz vorhanden', ''], ['anbau', 'Schrank kann erweitert werden', 'Anreihen möglich'], ['nein', 'Kein Platz', ''], ['unklar', 'Unklar', '']] },
   { id: 'apz', q: 'Ist ein APZ-Feld vorhanden?', help: 'Betriebsvorgabe für Anmeldung und Umsetzung: Raum für den Abschlusspunkt Zählerplatz (APZ) – Kommunikationsanschluss für Smart-Meter-Gateway/Steuerbox.', show: a => !zsTafel(a), o: [['ja', 'Ja, vorhanden', 'APZ-Modul bzw. Raum für APZ (meist oben im Verteilerfeld)'], ['nachr', 'Nachrüstbar', 'Platz für APZ-Feld/-Modul vorhanden'], ['nein', 'Nein', ''], ['unklar', 'Unklar', '']] },
   { id: 'rfz', q: 'Ist ein RfZ-Feld (Raum für Zusatzanwendungen) vorhanden?', help: 'Betriebsvorgabe: RfZ oberhalb des Zählerplatzes für Smart-Meter-Gateway, Steuerbox nach § 14a EnWG bzw. Rundsteuerempfänger.', show: a => !zsTafel(a), o: [['ja', 'Ja, vorhanden', ''], ['nachr', 'Nachrüstbar', 'z. B. RfZ-Aufsatz'], ['nein', 'Nein', ''], ['unklar', 'Unklar', '']] },
   { id: 'hut', q: 'Hutschienen im anlagenseitigen Anschlussraum (AAR) oberhalb des Zählerplatzes?', help: 'Betriebsvorgabe: mindestens 2 Hutschienen im AAR oberhalb des Zählerplatzes (z. B. für SH-Schalter, Trennvorrichtung, Freigaberelais).', show: a => !zsTafel(a), o: [['2', '2 oder mehr', ''], ['1', 'Nur 1', ''], ['0', 'Keine', ''], ['nachr', 'Nachrüstbar', 'AAR hoch genug für 2 Schienen'], ['unklar', 'Unklar', '']] },
@@ -37,7 +37,7 @@ function zsAiHTML(A, live) {
     <p class="muted small" style="margin:8px 0 0">${A.zaehlerplaetze ? `${A.zaehlerplaetze} Zählerplatz/-plätze erkannt${A.freie_zaehlerplaetze ? `, davon ${A.freie_zaehlerplaetze} frei` : ''}${A.zaehlerart ? ' · ' + esc(A.zaehlerart) : ''}. ` : ''}${live ? 'Die Antworten unten sind vorausgefüllt – bitte prüfen und ergänzen.' : ''}</p></div>`;
 }
 const zsTafel = a => ['tafel_offen', 'tafel_43853', 'tafel_vors'].includes(a.bau);
-const zsMeters = P => (P.wp || P.wb) ? (P.mess === 'zwei' ? 3 : P.mess === 'wp' ? 2 : 1) : 1;
+const zsMeters = P => { const wp = P.wp && (P.mess === 'wp' || P.mess === 'zwei'), wb = P.wb && (P.mess === 'wb' || P.mess === 'zwei'); return 1 + (wp ? 1 : 0) + (wb ? 1 : 0); };
 const zsSteuVE = P => P.wp || P.wb;
 const zsChange = P => P.pv || P.bat || P.wp || P.wb || P.klima;
 
@@ -96,7 +96,8 @@ function zsEval(a, P) {
 /* Empfehlung neuer Zählerschrank: Zählerfelder + Verteilerfeld (mit Raum für APZ) */
 function zsCabinet(P) {
   const m = zsMeters(P), fields = m + 1, parts = [P.pv ? 'Zweirichtungszähler (Bezug + Einspeisung)' : 'Haushaltszähler'];
-  if (m >= 2) parts.push(P.mess === 'zwei' ? 'Zähler Wärmepumpe' : 'Zähler Wärmepumpe / steuerbare Verbrauchseinrichtung (§ 14a Modul 2 bzw. WP-Tarif)'); if (m >= 3) parts.push('Zähler Wallbox');
+  if (P.wp && (P.mess === 'wp' || P.mess === 'zwei')) parts.push('Zähler Wärmepumpe (§ 14a Modul 2 bzw. WP-Tarif)');
+  if (P.wb && (P.mess === 'wb' || P.mess === 'zwei')) parts.push('Zähler E-Auto / Wallbox (§ 14a Modul 2 bzw. Autostrom-Tarif)');
   parts.push('je Zählerplatz: RfZ oben und anlagenseitiger Anschlussraum mit mind. 2 Hutschienen');
   return { m, fields, parts };
 }
@@ -106,7 +107,7 @@ function zsCabSVG(c, big) {
     return verteiler ? `<rect x="${x}" y="6" width="${W}" height="${H}" rx="4" class="zc-f"/><rect x="${x + 6}" y="12" width="${W - 12}" height="22" rx="2" class="zc-apz"/><text x="${x + W / 2}" y="27" class="zc-t">APZ</text>${[48, 72, 96, 120].map(y => `<rect x="${x + 6}" y="${y}" width="${W - 12}" height="14" rx="2" class="zc-ls"/>`).join('')}<text x="${x + W / 2}" y="${H + 2}" class="zc-t">Verteiler</text>`
       : `<rect x="${x}" y="6" width="${W}" height="${H}" rx="4" class="zc-f"/><rect x="${x + 6}" y="12" width="${W - 12}" height="18" rx="2" class="zc-rfz"/><text x="${x + W / 2}" y="25" class="zc-t">RfZ</text><rect x="${x + 10}" y="40" width="${W - 20}" height="52" rx="4" class="zc-z"/><text x="${x + W / 2}" y="70" class="zc-t zc-tz">${lab}</text><rect x="${x + 6}" y="100" width="${W - 12}" height="20" rx="2" class="zc-ar"/><rect x="${x + 6}" y="124" width="${W - 12}" height="20" rx="2" class="zc-ar"/><text x="${x + W / 2}" y="${H + 2}" class="zc-t">Zählerplatz</text>`; };
   const labs = ['Z1', 'Z2', 'Z3'];
-  return `<svg class="zc-svg ${big ? 'big' : ''}" viewBox="0 0 ${tw} ${H + 14}" role="img" aria-label="${n}-feldiger Zählerschrank">${[...Array(c.m)].map((_, i) => col(i, labs[i])).join('')}${col(c.m, '', true)}</svg>`;
+  return `<svg class="zc-svg ${big ? 'zc-big' : ''}" viewBox="0 0 ${tw} ${H + 14}" role="img" aria-label="${n}-feldiger Zählerschrank">${[...Array(c.m)].map((_, i) => col(i, labs[i])).join('')}${col(c.m, '', true)}</svg>`;
 }
 
 /* ---------- Laden ---------- */
@@ -137,7 +138,7 @@ function zsVnbHTML() {
   if (!V && !ZS.vnbErr) return '<div id="zs-vnb" class="zs-vnb muted small">Netzbetreiber wird über VNBdigital ermittelt …</div>';
   if (!V) return `<div id="zs-vnb" class="zs-vnb"><span class="muted small">${esc(ZS.vnbErr)}</span> <a href="https://www.vnbdigital.de/" target="_blank" rel="noopener">VNBdigital öffnen</a></div>`;
   return `<div id="zs-vnb" class="zs-vnb"><div class="zs-vh">${ic('home', 16)}<b>${esc(V.name)}</b><span class="muted small">Netzbetreiber laut VNBdigital</span></div>
-    <div class="zs-vl">${T ? `<a href="${esc(T.url)}" target="_blank" rel="noopener">${ic('offer', 14)}${esc(T.name || 'TAB öffnen')}</a>` : V.website ? `<a href="${esc(V.website)}" target="_blank" rel="noopener">${ic('offer', 14)}TAB auf ${esc(V.website.replace(/^https?:\/\/(www\.)?/, ''))} suchen</a>` : ''}
+    <div class="zs-vl">${T ? `<a href="${esc(T.url)}" target="_blank" rel="noopener">${ic('offer', 14)}${esc(T.name || 'TAB öffnen')}</a>` : V.website ? `<a href="${esc(V.website)}" target="_blank" rel="noopener">${ic('offer', 14)}TAB beim Netzbetreiber suchen</a>` : ''}
     ${V.phone ? `<a href="tel:${esc(V.phone)}">${ic('phone', 14)}${esc(V.phone)}</a>` : ''}${V.email ? `<a href="mailto:${esc(V.email)}">${ic('mail', 14)}${esc(V.email)}</a>` : ''}</div>
     ${T && T.note ? `<p class="muted small" style="margin:6px 0 0">${esc(T.note)}</p>` : ''}${V.more && V.more.length ? `<p class="muted small" style="margin:4px 0 0">Weitere im Gebiet: ${esc(V.more.join(', '))}</p>` : ''}</div>`;
 }
@@ -157,7 +158,7 @@ function zsStart() {
         : `<div class="pl-cust"><input id="zs-cq" placeholder="Name oder Kundennummer …" autocomplete="off"><div id="zs-cl" class="pl-cl"></div></div><label>oder Adresse ohne Kunde<input id="zs-addr" placeholder="Straße Nr., PLZ Ort" value="${esc(ZS.addr)}"></label>`}
       ${zsVnbHTML()}</div>
     <div class="cardx zs-card"><div class="h3x">Was ist geplant?</div><div class="zs-pls">${chk('pv', 'Photovoltaik', 'Einspeisung')}${chk('bat', 'Speicher', 'Batterie')}${chk('wp', 'Wärmepumpe', '§ 14a steuerbar')}${chk('wb', 'Wallbox', 'Ladeeinrichtung')}${chk('klima', 'Klimagerät', 'Dauerstrom')}</div>
-      ${zsSteuVE(P) ? `<div class="h3x" style="margin-top:14px">Messung für Wärmepumpe / Wallbox</div><div class="seg zs-seg">${[['eins', 'Ein Zähler für alles'], ['wp', 'Eigener Zähler WP (§ 14a Modul 2 / WP-Tarif)'], ['zwei', 'Eigene Zähler für WP und Wallbox']].filter(([k]) => k !== 'zwei' || (P.wp && P.wb)).map(([k, l]) => `<button class="${P.mess === k ? 'on' : ''}" data-zs="mess" data-v="${k}">${l}</button>`).join('')}</div>` : ''}
+      ${zsSteuVE(P) ? `<div class="h3x" style="margin-top:14px">Messung für Wärmepumpe / E-Auto</div><div class="seg zs-seg">${[['eins', 'Ein Zähler für alles'], ['wp', 'Eigener Zähler Wärmepumpe'], ['wb', 'Eigener Zähler E-Auto / Wallbox'], ['zwei', 'Eigene Zähler für Wärmepumpe und E-Auto']].filter(([k]) => k === 'eins' || (k === 'wp' && P.wp) || (k === 'wb' && P.wb) || (k === 'zwei' && P.wp && P.wb)).map(([k, l]) => `<button class="${P.mess === k ? 'on' : ''}" data-zs="mess" data-v="${k}">${l}</button>`).join('')}</div>` : ''}
       <p class="muted small" style="margin:10px 0 0">Daraus ergibt sich die Empfehlung für einen neuen Schrank: <b>${zsCabinet(P).fields}-feldig</b> (${zsCabinet(P).m} ${zsCabinet(P).m > 1 ? 'Zählerplätze' : 'Zählerplatz'} + Verteilerfeld mit APZ).</p></div>
     <div class="zs-act"><button class="btn" data-zs="go-foto" ${zsChange(P) ? '' : ''}>${ic('cam', 18)}Weiter zum Foto</button></div>
     ${(ZS.list || []).length ? `<section class="h-sec"><h2>Letzte Checks</h2></section><div class="glist">${ZS.list.slice(0, 8).map(x => `<a class="grow" href="#/zaehler/${x.id}"><span class="gic" style="color:${ZS_RES[x.result][2]}">${ic('zaehler', 16)}</span><span class="gmain"><b>${esc(x.title)}</b><span>${esc(ZS_RES[x.result][0])}${x.fields ? ' · ' + x.fields + '-feldig' : ''} · ${utc(x.at).toLocaleDateString('de-DE')}</span></span>${ic('next', 16)}</a>`).join('')}</div>` : ''}`;
@@ -174,7 +175,11 @@ function zsFragen() {
   const gi = ZS.kinds.indexOf('gesamt'), ph = ZS.photos[gi >= 0 ? gi : 0];
   const aiCard = ZS.ai ? zsAiHTML(ZS.ai, true) : ZS.aiErr ? `<div class="note err">${esc(ZS.aiErr)} – bitte die Fragen von Hand beantworten.</div>` : '';
   return `${ph ? `<a class="zs-peek" href="${ph}" target="_blank" title="Foto groß öffnen"><img src="${ph}" alt="Gesamtansicht"><span>${ic('search', 14)}Foto ansehen</span></a>` : ''}${aiCard}${ZS.found.length || ZS.quality ? `<div class="cardx zs-card zs-found"><div class="h3x">Aus dem Foto erkannt</div><div class="chips2">${ZS.found.map(f => `<span class="chip on">${esc(f)}</span>`).join('') || `<span class="muted small">${ZS.kinds.includes('schild') ? 'Typenschild nicht lesbar – näher heran, gerade und scharf fotografieren, oder' : 'Kein Typenschild-Foto –'} die Merkmale anhand des Fotos bestätigen.</span>`}</div>${ZS.quality && ZS.quality.warn ? `<p class="note err" style="margin:8px 0 0">${esc(ZS.quality.warn)}</p>` : ''}</div>` : ''}
-    ${qs.map(q => `<div class="cardx zs-card zs-q"><b>${esc(q.q)}${ZS.ai && ZS.ai[q.id] && ZS.ai[q.id] !== 'unklar' && ZS.ai[q.id] === a[q.id] ? ' <span class="zs-kib">aus Foto</span>' : ''}</b>${q.help ? `<span class="muted small">${esc(q.help)}</span>` : ''}<div class="zs-opts">${q.o.map(([v, l, d]) => `<button class="zs-o ${a[q.id] === v ? 'on' : ''}" data-zs="ans" data-q="${q.id}" data-v="${v}"><b>${esc(l)}</b>${d ? `<span>${esc(d)}</span>` : ''}</button>`).join('')}</div></div>`).join('')}
+    ${(() => { const qh = q => `<div class="cardx zs-card zs-q"><b>${esc(q.q)}${ZS.ai && ZS.ai[q.id] && ZS.ai[q.id] !== 'unklar' && ZS.ai[q.id] === a[q.id] ? ' <span class="zs-kib">aus Foto</span>' : ''}</b>${q.help ? `<span class="muted small">${esc(q.help)}</span>` : ''}<div class="zs-opts">${q.o.map(([v, l, d]) => `<button class="zs-o ${a[q.id] === v ? 'on' : ''}" data-zs="ans" data-q="${q.id}" data-v="${v}"><b>${esc(l)}</b>${d ? `<span>${esc(d)}</span>` : ''}</button>`).join('')}</div></div>`;
+      const open = qs.filter(q => !a[q.id] || a[q.id] === 'unklar'), done = qs.filter(q => a[q.id] && a[q.id] !== 'unklar');
+      const sum = done.map(q => `<span class="zs-ds"><i>${esc(q.q.replace(/\?$/, ''))}</i><b>${esc((q.o.find(o => o[0] === a[q.id]) || [, a[q.id]])[1])}</b></span>`).join('');
+      return `${open.length ? `<div class="h-sec zs-hs"><h2>${open.length === 1 ? 'Eine Frage offen' : open.length + ' Fragen offen'}</h2><span class="muted small">nicht sicher aus dem Foto erkennbar</span></div>${open.map(qh).join('')}` : `<div class="note ok">Alles aus dem Foto erkannt – bitte kurz prüfen und auswerten.</div>`}
+        ${done.length ? `<div class="cardx zs-card zs-done"><div class="zs-dh"><b>${ZS.ai ? 'Von der KI erkannt' : 'Beantwortet'} (${done.length})</b><button class="btn s sm" data-zs="done-t">${ZS.showDone ? 'Zuklappen' : 'Ändern'}</button></div>${ZS.showDone ? '' : `<div class="zs-dl">${sum}</div>`}</div>${ZS.showDone ? done.map(qh).join('') : ''}` : ''}`; })()}
     <div class="zs-act"><button class="btn s" data-zs="back" data-v="foto">Zurück</button><button class="btn" data-zs="eval">${ic('check', 18)}Auswerten</button></div>`;
 }
 function zsResultHTML(R, P, d) {
@@ -262,7 +267,7 @@ async function zsScan() {
       try { const j = await api('zs-ai', { photos: ZS.photos }); ZS.ai = j.ai; for (const q of ZS_Q) { const v = ZS.ai[q.id]; if (v && v !== 'unklar') ZS.a[q.id] = v; }
         for (const b of (ZS.ai.befunde || []).filter(b => b.status === 'mangel').slice(0, 4)) { tag('✗ ' + b.punkt); await wait(220); } st(6, ZS.ai.gesamt === 'konform' ? 'ok' : 'warn'); }
       catch (e) { ZS.aiErr = e.message; st(6, 'warn'); } finally { clearInterval(tk); } }
-    st(4, 'on'); const F = zsFind(ZS.ocr); ZS.found = F.f; for (const k in F.a) if (!ZS.a[k]) ZS.a[k] = F.a[k];   // KI-Antworten haben Vorrang vor dem Typenschild-Abgleich
+    st(4, 'on'); const F = zsFind(ZS.ocr); if (/Drehstrom|3\s?x\s?230\s?\/\s?400/i.test(ZS.ocr)) F.a.phase = 'drei'; ZS.found = F.f; for (const k in F.a) if (!ZS.a[k]) ZS.a[k] = F.a[k];   // KI-Antworten haben Vorrang vor dem Typenschild-Abgleich
     for (const t of F.f.slice(0, 6)) { tag(t); await wait(260); } if (!F.f.length && sch.length) tag('Typenschild nicht lesbar'); st(4, 'ok'); prog(.9);
     st(5, 'on'); if (ZS.addr && !ZS.vnb) await zsVnb(); st(5, ZS.vnb ? 'ok' : 'warn'); if (ZS.vnb) tag(ZS.vnb.vnb.name); prog(1); await wait(900);
   } finally { ov.classList.add('out'); setTimeout(() => ov.remove(), 300); }
@@ -318,6 +323,7 @@ document.addEventListener('click', async e => {
     if (k === 'ph-del') { ZS.photos.splice(+v, 1); ZS.kinds.splice(+v, 1); return zsRender(); }
     if (k === 'scan') return await zsScan();
     if (k === 'ans') { ZS.a[a.dataset.q] = v; const y = scrollY; zsRender(); return scrollTo(0, y); }
+    if (k === 'done-t') { ZS.showDone = !ZS.showDone; return zsRender(); }
     if (k === 'eval') { ZS.step = 'ergebnis'; zsRender(); return scrollTo(0, 0); }
     if (k === 'save') { a.disabled = true; const { R, data } = zsData(); const j = await api('zs-save', { project: ZS.cust ? ZS.cust.id : '', title: ZS.cust ? ZS.cust.name : (ZS.addr || 'Zählerschrank-Check'), result: R.result, data, photos: ZS.photos }); toast('Check gespeichert' + (ZS.cust ? ' – im Logbuch des Kunden vermerkt.' : '.')); zsReset(); ZS.list = null; location.hash = '#/zaehler/' + j.check.id; return; }
     if (k === 'pdf') return await zsPdf(ZS.view);
@@ -330,7 +336,7 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('change', async e => {
   const el = e.target;
-  if (el.dataset && el.dataset.zp) { ZS.plan[el.dataset.zp] = el.checked; if (!zsSteuVE(ZS.plan)) ZS.plan.mess = 'eins'; if (ZS.plan.mess === 'zwei' && !(ZS.plan.wp && ZS.plan.wb)) ZS.plan.mess = 'wp'; return zsRender(); }
+  if (el.dataset && el.dataset.zp) { ZS.plan[el.dataset.zp] = el.checked; const P2 = ZS.plan; if (!zsSteuVE(P2) || (P2.mess === 'wp' && !P2.wp) || (P2.mess === 'wb' && !P2.wb)) P2.mess = 'eins'; if (P2.mess === 'zwei' && !(P2.wp && P2.wb)) P2.mess = P2.wp ? 'wp' : P2.wb ? 'wb' : 'eins'; return zsRender(); }
   if (el.dataset && el.dataset.zf && el.files && el.files[0]) { try { ZS.photos.push(await zsShrink(el.files[0])); ZS.kinds.push(el.dataset.zf); } catch (err) { toast(err.message); } return zsRender(); }
   if (el.id === 'zs-addr') { ZS.addr = el.value.trim(); ZS.vnb = null; const x = $('#zs-vnb'); if (x) x.outerHTML = zsVnbHTML(); zsVnb(); }
 });

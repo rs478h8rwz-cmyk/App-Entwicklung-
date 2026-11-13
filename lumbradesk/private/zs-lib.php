@@ -102,8 +102,10 @@ function zs_ai_key_save(array $u, string $k): array {
 function zs_ai_schema(): array {
   $e = fn(array $v) => ['type' => 'string', 'enum' => $v];
   return ['type' => 'object', 'additionalProperties' => false,
-    'required' => ['bau', 'nar', 'aar', 'aarVert', 'trenn', 'zust', 'apz', 'rfz', 'hut', 'spd', 'zaehlerplaetze', 'freie_zaehlerplaetze', 'zaehlerart', 'befunde', 'gesamt', 'kurzfazit'],
+    'required' => ['bau', 'nar', 'aar', 'aarVert', 'trenn', 'zust', 'apz', 'rfz', 'hut', 'spd', 'verd', 'nl', 'phase', 'platz', 'bereich', 'ort', 'zaehlerplaetze', 'freie_zaehlerplaetze', 'zaehlerart', 'befunde', 'gesamt', 'kurzfazit'],
     'properties' => [
+      'verd' => $e(['ja', 'nein', 'unklar']), 'nl' => $e(['ja', 'nein', 'unklar']), 'phase' => $e(['drei', 'ein', 'unklar']),
+      'platz' => $e(['frei', 'anbau', 'nein', 'unklar']), 'bereich' => $e(['ja', 'nein', 'unklar']), 'ort' => $e(['nein', 'ja', 'unklar']),
       'bau' => $e(['tafel_offen', 'tafel_43853', 'tafel_vors', 's43870', 's0603', 's4100', 'unklar']),
       'nar' => $e(['300', '150', 'unklar']), 'aar' => $e(['300', '150', 'unklar']), 'aarVert' => $e(['ja', 'nein', 'unklar']),
       'trenn' => $e(['sh', 'hs', 'nein', 'unklar']), 'zust' => $e(['gut', 'maengel', 'brand']),
@@ -122,6 +124,15 @@ Betriebsvorgabe des Fachbetriebs (ohne diese keine Anmeldung/Umsetzung): Im vorh
 So sehen die Fälle typischerweise aus:
 - NICHT konform: Zählerfelder nach DIN 43870 mit geschlossenen Kunststoff-Abdeckungen oben und unten (150/300 mm), schwarzer Ferraris-Zähler am Zählerkreuz, oben nur eine kurze Abdeckung mit 3-poligem SLS/Vorsicherung (nur 1 Hutschiene), kein gelochtes APZ-Feld, kein RfZ; daneben Verteilerfelder mit LS-Schaltern; oft leere Dreipunkt-Zählerplätze.
 - Konform: neuerer Zählerschrank (VDE-AR-N 4100) – oberhalb des Zählerplatzes offener anlagenseitiger Anschlussraum mit mehreren Hutschienen (SLS/Hauptschalter, Klemmen, ggf. Steuer-/Messgeräte); separates gelochtes APZ-Feld (Lochblech-Montageplatte, oft mit Netzwerkkabel) und darüber ein RfZ-Bereich; unten netzseitig SH-Schalter, Sammelschienen und Überspannungsschutz (oft rotes oder graues Modul). Der Zähler selbst darf noch ein Ferraris-Zähler auf Dreipunkt-Adapter sein – entscheidend ist der Aufbau.
+
+Hinweise zu den einzelnen Feldern:
+- verd: „ja“ wenn die Zählerplatzverdrahtung als flexible Einzeladern (H07V-K) mit großem Querschnitt (ca. 10 mm², deutlich dicker als Leitungen der Stromkreise) erkennbar ist; „nein“ bei dünnen oder starren Adern; sonst „unklar“.
+- nl: „ja“ wenn der Neutralleiter (blau) erkennbar direkt vom unteren zum oberen Anschlussraum läuft bzw. ein moderner Zählerplatz mit Zählersteckklemme/BKE vorliegt; „nein“ wenn er sichtbar über den Zähler geführt wird.
+- phase: „drei“ bei Drehstromzähler, 3-poligem SLS/Hauptschalter oder 3 Außenleitern; „ein“ nur bei eindeutig einphasigem Zähler.
+- platz: „frei“ wenn ein unbelegter Zählerplatz (leeres Zählerfeld mit Zählerkreuz/Adapter) sichtbar ist; „anbau“ wenn seitlich sichtbar Wandfläche für ein weiteres Feld frei ist; „nein“ wenn eindeutig kein Platz.
+- bereich: „nein“ wenn direkt vor dem Schrank Regale, Geräte oder Gegenstände stehen, die den Arbeitsbereich (1,2 m) dauerhaft verstellen; „ja“ wenn der Bereich frei wirkt.
+- ort: „ja“ wenn erkennbar Treppenhaus/Flur als Rettungsweg; „nein“ bei Keller-, Technik- oder Hausanschlussraum; sonst „unklar“.
+Wähle möglichst eine konkrete Antwort, wenn das Foto sie mit hoher Wahrscheinlichkeit belegt; „unklar“ nur, wenn es wirklich nicht erkennbar ist.
 
 Bewerte nur, was auf den Fotos zu sehen ist. Wenn etwas nicht sicher erkennbar ist, antworte „unklar“ und schreibe in den Befund, was vor Ort zu prüfen ist. Erfinde nichts. Befunde kurz und konkret (ein Satz), je Punkt: Bauart, netzseitiger Anschlussraum, anlagenseitiger Anschlussraum/Hutschienen, APZ-Feld, RfZ-Feld, Trennvorrichtung, Überspannungsschutz, Zustand, freie Zählerplätze. „gesamt“ = konform nur wenn APZ, RfZ und 2 Hutschienen sicher vorhanden sind und nichts Gravierendes dagegen spricht.
 TXT;

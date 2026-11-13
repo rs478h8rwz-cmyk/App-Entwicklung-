@@ -825,3 +825,9 @@ aside.sb { display: none; }
 .zs-kib { font-size: 11px; font-weight: 700; color: var(--p); background: color-mix(in srgb, var(--p) 12%, transparent); padding: 1px 7px; border-radius: 99px; vertical-align: 2px; margin-left: 4px; }
 .zs-add { position: relative; overflow: hidden; min-width: 0; } .zs-add input.zs-file { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; font-size: 0; }
 .zs-act .btn:last-child { min-width: 0; flex: 1 1 160px; max-width: 260px; } .zs-act { flex-wrap: wrap; }
+.zs-hs { margin-top: 6px; } .zs-done .zs-dh { display: flex; align-items: center; justify-content: space-between; gap: 10px; } .zs-done .zs-dh b { font-size: 15px; }
+.zs-dl { display: grid; gap: 4px; margin-top: 10px; } .zs-ds { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 5px 0; border-bottom: 1px solid var(--line); } .zs-ds:last-child { border-bottom: 0; }
+.zs-ds i { font-style: normal; color: var(--ink3); min-width: 0; } .zs-ds b { text-align: right; flex: none; max-width: 50%; }
+.zc-svg, .zc-svg text { letter-spacing: normal; word-spacing: normal; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; font-stretch: normal; }
+.zc-svg text { font-kerning: normal; text-rendering: geometricPrecision; }
+.zc-svg.zc-big { max-width: 240px; justify-self: center; }
