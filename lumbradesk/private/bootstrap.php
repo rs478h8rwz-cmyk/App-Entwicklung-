@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '5.7';
+const LD_VERSION = '5.7.1';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -54,6 +54,8 @@ function db(): PDO {
       PDO::ATTR_EMULATE_PREPARES => false,
     ]);
     $pdo->exec("SET time_zone = '+00:00'");
+    /* Nie endlos auf Tabellensperren warten (z. B. während einer Tabellen-Erweiterung) – sonst hängen alle Anfragen und der Webspace antwortet nicht mehr */
+    try { $pdo->exec('SET SESSION lock_wait_timeout = 20, SESSION innodb_lock_wait_timeout = 20'); } catch (Throwable $e) {}
   }
   return $pdo;
 }

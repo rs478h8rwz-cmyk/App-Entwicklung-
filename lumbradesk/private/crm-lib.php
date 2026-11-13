@@ -536,5 +536,5 @@ function notif_read(array $u, int $id): void {
   else db()->prepare('UPDATE ld_notifs SET read_at = UTC_TIMESTAMP() WHERE user_id = ? AND read_at IS NULL')->execute([$u['id']]);
 }
 function notif_unread(int $uid): int {
-  try { crm_tables(); $c = db()->prepare('SELECT COUNT(*) FROM ld_notifs WHERE user_id = ? AND read_at IS NULL'); $c->execute([$uid]); return (int)$c->fetchColumn(); } catch (Throwable $e) { return 0; }
+  try { $c = db()->prepare('SELECT COUNT(*) FROM ld_notifs WHERE user_id = ? AND read_at IS NULL'); $c->execute([$uid]); return (int)$c->fetchColumn(); } catch (Throwable $e) { return 0; }
 }
