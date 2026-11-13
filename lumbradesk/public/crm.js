@@ -298,7 +298,7 @@ async function kdNew() {
     <div class="kd-g">${G.map((g, i) => `<label class="kd-gw"><input type="radio" name="gewerk" value="${esc(g.id)}" ${i ? '' : 'checked'}><span><b>${esc(g.name)}</b><em>${esc(g.preview)}</em></span></label>`).join('')}</div>
     <p class="muted small" style="margin:6px 2px 0">Die Kundennummer wird beim Anlegen vergeben. Gewerke und Nummern stellst du unter <a href="#/belege" data-a="kd-close">Nummern &amp; Texte</a> ein.</p>
     <div class="form-grid kd-f"><label>Anrede<select name="salutation">${opt([['Familie', 'Familie'], ['Herr', 'Herr'], ['Frau', 'Frau'], ['Firma', 'Firma'], ['', '–']], 'Familie')}</select></label>
-      <label>Name<input name="name" required placeholder="z. B. Müller"></label>
+      <label>Name<input name="name" required placeholder="z. B. Müller" autocomplete="off"></label><div id="kd-dupe" style="grid-column:1/-1"></div>
       <label style="grid-column:1/-1">Straße und Hausnummer<input name="street"></label>
       <label>PLZ<input name="zip" inputmode="numeric" maxlength="5"></label><label>Ort<input name="city"></label>
       <label>Telefon<input name="phone" type="tel"></label><label>E-Mail<input name="email" type="email"></label>
@@ -332,3 +332,15 @@ document.addEventListener('submit', async e => {
   catch (err) { toast(err.message); b.disabled = false; }
 });
 window.addEventListener('hashchange', kdClose);
+
+/* Kunde hinzufügen: vorhandene Kunden aus dem CRM vorschlagen, damit keiner doppelt angelegt wird */
+let KD_DT = null;
+document.addEventListener('input', e => {
+  const el = e.target; if (!(el.name === 'name' && el.closest && el.closest('#f-kd-new'))) return;
+  clearTimeout(KD_DT); KD_DT = setTimeout(async () => {
+    if (!KD.all) { try { KD.all = (await api('ab-customers')).customers; } catch (err) { KD.all = []; } }
+    const q = el.value.trim().toLowerCase(), box = $('#kd-dupe'); if (!box) return;
+    const l = q.length >= 3 ? KD.all.filter(c => `${c.kdnr || ''} ${c.name}`.toLowerCase().includes(q)).slice(0, 4) : [];
+    box.innerHTML = l.length ? `<div class="note" style="background:rgba(245,165,36,.1);margin:8px 0 0"><b>Diesen Kunden gibt es vielleicht schon:</b>${l.map(c => `<a class="kd-dl" href="#/kunde/${esc(c.id)}" data-a="kd-close"><b>${c.kdnr ? esc(c.kdnr) + ' · ' : ''}${esc(c.name)}</b><span>${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '))}</span></a>`).join('')}</div>` : '';
+  }, 300);
+});
