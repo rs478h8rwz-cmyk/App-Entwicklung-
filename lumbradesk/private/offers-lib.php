@@ -25,6 +25,7 @@ function of_tables(): void {
   }
   $ic2 = array_column($pdo->query('SHOW COLUMNS FROM offer_items')->fetchAll(), 'Field');
   if (!in_array('img', $ic2, true)) $pdo->exec("ALTER TABLE offer_items ADD COLUMN img VARCHAR(64) NOT NULL DEFAULT ''");
+  if (!in_array('sec', $ic2, true)) $pdo->exec("ALTER TABLE offer_items ADD COLUMN sec VARCHAR(12) NOT NULL DEFAULT '', ADD COLUMN opt TINYINT(1) NOT NULL DEFAULT 0");
   if (!in_array('usage', $ic2, true)) $pdo->exec("ALTER TABLE offer_items ADD COLUMN `usage` VARCHAR(5) NOT NULL DEFAULT 'alle', ADD COLUMN ext_key VARCHAR(20) NOT NULL DEFAULT ''");
   $pdo->exec("CREATE TABLE IF NOT EXISTS offers (id VARCHAR(40) PRIMARY KEY, project_id VARCHAR(40) NOT NULL, nr VARCHAR(40) NOT NULL DEFAULT '', title VARCHAR(200) NOT NULL DEFAULT '', status VARCHAR(12) NOT NULL DEFAULT 'entwurf', data MEDIUMTEXT NOT NULL, net DECIMAL(12,2) NOT NULL DEFAULT 0, gross DECIMAL(12,2) NOT NULL DEFAULT 0, created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_by INT UNSIGNED NULL, deleted TINYINT(1) NOT NULL DEFAULT 0, INDEX (project_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
   $pdo->exec("CREATE TABLE IF NOT EXISTS ld_numbers (k VARCHAR(40) PRIMARY KEY, n INT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB");
@@ -57,9 +58,9 @@ function of_tables(): void {
 }
 /* Katalog: nur die eigene Angebots-Datenbank (Produkte + Leistungen) – getrennt von der Wirtschaftlichkeit */
 function of_catalog(): array {
-  of_tables(); of_seed_fs376(); $out = [];
+  of_tables(); of_seed_fs376(); of_seed_fs367(); $out = [];
   foreach (db()->query('SELECT * FROM offer_items WHERE active = 1 ORDER BY kind DESC, cat, name')->fetchAll() as $r)
-    $out[] = ['id' => 'i' . $r['id'], 'kind' => $r['kind'], 'name' => $r['name'], 'maker' => (string)$r['maker'], 'descr' => (string)$r['descr'], 'unit' => $r['unit'], 'price' => (float)$r['price'], 'tax' => (float)$r['tax'], 'cat' => $r['cat'], 'words' => $r['words'], 'power' => $r['power'] !== null ? (float)$r['power'] : null, 'pm' => $r['pm'], 'pausch' => (bool)$r['pausch'], 'img' => (string)($r['img'] ?? ''), 'usage' => (string)($r['usage'] ?? 'alle')];
+    $out[] = ['id' => 'i' . $r['id'], 'kind' => $r['kind'], 'name' => $r['name'], 'maker' => (string)$r['maker'], 'descr' => (string)$r['descr'], 'unit' => $r['unit'], 'price' => (float)$r['price'], 'tax' => (float)$r['tax'], 'cat' => $r['cat'], 'words' => $r['words'], 'power' => $r['power'] !== null ? (float)$r['power'] : null, 'pm' => $r['pm'], 'pausch' => (bool)$r['pausch'], 'img' => (string)($r['img'] ?? ''), 'usage' => (string)($r['usage'] ?? 'alle'), 'sec' => (string)($r['sec'] ?? ''), 'opt' => (bool)($r['opt'] ?? 0)];
   return $out;
 }
 /* Einmalig übernehmen: Produkte aus der Wirtschaftlichkeit in die Angebots-Produktdatenbank kopieren (danach unabhängig) */
@@ -86,9 +87,10 @@ function of_item_save(array $b): array {
   $v = [$kind, mb_substr(trim((string)($b['name'] ?? '')), 0, 200), mb_substr(trim((string)($b['maker'] ?? '')), 0, 120), mb_substr(trim((string)($b['descr'] ?? '')), 0, 2000), mb_substr(trim((string)($b['unit'] ?? 'Stk')), 0, 20) ?: 'Stk', round((float)($b['price'] ?? 0), 4), in_array((float)($b['tax'] ?? 19), [0.0, 7.0, 19.0], true) ? (float)$b['tax'] : 19, $cat, mb_substr(mb_strtolower(trim((string)($b['words'] ?? ''))), 0, 300), $pow, ($b['pm'] ?? '') === 'brutto' ? 'brutto' : 'netto', !empty($b['pausch']) ? 1 : 0];
   if ($v[1] === '') fail('Bitte einen Namen eingeben.', 400);
   $img = preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string)($b['img'] ?? '')) ? $b['img'] : ''; $usage = in_array($b['usage'] ?? '', ['pv', 'wp', 'alle'], true) ? $b['usage'] : 'alle';
-  if ($id) db()->prepare('UPDATE offer_items SET img = ?, `usage` = ? WHERE id = ?')->execute([$img, $usage, $id]);
+  $sec = preg_match('/^[\w-]{0,12}$/', (string)($b['sec'] ?? '')) ? (string)($b['sec'] ?? '') : ''; $optv = !empty($b['opt']) ? 1 : 0;
+  if ($id) db()->prepare('UPDATE offer_items SET img = ?, `usage` = ?, sec = ?, opt = ? WHERE id = ?')->execute([$img, $usage, $sec, $optv, $id]);
   if ($id) db()->prepare('UPDATE offer_items SET kind = ?, name = ?, maker = ?, descr = ?, unit = ?, price = ?, tax = ?, cat = ?, words = ?, power = ?, pm = ?, pausch = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?')->execute(array_merge($v, [$id]));
-  else { db()->prepare('INSERT INTO offer_items (kind, name, maker, descr, unit, price, tax, cat, words, power, pm, pausch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($v); $id = (int)db()->lastInsertId(); db()->prepare('UPDATE offer_items SET img = ?, `usage` = ? WHERE id = ?')->execute([$img, $usage, $id]); }
+  else { db()->prepare('INSERT INTO offer_items (kind, name, maker, descr, unit, price, tax, cat, words, power, pm, pausch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute($v); $id = (int)db()->lastInsertId(); db()->prepare('UPDATE offer_items SET img = ?, `usage` = ?, sec = ?, opt = ? WHERE id = ?')->execute([$img, $usage, $sec, $optv, $id]); }
   return ['id' => 'i' . $id];
 }
 function of_package_save(array $b): void {
@@ -118,11 +120,12 @@ function of_save(array $u, array $b): array {
   foreach (array_slice((array)($d['pos'] ?? []), 0, 300) as $x) {
     if (!is_array($x)) continue;
     $pos[] = ['item' => mb_substr((string)($x['item'] ?? ''), 0, 40), 'name' => mb_substr(trim((string)($x['name'] ?? '')), 0, 300), 'descr' => mb_substr(trim((string)($x['descr'] ?? '')), 0, 2000), 'qty' => round((float)($x['qty'] ?? 0), 2), 'unit' => mb_substr((string)($x['unit'] ?? 'Stk'), 0, 20),
-      'price' => round((float)($x['price'] ?? 0), 4), 'tax' => in_array((float)($x['tax'] ?? 19), [0.0, 7.0, 19.0], true) ? (float)$x['tax'] : 19, 'pkg' => !empty($x['pkg']), 'pm' => ($x['pm'] ?? '') === 'brutto' ? 'brutto' : 'netto', 'pausch' => !empty($x['pausch']), 'cat' => mb_substr((string)($x['cat'] ?? ''), 0, 10), 'img' => preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string)($x['img'] ?? '')) ? $x['img'] : '', 'usage' => in_array($x['usage'] ?? '', ['pv', 'wp', 'alle'], true) ? $x['usage'] : '', 'rab' => !empty($x['rab']), 'power' => isset($x['power']) && is_numeric($x['power']) ? (float)$x['power'] : null];
+      'price' => round((float)($x['price'] ?? 0), 4), 'tax' => in_array((float)($x['tax'] ?? 19), [0.0, 7.0, 19.0], true) ? (float)$x['tax'] : 19, 'pkg' => !empty($x['pkg']), 'pm' => ($x['pm'] ?? '') === 'brutto' ? 'brutto' : 'netto', 'pausch' => !empty($x['pausch']), 'cat' => mb_substr((string)($x['cat'] ?? ''), 0, 10), 'img' => preg_match('/^[A-Za-z0-9_-]{1,64}$/', (string)($x['img'] ?? '')) ? $x['img'] : '', 'usage' => in_array($x['usage'] ?? '', ['pv', 'wp', 'alle'], true) ? $x['usage'] : '', 'rab' => !empty($x['rab']), 'sec' => preg_match('/^[\w-]{0,12}$/', (string)($x['sec'] ?? '')) ? (string)($x['sec'] ?? '') : '', 'opt' => !empty($x['opt']), 'dpct' => max(0, min(100, round((float)($x['dpct'] ?? 0), 2))), 'power' => isset($x['power']) && is_numeric($x['power']) ? (float)$x['power'] : null];
   }
   $disc = max(0, min(100, (float)($d['discount'] ?? 0)));
   $net = 0; $tax = [];   // je Position netto oder brutto (Steuer enthalten)
-  foreach ($pos as $x) { $t = $x['tax'] / 100; $l = $x['pm'] === 'brutto' ? $x['qty'] * round($x['price'] * (1 + $t), 2) / (1 + $t) : $x['qty'] * $x['price']; $l *= 1 - $disc / 100; $net += $l; $tax[(string)$x['tax']] = ($tax[(string)$x['tax']] ?? 0) + $l * $t; }
+  foreach ($pos as $x) { if ($x['opt']) continue;   // Bedarfsposition: wird nicht mitgerechnet
+    $t = $x['tax'] / 100; $l = $x['pm'] === 'brutto' ? $x['qty'] * round($x['price'] * (1 + $t), 2) / (1 + $t) : $x['qty'] * $x['price']; $l *= (1 - $disc / 100) * (1 - $x['dpct'] / 100); $net += $l; $tax[(string)$x['tax']] = ($tax[(string)$x['tax']] ?? 0) + $l * $t; }
   $gross = $net + array_sum($tax);
   $data = ['pos' => $pos, 'discount' => $disc, 'intro' => mb_substr((string)($d['intro'] ?? ''), 0, 4000), 'outro' => mb_substr((string)($d['outro'] ?? ''), 0, 4000), 'valid' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['valid'] ?? '')) ? $d['valid'] : '', 'spoken' => mb_substr((string)($d['spoken'] ?? ''), 0, 4000), 'otype' => in_array($d['otype'] ?? '', ['pv', 'wp', 'pvwp'], true) ? $d['otype'] : 'pv', 'pay' => mb_substr((string)($d['pay'] ?? ''), 0, 4000), 'imgs' => !empty($d['imgs'])];
   $status = isset(OF_STATUS[$b['status'] ?? '']) ? $b['status'] : 'entwurf'; $title = mb_substr(trim((string)($b['title'] ?? '')), 0, 200) ?: 'Angebot';
@@ -150,7 +153,7 @@ function of_wiz_item(string $name, string $descr, string $unit, float $price, fl
   return 'i' . $id;
 }
 function of_wizard(): array {
-  of_tables(); of_seed_fs376(); $w = ld_get('assistent', null); if (is_array($w) && !empty($w['pv'])) return $w;
+  of_tables(); of_seed_fs376(); of_seed_fs367(); $w = ld_get('assistent', null); if (is_array($w) && !empty($w['pv'])) return $w;
   /* Startbestand – Preise bitte unter „Leistungen“ anpassen */
   $I = fn(...$a) => of_wiz_item(...$a);
   $uk = $I('Unterkonstruktion je Modul', 'Dachhaken, Schienen und Befestigung je Modul', 'Stk', 45, 0, 'mont');
@@ -190,7 +193,7 @@ function of_wizard_save(array $u, array $w): array {
     foreach (array_slice((array)$steps, 0, 30) as $s) {
       if (!is_array($s)) continue; $id = preg_match('/^[\w-]{1,20}$/', (string)($s['id'] ?? '')) ? $s['id'] : 's' . bin2hex(random_bytes(3));
       $ids = fn($l) => array_values(array_filter(array_map('strval', (array)$l), fn($v) => (bool)preg_match('/^i\d+$/', $v)));
-      $free = is_array($s['free'] ?? null) && preg_match('/^i\d+$/', (string)($s['free']['item'] ?? '')) && (float)($s['free']['n'] ?? 0) > 0 ? ['item' => $s['free']['item'], 'n' => (float)$s['free']['n'], 'text' => mb_substr((string)($s['free']['text'] ?? ''), 0, 120)] : null;
+      $free = is_array($s['free'] ?? null) && preg_match('/^i\d+$/', (string)($s['free']['item'] ?? '')) && (float)($s['free']['n'] ?? 0) > 0 ? ['item' => $s['free']['item'], 'n' => (float)$s['free']['n'], 'rest' => preg_match('/^i\d+$/', (string)($s['free']['rest'] ?? '')) ? $s['free']['rest'] : '', 'text' => mb_substr((string)($s['free']['text'] ?? ''), 0, 120)] : null;
       $out[] = ['id' => $id, 'title' => mb_substr(trim((string)($s['title'] ?? '')), 0, 60) ?: 'Schritt', 'type' => in_array($s['type'] ?? '', ['one', 'multi', 'system', 'auto'], true) ? $s['type'] : 'one',
         'cats' => array_values(array_filter((array)($s['cats'] ?? []), fn($k) => isset(OF_CATS[$k]))), 'items' => $ids($s['items'] ?? []), 'askQty' => !empty($s['askQty']), 'optional' => !empty($s['optional']), 'onlyProd' => !empty($s['onlyProd']),
         'quick' => array_values(array_slice(array_filter(array_map('floatval', (array)($s['quick'] ?? [])), fn($v) => $v > 0), 0, 8)), 'free' => $free,
@@ -261,4 +264,49 @@ function of_seed_fs376(): void {
   foreach ($new as $n) if ($n['text'] !== '') { foreach ($tx as &$t) if ($t['kind'] === $n['kind'] && ($t['otype'] === $n['otype'] || ($n['otype'] === 'alle'))) $t['def'] = false; unset($t); $tx = array_values(array_filter($tx, fn($t) => $t['id'] !== $n['id'])); $tx[] = $n; }
   ld_set('texte', $tx, 0);
   ld_set('seed_fs376', gmdate('Y-m-d H:i'), 0);
+}
+
+/* ---------- Abschnitte im Angebot (z. B. Dachseitige Komponenten, Elektrische Komponenten, Lohnkosten) ---------- */
+function of_sections(): array {
+  $s = ld_get('abschnitte', null); if (is_array($s) && $s) return $s;
+  $f = __DIR__ . '/seed/fs20260367.json'; $j = is_file($f) ? json_decode((string)file_get_contents($f), true) : null;
+  return $j['sections'] ?? [['id' => 'dach', 'name' => 'Dachseitige Komponenten', 'descr' => '', 'otype' => 'pv'], ['id' => 'elek', 'name' => 'Elektrische Komponenten', 'descr' => '', 'otype' => 'pv'], ['id' => 'lohn', 'name' => 'Lohnkosten', 'descr' => '', 'otype' => 'alle']];
+}
+function of_sections_save(array $u, array $l): array {
+  $o = [];
+  foreach (array_slice($l, 0, 20) as $x) if (is_array($x) && trim((string)($x['name'] ?? '')) !== '') $o[] = ['id' => preg_match('/^[\w-]{1,12}$/', (string)($x['id'] ?? '')) ? $x['id'] : 'a' . bin2hex(random_bytes(3)), 'name' => mb_substr(trim((string)$x['name']), 0, 80), 'descr' => mb_substr((string)($x['descr'] ?? ''), 0, 400), 'otype' => in_array($x['otype'] ?? '', ['pv', 'wp', 'alle'], true) ? $x['otype'] : 'alle'];
+  ld_set('abschnitte', $o, (int)$u['id']); return $o;
+}
+/* ---------- Einmaliger Import 2: Angebot ANG-FS20260367 – Abschnitte, Unternehmensvorstellung, BG-Absicherung, Bedarfsposition, Rabatte ---------- */
+function of_seed_fs367(): void {
+  static $done = false; if ($done) return; $done = true;
+  $f = __DIR__ . '/seed/fs20260367.json'; if (!is_file($f) || ld_get('seed_fs367', null)) return;
+  $j = json_decode((string)file_get_contents($f), true); if (!$j) return; $pdo = db(); $id = [];
+  foreach ($j['items'] as $e) {
+    $img = '';
+    if (!empty($e['img']) && is_file(__DIR__ . '/seed/img/' . $e['img'])) { $img = $e['key']; $dst = files_dir() . '/' . $img; if (!is_file($dst . '.bin')) { copy(__DIR__ . '/seed/img/' . $e['img'], $dst . '.bin'); file_put_contents($dst . '.json', json_encode(['type' => 'image/jpeg', 'name' => $e['img'], 'size' => filesize($dst . '.bin')])); } }
+    $st = $pdo->prepare('SELECT id FROM offer_items WHERE (ext_key = ? OR name = ?) AND active = 1 LIMIT 1'); $st->execute([$e['key'], $e['name']]); $old = $st->fetchColumn();
+    $v = [$e['kind'], $e['name'], (string)$e['maker'], (string)$e['descr'], $e['unit'], (float)$e['price'], (float)$e['tax'], $e['cat'], $img, $e['usage'], $e['key'], $e['sec'], !empty($e['opt']) ? 1 : 0];
+    if ($old) { $pdo->prepare("UPDATE offer_items SET kind = ?, name = ?, maker = ?, descr = ?, unit = ?, price = ?, tax = ?, cat = ?, img = ?, `usage` = ?, ext_key = ?, sec = ?, opt = ? WHERE id = ?")->execute(array_merge($v, [$old])); $id[$e['key']] = 'i' . $old; }
+    else { $pdo->prepare("INSERT INTO offer_items (kind, name, maker, descr, unit, price, tax, cat, img, `usage`, ext_key, sec, opt, words) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '')")->execute($v); $id[$e['key']] = 'i' . $pdo->lastInsertId(); }
+  }
+  foreach ((array)($j['map376'] ?? []) as $k => $sec) $pdo->prepare('UPDATE offer_items SET sec = ? WHERE ext_key = ?')->execute([$sec, $k]);
+  foreach ((array)($j['byname'] ?? []) as $n => $sec) $pdo->prepare('UPDATE offer_items SET sec = ? WHERE name = ? AND sec = \'\'')->execute([$sec, $n]);
+  if (!ld_get('abschnitte', null)) ld_set('abschnitte', $j['sections'], 0);
+  /* Assistent: Unternehmensvorstellung vorweg, Gerüst „bis 5 m“ = BG-Absicherung (erste Seite 100 % Rabatt, jede weitere Seite), Bedarfsposition, Rabatte */
+  $w = ld_get('assistent', null);
+  if (is_array($w) && !empty($w['pv'])) {
+    $firma = ['id' => 'firma', 'title' => 'Wir als Unternehmen', 'type' => 'auto', 'cats' => [], 'items' => [$id['fs367-firma']]];
+    foreach (['pv', 'wp'] as $t) { $w[$t]['steps'] = array_values(array_filter($w[$t]['steps'], fn($s) => $s['id'] !== 'firma')); array_unshift($w[$t]['steps'], $firma); }
+    $st = $pdo->prepare("SELECT id FROM offer_items WHERE name = 'Gerüst ab 5 m Traufhöhe' AND active = 1 LIMIT 1"); $st->execute(); $g2 = $st->fetchColumn();
+    foreach ($w['pv']['steps'] as &$s) {
+      if ($s['id'] === 'geruest') { $s['items'] = array_values(array_filter([$id['fs367-bg1'], $g2 ? 'i' . $g2 : null])); $s['free'] = ['item' => $id['fs367-bg1'], 'n' => 1, 'rest' => $id['fs367-bg2'], 'text' => '']; $s['title'] = 'Gerüst / Absicherung'; }
+      if ($s['id'] === 'zusatz' && !in_array($id['fs367-msys'], $s['items'], true)) $s['items'][] = $id['fs367-msys'];
+      if ($s['id'] === 'extra') foreach (['fs367-kombi', 'fs367-rfirma'] as $k) if (!in_array($id[$k], $s['items'], true)) $s['items'][] = $id[$k];
+    } unset($s);
+    foreach ($w['wp']['steps'] as &$s) if ($s['id'] === 'wpextra' && !in_array($id['fs367-rfirma'], $s['items'], true)) $s['items'][] = $id['fs367-rfirma']; unset($s);
+    ld_set('assistent', $w, 0);
+  }
+  $pdo->exec("UPDATE offer_items SET active = 0 WHERE ext_key = '' AND name = 'Gerüst bis 5 m Traufhöhe'");
+  ld_set('seed_fs367', gmdate('Y-m-d H:i'), 0);
 }

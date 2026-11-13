@@ -173,6 +173,15 @@ async function route() {
   $('#app').innerHTML = shell((V[ST.view] || viewHome)());
 }
 window.addEventListener('hashchange', route);
+/* Rücksprung: zur vorherigen Ansicht innerhalb von lumbra.desk, sonst zur Ersatzseite */
+window.addEventListener('hashchange', () => { ST.navs = (ST.navs || 0) + 1; });
+function ldBack(fb) { if (ST.navs > 0) history.back(); else location.hash = fb; }
+/* PDF teilen bzw. speichern – true, wenn es geklappt hat (Abbrechen → false) */
+async function ldShare(blob, name, type) {
+  const file = new File([blob], name, { type: type || 'application/pdf' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return true; } catch (e) { if (e.name === 'AbortError') return false; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); return true;
+}
 
 document.addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target, d = Object.fromEntries(new FormData(f)), btn = f.querySelector('button[type=submit]'); if (btn) btn.disabled = true;

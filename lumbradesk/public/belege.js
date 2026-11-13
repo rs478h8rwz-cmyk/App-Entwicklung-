@@ -12,7 +12,7 @@ const reAllowed = () => (ST.features || {}).rechnungen && ['admin', 'buero'].inc
 /* Summen wie auf dem Server (EN 16931): Zeilen netto auf Cent, Steuer je Satz aus der Summe */
 function reCalc(pos, disc) {
   const lines = [], bas = {};
-  pos.forEach(x => { const t = x.tax / 100; let u = x.pm === 'brutto' ? Math.round(x.price * (1 + t) * 100) / 100 / (1 + t) : +x.price; u *= 1 - (disc || 0) / 100; u = Math.round(u * 10000) / 10000; const n = Math.round(x.qty * u * 100) / 100; lines.push({ unit: u, net: n }); bas[x.tax] = (bas[x.tax] || 0) + n; });
+  pos.forEach(x => { const t = x.tax / 100; let u = x.pm === 'brutto' ? Math.round(x.price * (1 + t) * 100) / 100 / (1 + t) : +x.price; u *= (1 - (disc || 0) / 100) * (1 - (+x.dpct || 0) / 100); u = Math.round(u * 10000) / 10000; const n = Math.round(x.qty * u * 100) / 100; lines.push({ unit: u, net: n }); bas[x.tax] = (bas[x.tax] || 0) + n; });
   const taxes = Object.entries(bas).map(([r, b]) => ({ rate: +r, base: Math.round(b * 100) / 100, tax: Math.round(b * r) / 100 })).sort((a, b) => a.rate - b.rate);
   const net = Math.round(taxes.reduce((a, t) => a + t.base, 0) * 100) / 100, tax = Math.round(taxes.reduce((a, t) => a + t.tax, 0) * 100) / 100;
   return { lines, taxes, net, tax, gross: Math.round((net + tax) * 100) / 100 };
@@ -37,10 +37,10 @@ async function reLoad(view, arg) {
 function reDraft(kind, o, prior, pct) {
   const ot = o.data.otype || 'pv', tx = k => ofTxDef(k, ot), d = o.data;
   const base = { project: o.project, offer: o.id, kind, date: ofIso(0), due: '', data: { pos: [], discount: 0, intro: tx('re_intro'), outro: tx('re_outro'), title: '', offerNr: o.nr, serviceDate: ofIso(0), buyerRef: '', pct: 0, prev: [] } };
-  if (kind === 'rechnung' || kind === 'schluss') { base.data.pos = d.pos.map(p => ({ ...p })); base.data.discount = d.discount || 0; base.data.title = `${kind === 'schluss' ? 'Schlussrechnung' : 'Rechnung'} zu Angebot ${o.nr}`; }
+  if (kind === 'rechnung' || kind === 'schluss') { base.data.pos = d.pos.filter(p => !p.opt).map(p => ({ ...p })); base.data.discount = d.discount || 0; base.data.title = `${kind === 'schluss' ? 'Schlussrechnung' : 'Rechnung'} zu Angebot ${o.nr}`; }
   if (kind === 'schluss') base.data.prev = prior.filter(r => r.kind === 'abschlag' && ['offen', 'bezahlt'].includes(r.status)).map(r => ({ id: r.id, nr: r.nr, date: r.date, gross: r.gross }));
   if (kind === 'abschlag') {
-    const T = reCalc(d.pos, d.discount || 0), n = prior.filter(r => r.kind === 'abschlag' && r.status !== 'storniert').length + 1;
+    const T = reCalc(d.pos.filter(p => !p.opt), d.discount || 0), n = prior.filter(r => r.kind === 'abschlag' && r.status !== 'storniert').length + 1;
     base.data.pct = pct; base.data.title = `${n}. Abschlagsrechnung zu Angebot ${o.nr}`;
     base.data.pos = T.taxes.filter(t => t.base).map(t => ({ item: '', name: `${n}. Abschlag ${numDe(pct)} % gemäß Angebot ${o.nr}${T.taxes.length > 1 ? ` (Anteil ${numDe(t.rate)} % USt.)` : ''}`, descr: `${numDe(pct)} % von ${eur2(t.base)} netto`, qty: 1, unit: 'psch', price: Math.round(t.base * pct) / 100, tax: t.rate, pm: 'netto', pausch: true, cat: '' }));
   }
@@ -138,7 +138,7 @@ async function rePdf(mahnIdx) {
     const tx = ((OF.cat.texte || []).find(t => t.kind === 'mahn' + M0.level && t.def) || (OF.cat.texte || []).find(t => t.kind === 'mahn' + M0.level) || {}).text || '';
     para(ofFill(tx, PH)); y += 2;
     const open = T.gross - pre - (E.paid || 0), fees = d.dunning.slice(0, mahnIdx + 1).reduce((a, m) => a + (m.fee || 0), 0);
-    sr(`Rechnung ${E.nr} vom ${dDe(E.date)}`, eur2(T.gross - pre), false, M); if (E.paid) sr('bereits gezahlt', '−' + eur2(E.paid), false, M); if (fees) sr('Mahngebühren', eur2(fees), false, M); sr('Offener Betrag', eur2(open + fees), true, M);
+    sr(`Rechnung ${E.nr} vom ${dDe(E.date)}`, eur2(T.gross - pre), false, M); if (E.paid) sr('bereits gezahlt', '-' + eur2(E.paid), false, M); if (fees) sr('Mahngebühren', eur2(fees), false, M); sr('Offener Betrag', eur2(open + fees), true, M);
     y += 4; doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...INK);
     para(`Bitte überweisen Sie ${eur2(open + fees)} bis zum ${dDe(M0.due)} auf ${co.iban ? 'IBAN ' + co.iban : 'unser Konto'} – Verwendungszweck: ${E.nr}.`);
   } else {
@@ -147,7 +147,7 @@ async function rePdf(mahnIdx) {
     const th = () => { doc.setFillColor(242, 243, 246); doc.rect(M, y - 4, W - 2 * M, 7, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GR); cols.forEach(([x, l], i) => doc.text(l, x + (i >= 3 ? 0 : 1), y, { align: i >= 3 ? 'right' : 'left' })); y += 7; doc.setFont('helvetica', 'normal'); };
     th();
     d.pos.forEach((p, i) => {
-      const nl = doc.splitTextToSize(p.name, wN), dl = p.descr ? doc.splitTextToSize(p.descr, wN) : [], h = nl.length * 4.4 + dl.length * 3.6 + 3;
+      doc.setFontSize(9); const nl = doc.splitTextToSize(p.name, wN); doc.setFontSize(7.8); const dl = p.descr ? doc.splitTextToSize(p.descr, wN) : [], h = nl.length * 4.4 + dl.length * 3.6 + 3;
       if (y + h > 262) { doc.addPage(); head(); y = 40; th(); }
       doc.setFontSize(9); doc.setTextColor(...INK); doc.text(String(i + 1), M + 1, y); doc.text(`${numDe(p.qty)} ${p.unit}`, M + 12, y); doc.text(nl, M + 32, y);
       doc.text(numDe(p.tax) + ' %', W - M - 48, y, { align: 'right' }); doc.text(eur2(T.lines[i].unit), W - M - 26, y, { align: 'right' }); doc.text(eur2(T.lines[i].net), W - M, y, { align: 'right' });
@@ -156,7 +156,7 @@ async function rePdf(mahnIdx) {
     });
     if (y > 225) { doc.addPage(); head(); y = 40; }
     y += 2; sr('Summe netto', eur2(T.net)); T.taxes.forEach(t => sr(`USt. ${numDe(t.rate)} % auf ${eur2(t.base)}`, eur2(t.tax))); sr('Gesamt brutto', eur2(T.gross), !pre);
-    if (pre) { (d.prev || []).forEach(x => sr(`abzgl. ${x.nr} vom ${dDe(x.date)}`, '−' + eur2(x.gross))); sr('Zu zahlen', eur2(T.gross - pre), true); }
+    if (pre) { (d.prev || []).forEach(x => sr(`abzgl. ${x.nr} vom ${dDe(x.date)}`, '-' + eur2(x.gross))); sr('Zu zahlen', eur2(T.gross - pre), true); }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...INK); y += 4;
     if (T.taxes.some(t => t.rate === 0)) { doc.setFontSize(8.5); doc.setTextColor(...GR); para('Für Photovoltaikanlagen und Stromspeicher auf bzw. an Wohngebäuden gilt der Nullsteuersatz nach § 12 Abs. 3 UStG.'); doc.setFontSize(10); doc.setTextColor(...INK); }
     if (E.kind === 'storno' && d.ref) para(`Diese Stornorechnung hebt die Rechnung ${d.ref} vom ${dDe(d.refDate)} vollständig auf.`);
@@ -171,14 +171,14 @@ async function rePdf(mahnIdx) {
   return { blob: doc.output('blob'), name: nm };
 }
 async function reShare(mahnIdx) {
-  const { blob, name } = await rePdf(mahnIdx), file = new File([blob], name, { type: 'application/pdf' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  const { blob, name } = await rePdf(mahnIdx);
+  if (!await ldShare(blob, name)) return;
+  toast('PDF gespeichert.'); setTimeout(() => ldBack('#/kunde/' + RB.edit.project), 400);   // zurück zur vorherigen Ansicht
 }
 
 /* ---------- Einstellungen: Nummern & Texte, Mahnwesen ---------- */
 function viewBelege() {
-  const C = RB.cfg; if (!C) return ''; const N = C.nummern, K = C.kinds, tx = RB.txEdit || C.texte;
+  const C = RB.cfg; if (!C) return ''; const N = C.nummern, K = C.kinds, tx = RB.txEdit || C.texte, ab = RB.abEdit || C.abschnitte || [];
   const numBox = (t, l) => `<div class="cardx"><div class="h3x">${l}</div><div class="form-grid" style="margin-top:8px"><label>Format<input data-bn="${t}" data-k="fmt" value="${esc(N[t].fmt)}"></label><label>Nächste Nummer<input data-bn="${t}" data-k="next" inputmode="numeric" value="${N[t].next}"></label>
       <label class="sw" style="grid-column:1/-1"><input type="checkbox" data-bn="${t}" data-k="yearly" ${N[t].yearly ? 'checked' : ''}>Jedes Jahr wieder bei 1 beginnen</label></div><p class="muted small" style="margin:6px 0 0">Nächste: <b>${esc(N[t].preview)}</b></p></div>`;
   return `<section class="hero"><h1>Nummern &amp; Texte</h1><p class="muted">Nummernkreise für Angebote und Rechnungen, Textbausteine und Mahnwesen.</p></section>
@@ -192,6 +192,13 @@ function viewBelege() {
       <label style="grid-column:1/-1">Text<textarea rows="3" data-bt="${i}" data-k="text">${esc(t.text)}</textarea></label></div><button class="btn sm g danger" data-bs="tx-del" data-v="${i}">Löschen</button></div>`).join('')}
     <p class="muted small" style="margin:6px 4px 0">„Standard“ wird bei neuen Angeboten bzw. Rechnungen automatisch eingesetzt (je Art und Angebotsart). Platzhalter: {Kunde}, {Nummer}, {Datum}, {Betrag}, {Fällig}, {Gültig}.</p>
     <button class="btn" style="margin-top:10px" data-bs="tx">Textbausteine speichern</button>
+    <section class="h-sec"><h2>Abschnitte im Angebot</h2><button class="btn sm" data-bs="ab-add">${ic('plus', 16)}Neu</button></section>
+    ${ab.map((t, i) => `<div class="cardx txb"><div class="form-grid"><label>Name<input data-ba="${i}" data-k="name" value="${esc(t.name)}"></label>
+      <label>Für<select data-ba="${i}" data-k="otype">${[['alle', 'alle'], ['pv', 'Photovoltaik'], ['wp', 'Wärmepumpe']].map(([k, l]) => `<option value="${k}" ${t.otype === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label style="grid-column:1/-1">Beschreibung<textarea rows="2" data-ba="${i}" data-k="descr">${esc(t.descr || '')}</textarea></label></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn sm s" data-bs="ab-up" data-v="${i}" ${i ? '' : 'disabled'}>Nach oben</button><button class="btn sm s" data-bs="ab-down" data-v="${i}" ${i < ab.length - 1 ? '' : 'disabled'}>Nach unten</button><button class="btn sm g danger" data-bs="ab-del" data-v="${i}">Löschen</button></div></div>`).join('')}
+    <p class="muted small" style="margin:6px 4px 0">Die Positionen werden im Angebot nach diesen Abschnitten gegliedert (Pos. 1, 2, 3 …) und im PDF mit Zwischensummen und einer Zusammenfassung gezeigt. {Nr} in der Beschreibung wird durch die Abschnittsnummer ersetzt. Welcher Abschnitt zu einem Artikel gehört, stellst du beim Artikel ein.</p>
+    <button class="btn" style="margin-top:10px" data-bs="ab">Abschnitte speichern</button>
     <section class="h-sec"><h2>Mahnwesen</h2></section>
     <div class="cardx"><div class="form-grid"><label>Zahlungsziel Rechnung (Tage)<input data-bm="ziel" inputmode="numeric" value="${C.mahn.ziel}"></label><span></span>
       ${MAHN_L.map((l, i) => `<label>${l}: Frist (Tage)<input data-bm="frist" data-i="${i}" inputmode="numeric" value="${C.mahn.frist[i]}"></label><label>${l}: Gebühr €<input data-bm="fee" data-i="${i}" inputmode="decimal" value="${numDe(C.mahn.fee[i])}"></label>`).join('')}</div>
@@ -233,6 +240,11 @@ document.addEventListener('click', async e => {
     const C = RB.cfg;
     if (k === 'bs:num') { const val = {}; for (const t of ['an', 're']) { val[t] = { fmt: $(`[data-bn="${t}"][data-k="fmt"]`).value, yearly: $(`[data-bn="${t}"][data-k="yearly"]`).checked }; const nx = parseInt($(`[data-bn="${t}"][data-k="next"]`).value, 10); if (nx !== C.nummern[t].next) val[t].next = nx; }
       C.nummern = (await api('belege-cfg', { part: 'nummern', value: val })).nummern; toast('Nummernkreise gespeichert.'); }
+    const AB = () => (RB.abEdit = RB.abEdit || (C.abschnitte || []).map(x => ({ ...x })));
+    if (k === 'bs:ab-add') AB().push({ id: '', name: 'Neuer Abschnitt', descr: 'In Pos. {Nr} sind … aufgelistet.', otype: 'alle' });
+    if (k === 'bs:ab-del') { if (!confirm('Abschnitt löschen? Positionen darin stehen dann ohne Abschnitt.')) return; AB().splice(+v, 1); }
+    if (k === 'bs:ab-up' || k === 'bs:ab-down') { const L = AB(), i = +v, j = k === 'bs:ab-up' ? i - 1 : i + 1; if (L[j]) [L[i], L[j]] = [L[j], L[i]]; }
+    if (k === 'bs:ab') { C.abschnitte = (await api('belege-cfg', { part: 'abschnitte', value: RB.abEdit || C.abschnitte })).abschnitte; RB.abEdit = null; await ofCatalog(true); toast('Abschnitte gespeichert.'); }
     if (k === 'bs:tx-add') { RB.txEdit = (RB.txEdit || C.texte).concat({ id: '', kind: 'outro', otype: 'alle', def: false, name: 'Neuer Text', text: '' }); }
     if (k === 'bs:tx-del') { if (!confirm('Textbaustein löschen?')) return; RB.txEdit = (RB.txEdit || C.texte).filter((x, i) => i !== +v); }
     if (k === 'bs:tx') { C.texte = (await api('belege-cfg', { part: 'texte', value: RB.txEdit || C.texte })).texte; RB.txEdit = null; await ofCatalog(true); toast('Textbausteine gespeichert.'); }
@@ -242,6 +254,7 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.dataset && el.dataset.ba !== undefined) { const C = RB.cfg; RB.abEdit = RB.abEdit || (C.abschnitte || []).map(x => ({ ...x })); RB.abEdit[+el.dataset.ba][el.dataset.k] = el.value; return; }
   if (el.dataset && el.dataset.bt !== undefined) { const C = RB.cfg; RB.txEdit = RB.txEdit || C.texte.map(t => ({ ...t })); const t = RB.txEdit[+el.dataset.bt]; t[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; return; }
   const k = el.dataset && el.dataset.re, E = RB.edit; if (!k || !E || E.pick || E.status !== 'entwurf') return; const i = +el.dataset.i;
   if (k === 'qty') { E.data.pos[i].qty = parseNum(el.value); reSumPaint(); }

@@ -15,6 +15,9 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.4', date: '2026-11-13', items: [
+    ['crm', 'Bedarfspositionen und Positionsrabatt', 'Angebote aus lumbra.desk sind jetzt nach Abschnitten gegliedert (z. B. Dachseitige Komponenten, Elektrische Komponenten, Lohnkosten). Beim Übernehmen zählen Bedarfspositionen nicht zum Preis, und ein Rabatt auf einzelne Positionen (z. B. erste Gerüstseite 100 %) wird berücksichtigt.']
+  ] },
   { version: '3.3', date: '2026-11-13', items: [
     ['crm', 'PV/WP-Aufteilung nach Zuordnung', 'Beim Übernehmen eines Angebots aus lumbra.desk wird der Preis jetzt nach der Zuordnung jeder Position (Photovoltaik oder Wärmepumpe) aufgeteilt – so landen z. B. Speicher, Fundament und Hydraulik im richtigen Teil.']
   ] },

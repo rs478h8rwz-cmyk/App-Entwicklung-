@@ -586,3 +586,24 @@ a.grow:active, button.grow:active { background: var(--raised); }
 .utag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px; vertical-align: 2px; margin-left: 4px; }
 .utag.pv { background: #F5A62322; color: #B7791F; } .utag.wp { background: #3B82F622; color: #2563EB; }
 .rimg { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: #fff; flex: none; display: grid; place-items: center; } .rimg img { width: 100%; height: 100%; object-fit: contain; }
+
+/* 4.5: Abschnitte, Preis-Feld, Bedarfsposition, Positionsrabatt */
+.ofsec { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 14px 16px 8px; background: color-mix(in srgb, var(--p) 7%, var(--card)); border-bottom: 1px solid var(--line); }
+.ofsec b { font-size: 15px; min-width: 0; overflow-wrap: anywhere; } .ofsec span { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ofg, .ofg2 { display: flex; align-items: flex-end; gap: 8px 10px; flex-wrap: wrap; margin: 8px 0 0 30px; min-width: 0; }
+.ofg2 { align-items: center; margin-top: 6px; }
+.ofc { display: flex; flex-direction: column; gap: 3px; margin: 0; min-width: 0; font-size: 12px; color: var(--ink3); }
+.ofc > span:first-child { font-size: 11.5px; font-weight: 600; }
+.ofc-s { flex-direction: row; align-items: center; gap: 6px; }
+.lbl-red { color: #E5484D; font-weight: 700 !important; }
+.ofi-sec { width: auto; max-width: 100%; min-width: 0; flex: 1 1 160px; height: 34px; margin: 0; font-size: 13px; padding: 0 8px; }
+.ofp.is-opt { background: color-mix(in srgb, var(--ink3) 7%, transparent); } .ofp.is-opt .ofl-t { color: var(--ink3); }
+.ofd textarea.ofi-descr { width: 100%; min-height: 30px; margin: 2px 0 0; font-size: 12.5px; padding: 4px 6px; }
+.ofp, .ofp-h, .ofd { min-width: 0; max-width: 100%; }
+@media (max-width: 760px) { .ofg, .ofg2 { margin-left: 0; } }
+@media (max-width: 400px) { .qty input { width: 48px; } .qty button { width: 32px; } .ofi-pr { width: 84px; } .ofsec { padding: 12px 12px 8px; } .ofp { padding: 12px; } }
+/* Assistent: lange Namen umbrechen, Bilder ohne weiße Balken */
+.wzchips .chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; height: auto; min-height: 32px; text-align: left; line-height: 1.25; padding-top: 6px; padding-bottom: 6px; }
+.wzopt img { background: transparent; height: auto; max-height: 76px; width: auto; max-width: 100%; align-self: center; }
+.ofp .ofn { width: auto; min-width: 22px; padding: 0 6px; border-radius: 11px; font-variant-numeric: tabular-nums; }
+.ofg .pmb { height: 36px; align-self: flex-end; }

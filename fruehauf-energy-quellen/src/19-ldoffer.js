@@ -8,8 +8,8 @@ async function ldOffersLoad(pid, force) {
   const r = await ldApi('of-list&p=' + encodeURIComponent(pid)); LDOF[pid] = { at: Date.now(), list: r.ok && r.j ? r.j.offers || [] : [] }; return LDOF[pid].list;
 }
 function ldOfferFacts(o) {
-  const d = o.data || {}, f = 1 - (+d.discount || 0) / 100, pos = d.pos || [];
-  const gross = p => { const t = (+p.tax || 0) / 100, u = p.pm === 'brutto' ? Math.round(p.price * (1 + t) * 100) / 100 : p.price * (1 + t); return u * p.qty * f; };
+  const d = o.data || {}, f = 1 - (+d.discount || 0) / 100, pos = (d.pos || []).filter(p => !p.opt);   // Bedarfspositionen zählen nicht
+  const gross = p => { const t = (+p.tax || 0) / 100, u = p.pm === 'brutto' ? Math.round(p.price * (1 + t) * 100) / 100 : p.price * (1 + t); return u * p.qty * f * (1 - (+p.dpct || 0) / 100); };
   const kwOf = p => +p.power > 0 ? +p.power : (m => m ? +m[1].replace(',', '.') : 0)(/(\d+(?:[.,]\d+)?)\s*kW(?!h|p)/i.exec(p.name || ''));   // Leistung oder aus dem Namen („9 kW“)
   const mods = pos.filter(p => p.cat === 'mod' && +p.power >= 100), bats = pos.filter(p => p.cat === 'bat' && +p.power > 0);
   const wps = pos.filter(p => p.cat === 'wp' && !/montage|demontage|installation|entsorgung|hydraulik/i.test(p.name || '') && (kwOf(p) > 0 || /wärmepumpe|waermepumpe/i.test(p.name || '')));

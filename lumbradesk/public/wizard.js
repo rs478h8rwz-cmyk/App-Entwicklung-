@@ -71,8 +71,11 @@ function wzBuild(W) {
     const blk = [], sel = W.sel[s.key] || [];
     if (s.type === 'auto') (s.items || []).forEach(id => add(blk, wzItem(id), 1));
     if (s.type === 'one' || s.type === 'multi') for (const x of sel) {
-      const it = wzItem(x.item); add(blk, it, x.qty);
-      if (s.free && s.free.item === x.item && it) { const n = Math.min(s.free.n, x.qty); blk.push({ ...ofPos(it, n), name: s.free.text || `Rabatt: ${it.name}`, descr: '100 % Rabatt', price: -it.price, rab: true, pausch: false, unit: it.unit, qty: n }); }
+      const it = wzItem(x.item);
+      if (s.free && s.free.item === x.item && it) {   // z. B. Gerüst: erste Seite 100 % rabattiert, weitere Seiten zum Folgepreis
+        const n = Math.min(+s.free.n || 1, x.qty), rest = x.qty - n, ri = s.free.rest ? wzItem(s.free.rest) : null;
+        add(blk, it, n, { dpct: 100 }); if (rest > 0) add(blk, ri || it, rest);
+      } else add(blk, it, x.qty);
     }
     if (s.type === 'system') { const Y = W.sys[s.key] || {}, sy = (wzCfg().systems || []).find(x => x.id === Y.sys); if (sy) (sy.intro || []).forEach(id => add(blk, wzItem(id), 1)); if (Y.inv && Y.inv.item) add(blk, wzItem(Y.inv.item), Y.inv.qty || 1); if (Y.bat) add(blk, wzItem(Y.bat.item), Y.bat.qty || 1); }
     const total = sel.reduce((a, x) => a + x.qty, 0);
@@ -87,7 +90,7 @@ function wzFinish() {
   const W = OF.wz, d = OF.edit.data, pos = wzBuild(W);
   d.otype = W.ot; for (const k of ['intro', 'outro', 'pay']) if (!d[k] || ['pv', 'wp', 'pvwp'].some(t => d[k] === ofTxDef(k, t))) d[k] = ofTxDef(k, W.ot);
   if (/^Angebot (Photovoltaik|Wärmepumpe|PV \+ Wärmepumpe)$/.test(OF.edit.title) || !OF.edit.title) OF.edit.title = 'Angebot ' + WZ_T[W.ot];
-  d.pos = ofApplyPackages(pos); d.wz = { ot: W.ot, sel: W.sel, sys: W.sys }; OF.wz = null;
+  d.pos = ofSortSecs(ofApplyPackages(pos)); d.wz = { ot: W.ot, sel: W.sel, sys: W.sys }; OF.wz = null;
   toast(`${d.pos.length} Positionen erstellt – Mengen, Preise und Texte unten anpassen.`, 'ok', 4500); ofRender();
 }
 
@@ -183,7 +186,7 @@ function asForm(s, i, S) {
     <label class="sw"><input type="checkbox" data-as="optional" data-i="${i}" ${s.optional ? 'checked' : ''}>Darf übersprungen werden</label>`}
     ${s.type === 'one' || s.type === 'multi' ? `<div class="muted small" style="margin-top:6px">Gratis (100 % Rabatt) – die ersten … Einheiten von:</div>
       <div class="pkline" style="grid-template-columns:minmax(0,1fr) 64px"><select data-as="freeitem" data-i="${i}">${asOpts(s.free ? s.free.item : '', 'kein Gratis-Anteil')}</select><input data-as="freen" data-i="${i}" inputmode="decimal" value="${s.free ? numDe(s.free.n) : '1'}"></div>
-      ${s.free ? `<label>Text der Rabattzeile<input data-as="freetext" data-i="${i}" value="${esc(s.free.text || '')}"></label>` : ''}` : ''}
+      ${s.free ? `<label>Weitere Einheiten als<select data-as="freerest" data-i="${i}">${asOpts(s.free.rest || '', 'gleiche Position (voller Preis)')}</select></label>` : ''}` : ''}
     <div class="muted small" style="margin-top:6px">Anhängen – kommt automatisch mit (z. B. Unterkonstruktion je Modul):</div>
     ${(s.links || []).map((l, j) => `<div class="pkline aslink"><select data-as="litem" data-i="${i}" data-j="${j}">${asOpts(l.item)}</select><select data-as="lqty" data-i="${i}" data-j="${j}"><option value="same" ${l.qty === 'same' ? 'selected' : ''}>gleiche Anzahl</option>${[1, 2, 3, 4].map(n => `<option value="${n}" ${l.qty === n ? 'selected' : ''}>${n}× fest</option>`).join('')}</select><select data-as="lplace" data-i="${i}" data-j="${j}"><option value="after" ${l.place === 'after' ? 'selected' : ''}>direkt darunter</option>${places.map(([k, t]) => `<option value="${esc(k)}" ${l.place === k ? 'selected' : ''}>bei „${esc(t)}“</option>`).join('')}</select><button type="button" class="xbtn" data-asb="ldel" data-i="${i}" data-v="${j}" aria-label="Anhang entfernen">${ic('x', 14)}</button></div>`).join('')}
     <div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn sm s" data-asb="ladd" data-i="${i}">${ic('plus', 14)}Anhang</button><span style="flex:1"></span><button type="button" class="btn sm g danger" data-asb="del" data-v="${i}">Schritt löschen</button></div></div>`;
@@ -216,14 +219,14 @@ document.addEventListener('click', async e => {
 document.addEventListener('input', e => {
   const el = e.target, k = el.dataset && el.dataset.as; if (!k || !AS.cfg) return; const i = +el.dataset.i, C = AS.cfg, s = AS.tab === 'sys' ? null : C[AS.tab].steps[i];
   if (k === 'title') s.title = el.value; if (k === 'quick') s.quick = el.value.split(/[,; ]+/).map(parseNum).filter(n => n > 0);
-  if (k === 'freen' && s.free) s.free.n = parseNum(el.value); if (k === 'freetext' && s.free) s.free.text = el.value;
+  if (k === 'freen' && s.free) s.free.n = parseNum(el.value); if (k === 'freerest' && s.free) s.free.rest = el.value;
   if (k === 'sysname') C.systems[i].name = el.value;
 });
 document.addEventListener('change', e => {
   const el = e.target, k = el.dataset && el.dataset.as; if (!k || !AS.cfg) return; const i = +el.dataset.i, j = +el.dataset.j, C = AS.cfg, s = AS.tab === 'sys' ? null : C[AS.tab].steps[i];
   if (k === 'askQty' || k === 'optional') s[k] = el.checked;
   else if (k === 'itemadd' && el.value) { if (!(s.items || []).includes(el.value)) (s.items = s.items || []).push(el.value); }
-  else if (k === 'freeitem') s.free = el.value ? { item: el.value, n: s.free ? s.free.n : 1, text: s.free && s.free.text ? s.free.text : 'Rabatt: ' + ((wzItem(el.value) || {}).name || '') + ' (100 %)' } : null;
+  else if (k === 'freeitem') s.free = el.value ? { item: el.value, n: s.free ? s.free.n : 1, rest: s.free ? s.free.rest || '' : '' } : null;
   else if (k === 'litem') s.links[j].item = el.value; else if (k === 'lqty') s.links[j].qty = el.value === 'same' ? 'same' : +el.value; else if (k === 'lplace') s.links[j].place = el.value;
   else if (k === 'sysadd' && el.value) { const x = C.systems[i], c = el.dataset.c; if (!(x[c] = x[c] || []).includes(el.value)) x[c].push(el.value); }
   else return;

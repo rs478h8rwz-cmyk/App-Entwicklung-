@@ -94,7 +94,7 @@ function re_calc(array $pos, float $disc): array {
   $lines = []; $bas = [];
   foreach ($pos as $i => $x) {
     $t = (float)$x['tax'] / 100; $unit = $x['pm'] === 'brutto' ? round($x['price'] * (1 + $t), 2) / (1 + $t) : (float)$x['price'];
-    $unit *= (1 - $disc / 100); $unit = round($unit, 4); $ln = round($x['qty'] * $unit, 2);
+    $unit *= (1 - $disc / 100) * (1 - (float)($x['dpct'] ?? 0) / 100); $unit = round($unit, 4); $ln = round($x['qty'] * $unit, 2);
     $lines[$i] = ['unit' => $unit, 'net' => $ln]; $k = (string)(float)$x['tax']; $bas[$k] = ($bas[$k] ?? 0) + $ln;
   }
   $taxes = []; foreach ($bas as $r => $b) $taxes[$r] = ['base' => round($b, 2), 'tax' => round($b * (float)$r / 100, 2)];
@@ -105,7 +105,8 @@ function re_clean_pos(array $list): array {
   $pos = [];
   foreach (array_slice($list, 0, 300) as $x) {
     if (!is_array($x)) continue;
-    $pos[] = ['item' => mb_substr((string)($x['item'] ?? ''), 0, 40), 'name' => mb_substr(trim((string)($x['name'] ?? '')), 0, 300), 'descr' => mb_substr(trim((string)($x['descr'] ?? '')), 0, 2000), 'qty' => round((float)($x['qty'] ?? 0), 2), 'unit' => mb_substr((string)($x['unit'] ?? 'Stk'), 0, 20),
+    if (!empty($x['opt'])) continue;   // Bedarfspositionen kommen nicht in die Rechnung
+    $pos[] = ['dpct' => max(0, min(100, round((float)($x['dpct'] ?? 0), 2))), 'item' => mb_substr((string)($x['item'] ?? ''), 0, 40), 'name' => mb_substr(trim((string)($x['name'] ?? '')), 0, 300), 'descr' => mb_substr(trim((string)($x['descr'] ?? '')), 0, 2000), 'qty' => round((float)($x['qty'] ?? 0), 2), 'unit' => mb_substr((string)($x['unit'] ?? 'Stk'), 0, 20),
       'price' => round((float)($x['price'] ?? 0), 4), 'tax' => in_array((float)($x['tax'] ?? 19), [0.0, 7.0, 19.0], true) ? (float)$x['tax'] : 19, 'pm' => ($x['pm'] ?? '') === 'brutto' ? 'brutto' : 'netto', 'pausch' => !empty($x['pausch']), 'cat' => mb_substr((string)($x['cat'] ?? ''), 0, 10)];
   }
   return $pos;

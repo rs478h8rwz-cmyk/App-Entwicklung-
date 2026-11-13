@@ -376,12 +376,13 @@ try {
     case 'POST of-wizard': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; $o = of_wizard_save($u, body()); audit((int)$u['id'], 'belege_einstellungen', 'Angebots-Assistent'); json_out(['ok' => true, 'wizard' => $o]); }
     case 'GET belege-cfg': {
       $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/belege-lib.php';
-      json_out(['nummern' => num_out(), 'texte' => tx_all(), 'kinds' => TX_KINDS, 'mahn' => mahn_cfg()]);
+      json_out(['nummern' => num_out(), 'texte' => tx_all(), 'kinds' => TX_KINDS, 'mahn' => mahn_cfg(), 'abschnitte' => of_sections()]);
     }
     case 'POST belege-cfg': {
       $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/belege-lib.php'; $b = body(); $part = (string)($b['part'] ?? '');
       if ($part === 'nummern') { $o = num_save($u, (array)($b['value'] ?? [])); audit((int)$u['id'], 'belege_einstellungen', 'Nummernkreise'); json_out(['ok' => true, 'nummern' => $o]); }
       if ($part === 'texte') { $o = tx_save($u, (array)($b['value'] ?? [])); audit((int)$u['id'], 'belege_einstellungen', 'Textbausteine'); json_out(['ok' => true, 'texte' => $o]); }
+      if ($part === 'abschnitte') { $o = of_sections_save($u, (array)($b['value'] ?? [])); audit((int)$u['id'], 'belege_einstellungen', 'Abschnitte'); json_out(['ok' => true, 'abschnitte' => $o]); }
       if ($part === 'mahn') { $o = mahn_save($u, (array)($b['value'] ?? [])); audit((int)$u['id'], 'belege_einstellungen', 'Mahnwesen'); json_out(['ok' => true, 'mahn' => $o]); }
       fail('Unbekannt', 400);
     }
@@ -407,7 +408,7 @@ try {
       $u = require_role(['admin', 'buero', 'vertrieb']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php';
       $row = cfg_row(); $cfg = $row ? json_decode((string)$row['data'], true) : []; $co = (array)(($cfg['settings'] ?? [])['company'] ?? []);
       require_once LD_PRIV_DIR . '/belege-lib.php';
-      json_out(['wizard' => of_wizard(), 'texte' => tx_all(), 'nextNr' => num_peek('an')['nr'], 'items' => of_catalog(), 'packages' => of_packages(), 'cats' => OF_CATS, 'status' => OF_STATUS, 'company' => array_intersect_key($co, array_flip(['name', 'ceo', 'register', 'street', 'zip', 'city', 'phone', 'email', 'web', 'taxNo', 'vatId', 'bank', 'iban', 'bic', 'logoFile']))]);
+      json_out(['abschnitte' => of_sections(), 'wizard' => of_wizard(), 'texte' => tx_all(), 'nextNr' => num_peek('an')['nr'], 'items' => of_catalog(), 'packages' => of_packages(), 'cats' => OF_CATS, 'status' => OF_STATUS, 'company' => array_intersect_key($co, array_flip(['name', 'ceo', 'register', 'street', 'zip', 'city', 'phone', 'email', 'web', 'taxNo', 'vatId', 'bank', 'iban', 'bic', 'logoFile']))]);
     }
     case 'POST of-item': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; json_out(['ok' => true] + of_item_save(body())); }
     case 'POST of-item-del': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; of_tables(); db()->prepare('UPDATE offer_items SET active = 0 WHERE id = ?')->execute([(int)preg_replace('/\D/', '', (string)(body()['id'] ?? ''))]); json_out(['ok' => true]); }

@@ -13,7 +13,7 @@ const numDe = n => (Math.round((n || 0) * 100) / 100).toLocaleString('de-DE', { 
 const parseNum = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
 async function ofCatalog(force) { if (!OF.cat || force) OF.cat = await api('of-catalog'); return OF.cat; }
 
-const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch, img: it.img || '', usage: it.usage || '' });
+const ofPos = (it, qty) => ({ item: it.id, name: it.name, descr: it.descr || '', qty: it.pausch ? 1 : qty, unit: it.pausch ? 'pauschal' : it.unit || 'Stk', price: it.price || 0, tax: it.tax, cat: it.cat, power: it.power || null, pm: it.pm === 'brutto' ? 'brutto' : 'netto', pausch: !!it.pausch, img: it.img || '', usage: it.usage || '', sec: it.sec || '', opt: !!it.opt });
 /* Pakete: feste Positionen je Angebotsart („immer“) oder nur, wenn bestimmte Kategorien/Produkte im Angebot sind („wenn“) */
 const OF_OTYPES = { pv: 'Photovoltaik', wp: 'Wärmepumpe', pvwp: 'PV + Wärmepumpe' };
 const ofTypeFits = (pk, ot) => pk.otype === 'alle' || ot === pk.otype || (ot === 'pvwp' && (pk.otype === 'pv' || pk.otype === 'wp'));
@@ -45,13 +45,40 @@ const ofTxDef = (kind, ot) => { const l = ofTx(kind, ot); const sp = l.filter(t 
 /* Platzhalter in Texten: {Kunde} {Nummer} {Datum} {Betrag} {Fällig} {Gültig} */
 const ofFill = (t, v) => String(t || '').replace(/\{(Kunde|Nummer|Datum|Betrag|Fällig|Gültig|Angebot)\}/g, (m, k) => v[k] !== undefined ? v[k] : m);
 
+function ofRowHTML(p, i, nr) {
+  const S = ofSecs();
+  return `<div class="ofp ${p.opt ? 'is-opt' : ''}">
+    <div class="ofp-h"><span class="ofn">${nr}</span><input class="ofi-name" data-of="name" data-i="${i}" value="${esc(p.name)}"><button class="xbtn" data-a="of-del" data-i="${i}" aria-label="Position löschen">${ic('x', 14)}</button></div>
+    <div class="ofd">${p.pkg ? `<span class="tag t-a">Standard</span> ` : ''}${p.opt ? '<span class="tag">Bedarfsposition – nicht in der Summe</span> ' : ''}<textarea class="ofi-descr" data-of="descr" data-i="${i}" rows="1" placeholder="Beschreibung (optional)">${esc(p.descr || '')}</textarea></div>
+    <div class="ofg">
+      <label class="ofc"><span>Menge</span>${p.pausch ? '<span class="tag">pauschal</span>' : `<div class="qty"><button data-a="of-q" data-i="${i}" data-v="-1" aria-label="weniger">${ic('minus', 16)}</button><input inputmode="decimal" data-of="qty" data-i="${i}" value="${numDe(p.qty)}"><button data-a="of-q" data-i="${i}" data-v="1" aria-label="mehr">${ic('plus', 16)}</button></div>`}</label>
+      <label class="ofc"><span>Einheit</span><input class="ofi-unit" data-of="unit" data-i="${i}" value="${esc(p.unit)}"></label>
+      <label class="ofc"><span class="lbl-red">Preis</span><input class="ofi-pr" inputmode="decimal" data-of="price" data-i="${i}" value="${numDe(ofUp(p))}"></label>
+      <button class="pmb ${ofBr(p) ? 'br' : ''}" data-a="of-pm" data-i="${i}" title="Netto/Brutto umschalten">€ ${ofBr(p) ? 'brutto' : 'netto'}</button>
+    </div>
+    <div class="ofg2">
+      ${S.length ? `<select class="ofi-sec" data-of="sec" data-i="${i}" aria-label="Abschnitt"><option value="">ohne Abschnitt</option>${S.map(x => `<option value="${esc(x.id)}" ${p.sec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : ''}
+      <label class="ofc ofc-s"><span>Rabatt %</span><input class="ofi-unit" inputmode="decimal" data-of="dpct" data-i="${i}" value="${p.dpct ? numDe(p.dpct) : ''}" placeholder="0"></label>
+      <label class="sw ofc-s"><input type="checkbox" data-of="opt" data-i="${i}" ${p.opt ? 'checked' : ''}>Bedarf</label>
+      <b class="ofl-t" data-i="${i}">${p.opt ? '(' + eur2(p.qty * ofUp(p)) + ')' : eur2(ofLine(p))}</b>
+      ${p.item ? `<button class="pmb" data-a="of-stdsave" data-i="${i}" title="Bezeichnung, Beschreibung, Einheit, Preis und Abschnitt als Standard speichern">als Standard</button>` : ''}
+    </div></div>`;
+}
+/* Abschnitte (Dachseitige Komponenten …): Reihenfolge aus den Einstellungen; Positionen ohne Abschnitt stehen vorweg */
+const ofSecs = () => (OF.cat && OF.cat.abschnitte) || [];
+function ofGroups(pos) {
+  const S = ofSecs(), ids = S.map(s => s.id), g = [{ sec: null, rows: [] }].concat(S.map(s => ({ sec: s, rows: [] })));
+  pos.forEach((p, i) => { const k = ids.indexOf(p.sec); (k < 0 ? g[0] : g[k + 1]).rows.push([p, i]); });
+  const used = g.filter((x, k) => k === 0 || x.rows.length); let n = 0; used.forEach(x => { if (x.sec) x.nr = ++n; }); return used;
+}
+const ofSortSecs = pos => { const ids = ofSecs().map(s => s.id), r = p => { const k = ids.indexOf(p.sec); return k < 0 ? -1 : k; }; return pos.map((p, i) => [p, i]).sort((a, b) => r(a[0]) - r(b[0]) || a[1] - b[1]).map(x => x[0]); };
 /* Preisart je Position (aus dem Produkt): netto (zzgl. USt., z. B. PV) oder brutto (inkl. USt., z. B. Wärmepumpe). Intern immer netto gespeichert. */
 const ofBr = p => p.pm === 'brutto';
 const ofUp = p => ofBr(p) ? Math.round(p.price * (1 + p.tax / 100) * 100) / 100 : p.price;
-const ofLine = p => p.qty * ofUp(p);
+const ofLine = p => p.qty * ofUp(p) * (1 - (+p.dpct || 0) / 100);   // nach Positionsrabatt
 function ofTotals(d) {
   const f = 1 - (d.discount || 0) / 100; let net = 0, sub = 0; const tax = {};
-  for (const p of d.pos) {
+  for (const p of d.pos) { if (p.opt) continue;   // Bedarfsposition: nicht mitrechnen
     const t = p.tax / 100, l0 = ofBr(p) ? ofLine(p) / (1 + t) : ofLine(p), l = l0 * f;   // Nettobetrag der Position
     sub += l0; net += l; tax[p.tax] = (tax[p.tax] || 0) + l * t;
   }
@@ -94,12 +121,7 @@ function viewAngebot() {
     <div class="ofmode"><span class="muted small">Angebotsart</span><div class="seg">${Object.entries(OF_OTYPES).map(([k, l]) => `<button data-a="of-otype" data-v="${k}" class="${(d.otype || 'pv') === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <section class="h-sec"><h2>Positionen</h2><span class="muted small">${d.pos.length} Position${d.pos.length === 1 ? '' : 'en'}</span></section>
 
-    <div class="glist ofl">${d.pos.map((p, i) => `<div class="ofp ${p.check ? 'chk-me' : ''}">
-        <div class="ofp-h"><span class="ofn">${i + 1}</span><input class="ofi-name" data-of="name" data-i="${i}" value="${esc(p.name)}"><button class="xbtn" data-a="of-del" data-i="${i}" aria-label="Position löschen">${ic('x', 14)}</button></div>
-        <div class="ofd">${p.pkg ? `<span class="tag t-a">Standard</span> ` : ''}${p.rab ? `<span class="tag t-a">Rabatt</span> ` : ''}<textarea class="ofi-descr" data-of="descr" data-i="${i}" rows="1" placeholder="Beschreibung (optional)">${esc(p.descr || '')}</textarea></div>
-        <div class="ofp-r">${p.pausch ? `<span class="tag">pauschal</span>` : `<div class="qty"><button data-a="of-q" data-i="${i}" data-v="-1" aria-label="weniger">${ic('minus', 16)}</button><input inputmode="decimal" data-of="qty" data-i="${i}" value="${numDe(p.qty)}"><button data-a="of-q" data-i="${i}" data-v="1" aria-label="mehr">${ic('plus', 16)}</button></div>
-          <input class="ofi-unit" data-of="unit" data-i="${i}" value="${esc(p.unit)}" aria-label="Einheit"><span class="muted small">×</span>`}<input class="ofi-pr" inputmode="decimal" data-of="price" data-i="${i}" value="${numDe(ofUp(p))}"><button class="pmb ${ofBr(p) ? 'br' : ''}" data-a="of-pm" data-i="${i}" title="Netto/Brutto umschalten">€ ${ofBr(p) ? 'brutto' : 'netto'}</button><b class="ofl-t">${eur2(ofLine(p))}</b>${p.item ? `<button class="pmb" data-a="of-stdsave" data-i="${i}" title="Bezeichnung, Beschreibung, Einheit und Preis als Standard für diese Position speichern">als Standard</button>` : ''}</div>
-      </div>`).join('') || '<div class="grow empty-g"><span class="gic">' + ic('plus', 16) + '</span><span class="gmain"><b>Noch keine Positionen</b><span>Assistent starten oder unten hinzufügen</span></span></div>'}
+    <div class="glist ofl">${d.pos.length ? ofGroups(d.pos).map(G => `${G.sec ? `<div class="ofsec"><b>Pos. ${G.nr} · ${esc(G.sec.name)}</b><span>${eur2(G.rows.reduce((a, [p]) => a + (p.opt ? 0 : ofLine(p)), 0))}</span></div>` : ''}${G.rows.map(([p, i], k) => ofRowHTML(p, i, G.nr ? `${G.nr}.${String(k + 1).padStart(3, '0')}` : String(k + 1).padStart(3, '0'))).join('')}`).join('') : '<div class="grow empty-g"><span class="gic">' + ic('plus', 16) + '</span><span class="gmain"><b>Noch keine Positionen</b><span>Assistent starten oder unten hinzufügen</span></span></div>'}
       <div class="ofadd"><div class="srch">${ic('search', 18)}<input id="of-q" placeholder="Artikel oder Leistung hinzufügen …" value="${esc(OF.q)}" autocomplete="off"></div><div id="of-sug">${ofSug()}</div></div>
     </div>
     <div class="cardx sec ofsum">
@@ -124,7 +146,12 @@ function ofSug() {
   return l.map(i => `<button class="grow" data-a="of-add" data-v="${esc(i.id)}"><span class="gmain"><b>${esc(i.name)}</b><span>${esc(OF.cat.cats[i.cat] || '')} · ${eur2(i.price)} / ${esc(i.unit)}${i.maker ? ' · ' + esc(i.maker) : ''}</span></span>${ic('plus', 16)}</button>`).join('') || '<div class="grow muted small">Nichts gefunden – unter Mehr → Produkte bzw. Leistungen & Pakete anlegen</div>';
 }
 const ofRender = () => { const y = scrollY; $('#app main').innerHTML = viewAngebot(); scrollTo(0, y); };
-function ofSumPaint() { const s = $('.ofsum'); if (!s) return; const tmp = document.createElement('div'); tmp.innerHTML = viewAngebot(); const n = tmp.querySelector('.ofsum'); if (n) s.replaceWith(n); $$('.ofl-t').forEach((el, i) => { const p = OF.edit.data.pos[i]; if (p) el.textContent = eur2(ofLine(p)); }); }
+function ofSumPaint() {   // Summen, Zeilen- und Abschnittsbeträge aktualisieren, ohne die Eingabefelder neu aufzubauen
+  const tmp = document.createElement('div'); tmp.innerHTML = viewAngebot();
+  const n = tmp.querySelector('.ofsum'), s = $('.ofsum'); if (n && s) s.replaceWith(n);
+  tmp.querySelectorAll('.ofl-t[data-i]').forEach(x => { const o = document.querySelector(`.ofl-t[data-i="${x.dataset.i}"]`); if (o) o.textContent = x.textContent; });
+  const ns = [...tmp.querySelectorAll('.ofsec span')], os = [...document.querySelectorAll('.ofsec span')]; os.forEach((o, k) => { if (ns[k]) o.textContent = ns[k].textContent; });
+}
 const $$ = s => [...document.querySelectorAll(s)];
 
 async function ofBuild() {
@@ -149,19 +176,45 @@ async function ofBuild() {
   const cols = [[M, 'Pos.'], [M + 12, 'Menge'], [M + 30, 'Bezeichnung'], [W - M - 30, 'Einzelpreis' + (mixed ? '' : allBr ? ' brutto' : ' netto')], [W - M, 'Gesamt']];
   const th = () => { doc.setFillColor(242, 243, 246); doc.rect(M, y - 4, W - 2 * M, 7, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...GR); cols.forEach(([x, l], i) => doc.text(l, x + (i >= 3 ? 0 : 1), y, { align: i >= 3 ? 'right' : 'left' })); y += 7; doc.setFont('helvetica', 'normal'); };
   th();
-  d.pos.forEach((p, i) => {
-    const im = d.imgs && p.img && IMG[p.img], iw = im ? 16 : 0, nl = doc.splitTextToSize(p.name, wN - iw), dl = p.descr && !p.check ? doc.splitTextToSize(p.descr, wN - iw) : [], h = Math.max(nl.length * 4.4 + dl.length * 3.6 + 3, im ? 18 : 0);
+  const G = ofGroups(d.pos), gsum = g => g.rows.reduce((a, [p]) => a + (p.opt ? 0 : ofLine(p)), 0);
+  const row = (p, nr) => {
+    const im = d.imgs && p.img && IMG[p.img], iw = im ? 16 : 0; doc.setFontSize(9.5); const nl = doc.splitTextToSize(p.name + (p.opt ? ' (Bedarfsposition)' : ''), wN - iw); doc.setFontSize(8); const dl = p.descr && !p.check ? doc.splitTextToSize(p.descr, wN - iw) : [];
+    const h = Math.max(nl.length * 4.4 + dl.length * 3.6 + (p.dpct ? 3.6 : 0) + 3, im ? 18 : 0);
     if (y + h > 262) { doc.addPage(); head(); y = 40; th(); }
     if (im) { try { const pr = doc.getImageProperties(im), s0 = Math.min(14 / pr.width, 14 / pr.height); doc.addImage(im, M + 30, y - 3, pr.width * s0, pr.height * s0); } catch (e) {} }
-    doc.setFontSize(9.5); doc.setTextColor(...INK); doc.text(String(i + 1), M + 1, y); doc.text(p.pausch ? 'pauschal' : `${numDe(p.qty)} ${p.unit}`, M + 12, y); doc.text(nl, M + 30 + iw, y);
-    if (!p.pausch) doc.text(eur2(ofUp(p)), W - M - 30, y, { align: 'right' }); doc.text(eur2(ofLine(p)), W - M, y, { align: 'right' });
+    doc.setFontSize(nr.length > 4 ? 8 : 9.5); doc.setTextColor(...INK); doc.text(nr, M + 1, y); doc.setFontSize(9.5); doc.text(p.pausch ? 'pauschal' : `${numDe(p.qty)} ${p.unit}`, M + 12 + (nr.length > 4 ? 3 : 0), y); doc.text(nl, M + 30 + iw, y);
+    const lt = p.opt ? '(' + eur2(p.qty * ofUp(p)) + ')' : eur2(ofLine(p));
+    const hide = !p.price && !p.opt && !p.sec;   // z. B. „Wir als Unternehmen“: reiner Text ohne Preis
+    if (!hide) { if (!p.pausch) doc.text(p.opt ? '(' + eur2(ofUp(p)) + ')' : eur2(ofUp(p)), W - M - 30, y, { align: 'right' }); doc.text(lt, W - M, y, { align: 'right' }); }
+    let yy = y + nl.length * 4.4;
+    if (p.dpct) { doc.setFontSize(8); doc.setTextColor(...GR); doc.text(`Rabatt ${numDe(p.dpct)} % (-${eur2(p.qty * ofUp(p) * p.dpct / 100)})`, M + 30 + iw, yy - 0.8); yy += 3.6; doc.setFontSize(9.5); doc.setTextColor(...INK); }
     if (mixed) { doc.setFontSize(7); doc.setTextColor(...GR); doc.text(ofBr(p) ? 'brutto' : 'netto', W - M, y + 3.4, { align: 'right' }); doc.setFontSize(9.5); doc.setTextColor(...INK); }
-    if (dl.length) { doc.setFontSize(8); doc.setTextColor(...GR); doc.text(dl, M + 30 + iw, y + nl.length * 4.4); }
+    if (dl.length) { doc.setFontSize(8); doc.setTextColor(...GR); doc.text(dl, M + 30 + iw, yy); }
     y += h; doc.setDrawColor(...LN); doc.line(M, y - 2, W - M, y - 2); y += 2;
+  };
+  G.forEach(g => {
+    if (g.sec) {   // Abschnittskopf: „Pos. 1  Dachseitige Komponenten“ + Beschreibung
+      const ds = g.sec.descr ? doc.splitTextToSize(String(g.sec.descr).replace(/\{Nr\}/g, g.nr), W - 2 * M - 4) : [];
+      if (y + 30 + ds.length * 3.8 > 262) { doc.addPage(); head(); y = 40; th(); }
+      y += 1; doc.setFillColor(248, 249, 251); doc.rect(M, y - 4.5, W - 2 * M, 7 + ds.length * 3.8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...INK); doc.text(`Pos. ${g.nr}`, M + 1, y); doc.text(g.sec.name, M + 22, y); doc.setFont('helvetica', 'normal');
+      if (ds.length) { doc.setFontSize(8); doc.setTextColor(...GR); doc.text(ds, M + 22, y + 4); }
+      y += 7 + ds.length * 3.8;
+    }
+    g.rows.forEach(([p], k) => row(p, g.sec ? `${g.nr}.${String(k + 1).padStart(3, '0')}` : String(k + 1)));
+    if (g.sec) { if (y > 262) { doc.addPage(); head(); y = 40; } doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...INK); doc.text(`Summe Pos. ${g.nr} ${g.sec.name}`, W - M - 34, y, { align: 'right' }); doc.text(eur2(gsum(g)), W - M, y, { align: 'right' }); doc.setFont('helvetica', 'normal'); y += 7; }
   });
+  const GS = G.filter(g => g.sec);
+  if (GS.length > 1) {   // Zusammenfassung der Abschnitte
+    if (y + 10 + GS.length * 5 > 262) { doc.addPage(); head(); y = 40; }
+    y += 2; doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...INK); doc.text('Zusammenfassung', M, y); y += 6; doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+    if (G[0] && !G[0].sec && gsum(G[0])) { doc.text('Weitere Positionen', M + 22, y); doc.text(eur2(gsum(G[0])), W - M, y, { align: 'right' }); y += 5; }
+    GS.forEach(g => { doc.text(`Pos. ${g.nr}`, M + 1, y); doc.text(g.sec.name, M + 22, y); doc.text(eur2(gsum(g)), W - M, y, { align: 'right' }); y += 5; });
+    doc.setDrawColor(...LN); doc.line(M, y - 2, W - M, y - 2); y += 3;
+  }
   if (y > 230) { doc.addPage(); head(); y = 40; }
   const sr = (k, v, b) => { doc.setFont('helvetica', b ? 'bold' : 'normal'); doc.setFontSize(b ? 11 : 9.5); doc.setTextColor(...(b ? INK : GR)); doc.text(k, W - M - 60, y); doc.setTextColor(...INK); doc.text(v, W - M, y, { align: 'right' }); y += b ? 7 : 5; };
-  y += 2; sr('Zwischensumme netto', eur2(T.sub)); if (T.disc) { sr(`Rabatt ${numDe(d.discount)} %`, '−' + eur2(T.disc)); sr('Netto', eur2(T.net)); }
+  y += 2; sr('Zwischensumme netto', eur2(T.sub)); if (T.disc) { sr(`Rabatt ${numDe(d.discount)} %`, '-' + eur2(T.disc)); sr('Netto', eur2(T.net)); }
   Object.entries(T.tax).sort().forEach(([r, v]) => sr(`USt. ${numDe(+r)} %`, eur2(v))); sr('Gesamt brutto', eur2(T.gross), true);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); y += 4;
   if (T.tax['0'] !== undefined) { doc.setFontSize(8.5); doc.setTextColor(...GR); para('Für Photovoltaikanlagen und Stromspeicher auf bzw. an Wohngebäuden gilt der Nullsteuersatz nach § 12 Abs. 3 UStG.'); doc.setFontSize(10); doc.setTextColor(...INK); }
@@ -175,9 +228,10 @@ async function ofBuild() {
   return { blob: doc.output('blob'), name };
 }
 async function ofPdf(pre) {
-  const { blob, name } = pre || await ofBuild(), file = new File([blob], name, { type: 'application/pdf' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  const { blob, name } = pre || await ofBuild();
+  if (!await ldShare(blob, name)) return;
+  const pv = $('#of-prev'); if (pv) { pv.remove(); document.documentElement.style.overflow = ''; }   // nach dem Speichern: zurück zur vorherigen Ansicht
+  toast('PDF gespeichert.'); setTimeout(() => ldBack('#/kunde/' + OF.edit.project), 400);
 }
 /* Vorschau: Seiten als Bilder (pdf.js) – zuverlässig auch auf dem iPhone */
 async function ofPreview() {
@@ -217,6 +271,8 @@ function ofItemForm(it) {
     <label>USt.<select name="tax">${[0, 7, 19].map(t => `<option value="${t}" ${+it.tax === t ? 'selected' : ''}>${t} %</option>`).join('')}</select></label>
     <label>Einheit<input name="unit" value="${esc(it.unit || 'Stk')}"></label>
     <label>Gehört zu<select name="usage">${[['pv', 'Photovoltaik'], ['wp', 'Wärmepumpe'], ['alle', 'beides']].map(([k, l]) => `<option value="${k}" ${(it.usage || 'alle') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label>Abschnitt im Angebot<select name="sec"><option value="">ohne Abschnitt</option>${ofSecs().map(x => `<option value="${esc(x.id)}" ${it.sec === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+    <label class="sw" style="grid-column:1/-1"><input type="checkbox" name="opt" ${it.opt ? 'checked' : ''}>Bedarfsposition – steht im Angebot in Klammern, zählt nicht zur Summe</label>
     <div class="imgup" style="grid-column:1/-1"><input type="hidden" name="img" value="${esc(it.img || '')}"><span class="imgprev">${it.img ? `<img src="api/?r=cfg-file&id=${esc(it.img)}" alt="">` : ic('box', 22)}</span>
       <span class="gmain"><b>Bild</b><span>${it.img ? 'erscheint im Angebot, wenn „Produktbilder im PDF“ an ist' : 'optional – Foto oder Datenblatt-Bild'}</span></span>
       <label class="btn sm s" style="cursor:pointer">${it.img ? 'Ändern' : 'Hinzufügen'}<input type="file" accept="image/*" data-imgup="1" hidden></label>${it.img ? '<button type="button" class="btn sm g" data-pk="img-del">Entfernen</button>' : ''}</div>
@@ -325,7 +381,7 @@ document.addEventListener('click', async e => {
         d.pos = ofApplyPackages(d.pos.filter(p => !p.pkg || p.man)); toast('Angebotsart: ' + OF_OTYPES[nt] + ' – feste Positionen angepasst.'); return ofRender(); }
       case 'of-stdsave': { const p = d.pos[i], it = OF.cat.items.find(x => x.id === p.item); if (!it) return toast('Diese Position stammt nicht aus der Datenbank.');
         if (!confirm(`„${p.name}“ als Standard speichern? Neue Angebote verwenden dann Bezeichnung, Beschreibung, Einheit (${p.unit}) und Preis ${eur2(ofUp(p))} ${ofBr(p) ? 'brutto' : 'netto'}.`)) return;
-        await api('of-item', { ...it, id: it.id, name: p.name, descr: p.descr, unit: p.unit, price: p.price, tax: p.tax, pm: p.pm, pausch: !!it.pausch }); await ofCatalog(true); toast('Als Standard gespeichert.'); return; }
+        await api('of-item', { ...it, id: it.id, name: p.name, descr: p.descr, unit: p.unit, price: p.price, tax: p.tax, pm: p.pm, pausch: !!it.pausch, sec: p.sec || '', opt: !!p.opt }); await ofCatalog(true); toast('Als Standard gespeichert.'); return; }
       case 'of-pm': { const p = d.pos[i]; p.pm = ofBr(p) ? 'netto' : 'brutto'; return ofRender(); }
       case 'of-q': { const p = d.pos[i]; p.qty = Math.max(0, Math.round((p.qty + +a.dataset.v) * 100) / 100); if (p.pkg) p.man = true; const inp = $(`[data-of="qty"][data-i="${i}"]`); if (inp) inp.value = numDe(p.qty);
         if (p.cat === 'mod' && !p.pkg) d.pos = ofApplyPackages(d.pos), ofRender(); else ofSumPaint(); return; }
@@ -357,7 +413,10 @@ document.addEventListener('input', e => {
   if (k === 'price' && ofBr(d.pos[i])) { const p = d.pos[i]; p.price = Math.round(parseNum(el.value) / (1 + p.tax / 100) * 10000) / 10000; ofSumPaint(); }
   else if (k === 'qty' || k === 'price') { d.pos[i][k] = parseNum(el.value); if (k === 'qty' && d.pos[i].pkg) d.pos[i].man = true; ofSumPaint(); }
   else if (k === 'name' || k === 'descr' || k === 'unit') d.pos[i][k] = el.value;
+  else if (k === 'dpct') { d.pos[i].dpct = Math.max(0, Math.min(100, parseNum(el.value))); ofSumPaint(); }
   else if (k === 'imgs') d.imgs = el.checked;
+  else if (k === 'opt') { d.pos[i].opt = el.checked; ofRender(); }
+  else if (k === 'sec') { d.pos[i].sec = el.value; ofRender(); }
   else if (k === 'discount') { d.discount = Math.max(0, Math.min(100, parseNum(el.value))); ofSumPaint(); }
   else if (k === 'title' || k === 'status') OF.edit[k] = el.value;
   else d[k] = el.value;
@@ -365,6 +424,6 @@ document.addEventListener('input', e => {
 document.addEventListener('change', e => { const el = e.target; if (el.dataset && el.dataset.a2 === 'of-tx' && OF.edit && el.value) { const t = ((OF.cat || {}).texte || []).find(x => x.id === el.value); if (t) { OF.edit.data[el.dataset.k] = t.text; const ta = $(`textarea[data-of="${el.dataset.k}"]`); if (ta) ta.value = t.text; } el.value = ''; return; } if (el.name === 'cat' && el.closest('#f-of-item') && OF.itemEdit && OF.itemEdit.kind === 'produkt') { const d = Object.fromEntries(new FormData(el.closest('form'))); OF.itemEdit = { ...OF.itemEdit, ...d, power: d.power === '' || d.power === undefined ? null : parseNum(d.power), price: parseNum(d.price), tax: ofTaxFor(d.cat), pm: d.cat === 'wp' ? 'brutto' : 'netto', pausch: !!d.pausch }; ofRedraw(); return; } if (el.dataset && el.dataset.of === 'status' && OF.edit) OF.edit.status = el.value; if (el.dataset && el.dataset.of === 'qty' && OF.edit) { const p = OF.edit.data.pos[+el.dataset.i]; if (p && p.cat === 'mod' && !p.pkg) { OF.edit.data.pos = ofApplyPackages(OF.edit.data.pos); ofRender(); } } });
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'f-of-item') return; e.preventDefault(); e.stopImmediatePropagation();
-  const f = e.target, d = Object.fromEntries(new FormData(f)); d.id = f.dataset.id; d.tax = +d.tax; d.price = f.dataset.last === 'g' ? Math.round(parseNum(d.pgross) / (1 + d.tax / 100) * 10000) / 10000 : parseNum(d.price); delete d.pgross; d.pausch = !!d.pausch; if (d.power !== undefined) d.power = d.power === '' ? '' : parseNum(d.power);
+  const f = e.target, d = Object.fromEntries(new FormData(f)); d.id = f.dataset.id; d.tax = +d.tax; d.price = f.dataset.last === 'g' ? Math.round(parseNum(d.pgross) / (1 + d.tax / 100) * 10000) / 10000 : parseNum(d.price); delete d.pgross; d.pausch = !!d.pausch; d.opt = !!d.opt; if (d.power !== undefined) d.power = d.power === '' ? '' : parseNum(d.power);
   try { await api('of-item', d); OF.itemEdit = null; await ofCatalog(true); ofRedraw(); toast('Gespeichert.'); } catch (err) { toast(err.message); }
 }, true);
