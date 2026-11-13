@@ -19,6 +19,7 @@ function crm_tables(): void {
   $ecols = array_column($pdo->query('SHOW COLUMNS FROM crm_events')->fetchAll(), 'Field');
   if (!in_array('mentions', $ecols, true)) $pdo->exec("ALTER TABLE crm_events ADD COLUMN mentions VARCHAR(500) NULL");
   if (!in_array('stage_base', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN stage_base VARCHAR(20) NULL");
+  if (!in_array('kdnr', $cols, true)) $pdo->exec("ALTER TABLE projects ADD COLUMN kdnr VARCHAR(30) NULL, ADD COLUMN gewerk VARCHAR(12) NULL, ADD INDEX (kdnr)");
   $ucols = array_column($pdo->query('SHOW COLUMNS FROM users')->fetchAll(), 'Field');
   if (!in_array('remind', $ucols, true)) $pdo->exec("ALTER TABLE users ADD COLUMN remind TINYINT(1) NOT NULL DEFAULT 1");
 }
@@ -36,7 +37,7 @@ function crm_stage(?string $stored, ?string $base, string $derived): string {
   return $stored !== 'verloren' && array_search($derived, $o, true) > array_search($stored, $o, true) ? $derived : $stored;
 }
 
-const CRM_FIELDS = "p.id, p.owner_id, p.created_by, p.assigned_by, p.assigned_at, p.updated_at, p.stage, p.stage_at, p.stage_base, p.name,
+const CRM_FIELDS = "p.id, p.kdnr, p.gewerk, p.owner_id, p.created_by, p.assigned_by, p.assigned_at, p.updated_at, p.stage, p.stage_at, p.stage_base, p.name,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.type')) AS type, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.status')) AS status, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.statusDate')) AS status_date,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.step')) AS step, JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.archived')) AS archived,
   JSON_UNQUOTE(JSON_EXTRACT(p.data, '$.created')) AS created_ms,
@@ -50,7 +51,7 @@ function crm_row_out(array $r, array $extra = []): array {
   $n = user_names(); $total = (float)crm_val($r['total'] ?: $r['gross']);
   $derived = crm_derived(crm_val($r['status']) ?: 'offen', $total > 0 || crm_val($r['offer_no']) !== '');
   return [
-    'id' => $r['id'], 'name' => $r['name'] ?: 'Ohne Namen', 'type' => crm_val($r['type']), 'status' => crm_val($r['status']) ?: 'offen',
+    'id' => $r['id'], 'kdnr' => (string)($r['kdnr'] ?? ''), 'gewerk' => (string)($r['gewerk'] ?? ''), 'name' => $r['name'] ?: 'Ohne Namen', 'type' => crm_val($r['type']), 'status' => crm_val($r['status']) ?: 'offen',
     'step' => (int)crm_val($r['step']) ?: 1, 'archived' => crm_val($r['archived']) === 'true',
     'street' => crm_val($r['street']), 'zip' => crm_val($r['zip']), 'city' => crm_val($r['city']), 'phone' => crm_val($r['phone']), 'email' => crm_val($r['email']),
     'total' => $total ?: null, 'offerNo' => crm_val($r['offer_no']),
@@ -222,4 +223,91 @@ function crm_mention(array $u, string $pid, int $eventId, array $ids, string $ki
     } catch (Throwable $e) { error_log('LumbraDesk Markierung: ' . $e->getMessage()); }
   }
   return $sent;
+}
+
+/* ---------- Kundennummern je Gewerk (z. B. PV-1125, WP-1257) ---------- */
+function kd_defaults(): array {
+  return [['id' => 'pv', 'name' => 'Photovoltaik', 'fmt' => 'PV-{NNNN}', 'types' => ['pv', 'pvwp']], ['id' => 'wp', 'name' => 'Wärmepumpe', 'fmt' => 'WP-{NNNN}', 'types' => ['wp']]];
+}
+function kd_gewerke(): array { $g = ld_get('gewerke', null); return is_array($g) && $g ? $g : kd_defaults(); }
+function kd_fmt(string $fmt, int $n): string {
+  $s = strtr($fmt, ['{JJJJ}' => gmdate('Y'), '{JJ}' => gmdate('y'), '{MM}' => gmdate('m')]);
+  return preg_replace_callback('/\{(N+)\}/', fn($m) => str_pad((string)$n, strlen($m[1]), '0', STR_PAD_LEFT), $s) ?? $s;
+}
+function kd_numtable(): void { static $done = false; if ($done) return; $done = true; db()->exec("CREATE TABLE IF NOT EXISTS ld_numbers (k VARCHAR(40) PRIMARY KEY, n INT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB"); }
+function kd_counter(string $gid): int { kd_numtable(); $st = db()->prepare('SELECT n FROM ld_numbers WHERE k = ?'); $st->execute(['kd-' . $gid]); $n = $st->fetchColumn(); return $n === false ? 0 : (int)$n; }
+function kd_find(string $gid): ?array { foreach (kd_gewerke() as $g) if ($g['id'] === $gid) return $g; return null; }
+function kd_for_type(string $type): ?array { foreach (kd_gewerke() as $g) if (in_array($type, $g['types'] ?? [], true)) return $g; return null; }
+function kd_out(): array { return array_map(fn($g) => $g + ['next' => kd_counter($g['id']) + 1, 'preview' => kd_fmt($g['fmt'], kd_counter($g['id']) + 1)], kd_gewerke()); }
+/* Nächste Nummer ziehen (gesperrt, damit keine doppelt vergeben wird); bereits benutzte Nummern werden übersprungen */
+function kd_take(array $g): string {
+  crm_tables(); kd_numtable(); $pdo = db(); $k = 'kd-' . $g['id'];
+  $inTx = $pdo->inTransaction(); if (!$inTx) $pdo->beginTransaction();
+  $pdo->prepare('INSERT INTO ld_numbers (k, n) VALUES (?, 0) ON DUPLICATE KEY UPDATE n = n')->execute([$k]);
+  $st = $pdo->prepare('SELECT n FROM ld_numbers WHERE k = ? FOR UPDATE'); $st->execute([$k]); $n = (int)$st->fetchColumn();
+  $chk = $pdo->prepare('SELECT COUNT(*) FROM projects WHERE kdnr = ?');
+  do { $n++; $nr = kd_fmt($g['fmt'], $n); $chk->execute([$nr]); } while ((int)$chk->fetchColumn() > 0);
+  $pdo->prepare('UPDATE ld_numbers SET n = ? WHERE k = ?')->execute([$n, $k]); if (!$inTx) $pdo->commit();
+  return $nr;
+}
+function kd_assign(string $pid, string $gid): string {
+  crm_tables(); $g = kd_find($gid); if (!$g) fail('Unbekanntes Gewerk', 400);
+  $st = db()->prepare('SELECT kdnr FROM projects WHERE id = ?'); $st->execute([$pid]); $cur = $st->fetchColumn();
+  if ($cur) return (string)$cur;
+  $nr = kd_take($g); db()->prepare('UPDATE projects SET kdnr = ?, gewerk = ? WHERE id = ? AND kdnr IS NULL')->execute([$nr, $g['id'], $pid]);
+  return $nr;
+}
+/* Neuer Kunde aus der Wirtschaftlichkeit: Nummer nach Art (PV/WP) – nur wenn ein Gewerk dafür eingestellt ist */
+function kd_auto(string $pid, string $type): void { try { $g = kd_for_type($type); if ($g) kd_assign($pid, $g['id']); } catch (Throwable $e) {} }
+function kd_save(array $u, array $l): array {
+  crm_tables(); kd_numtable(); $o = []; $ids = [];
+  foreach (array_slice($l, 0, 20) as $x) {
+    if (!is_array($x) || trim((string)($x['name'] ?? '')) === '') continue;
+    $id = preg_match('/^[a-z0-9]{1,12}$/', (string)($x['id'] ?? '')) ? $x['id'] : 'g' . bin2hex(random_bytes(3));
+    if (isset($ids[$id])) $id = 'g' . bin2hex(random_bytes(3)); $ids[$id] = 1;
+    $fmt = mb_substr(trim((string)($x['fmt'] ?? '')), 0, 40);
+    if (!preg_match('/\{N+\}/', $fmt)) fail('Das Format für „' . $x['name'] . '“ braucht einen Zähler, z. B. PV-{NNNN}.', 400);
+    if (!preg_match('/^[\w\-\/.{}# ]+$/u', $fmt)) fail('Im Format sind Buchstaben, Ziffern, - / . # und die Platzhalter erlaubt.', 400);
+    $types = array_values(array_intersect((array)($x['types'] ?? []), ['pv', 'wp', 'pvwp']));
+    $o[] = ['id' => $id, 'name' => mb_substr(trim((string)$x['name']), 0, 40), 'fmt' => $fmt, 'types' => $types];
+    if (isset($x['next']) && (int)$x['next'] > 0 && (int)$x['next'] !== kd_counter($id) + 1) {
+      $next = (int)$x['next']; $st = db()->prepare('SELECT COUNT(*) FROM projects WHERE kdnr = ?'); $st->execute([kd_fmt($fmt, $next)]);
+      if ((int)$st->fetchColumn()) fail('Die Nummer ' . kd_fmt($fmt, $next) . ' ist schon vergeben – bitte eine höhere Startnummer wählen.', 400);
+      db()->prepare('INSERT INTO ld_numbers (k, n) VALUES (?, ?) ON DUPLICATE KEY UPDATE n = VALUES(n)')->execute(['kd-' . $id, $next - 1]);
+    }
+  }
+  if (!$o) fail('Mindestens ein Gewerk anlegen.', 400);
+  foreach ($o as $g) foreach ($g['types'] as $t) foreach ($o as $h) if ($h !== $g && in_array($t, $h['types'], true)) fail('Jede Art aus der Wirtschaftlichkeit (PV, WP, PV + WP) darf nur einem Gewerk zugeordnet sein.', 400);
+  ld_set('gewerke', $o, (int)$u['id']); return kd_out();
+}
+/* Alle Kunden ohne Nummer nach Art nummerieren (älteste zuerst) */
+function kd_fill(): int {
+  crm_tables(); $n = 0;
+  $rows = db()->query("SELECT id, JSON_UNQUOTE(JSON_EXTRACT(data, '$.type')) t, JSON_UNQUOTE(JSON_EXTRACT(data, '$.created')) c FROM projects WHERE deleted = 0 AND kdnr IS NULL")->fetchAll();
+  usort($rows, fn($a, $b) => (float)$a['c'] <=> (float)$b['c']);
+  foreach ($rows as $r) { $g = kd_for_type((string)$r['t']); if ($g) { kd_assign($r['id'], $g['id']); $n++; } }
+  return $n;
+}
+/* Kunde direkt in lumbra.desk anlegen – erscheint nach dem Abgleich auch in der Wirtschaftlichkeit */
+function crm_new(array $u, array $b): array {
+  crm_tables(); $g = kd_find((string)($b['gewerk'] ?? '')); if (!$g) fail('Bitte ein Gewerk wählen.', 400);
+  $name = trim((string)($b['name'] ?? '')); if ($name === '') fail('Bitte einen Namen eingeben.', 400);
+  $sal = isset($b['salutation']) && in_array($b['salutation'], ['Familie', 'Herr', 'Frau', 'Firma', ''], true) ? (string)$b['salutation'] : 'Familie';
+  $type = in_array($b['type'] ?? '', ['pv', 'wp', 'pvwp'], true) ? $b['type'] : (($g['types'][0] ?? '') ?: 'pv');
+  $owner = (int)($b['owner'] ?? 0); if (!$owner || !sees_all($u) || !crm_valid_user($owner)) $owner = (int)$u['id'];
+  $cl = fn($k, $n) => mb_substr(trim((string)($b[$k] ?? '')), 0, $n);
+  $id = 'p' . base_convert((string)(int)(microtime(true) * 1000), 10, 36) . bin2hex(random_bytes(3));
+  $now = (int)(microtime(true) * 1000);
+  $data = ['id' => $id, 'type' => $type, 'created' => $now, 'updated' => $now, 'step' => 1, 'status' => 'offen',
+    'customer' => ['salutation' => $sal, 'name' => $cl('name', 160), 'street' => $cl('street', 160), 'zip' => $cl('zip', 10), 'city' => $cl('city', 80), 'email' => $cl('email', 160), 'phone' => $cl('phone', 60)]];
+  $full = trim($sal . ' ' . $data['customer']['name']); kd_numtable(); $pdo = db(); $pdo->beginTransaction();   // Tabellen vorher anlegen: DDL beendet sonst die Transaktion
+  try {
+    $nr = kd_take($g);
+    $pdo->prepare('INSERT INTO projects (id, owner_id, created_by, assigned_by, assigned_at, name, data, version, updated_at, updated_by, kdnr, gewerk) VALUES (?, ?, ?, ?, ' . ($owner !== (int)$u['id'] ? 'UTC_TIMESTAMP()' : 'NULL') . ', ?, ?, 1, UTC_TIMESTAMP(), ?, ?, ?)')
+      ->execute([$id, $owner, $u['id'], $owner !== (int)$u['id'] ? $u['id'] : null, $full, json_encode($data, JSON_UNESCAPED_UNICODE), $u['id'], $nr, $g['id']]);
+    $pdo->commit();
+  } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+  crm_add_event($id, (int)$u['id'], 'notiz', "Kunde $nr angelegt ({$g['name']}).");
+  audit((int)$u['id'], 'kunde_angelegt', "$nr $full");
+  return ['id' => $id, 'kdnr' => $nr];
 }

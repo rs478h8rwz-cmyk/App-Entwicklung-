@@ -14,7 +14,7 @@ viewHome = function () {
   const crm = typeof isCrm === 'function' && isCrm(), first = esc(ST.user.name.split(' ')[0]);
   const apps = ST.apps.filter(a => a.url);
   if (isDesk()) return homeDesk(crm, first, apps);
-  return `<section class="h-top"><div class="h-date"><i></i>${esc(homeDate())}</div><h1 class="h-title">${crm ? 'Heute' : 'Hallo ' + first}</h1></section>
+  return `<section class="h-top"><div class="h-date"><i></i>${esc(homeDate())}</div><div class="h-trow"><h1 class="h-title">${crm ? 'Heute' : 'Hallo ' + first}</h1>${crm ? kdBtn('sm') : ''}</div></section>
     <section class="h-apps">${apps.map(a => `<a class="app" href="${esc(a.url)}">${appIcon(a.key)}<span class="app-l">${esc(a.name)}</span></a>`).join('') || '<p class="muted">Für deine Rolle sind noch keine Apps freigeschaltet.</p>'}</section>
     ${crm ? homeCrm() : ''}
     <section class="h-sec"><h2>Konto</h2></section>
@@ -116,7 +116,7 @@ function homeDueCard() {
 function homeDesk(crm, first, apps) {
   const h = new Date().getHours(), hi = h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend', D = crm ? ST.dash : null;
   const head = `<header class="dk-head"><div><div class="h-date"><i></i>${esc(homeDate())}</div><h1 class="dk-title">${hi}, ${first}</h1></div>
-    <div class="dk-apps">${apps.map(a => `<a class="dk-app" href="${esc(a.url)}">${appIcon(a.key)}<span>${esc(a.name)}</span></a>`).join('')}</div></header>`;
+    <div class="dk-act">${crm ? kdBtn() : apps.map(a => `<a class="dk-app" href="${esc(a.url)}">${appIcon(a.key)}<span>${esc(a.name)}</span></a>`).join('')}</div></header>`;
   const konto = `<div class="dkc dk-s12 dk-konto"><div class="dkc-h"><h3>Konto</h3></div><div class="dk-kr"><span class="av sm">${esc(ST.user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span><span class="gmain"><b>${esc(ST.user.name)}</b><span class="muted small">${esc(ST.user.email)} · ${esc(ST.user.roleName)}</span></span>
       <details class="pwbox"><summary class="btn s sm">${ic('key', 16)}Passwort ändern</summary><form id="f-pw2" class="form-grid"><label>Bisheriges Passwort<input name="old" type="password" autocomplete="current-password" required></label><label>Neues Passwort<input name="new" type="password" autocomplete="new-password" required></label><label>Wiederholen<input name="new2" type="password" autocomplete="new-password" required></label><div><button class="btn" type="submit" style="margin-top:12px">Speichern</button></div></form></details></div></div>`;
   if (!D) return `${head}<div class="dk">${crm ? `<div class="dkc dk-s12">${homeDueCard()}</div>` : ''}${konto}</div>`;

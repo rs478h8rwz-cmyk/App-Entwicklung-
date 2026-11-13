@@ -284,7 +284,9 @@ try {
       $st = $pdo->prepare('SELECT * FROM projects WHERE id = ? FOR UPDATE'); $st->execute([$id]); $p = $st->fetch() ?: null;
       if (!$p) {
         $pdo->prepare('INSERT INTO projects (id, owner_id, created_by, name, data, version, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, 1, UTC_TIMESTAMP(), ?)')->execute([$id, $u['id'], $u['id'], $name, $json, $u['id']]);
-        $pdo->commit(); audit((int)$u['id'], 'kunde_angelegt', $name ?: $id); json_out(['v' => 1, 'created' => true]);
+        $pdo->commit(); audit((int)$u['id'], 'kunde_angelegt', $name ?: $id);
+        require_once LD_PRIV_DIR . '/crm-lib.php'; kd_auto($id, (string)($data['type'] ?? ''));   // Kundennummer je Gewerk
+        json_out(['v' => 1, 'created' => true]);
       }
       if (!can_see_project($u, $p)) { $pdo->rollBack(); fail('Keine Berechtigung für diesen Kunden', 403); }
       if ($p['deleted']) { $pdo->rollBack(); json_out(['error' => 'Kunde wurde gelöscht', 'deleted' => true], 409); }
@@ -376,7 +378,8 @@ try {
     case 'POST of-wizard': { $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/offers-lib.php'; $o = of_wizard_save($u, body()); audit((int)$u['id'], 'belege_einstellungen', 'Angebots-Assistent'); json_out(['ok' => true, 'wizard' => $o]); }
     case 'GET belege-cfg': {
       $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/belege-lib.php';
-      json_out(['nummern' => num_out(), 'texte' => tx_all(), 'kinds' => TX_KINDS, 'mahn' => mahn_cfg(), 'abschnitte' => of_sections()]);
+      require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables();
+      json_out(['nummern' => num_out(), 'texte' => tx_all(), 'kinds' => TX_KINDS, 'mahn' => mahn_cfg(), 'abschnitte' => of_sections(), 'gewerke' => kd_out()]);
     }
     case 'POST belege-cfg': {
       $u = require_role(['admin', 'buero']); require_feature($u, 'angebote'); require_once LD_PRIV_DIR . '/belege-lib.php'; $b = body(); $part = (string)($b['part'] ?? '');
@@ -503,6 +506,24 @@ try {
       $team = db()->query("SELECT id, name FROM users WHERE active = 1 AND role IN ('admin','buero','vertrieb') ORDER BY name")->fetchAll();
       $people = db()->query("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name")->fetchAll();
       json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'stages' => STAGES, 'customers' => crm_list($u), 'team' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name']], $team), 'people' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'role' => $r['role']], $people)]);
+    }
+    case 'GET kd-cfg': {
+      require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables();
+      json_out(['gewerke' => kd_out()]);
+    }
+    case 'POST kd-cfg': {
+      $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body();
+      if (!empty($b['fill'])) { $n = kd_fill(); audit((int)$u['id'], 'kundennummern', "$n Kunden nummeriert"); json_out(['ok' => true, 'filled' => $n, 'gewerke' => kd_out()]); }
+      $o = kd_save($u, (array)($b['gewerke'] ?? [])); audit((int)$u['id'], 'kundennummern', 'Gewerke gespeichert'); json_out(['ok' => true, 'gewerke' => $o]);
+    }
+    case 'POST crm-new': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';
+      json_out(['ok' => true] + crm_new($u, body()));
+    }
+    case 'POST kd-assign': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; $b = body(); $id = (string)($b['id'] ?? '');
+      crm_project($u, $id); $nr = kd_assign($id, (string)($b['gewerk'] ?? '')); crm_add_event($id, (int)$u['id'], 'notiz', "Kundennummer $nr vergeben.");
+      json_out(['ok' => true, 'kdnr' => $nr]);
     }
     case 'GET dash': {
       $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php';

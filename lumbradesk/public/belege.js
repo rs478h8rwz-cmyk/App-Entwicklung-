@@ -181,7 +181,15 @@ function viewBelege() {
   const C = RB.cfg; if (!C) return ''; const N = C.nummern, K = C.kinds, tx = RB.txEdit || C.texte, ab = RB.abEdit || C.abschnitte || [];
   const numBox = (t, l) => `<div class="cardx"><div class="h3x">${l}</div><div class="form-grid" style="margin-top:8px"><label>Format<input data-bn="${t}" data-k="fmt" value="${esc(N[t].fmt)}"></label><label>Nächste Nummer<input data-bn="${t}" data-k="next" inputmode="numeric" value="${N[t].next}"></label>
       <label class="sw" style="grid-column:1/-1"><input type="checkbox" data-bn="${t}" data-k="yearly" ${N[t].yearly ? 'checked' : ''}>Jedes Jahr wieder bei 1 beginnen</label></div><p class="muted small" style="margin:6px 0 0">Nächste: <b>${esc(N[t].preview)}</b></p></div>`;
-  return `<section class="hero"><h1>Nummern &amp; Texte</h1><p class="muted">Nummernkreise für Angebote und Rechnungen, Textbausteine und Mahnwesen.</p></section>
+  const gw = RB.gwEdit || C.gewerke || [], TY = [['pv', 'PV'], ['wp', 'WP'], ['pvwp', 'PV + WP']];
+  return `<section class="hero"><h1>Nummern &amp; Texte</h1><p class="muted">Kundennummern je Gewerk, Nummernkreise für Angebote und Rechnungen, Textbausteine und Mahnwesen.</p></section>
+    <section class="h-sec"><h2>Kundennummern je Gewerk</h2><button class="btn sm" data-bs="gw-add">${ic('plus', 16)}Gewerk</button></section>
+    ${gw.map((g, i) => `<div class="cardx txb"><div class="form-grid"><label>Gewerk<input data-bg="${i}" data-k="name" value="${esc(g.name)}" placeholder="z. B. Photovoltaik"></label>
+      <label>Format<input data-bg="${i}" data-k="fmt" value="${esc(g.fmt)}" placeholder="PV-{NNNN}"></label><label>Nächste Nummer<input data-bg="${i}" data-k="next" inputmode="numeric" value="${g.next || 1}"></label>
+      <div style="grid-column:1/-1;margin-top:10px"><span class="muted small">Neue Kunden aus der Wirtschaftlichkeit dieser Art bekommen automatisch eine Nummer aus diesem Gewerk:</span><div class="row" style="margin-top:4px">${TY.map(([k, l]) => `<label class="sw" style="margin:0 10px 0 0"><input type="checkbox" data-bg="${i}" data-k="t-${k}" ${(g.types || []).includes(k) ? 'checked' : ''}>${l}</label>`).join('')}</div></div></div>
+      <div class="row" style="margin-top:8px;justify-content:space-between"><span class="muted small">Nächste: <b>${esc(g.preview || '')}</b></span><button class="btn sm g danger" data-bs="gw-del" data-v="${i}">Löschen</button></div></div>`).join('')}
+    <p class="muted small" style="margin:6px 4px 0">Platzhalter wie bei den Nummernkreisen: {NNNN} laufende Nummer, {JJJJ} Jahr. Beispiel „PV-{NNNN}“ mit nächster Nummer 1125 → PV-1125. Eine schon vergebene Nummer wird nie doppelt vergeben.</p>
+    <div class="row" style="margin-top:10px"><button class="btn" data-bs="gw">Gewerke speichern</button><button class="btn s" data-bs="gw-fill">Bestehende Kunden ohne Nummer nummerieren</button></div>
     <section class="h-sec"><h2>Nummernkreise</h2></section>${numBox('an', 'Angebote')}${numBox('re', 'Rechnungen')}
     <p class="muted small" style="margin:6px 4px 0">Platzhalter: {JJJJ} Jahr, {JJ} Jahr zweistellig, {MM} Monat, {NNNN} laufende Nummer (Anzahl N = Stellen). Beispiel: „AN-{JJJJ}-{NNNN}“ → AN-2026-0001. Die erste Nummer legst du mit „Nächste Nummer“ fest.</p>
     <button class="btn" style="margin-top:10px" data-bs="num">Nummernkreise speichern</button>
@@ -240,6 +248,11 @@ document.addEventListener('click', async e => {
     const C = RB.cfg;
     if (k === 'bs:num') { const val = {}; for (const t of ['an', 're']) { val[t] = { fmt: $(`[data-bn="${t}"][data-k="fmt"]`).value, yearly: $(`[data-bn="${t}"][data-k="yearly"]`).checked }; const nx = parseInt($(`[data-bn="${t}"][data-k="next"]`).value, 10); if (nx !== C.nummern[t].next) val[t].next = nx; }
       C.nummern = (await api('belege-cfg', { part: 'nummern', value: val })).nummern; toast('Nummernkreise gespeichert.'); }
+    const GW = () => (RB.gwEdit = RB.gwEdit || (C.gewerke || []).map(x => ({ ...x, types: [...(x.types || [])] })));
+    if (k === 'bs:gw-add') GW().push({ id: '', name: '', fmt: 'XX-{NNNN}', next: 1, types: [], preview: '' });
+    if (k === 'bs:gw-del') { if (!confirm('Gewerk löschen? Bereits vergebene Kundennummern bleiben erhalten.')) return; GW().splice(+v, 1); }
+    if (k === 'bs:gw') { C.gewerke = (await api('kd-cfg', { gewerke: (RB.gwEdit || C.gewerke).map(g => ({ ...g, next: parseInt(g.next, 10) || 0 })) })).gewerke; RB.gwEdit = null; if (typeof KD === 'object') KD.g = null; toast('Gewerke gespeichert.'); }
+    if (k === 'bs:gw-fill') { if (RB.gwEdit) return toast('Bitte zuerst die Gewerke speichern.'); if (!confirm('Alle Kunden ohne Kundennummer jetzt nach ihrer Art (PV/WP) nummerieren – älteste zuerst?')) return; const j = await api('kd-cfg', { fill: true }); C.gewerke = j.gewerke; toast(j.filled ? `${j.filled} Kunden nummeriert.` : 'Alle Kunden haben schon eine Nummer (oder keine passende Art).'); }
     const AB = () => (RB.abEdit = RB.abEdit || (C.abschnitte || []).map(x => ({ ...x })));
     if (k === 'bs:ab-add') AB().push({ id: '', name: 'Neuer Abschnitt', descr: 'In Pos. {Nr} sind … aufgelistet.', otype: 'alle' });
     if (k === 'bs:ab-del') { if (!confirm('Abschnitt löschen? Positionen darin stehen dann ohne Abschnitt.')) return; AB().splice(+v, 1); }
@@ -254,6 +267,8 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.dataset && el.dataset.bg !== undefined) { const C = RB.cfg; RB.gwEdit = RB.gwEdit || (C.gewerke || []).map(x => ({ ...x, types: [...(x.types || [])] })); const g = RB.gwEdit[+el.dataset.bg], kk = el.dataset.k;
+    if (kk.startsWith('t-')) { const t = kk.slice(2); g.types = el.checked ? [...new Set([...(g.types || []), t])] : (g.types || []).filter(x => x !== t); } else g[kk] = el.value; return; }
   if (el.dataset && el.dataset.ba !== undefined) { const C = RB.cfg; RB.abEdit = RB.abEdit || (C.abschnitte || []).map(x => ({ ...x })); RB.abEdit[+el.dataset.ba][el.dataset.k] = el.value; return; }
   if (el.dataset && el.dataset.bt !== undefined) { const C = RB.cfg; RB.txEdit = RB.txEdit || C.texte.map(t => ({ ...t })); const t = RB.txEdit[+el.dataset.bt]; t[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; return; }
   const k = el.dataset && el.dataset.re, E = RB.edit; if (!k || !E || E.pick || E.status !== 'entwurf') return; const i = +el.dataset.i;

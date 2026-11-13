@@ -55,7 +55,7 @@ function crmFiltered() {
     if (CR.scope === 'abgegeben' && !(c.by === me && c.owner !== me)) return false;
     if (CR.scope === 'alle' && CR.adv && c.owner !== +CR.adv) return false;
     if (!CR.archiv && c.archived) return false;
-    if (q && !`${c.name} ${c.city} ${c.zip} ${c.street} ${c.phone} ${c.email} ${c.offerNo}`.toLowerCase().includes(q)) return false;
+    if (q && !`${c.name} ${c.city} ${c.zip} ${c.street} ${c.phone} ${c.email} ${c.offerNo} ${c.kdnr}`.toLowerCase().includes(q)) return false;
     return true;
   });
 }
@@ -63,9 +63,9 @@ function viewKunden() {
   const me = ST.user.id, all = ST.crmAll, list = ST.crm || [];
   const nZu = list.filter(c => c.owner === me && c.assignedBy && c.assignedBy !== me).length, nAb = list.filter(c => c.by === me && c.owner !== me).length;
   const scopes = [['meine', 'Meine'], ['zugewiesen', 'Mir zugewiesen' + (nZu ? ` · ${nZu}` : '')], ...(nAb ? [['abgegeben', 'Abgegeben · ' + nAb]] : []), ['alle', all ? 'Alle' : 'Alle sichtbaren']];
-  return `<section class="hero"><h1>Kunden</h1><p class="muted">Alle Kunden aus der Wirtschaftlichkeit – mit Vertriebs-Stufe, Logbuch und Wiedervorlagen.</p></section>
+  return `<section class="hero kd-hero"><div><h1>Kunden</h1><p class="muted">Alle Kunden – mit Kundennummer, Vertriebs-Stufe, Logbuch und Wiedervorlagen.</p></div>${kdBtn()}</section>
     <div class="crm-bar">
-      <div class="srch">${ic('search', 18)}<input id="crm-q" type="search" placeholder="Name, Ort, Telefon, Angebots-Nr. …" value="${esc(CR.q)}" autocomplete="off"></div>
+      <div class="srch">${ic('search', 18)}<input id="crm-q" type="search" placeholder="Name, Kundennr., Ort, Telefon, Angebots-Nr. …" value="${esc(CR.q)}" autocomplete="off"></div>
       <div class="seg" role="tablist">${[['liste', 'Liste'], ['pipeline', 'Pipeline']].map(([k, l]) => `<button class="${CR.mode === k ? 'on' : ''}" data-a="crm-mode" data-v="${k}">${l}</button>`).join('')}</div>
     </div>
     <div class="chips">${scopes.map(([k, l]) => `<button class="chip ${CR.scope === k ? 'on' : ''}" data-a="crm-scope" data-v="${k}">${l}</button>`).join('')}
@@ -87,13 +87,13 @@ function crmList(rows) {
 }
 /* PC-Ansicht: Tabelle mit allen wichtigen Spalten */
 function crmTable(rows) {
-  return `<div class="card dk-ctbl"><table><thead><tr><th>Kunde</th><th>Ort</th><th>Stufe</th><th>Art</th><th>Zuständig</th><th class="r">Volumen</th><th>Wiedervorlage</th><th>Zuletzt</th></tr></thead><tbody>
-    ${rows.map(c => `<tr data-href="#/kunde/${esc(c.id)}"><td><a href="#/kunde/${esc(c.id)}"><b>${esc(c.name)}</b></a>${c.archived ? ' <span class="badge">Archiv</span>' : ''}</td><td class="muted">${esc([c.zip, c.city].filter(Boolean).join(' ') || '–')}</td><td>${stageBadge(c.stage)}</td><td>${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : '–'}</td><td>${esc(c.ownerName || '')}</td><td class="r">${c.total ? euro(c.total) : '–'}</td><td>${c.nextDue ? `<span class="due ${dueCls(c.nextDue)}">${ic('aufgaben', 14)}${dueLabel(c.nextDue)}</span>` : '<span class="muted">–</span>'}</td><td class="muted">${esc(ago(c.last || c.upd))}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="card dk-ctbl"><table><thead><tr><th>Nr.</th><th>Kunde</th><th>Ort</th><th>Stufe</th><th>Art</th><th>Zuständig</th><th class="r">Volumen</th><th>Wiedervorlage</th><th>Zuletzt</th></tr></thead><tbody>
+    ${rows.map(c => `<tr data-href="#/kunde/${esc(c.id)}"><td class="kd-nr">${c.kdnr ? esc(c.kdnr) : '<span class="muted">–</span>'}</td><td><a href="#/kunde/${esc(c.id)}"><b>${esc(c.name)}</b></a>${c.archived ? ' <span class="badge">Archiv</span>' : ''}</td><td class="muted">${esc([c.zip, c.city].filter(Boolean).join(' ') || '–')}</td><td>${stageBadge(c.stage)}</td><td>${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : '–'}</td><td>${esc(c.ownerName || '')}</td><td class="r">${c.total ? euro(c.total) : '–'}</td><td>${c.nextDue ? `<span class="due ${dueCls(c.nextDue)}">${ic('aufgaben', 14)}${dueLabel(c.nextDue)}</span>` : '<span class="muted">–</span>'}</td><td class="muted">${esc(ago(c.last || c.upd))}</td></tr>`).join('')}</tbody></table></div>`;
 }
 document.addEventListener('click', e => { const tr = e.target.closest && e.target.closest('tr[data-href]'); if (tr && !e.target.closest('a,button')) location.hash = tr.dataset.href; });
 function crmRow(c) {
   return `<a class="crow" href="#/kunde/${esc(c.id)}"><div class="cmain"><b>${esc(c.name)}</b><span class="muted">${esc([c.zip, c.city].filter(Boolean).join(' ') || 'Ort fehlt')}${c.total ? ' · ' + euro(c.total) : ''}</span>
-    <div class="cmeta">${stageBadge(c.stage)}${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : ''}${ST.user.id !== c.owner ? `<span class="badge">${esc(c.ownerName)}</span>` : ''}${c.archived ? '<span class="badge">Archiv</span>' : ''}</div></div>
+    <div class="cmeta">${kdBadge(c)}${stageBadge(c.stage)}${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : ''}${ST.user.id !== c.owner ? `<span class="badge">${esc(c.ownerName)}</span>` : ''}${c.archived ? '<span class="badge">Archiv</span>' : ''}</div></div>
     <div class="cside">${c.nextDue ? `<span class="due ${dueCls(c.nextDue)}">${ic('aufgaben', 14)}${dueLabel(c.nextDue)}</span>` : ''}<span class="muted small">${esc(ago(c.last || c.upd))}</span></div>${ic('next', 18)}</a>`;
 }
 function crmPipeline(rows) {
@@ -112,7 +112,7 @@ function viewKunde() {
   const addr = [c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const cur = STG.indexOf(c.stage);
   return `<a class="backl" href="#/kunden">${ic('back', 18)}Kunden</a>
-    <section class="hero" style="padding-top:8px"><h1>${esc(c.name)}</h1><div class="cmeta" style="margin-top:10px">${stageBadge(c.stage)}${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : ''}<span class="badge">Zuständig: ${esc(c.ownerName)}</span>${c.archived ? '<span class="badge">Archiv</span>' : ''}</div></section>
+    <section class="hero" style="padding-top:8px"><h1>${esc(c.name)}</h1><div class="cmeta" style="margin-top:10px">${c.kdnr ? kdBadge(c) : `<button class="badge kd-set" data-a="kd-assign">${ic('plus', 12)}Kundennummer vergeben</button>`}${stageBadge(c.stage)}${c.type ? `<span class="badge">${esc(TYPE_L[c.type] || c.type)}</span>` : ''}<span class="badge">Zuständig: ${esc(c.ownerName)}</span>${c.archived ? '<span class="badge">Archiv</span>' : ''}</div></section>
     <div class="kgrid">
       <div class="kcol">
         <div class="card"><div class="contact">
@@ -226,7 +226,7 @@ function homeDue() {
 }
 /* Handy: „Mehr“ für die Admin-Seiten */
 function viewMehr() {
-  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[...((ST.features || {}).angebote ? [['assistent', 'Angebots-Assistent', 'Fragen, Reihenfolge, Anhänge, Gratis-Mengen, Systeme'], ['produkte', 'Produkte', 'Produktdatenbank fürs Angebot: Module, Speicher, Wechselrichter …'], ['artikel', 'Leistungen & Pakete', 'Montage, Elektro & Co. – feste und bedingte Positionen'], ['belege', 'Nummern & Texte', 'Nummernkreise, Textbausteine, Mahnwesen']] : []), ...((ST.features || {}).rechnungen ? [['rechnungen', 'Rechnungen', 'Offene Posten, E-Rechnung, Mahnungen']] : []), ['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Änderungen', 'Wer hat wann was im System gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k === 'artikel' || k === 'produkte' || k === 'assistent' ? 'box' : k === 'belege' || k === 'rechnungen' ? 'offer' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
+  return `<section class="hero"><h1>Verwaltung</h1></section><div class="card clist">${[...((ST.features || {}).angebote ? [['assistent', 'Angebots-Assistent', 'Fragen, Reihenfolge, Anhänge, Gratis-Mengen, Systeme'], ['produkte', 'Produkte', 'Produktdatenbank fürs Angebot: Module, Speicher, Wechselrichter …'], ['artikel', 'Leistungen & Pakete', 'Montage, Elektro & Co. – feste und bedingte Positionen'], ['belege', 'Nummern & Texte', 'Kundennummern, Nummernkreise, Textbausteine, Mahnwesen']] : []), ...((ST.features || {}).rechnungen ? [['rechnungen', 'Rechnungen', 'Offene Posten, E-Rechnung, Mahnungen']] : []), ['protokolle', 'Protokolle', 'Abnahmen und Service-Einsätze aller Monteure'], ['stunden', 'Stunden-Auswertung', 'Monatsübersicht, Lohn-Export, Baustellen'], ['users', 'Benutzer', 'Mitarbeiter anlegen, Rollen, Zugänge'], ['audit', 'Änderungen', 'Wer hat wann was im System gemacht'], ['system', 'System', 'Update, Datensicherung, E-Mail']].map(([k, l, t]) => `<a class="crow" href="${k === 'stunden' ? 'stempel/#/einstellungen/auswertung' : '#/' + k}"><span class="evi">${ic(k === 'stunden' ? 'stempel' : k === 'artikel' || k === 'produkte' || k === 'assistent' ? 'box' : k === 'belege' || k === 'rechnungen' ? 'offer' : k, 18)}</span><div class="cmain"><b>${l}</b><span class="muted">${t}</span></div>${ic('next', 18)}</a>`).join('')}</div>`;
 }
 
 /* ---------- Laden ---------- */
@@ -281,3 +281,52 @@ document.addEventListener('change', async e => {
   if (e.target.id === 'crm-adv') { CR.adv = e.target.value; crSave(); $('#crm-res').innerHTML = crmResults(); }
   if (e.target.id === 'crm-remind') { try { await api('remind', { on: e.target.checked }); ST.remind = e.target.checked; toast(e.target.checked ? 'Erinnerung per E-Mail an.' : 'Erinnerung per E-Mail aus.'); } catch (err) { toast(err.message); } }
 });
+
+/* ---------- Kunde hinzufügen · Kundennummer je Gewerk ---------- */
+const KD = { g: null, team: null };
+async function kdLoad(force) { if (!KD.g || force) KD.g = (await api('kd-cfg')).gewerke; return KD.g; }
+const kdBtn = (cls = '') => typeof isCrm === 'function' && isCrm() ? `<button class="btn ${cls}" data-a="kd-new">${ic('plus', 18)}Kunde hinzufügen</button>` : '';
+const kdBadge = c => c.kdnr ? `<span class="badge kdnr">${esc(c.kdnr)}</span>` : '';
+const kdClose = () => { const o = $('#kd-sheet'); if (o) o.remove(); };
+function kdSheet(inner) { kdClose(); const o = document.createElement('div'); o.id = 'kd-sheet'; o.className = 'kdsheet'; o.innerHTML = `<div class="kdbox">${inner}</div>`; document.body.appendChild(o); o.addEventListener('click', e => { if (e.target === o) kdClose(); }); return o; }
+async function kdNew() {
+  const [G, T] = await Promise.all([kdLoad(true), ST.crmAll || ['admin', 'buero'].includes(ST.user.role) ? (KD.team ? Promise.resolve(KD.team) : api('team').then(j => (KD.team = j.users))) : Promise.resolve(null)]);
+  const g0 = G[0] || {}, opt = (l, v) => l.map(([k, n]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${n}</option>`).join('');
+  const o = kdSheet(`<form id="f-kd-new" autocomplete="off"><div class="kd-h"><b>Kunde hinzufügen</b><button type="button" class="xbtn" data-a="kd-close" aria-label="Schließen">${ic('x', 16)}</button></div>
+    <div class="kd-g">${G.map((g, i) => `<label class="kd-gw"><input type="radio" name="gewerk" value="${esc(g.id)}" ${i ? '' : 'checked'}><span><b>${esc(g.name)}</b><em>${esc(g.preview)}</em></span></label>`).join('')}</div>
+    <p class="muted small" style="margin:6px 2px 0">Die Kundennummer wird beim Anlegen vergeben. Gewerke und Nummern stellst du unter <a href="#/belege" data-a="kd-close">Nummern &amp; Texte</a> ein.</p>
+    <div class="form-grid kd-f"><label>Anrede<select name="salutation">${opt([['Familie', 'Familie'], ['Herr', 'Herr'], ['Frau', 'Frau'], ['Firma', 'Firma'], ['', '–']], 'Familie')}</select></label>
+      <label>Name<input name="name" required placeholder="z. B. Müller"></label>
+      <label style="grid-column:1/-1">Straße und Hausnummer<input name="street"></label>
+      <label>PLZ<input name="zip" inputmode="numeric" maxlength="5"></label><label>Ort<input name="city"></label>
+      <label>Telefon<input name="phone" type="tel"></label><label>E-Mail<input name="email" type="email"></label>
+      <label>Art in der Wirtschaftlichkeit<select name="type">${opt([['pv', 'Photovoltaik'], ['wp', 'Wärmepumpe'], ['pvwp', 'PV + Wärmepumpe']], (g0.types || [])[0] || 'pv')}</select></label>
+      ${T ? `<label>Zuständig<select name="owner">${T.map(u => `<option value="${u.id}" ${u.id === ST.user.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select></label>` : ''}</div>
+    <div class="kd-act"><button type="button" class="btn s" data-a="kd-close">Abbrechen</button><button class="btn" type="submit">${ic('plus', 18)}Anlegen</button></div></form>`);
+  setTimeout(() => { const n = o.querySelector('[name=name]'); if (n) n.focus(); }, 50);
+}
+async function kdAssign() {
+  const c = ST.cd && ST.cd.customer; if (!c) return; const G = await kdLoad(true);
+  kdSheet(`<div class="kd-h"><b>Kundennummer vergeben</b><button type="button" class="xbtn" data-a="kd-close" aria-label="Schließen">${ic('x', 16)}</button></div>
+    <p class="muted small" style="margin:0 2px 10px">Für ${esc(c.name)} – welches Gewerk?</p>
+    <div class="kd-g">${G.map(g => `<button class="kd-gw" data-a="kd-assign-go" data-v="${esc(g.id)}"><span><b>${esc(g.name)}</b><em>${esc(g.preview)}</em></span></button>`).join('')}</div>`);
+}
+document.addEventListener('change', e => { const f = e.target.closest && e.target.closest('#f-kd-new'); if (f && e.target.name === 'gewerk') { const g = (KD.g || []).find(x => x.id === e.target.value); if (g && (g.types || [])[0]) f.type.value = g.types[0]; } });
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('[data-a^="kd-"]'); if (!a) return;
+  const k = a.dataset.a; if (k !== 'kd-close' || a.tagName !== 'A') e.preventDefault();
+  try {
+    if (k === 'kd-new') return await kdNew();
+    if (k === 'kd-close') return kdClose();
+    if (k === 'kd-assign') return await kdAssign();
+    if (k === 'kd-assign-go') { a.disabled = true; const j = await api('kd-assign', { id: ST.cd.customer.id, gewerk: a.dataset.v }); kdClose(); toast('Kundennummer ' + j.kdnr + ' vergeben.'); return crmReload(); }
+  } catch (err) { toast(err.message); a.disabled = false; }
+});
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'f-kd-new') return; e.preventDefault(); const f = e.target, b = f.querySelector('[type=submit]');
+  const d = Object.fromEntries(new FormData(f)); if (d.owner) d.owner = +d.owner;
+  b.disabled = true;
+  try { const j = await api('crm-new', d); kdClose(); toast(`Kunde ${j.kdnr} angelegt.`); location.hash = '#/kunde/' + j.id; }
+  catch (err) { toast(err.message); b.disabled = false; }
+});
+window.addEventListener('hashchange', kdClose);
