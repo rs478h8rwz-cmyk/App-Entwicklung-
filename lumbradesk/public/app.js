@@ -178,8 +178,12 @@ async function load() {
   if (tok) { ST.token = tok; history.replaceState(null, '', location.pathname); try { const r = await fetch('api/?r=tokeninfo&t=' + encodeURIComponent(tok), { credentials: 'same-origin', cache: 'no-store' }); ST.tokenInfo = r.ok ? await r.json() : null; } catch (e) { ST.tokenInfo = null; } return void ($('#app').innerHTML = viewSetPw(ST.tokenInfo)); }
   try { const j = await api('me'); ST.user = j.user; ST.apps = j.apps || []; ST.roles = j.roles || {}; ST.features = j.features || {}; }
   catch (e) { $('#app').innerHTML = `<main class="auth"><div class="card">${brand('')}<p class="note err">${esc(e.message)}</p></div></main>`; return; }
-  route();
+  route().catch(e => ldBootFail(e));
 }
+/* Start hängt? Statt endloser Ladeanzeige eine Meldung mit „Neu laden“ */
+function ldBootFail(e) { const a = $('#app'); if (a && /wird geladen/.test(a.textContent)) a.innerHTML = `<main class="auth"><div class="card">${brand('')}<p class="note err">LumbraDesk konnte nicht gestartet werden${e && e.message ? ': ' + esc(e.message) : ''}.</p><button class="btn" onclick="location.reload()">Neu laden</button></div></main>`; }
+window.addEventListener('error', e => ldBootFail(e.error || { message: e.message }));
+setTimeout(() => ldBootFail({ message: 'Zeitüberschreitung – bitte neu laden' }), 20000);
 async function route() {
   const seq = ST.seq = (ST.seq || 0) + 1;   // nur die neueste Navigation zeichnet (verhindert überschriebene Eingaben)
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/'); ST.view = parts[0]; const arg = decodeURIComponent(parts[1] || '');
