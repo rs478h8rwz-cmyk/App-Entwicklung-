@@ -81,11 +81,12 @@ try {
       db()->prepare('UPDATE users SET last_login = UTC_TIMESTAMP() WHERE id = ?')->execute([$u['id']]);
       db()->prepare('DELETE FROM login_attempts WHERE email = ?')->execute([$email]);
       audit((int)$u['id'], 'login');
+      remember_issue((int)$u['id']);   // angemeldet bleiben
       json_out(['user' => user_out($u)]);
     }
     case 'POST logout': {
       $u = current_user(); if ($u) audit((int)$u['id'], 'logout');
-      $_SESSION = []; session_regenerate_id(true); session_destroy();
+      remember_forget(); $_SESSION = []; session_regenerate_id(true); session_destroy();
       json_out(['ok' => true]);
     }
     case 'POST password': {
@@ -95,7 +96,7 @@ try {
       $new = (string)($b['new'] ?? ''); if ($e = pw_ok($new)) fail($e);
       if ($new === (string)($b['old'] ?? '')) fail('Bitte ein anderes Passwort als bisher wählen.');
       db()->prepare('UPDATE users SET pw_hash = ?, must_change = 0 WHERE id = ?')->execute([password_hash($new, PASSWORD_DEFAULT), $u['id']]);
-      session_regenerate_id(true);
+      session_regenerate_id(true); remember_revoke((int)$u['id']); remember_issue((int)$u['id']);   // andere Geräte abmelden, dieses bleibt angemeldet
       audit((int)$u['id'], 'passwort_geaendert');
       json_out(['ok' => true]);
     }
@@ -141,7 +142,7 @@ try {
       }
             if (!empty($b['resetPassword'])) {
         $tmp = temp_password();
-        db()->prepare('UPDATE users SET pw_hash = ?, must_change = 1 WHERE id = ?')->execute([password_hash($tmp, PASSWORD_DEFAULT), $id]);
+        db()->prepare('UPDATE users SET pw_hash = ?, must_change = 1 WHERE id = ?')->execute([password_hash($tmp, PASSWORD_DEFAULT), $id]); remember_revoke($id);
         db()->prepare('DELETE FROM login_attempts WHERE email = ?')->execute([$u['email']]);
         audit((int)$me['id'], 'passwort_zurueckgesetzt', $u['email']); $out['tempPassword'] = $tmp;
       }
@@ -173,7 +174,7 @@ try {
     case 'POST setpw': {
       $b = body(); $t = find_token((string)($b['token'] ?? '')); if (!$t) fail('Der Link ist abgelaufen oder wurde schon benutzt.', 404);
       $pw = (string)($b['password'] ?? ''); if ($e = pw_ok($pw)) fail($e);
-      db()->prepare('UPDATE users SET pw_hash = ?, must_change = 0 WHERE id = ?')->execute([password_hash($pw, PASSWORD_DEFAULT), $t['user_id']]);
+      db()->prepare('UPDATE users SET pw_hash = ?, must_change = 0 WHERE id = ?')->execute([password_hash($pw, PASSWORD_DEFAULT), $t['user_id']]); remember_revoke((int)$t['user_id']);
       db()->prepare('UPDATE user_tokens SET used_at = UTC_TIMESTAMP() WHERE id = ?')->execute([$t['id']]);
       db()->prepare('DELETE FROM login_attempts WHERE email = ?')->execute([$t['email']]);
       audit((int)$t['user_id'], 'passwort_per_link', $t['email']);

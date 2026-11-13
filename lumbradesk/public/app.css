@@ -839,3 +839,5 @@ button.zs-peek, button.zs-th { border: 0; padding: 0; cursor: zoom-in; } .zs-th 
 .zs-rl { display: grid; gap: 12px; } .zs-ri { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); } .zs-ri.off { opacity: .5; }
 .zs-rimg { border: 0; padding: 0; border-radius: 10px; overflow: hidden; background: #000; height: 120px; cursor: zoom-in; } .zs-rimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .kd-dl { display: block; padding: 6px 0; text-decoration: none; color: var(--ink); border-top: 1px solid var(--line); margin-top: 6px; } .kd-dl b { display: block; font-size: 14px; } .kd-dl span { font-size: 12.5px; color: var(--ink3); }
+#ld-loader.boot { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; z-index: 300; }
+#ld-loader.boot .ldl-box { box-shadow: none; background: transparent; }

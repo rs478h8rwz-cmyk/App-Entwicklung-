@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '5.4';
+const LD_VERSION = '5.5';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -89,8 +89,48 @@ function start_session(): void {
   /* Abmelden nach Inaktivität */
   $idle = ((int)cfg('idle_minutes') ?: 480) * 60;
   if (!empty($_SESSION['uid']) && (time() - (int)($_SESSION['seen'] ?? 0)) > $idle) { $_SESSION = []; session_regenerate_id(true); }
+  if (empty($_SESSION['uid'])) remember_login();   // angemeldet bleiben
   if (!empty($_SESSION['uid'])) $_SESSION['seen'] = time();
 }
+
+/* ---------- Angemeldet bleiben (180 Tage je Gerät) ----------
+   Cookie LDREM = Auswahl:Prüfwert. Auf dem Server liegt nur der SHA-256 des Prüfwerts. Bei jeder Nutzung wird die Laufzeit
+   verlängert (nicht rotiert – parallele Anfragen beim App-Start würden sich sonst gegenseitig abmelden).
+   Ungültig durch: Abmelden (dieses Gerät), Passwort ändern/zurücksetzen (alle Geräte), Benutzer deaktiviert. */
+const REMEMBER_DAYS = 180;
+function remember_table(): void {
+  static $d = false; if ($d) return; $d = true;
+  db()->exec("CREATE TABLE IF NOT EXISTS ld_remember (selector CHAR(24) PRIMARY KEY, hash CHAR(64) NOT NULL, user_id INT UNSIGNED NOT NULL, expires INT UNSIGNED NOT NULL, ua VARCHAR(200) NOT NULL DEFAULT '', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX (user_id)) ENGINE=InnoDB");
+}
+function remember_cookie(string $v, int $exp): void {
+  if (headers_sent()) return;
+  setcookie('LDREM', $v, ['expires' => $exp, 'path' => '/', 'secure' => (bool)cfg('cookie_secure'), 'httponly' => true, 'samesite' => 'Lax']);
+}
+function remember_issue(int $uid): void {
+  try {
+    remember_table(); $sel = bin2hex(random_bytes(12)); $val = bin2hex(random_bytes(32)); $exp = time() + REMEMBER_DAYS * 86400;
+    db()->prepare('INSERT INTO ld_remember (selector, hash, user_id, expires, ua) VALUES (?, ?, ?, ?, ?)')->execute([$sel, hash('sha256', $val), $uid, $exp, mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200)]);
+    db()->prepare('DELETE FROM ld_remember WHERE expires < ?')->execute([time()]);
+    remember_cookie($sel . ':' . $val, $exp);
+  } catch (Throwable $e) {}
+}
+function remember_login(): void {
+  $c = (string)($_COOKIE['LDREM'] ?? ''); if (!preg_match('/^([a-f0-9]{24}):([a-f0-9]{64})$/', $c, $m)) return;
+  try {
+    remember_table(); $st = db()->prepare('SELECT r.user_id, r.hash, r.expires, u.active FROM ld_remember r JOIN users u ON u.id = r.user_id WHERE r.selector = ?'); $st->execute([$m[1]]); $r = $st->fetch();
+    if (!$r || !$r['active'] || (int)$r['expires'] < time() || !hash_equals($r['hash'], hash('sha256', $m[2]))) { remember_cookie('', time() - 3600); return; }
+    session_regenerate_id(true); $_SESSION['uid'] = (int)$r['user_id']; $_SESSION['seen'] = time();
+    $exp = time() + REMEMBER_DAYS * 86400; db()->prepare('UPDATE ld_remember SET expires = ? WHERE selector = ?')->execute([$exp, $m[1]]); remember_cookie($c, $exp);
+  } catch (Throwable $e) {}
+}
+/* Dieses Gerät abmelden */
+function remember_forget(): void {
+  $c = (string)($_COOKIE['LDREM'] ?? '');
+  try { if (preg_match('/^([a-f0-9]{24}):/', $c, $m)) { remember_table(); db()->prepare('DELETE FROM ld_remember WHERE selector = ?')->execute([$m[1]]); } } catch (Throwable $e) {}
+  remember_cookie('', time() - 3600);
+}
+/* Alle Geräte eines Benutzers abmelden (Passwort geändert/zurückgesetzt) */
+function remember_revoke(int $uid): void { try { remember_table(); db()->prepare('DELETE FROM ld_remember WHERE user_id = ?')->execute([$uid]); } catch (Throwable $e) {} }
 
 /* Schutz gegen Anfragen von fremden Seiten: eigener Header + gleiche Herkunft */
 function check_origin(): void {
