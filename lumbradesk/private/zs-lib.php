@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 function zs_tables(): void {
   static $done = false; if ($done) return; $done = true;
+  db()->exec("CREATE TABLE IF NOT EXISTS zs_refs (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, photo VARCHAR(40) NOT NULL, label VARCHAR(16) NOT NULL, answers TEXT NOT NULL, note TEXT NOT NULL, check_id INT UNSIGNED NULL, active TINYINT(1) NOT NULL DEFAULT 1, created_by INT UNSIGNED NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
   db()->exec("CREATE TABLE IF NOT EXISTS zs_checks (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, project_id VARCHAR(40) NULL, title VARCHAR(200) NOT NULL DEFAULT '', result VARCHAR(12) NOT NULL DEFAULT '', data MEDIUMTEXT NOT NULL, photos VARCHAR(500) NOT NULL DEFAULT '', created_by INT UNSIGNED NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX (project_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 function zs_http(string $url, ?string $post = null): ?array {
@@ -123,9 +124,11 @@ Betriebsvorgabe des Fachbetriebs (ohne diese keine Anmeldung/Umsetzung): Im vorh
 
 So sehen die Fälle typischerweise aus:
 - NICHT konform: Zählerfelder nach DIN 43870 mit geschlossenen Kunststoff-Abdeckungen oben und unten (150/300 mm), schwarzer Ferraris-Zähler am Zählerkreuz, oben nur eine kurze Abdeckung mit 3-poligem SLS/Vorsicherung (nur 1 Hutschiene), kein gelochtes APZ-Feld, kein RfZ; daneben Verteilerfelder mit LS-Schaltern; oft leere Dreipunkt-Zählerplätze.
-- Konform: neuerer Zählerschrank (VDE-AR-N 4100) – oberhalb des Zählerplatzes offener anlagenseitiger Anschlussraum mit mehreren Hutschienen (SLS/Hauptschalter, Klemmen, ggf. Steuer-/Messgeräte); separates gelochtes APZ-Feld (Lochblech-Montageplatte, oft mit Netzwerkkabel) und darüber ein RfZ-Bereich; unten netzseitig SH-Schalter, Sammelschienen und Überspannungsschutz (oft rotes oder graues Modul). Der Zähler selbst darf noch ein Ferraris-Zähler auf Dreipunkt-Adapter sein – entscheidend ist der Aufbau.
+- Konform: neuerer Zählerschrank (VDE-AR-N 4100) – oberhalb des Zählerplatzes offener anlagenseitiger Anschlussraum mit mehreren Hutschienen (SLS/Hauptschalter, Klemmen, ggf. Steuer-/Messgeräte); das APZ-Feld sitzt UNTEN (gelochte Lochblech-Montageplatte im unteren Bereich, oft mit Netzwerkkabel), darüber der RfZ-Bereich; unten netzseitig SH-Schalter, Sammelschienen und Überspannungsschutz (oft rotes oder graues Modul). Der Zähler selbst darf noch ein Ferraris-Zähler auf Dreipunkt-Adapter sein – entscheidend ist der Aufbau.
 
 Hinweise zu den einzelnen Feldern:
+- spd (Überspannungsschutz): Achte gezielt auf den unteren (netzseitigen) Anschlussraum. Ein Überspannungs-Schutzgerät Typ 1/Kombiableiter ist ein breites Reiheneinbaugerät (3–4 Teilungseinheiten), oft ROT (z. B. DEHN) oder GRAU/WEISS mit Sichtfenster bzw. grün/roter Anzeige, meist direkt neben der Hauptleitungsabzweigklemme oder dem SH-Schalter, manchmal auch im Verteilerfeld. „ja“ wenn ein solches Modul sichtbar ist, „nein“ wenn der untere Anschlussraum offen und ohne solches Modul sichtbar ist, „unklar“ wenn er abgedeckt ist.
+- apz: Das APZ-Feld befindet sich UNTEN im Schrank (gelochte Montageplatte bzw. Feld mit Datenanschluss/Netzwerkkabel), nicht oben.
 - verd: „ja“ wenn die Zählerplatzverdrahtung als flexible Einzeladern (H07V-K) mit großem Querschnitt (ca. 10 mm², deutlich dicker als Leitungen der Stromkreise) erkennbar ist; „nein“ bei dünnen oder starren Adern; sonst „unklar“.
 - nl: „ja“ wenn der Neutralleiter (blau) erkennbar direkt vom unteren zum oberen Anschlussraum läuft bzw. ein moderner Zählerplatz mit Zählersteckklemme/BKE vorliegt; „nein“ wenn er sichtbar über den Zähler geführt wird.
 - phase: „drei“ bei Drehstromzähler, 3-poligem SLS/Hauptschalter oder 3 Außenleitern; „ein“ nur bei eindeutig einphasigem Zähler.
@@ -136,6 +139,47 @@ Wähle möglichst eine konkrete Antwort, wenn das Foto sie mit hoher Wahrscheinl
 
 Bewerte nur, was auf den Fotos zu sehen ist. Wenn etwas nicht sicher erkennbar ist, antworte „unklar“ und schreibe in den Befund, was vor Ort zu prüfen ist. Erfinde nichts. Befunde kurz und konkret (ein Satz), je Punkt: Bauart, netzseitiger Anschlussraum, anlagenseitiger Anschlussraum/Hutschienen, APZ-Feld, RfZ-Feld, Trennvorrichtung, Überspannungsschutz, Zustand, freie Zählerplätze. „gesamt“ = konform nur wenn APZ, RfZ und 2 Hutschienen sicher vorhanden sind und nichts Gravierendes dagegen spricht.
 TXT;
+/* ---------- Lernbilder: bestätigte Beispiele, die bei jeder Analyse mitgeschickt werden ---------- */
+function zs_refs_seed(): void {
+  if (ld_get('zs_refs_seed', null)) return; $f = __DIR__ . '/seed/zs/refs.json'; if (!is_file($f)) return;
+  $l = json_decode((string)file_get_contents($f), true) ?: [];
+  foreach ($l as $i => $x) {
+    $src = __DIR__ . '/seed/zs/' . $x['img']; if (!is_file($src)) continue;
+    $id = 'zsref-seed-' . ($i + 1); $dst = files_dir() . '/' . $id;
+    if (!is_file($dst . '.bin')) { copy($src, $dst . '.bin'); file_put_contents($dst . '.json', json_encode(['type' => 'image/jpeg', 'name' => $x['img'], 'size' => filesize($src)])); }
+    db()->prepare('INSERT INTO zs_refs (photo, label, answers, note) VALUES (?, ?, ?, ?)')->execute([$id, $x['label'], json_encode($x['a'], JSON_UNESCAPED_UNICODE), $x['note']]);
+  }
+  ld_set('zs_refs_seed', 1, 0);
+}
+function zs_refs(bool $onlyActive = false): array {
+  zs_tables(); zs_refs_seed();
+  $rows = db()->query('SELECT * FROM zs_refs' . ($onlyActive ? ' WHERE active = 1' : '') . ' ORDER BY id')->fetchAll();
+  return array_map(fn($r) => ['id' => (int)$r['id'], 'photo' => $r['photo'], 'label' => $r['label'], 'a' => json_decode($r['answers'], true) ?: [], 'note' => $r['note'], 'active' => (bool)$r['active'], 'check' => $r['check_id'] ? (int)$r['check_id'] : null], $rows);
+}
+/* Aus einem gespeicherten Check: erstes Foto (Gesamtansicht), die endgültigen Antworten und eine Notiz */
+function zs_ref_add(array $u, int $checkId, string $label, string $note): array {
+  $c = zs_get($u, $checkId); if (!$c['photos']) fail('Der Check hat kein Foto.', 400);
+  if (!in_array($label, ['konform', 'nicht_konform'], true)) fail('Bitte „konform“ oder „nicht konform“ wählen.', 400);
+  $kinds = (array)($c['data']['kinds'] ?? []); $i = array_search('gesamt', $kinds, true); $photo = $c['photos'][$i === false ? 0 : (int)$i] ?? $c['photos'][0];
+  db()->prepare('INSERT INTO zs_refs (photo, label, answers, note, check_id, created_by) VALUES (?, ?, ?, ?, ?, ?)')->execute([$photo, $label, json_encode((array)($c['data']['a'] ?? []), JSON_UNESCAPED_UNICODE), mb_substr(trim($note), 0, 1500), $checkId, $u['id']]);
+  return zs_refs();
+}
+function zs_ref_set(int $id, ?bool $active, bool $del): array {
+  zs_tables(); if ($del) db()->prepare('DELETE FROM zs_refs WHERE id = ?')->execute([$id]); elseif ($active !== null) db()->prepare('UPDATE zs_refs SET active = ? WHERE id = ?')->execute([$active ? 1 : 0, $id]);
+  return zs_refs();
+}
+function zs_ai_examples(): array {
+  $L = ['bau' => 'Bauart', 'nar' => 'netzseitiger Anschlussraum (mm)', 'aar' => 'anlagenseitiger Anschlussraum (mm)', 'aarVert' => 'Stromkreise im AAR', 'apz' => 'APZ-Feld', 'rfz' => 'RfZ-Feld', 'hut' => 'Hutschienen im AAR', 'spd' => 'Überspannungsschutz', 'trenn' => 'Trennvorrichtung', 'phase' => 'Anschluss', 'platz' => 'Platz für weiteren Zählerplatz', 'zust' => 'Zustand', 'verd' => 'Verdrahtung 10 mm²', 'nl' => 'Neutralleiter durchgehend'];
+  $refs = array_slice(array_reverse(zs_refs(true)), 0, 10); $out = [];
+  foreach (array_reverse($refs) as $n => $r) {
+    $f = files_dir() . '/' . $r['photo'] . '.bin'; if (!is_file($f)) continue; $bin = (string)file_get_contents($f); if (strlen($bin) > 3 * 1024 * 1024) continue;
+    $merk = []; foreach ($r['a'] as $k => $v) if (isset($L[$k]) && $v !== '' && $v !== 'unklar') $merk[] = $L[$k] . ': ' . $v;
+    $out[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => 'image/jpeg', 'data' => base64_encode($bin)]];
+    $out[] = ['type' => 'text', 'text' => 'Lernbild ' . ($n + 1) . ' – vom Fachbetrieb bestätigt: ' . ($r['label'] === 'konform' ? 'KONFORM' : 'NICHT KONFORM') . '. Merkmale: ' . implode('; ', $merk) . '. ' . $r['note']];
+  }
+  if ($out) $out[count($out) - 1]['cache_control'] = ['type' => 'ephemeral'];   // gleichbleibender Vorspann → Zwischenspeicher, spart Kosten
+  return $out;
+}
 function zs_ai(array $photos): array {
   $key = zs_ai_key(); if ($key === '') fail('Die KI-Bildanalyse ist noch nicht eingerichtet (System → KI-Bildanalyse).', 400);
   $content = [];
@@ -145,7 +189,9 @@ function zs_ai(array $photos): array {
     $content[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => 'image/jpeg', 'data' => $m[1]]];
   }
   if (!$content) fail('Kein Foto übergeben.', 400);
-  $content[] = ['type' => 'text', 'text' => 'Bewerte diesen Zählerschrank anhand der Fotos.'];
+  $ex = zs_ai_examples();
+  if ($ex) $content = array_merge([['type' => 'text', 'text' => 'Zuerst bestätigte Lernbilder des Fachbetriebs als Vergleich (nicht bewerten):']], $ex, [['type' => 'text', 'text' => 'Jetzt der zu bewertende Zählerschrank:']], $content);
+  $content[] = ['type' => 'text', 'text' => 'Bewerte diesen Zählerschrank anhand der Fotos. Vergleiche mit den Lernbildern – besonders APZ-Feld (unten), RfZ, Hutschienen im AAR und Überspannungsschutz.'];
   $req = ['model' => ZS_AI_MODEL, 'max_tokens' => 16000, 'system' => ZS_AI_SYSTEM, 'fallbacks' => 'default',
     'output_config' => ['effort' => 'medium', 'format' => ['type' => 'json_schema', 'schema' => zs_ai_schema()]],
     'messages' => [['role' => 'user', 'content' => $content]]];

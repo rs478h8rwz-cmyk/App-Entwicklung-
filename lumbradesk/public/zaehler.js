@@ -36,6 +36,39 @@ function zsAiHTML(A, live) {
     <ul class="zs-bf">${(A.befunde || []).map(b => `<li class="${b.status}"><i>${b.status === 'ok' ? '✓' : b.status === 'mangel' ? '✗' : '?'}</i><span><b>${esc(b.punkt)}</b> ${esc(b.text)}</span></li>`).join('')}</ul>
     <p class="muted small" style="margin:8px 0 0">${A.zaehlerplaetze ? `${A.zaehlerplaetze} Zählerplatz/-plätze erkannt${A.freie_zaehlerplaetze ? `, davon ${A.freie_zaehlerplaetze} frei` : ''}${A.zaehlerart ? ' · ' + esc(A.zaehlerart) : ''}. ` : ''}${live ? 'Die Antworten unten sind vorausgefüllt – bitte prüfen und ergänzen.' : ''}</p></div>`;
 }
+/* Vollbild-Foto mit Schließen-Knopf (statt neuer Seite ohne Rückweg) */
+function zsLight(src) { const o = document.createElement('div'); o.className = 'zs-light'; o.innerHTML = `<img src="${src}" alt="Foto"><button class="btn" data-zs="light-x">${ic('x', 18)}Schließen</button>`; document.body.appendChild(o); document.documentElement.style.overflow = 'hidden'; o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-zs="light-x"]')) { o.remove(); document.documentElement.style.overflow = ''; } }); }
+/* PDF-Vorschau (Seiten als Bilder, pdf.js) mit Teilen */
+async function zsPreview(X) {
+  const ov = document.createElement('div'); ov.id = 'of-prev'; ov.innerHTML = `<div class="pv-bar"><button class="btn g" data-pv="close">${ic('x', 18)}Schließen</button><b>Prüfbericht</b><button class="btn" data-pv="share">${ic('offer', 16)}Teilen</button></div><div class="pv-pages"><p class="muted" style="text-align:center;padding:40px 0">Vorschau wird erstellt …</p></div>`;
+  document.body.appendChild(ov); document.documentElement.style.overflow = 'hidden'; let built = null;
+  const close = () => { ov.remove(); document.documentElement.style.overflow = ''; };
+  ov.addEventListener('click', async e => { const b = e.target.closest('[data-pv]'); if (!b) return; if (b.dataset.pv === 'close') close(); if (b.dataset.pv === 'share' && built && typeof ldShare === 'function') { if (await ldShare(built.blob, built.name)) close(); } });
+  try {
+    built = await zsPdf(X);
+    await loadJs('rechner/vendor/pdf.min.js'); const lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = 'rechner/vendor/pdf.worker.min.js';
+    const pdf = await lib.getDocument({ data: new Uint8Array(await built.blob.arrayBuffer()) }).promise, box = ov.querySelector('.pv-pages'); box.innerHTML = '';
+    for (let i = 1; i <= pdf.numPages; i++) { const pg = await pdf.getPage(i), w = Math.min(box.clientWidth - 24, 820), v0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: w / v0.width * (window.devicePixelRatio || 1) }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; cv.style.width = w + 'px'; cv.className = 'pv-page'; box.appendChild(cv); await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise; }
+  } catch (err) { ov.querySelector('.pv-pages').innerHTML = `<p class="note err">Vorschau nicht möglich: ${esc(err.message)}</p>`; }
+}
+/* Lernbilder (Admin/Büro): bestätigte Beispiele für die KI */
+async function zsRefs() {
+  const j = await api('zs-refs'); ZS.refs = j.refs;
+  const html = `<div class="kd-h"><b>Lernbilder (${ZS.refs.filter(r => r.active).length} aktiv)</b><button type="button" class="xbtn" data-zs="tabs-x" aria-label="Schließen">${ic('x', 16)}</button></div>
+    <p class="muted small" style="margin:0 2px 10px">Diese bestätigten Fotos schickt der Check bei jeder KI-Analyse als Vergleich mit (die neuesten 10 aktiven). Neue Lernbilder: gespeicherten Check öffnen → „Als Lernbild übernehmen“.</p>
+    <div class="zs-rl">${ZS.refs.map(r => `<div class="zs-ri ${r.active ? '' : 'off'}"><button class="zs-rimg" data-zs="light-u" data-v="api/?r=cfg-file&id=${esc(r.photo)}"><img src="api/?r=cfg-file&id=${esc(r.photo)}" alt=""></button><div><span class="badge ${r.label === 'konform' ? 'p' : 'r'}">${r.label === 'konform' ? 'konform' : 'nicht konform'}</span><p class="small" style="margin:4px 0 6px">${esc(r.note)}</p>
+      <div class="row"><button class="btn s sm" data-zs="ref-act" data-v="${r.id}" data-a2="${r.active ? 'off' : 'on'}">${r.active ? 'Pausieren' : 'Aktivieren'}</button><button class="btn g sm danger" data-zs="ref-del" data-v="${r.id}">Löschen</button></div></div></div>`).join('')}</div>`;
+  const o = $('#kd-sheet'); if (o) o.querySelector('.kdbox').innerHTML = html; else kdSheet(html);
+}
+function zsRefNew() {
+  const X = ZS.view, d = X.data || {}, R = d.eval || {}, lab = R.result === 'ok' ? 'konform' : 'nicht_konform';
+  kdSheet(`<form id="f-zsref"><div class="kd-h"><b>Als Lernbild übernehmen</b><button type="button" class="xbtn" data-zs="tabs-x" aria-label="Schließen">${ic('x', 16)}</button></div>
+    <p class="muted small" style="margin:0 2px 10px">Foto und die endgültigen Antworten dieses Checks werden künftig bei jeder KI-Analyse als bestätigtes Beispiel mitgeschickt. Bitte nur übernehmen, wenn die Antworten stimmen.</p>
+    <div class="seg" style="margin-bottom:10px"><label class="pl-kc" style="--c:#2F9E44"><input type="radio" name="label" value="konform" ${lab === 'konform' ? 'checked' : ''}><span>konform</span></label><label class="pl-kc" style="--c:#E5484D"><input type="radio" name="label" value="nicht_konform" ${lab === 'nicht_konform' ? 'checked' : ''}><span>nicht konform</span></label></div>
+    <label>Was ist auf dem Foto zu sehen? (z. B. „APZ unten rechts, rotes Überspannungsschutz-Modul unten links“)<textarea name="note" rows="4">${esc((d.ai && d.ai.kurzfazit) || '')}</textarea></label>
+    <div class="kd-act"><button class="btn" type="submit">${ic('check', 18)}Übernehmen</button></div></form>`);
+}
+document.addEventListener('submit', async e => { if (e.target.id !== 'f-zsref') return; e.preventDefault(); const f = e.target; try { await api('zs-ref', { act: 'add', check: ZS.view.id, label: (f.querySelector('[name=label]:checked') || {}).value, note: f.note.value }); kdClose(); toast('Als Lernbild übernommen – wird bei der nächsten Analyse mitgeschickt.'); } catch (err) { toast(err.message); } });
 const zsTafel = a => ['tafel_offen', 'tafel_43853', 'tafel_vors'].includes(a.bau);
 const zsMeters = P => { const wp = P.wp && (P.mess === 'wp' || P.mess === 'zwei'), wb = P.wb && (P.mess === 'wb' || P.mess === 'zwei'); return 1 + (wp ? 1 : 0) + (wb ? 1 : 0); };
 const zsSteuVE = P => P.wp || P.wb;
@@ -104,7 +137,7 @@ function zsCabinet(P) {
 function zsCabSVG(c, big) {
   const W = 62, H = 150, g = 6, n = c.fields, tw = n * W + (n - 1) * g + 12;
   const col = (i, lab, verteiler) => { const x = 6 + i * (W + g);
-    return verteiler ? `<rect x="${x}" y="6" width="${W}" height="${H}" rx="4" class="zc-f"/><rect x="${x + 6}" y="12" width="${W - 12}" height="22" rx="2" class="zc-apz"/><text x="${x + W / 2}" y="27" class="zc-t">APZ</text>${[48, 72, 96, 120].map(y => `<rect x="${x + 6}" y="${y}" width="${W - 12}" height="14" rx="2" class="zc-ls"/>`).join('')}<text x="${x + W / 2}" y="${H + 2}" class="zc-t">Verteiler</text>`
+    return verteiler ? `<rect x="${x}" y="6" width="${W}" height="${H}" rx="4" class="zc-f"/><rect x="${x + 6}" y="${H - 24}" width="${W - 12}" height="22" rx="2" class="zc-apz"/><text x="${x + W / 2}" y="${H - 9}" class="zc-t">APZ</text>${[14, 36, 58, 80, 102].map(y => `<rect x="${x + 6}" y="${y}" width="${W - 12}" height="14" rx="2" class="zc-ls"/>`).join('')}<text x="${x + W / 2}" y="${H + 2}" class="zc-t">Verteiler</text>`
       : `<rect x="${x}" y="6" width="${W}" height="${H}" rx="4" class="zc-f"/><rect x="${x + 6}" y="12" width="${W - 12}" height="18" rx="2" class="zc-rfz"/><text x="${x + W / 2}" y="25" class="zc-t">RfZ</text><rect x="${x + 10}" y="40" width="${W - 20}" height="52" rx="4" class="zc-z"/><text x="${x + W / 2}" y="70" class="zc-t zc-tz">${lab}</text><rect x="${x + 6}" y="100" width="${W - 12}" height="20" rx="2" class="zc-ar"/><rect x="${x + 6}" y="124" width="${W - 12}" height="20" rx="2" class="zc-ar"/><text x="${x + W / 2}" y="${H + 2}" class="zc-t">Zählerplatz</text>`; };
   const labs = ['Z1', 'Z2', 'Z3'];
   return `<svg class="zc-svg ${big ? 'zc-big' : ''}" viewBox="0 0 ${tw} ${H + 14}" role="img" aria-label="${n}-feldiger Zählerschrank">${[...Array(c.m)].map((_, i) => col(i, labs[i])).join('')}${col(c.m, '', true)}</svg>`;
@@ -147,7 +180,7 @@ function zsVnbHTML() {
 function viewZaehler() {
   if (ZS.view) return zsSavedHTML(ZS.view);
   const steps = [['start', 'Kunde & Vorhaben'], ['foto', 'Foto & Scan'], ['fragen', 'Prüfung'], ['ergebnis', 'Ergebnis']], k = steps.findIndex(s => s[0] === ZS.step);
-  const head = `<section class="hero zs-hero"><div><h1>Zählerschrank-Check</h1><p class="muted">Foto aufnehmen, Merkmale prüfen, Ergebnis nach VDE-AR-N 4100, DIN VDE 0603 und der TAB des Netzbetreibers.</p></div>${['admin', 'buero'].includes(ST.user.role) ? `<button class="btn s sm" data-zs="tabs">${ic('edit', 15)}TAB-Liste</button>` : ''}</section>
+  const head = `<section class="hero zs-hero"><div><h1>Zählerschrank-Check</h1><p class="muted">Foto aufnehmen, Merkmale prüfen, Ergebnis nach VDE-AR-N 4100, DIN VDE 0603 und der TAB des Netzbetreibers.</p></div>${['admin', 'buero'].includes(ST.user.role) ? `<div class="row"><button class="btn s sm" data-zs="refs">${ic('cam', 15)}Lernbilder</button><button class="btn s sm" data-zs="tabs">${ic('edit', 15)}TAB-Liste</button></div>` : ''}</section>
     <div class="zs-steps">${steps.map(([s, l], i) => `<span class="${i < k ? 'done' : i === k ? 'on' : ''}"><i>${i + 1}</i>${l}</span>`).join('')}</div>`;
   return head + (ZS.step === 'start' ? zsStart() : ZS.step === 'foto' ? zsFoto() : ZS.step === 'fragen' ? zsFragen() : zsErgebnis());
 }
@@ -166,15 +199,19 @@ function zsStart() {
 function zsFoto() {
   const slot = (kind, l, d) => `<label class="zs-add ${kind}">${ic('cam', 26)}<b>${l}</b><span>${d}</span><input type="file" accept="image/*" data-zf="${kind}" class="zs-file"></label>`;   // ohne capture: iPhone bietet Mediathek, Kamera oder Datei an
   return `<div class="cardx zs-card"><div class="h3x">Fotos des Zählerschranks</div><p class="muted small" style="margin:2px 0 10px">1. Gesamtansicht mit offener Tür – dient als Dokumentation und liegt bei den Fragen daneben. 2. Optional eine Nahaufnahme vom Typenschild (innen an der Tür oder am Rahmen) – die wird automatisch gelesen.</p>
-      <div class="zs-ph">${ZS.photos.map((p, i) => `<div class="zs-th"><img src="${p}" alt="Foto ${i + 1}"><em>${ZS.kinds[i] === 'schild' ? 'Typenschild' : 'Gesamtansicht'}</em><button class="xbtn" data-zs="ph-del" data-v="${i}" aria-label="Foto entfernen">${ic('x', 14)}</button></div>`).join('')}
+      <div class="zs-ph">${ZS.photos.map((p, i) => `<div class="zs-th"><img src="${p}" alt="Foto ${i + 1}" data-zs="light" data-v="${i}"><em>${ZS.kinds[i] === 'schild' ? 'Typenschild' : 'Gesamtansicht'}</em><button class="xbtn" data-zs="ph-del" data-v="${i}" aria-label="Foto entfernen">${ic('x', 14)}</button></div>`).join('')}
         ${ZS.photos.length < 4 ? (ZS.kinds.includes('gesamt') ? '' : slot('gesamt', 'Gesamtansicht', 'Tür offen, ganzer Schrank')) + slot('schild', 'Typenschild', 'Nahaufnahme, scharf') : ''}</div></div>
     <div class="zs-act"><button class="btn s" data-zs="back" data-v="start">Zurück</button><button class="btn" data-zs="scan" ${ZS.photos.length ? '' : 'disabled'}>${ic('search', 18)}Scannen</button></div>`;
 }
 function zsFragen() {
   const a = ZS.a, P = ZS.plan, qs = ZS_Q.filter(q => !q.show || q.show(a, P));
   const gi = ZS.kinds.indexOf('gesamt'), ph = ZS.photos[gi >= 0 ? gi : 0];
+  const R0 = zsEval(a, P), S0 = ZS_RES[R0.result], why = R0.neu.concat(R0.fix).slice(0, 3);
+  const first = `<div class="zs-first" style="--c:${S0[2]}"><div class="zs-rh"><span class="zs-dot"></span><div><span class="muted small">Erste Einschätzung</span><b>${S0[0]}</b></div></div>
+    ${why.length ? `<ul class="zs-l ${R0.neu.length ? 'bad' : 'fix'}">${why.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${R0.open.length ? `<p class="muted small" style="margin:6px 0 0">${R0.open.length} Punkt${R0.open.length > 1 ? 'e' : ''} noch offen – die Einschätzung kann sich noch ändern.</p>` : ''}
+    <button class="btn" data-zs="eval" style="margin-top:10px">${ic('check', 18)}Ergebnis ansehen</button></div>`;
   const aiCard = ZS.ai ? zsAiHTML(ZS.ai, true) : ZS.aiErr ? `<div class="note err">${esc(ZS.aiErr)} – bitte die Fragen von Hand beantworten.</div>` : '';
-  return `${ph ? `<a class="zs-peek" href="${ph}" target="_blank" title="Foto groß öffnen"><img src="${ph}" alt="Gesamtansicht"><span>${ic('search', 14)}Foto ansehen</span></a>` : ''}${aiCard}${ZS.found.length || ZS.quality ? `<div class="cardx zs-card zs-found"><div class="h3x">Aus dem Foto erkannt</div><div class="chips2">${ZS.found.map(f => `<span class="chip on">${esc(f)}</span>`).join('') || `<span class="muted small">${ZS.kinds.includes('schild') ? 'Typenschild nicht lesbar – näher heran, gerade und scharf fotografieren, oder' : 'Kein Typenschild-Foto –'} die Merkmale anhand des Fotos bestätigen.</span>`}</div>${ZS.quality && ZS.quality.warn ? `<p class="note err" style="margin:8px 0 0">${esc(ZS.quality.warn)}</p>` : ''}</div>` : ''}
+  return `${first}${ph ? `<button class="zs-peek" data-zs="light" data-v="${ph === ZS.photos[0] ? 0 : Math.max(0, ZS.kinds.indexOf('gesamt'))}" title="Foto groß ansehen"><img src="${ph}" alt="Gesamtansicht"><span>${ic('search', 14)}Foto ansehen</span></button>` : ''}${aiCard}${ZS.found.length || ZS.quality ? `<div class="cardx zs-card zs-found"><div class="h3x">Aus dem Foto erkannt</div><div class="chips2">${ZS.found.map(f => `<span class="chip on">${esc(f)}</span>`).join('') || `<span class="muted small">${ZS.kinds.includes('schild') ? 'Typenschild nicht lesbar – näher heran, gerade und scharf fotografieren, oder' : 'Kein Typenschild-Foto –'} die Merkmale anhand des Fotos bestätigen.</span>`}</div>${ZS.quality && ZS.quality.warn ? `<p class="note err" style="margin:8px 0 0">${esc(ZS.quality.warn)}</p>` : ''}</div>` : ''}
     ${(() => { const qh = q => `<div class="cardx zs-card zs-q"><b>${esc(q.q)}${ZS.ai && ZS.ai[q.id] && ZS.ai[q.id] !== 'unklar' && ZS.ai[q.id] === a[q.id] ? ' <span class="zs-kib">aus Foto</span>' : ''}</b>${q.help ? `<span class="muted small">${esc(q.help)}</span>` : ''}<div class="zs-opts">${q.o.map(([v, l, d]) => `<button class="zs-o ${a[q.id] === v ? 'on' : ''}" data-zs="ans" data-q="${q.id}" data-v="${v}"><b>${esc(l)}</b>${d ? `<span>${esc(d)}</span>` : ''}</button>`).join('')}</div></div>`;
       const open = qs.filter(q => !a[q.id] || a[q.id] === 'unklar'), done = qs.filter(q => a[q.id] && a[q.id] !== 'unklar');
       const sum = done.map(q => `<span class="zs-ds"><i>${esc(q.q.replace(/\?$/, ''))}</i><b>${esc((q.o.find(o => o[0] === a[q.id]) || [, a[q.id]])[1])}</b></span>`).join('');
@@ -193,7 +230,7 @@ function zsResultHTML(R, P, d) {
 }
 function zsData() {
   const R = zsEval(ZS.a, ZS.plan), V = ZS.vnb && ZS.vnb.vnb, T = ZS.vnb && ZS.vnb.tab;
-  return { R, data: { ai: ZS.ai, plan: ZS.plan, a: ZS.a, found: ZS.found, ocr: ZS.ocr.slice(0, 3000), addr: ZS.addr, fields: zsCabinet(ZS.plan).fields, vnb: V ? V.name : '', vnbWeb: V ? V.website : '', tabUrl: T ? T.url : (V ? V.website : ''), tabName: T ? T.name : '', eval: R } };
+  return { R, data: { ai: ZS.ai, kinds: ZS.kinds, plan: ZS.plan, a: ZS.a, found: ZS.found, ocr: ZS.ocr.slice(0, 3000), addr: ZS.addr, fields: zsCabinet(ZS.plan).fields, vnb: V ? V.name : '', vnbWeb: V ? V.website : '', tabUrl: T ? T.url : (V ? V.website : ''), tabName: T ? T.name : '', eval: R } };
 }
 function zsErgebnis() {
   const { R, data } = zsData();
@@ -204,8 +241,8 @@ function zsSavedHTML(X) {
   const d = X.data || {}, R = d.eval || zsEval(d.a || {}, d.plan || {}), P = d.plan || {};
   const ans = ZS_Q.filter(q => d.a && d.a[q.id]).map(q => [q.q, (q.o.find(o => o[0] === d.a[q.id]) || [, d.a[q.id]])[1]]);
   return `<a class="backl" href="${X.project ? '#/kunde/' + esc(X.project) : '#/zaehler'}">${ic('back', 18)}${X.project ? 'Zum Kunden' : 'Zählerschrank-Check'}</a>
-    <section class="hero zs-hero"><div><h1>${esc(X.title)}</h1><p class="muted">Zählerschrank-Check vom ${utc(X.at).toLocaleDateString('de-DE')} · ${esc(X.by)}${d.addr ? ' · ' + esc(d.addr) : ''}</p></div><button class="btn" data-zs="pdf" data-v="${X.id}">${ic('offer', 18)}PDF-Bericht</button></section>
-    ${d.ai ? zsAiHTML(d.ai, false) : ''}${X.photos.length ? `<div class="zs-ph saved">${X.photos.map(p => `<a href="api/?r=cfg-file&id=${esc(p)}" target="_blank" class="zs-th"><img src="api/?r=cfg-file&id=${esc(p)}" alt="Foto"></a>`).join('')}</div>` : ''}
+    <section class="hero zs-hero"><div><h1>${esc(X.title)}</h1><p class="muted">Zählerschrank-Check vom ${utc(X.at).toLocaleDateString('de-DE')} · ${esc(X.by)}${d.addr ? ' · ' + esc(d.addr) : ''}</p></div><div class="row"><button class="btn" data-zs="pdf" data-v="${X.id}">${ic('offer', 18)}PDF-Vorschau</button>${['admin', 'buero'].includes(ST.user.role) ? `<button class="btn s" data-zs="ref-new">${ic('plus', 16)}Als Lernbild übernehmen</button>` : ''}</div></section>
+    ${d.ai ? zsAiHTML(d.ai, false) : ''}${X.photos.length ? `<div class="zs-ph saved">${X.photos.map(p => `<button class="zs-th" data-zs="light-u" data-v="api/?r=cfg-file&id=${esc(p)}"><img src="api/?r=cfg-file&id=${esc(p)}" alt="Foto"></button>`).join('')}</div>` : ''}
     ${zsResultHTML(R, P, d)}
     <div class="cardx zs-card"><div class="h3x">Vorhaben</div><p style="margin:0">${[['pv', 'Photovoltaik'], ['bat', 'Speicher'], ['wp', 'Wärmepumpe'], ['wb', 'Wallbox'], ['klima', 'Klimagerät']].filter(([k]) => P[k]).map(x => x[1]).join(', ') || '–'}</p>
       <div class="h3x" style="margin-top:12px">Antworten</div><table class="zs-tbl">${ans.map(([q, v]) => `<tr><td>${esc(q)}</td><td><b>${esc(v)}</b></td></tr>`).join('')}</table>
@@ -298,7 +335,7 @@ async function zsPdf(X) {
   for (const id of X.photos.slice(0, 2)) { try { const b = await (await fetch('api/?r=cfg-file&id=' + encodeURIComponent(id), { credentials: 'same-origin' })).blob(); const u = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); const pr = doc.getImageProperties(u), w = 80, h = Math.min(100, w * pr.height / pr.width); if (y + h > 275) { doc.addPage(); y = 20; } doc.addImage(u, 'JPEG', M, y, h * pr.width / pr.height, h); y += h + 4; } catch (e) {} }
   y += 2; para(`Grundlage: ${R.src.join(' · ')}. Dieser Bericht ist eine Vorbewertung und ersetzt nicht die Prüfung durch die Elektrofachkraft (z. B. E-CHECK nach DIN VDE 0105-100) sowie die Abstimmung mit dem Netzbetreiber.`, 8, GR);
   const name = `Zaehlerschrank-Check_${X.title.replace(/[^\wäöüÄÖÜß-]+/g, '_')}.pdf`;
-  if (typeof ldShare === 'function') return ldShare(doc.output('blob'), name);
+  return { blob: doc.output('blob'), name };
 }
 
 /* ---------- TAB-Liste (Admin/Büro) ---------- */
@@ -326,8 +363,14 @@ document.addEventListener('click', async e => {
     if (k === 'done-t') { ZS.showDone = !ZS.showDone; return zsRender(); }
     if (k === 'eval') { ZS.step = 'ergebnis'; zsRender(); return scrollTo(0, 0); }
     if (k === 'save') { a.disabled = true; const { R, data } = zsData(); const j = await api('zs-save', { project: ZS.cust ? ZS.cust.id : '', title: ZS.cust ? ZS.cust.name : (ZS.addr || 'Zählerschrank-Check'), result: R.result, data, photos: ZS.photos }); toast('Check gespeichert' + (ZS.cust ? ' – im Logbuch des Kunden vermerkt.' : '.')); zsReset(); ZS.list = null; location.hash = '#/zaehler/' + j.check.id; return; }
-    if (k === 'pdf') return await zsPdf(ZS.view);
+    if (k === 'pdf') return await zsPreview(ZS.view);
     if (k === 'tabs') return zsTabs();
+    if (k === 'light') return zsLight(ZS.photos[+v]);
+    if (k === 'light-u') return zsLight(v);
+    if (k === 'refs') return await zsRefs();
+    if (k === 'ref-new') return zsRefNew();
+    if (k === 'ref-act') { await api('zs-ref', { id: +v, active: a.dataset.a2 === 'on' }); return await zsRefs(); }
+    if (k === 'ref-del') { if (!confirm('Lernbild löschen?')) return; await api('zs-ref', { act: 'del', id: +v }); return await zsRefs(); }
     if (k === 'tabs-x') return kdClose();
     if (k === 'tab-add') { ZS.tabEdit.push({ match: '', name: '', url: '', note: '' }); return zsTabs(true); }
     if (k === 'tab-del') { ZS.tabEdit.splice(+v, 1); return zsTabs(true); }

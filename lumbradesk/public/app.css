@@ -831,3 +831,10 @@ aside.sb { display: none; }
 .zc-svg, .zc-svg text { letter-spacing: normal; word-spacing: normal; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; font-stretch: normal; }
 .zc-svg text { font-kerning: normal; text-rendering: geometricPrecision; }
 .zc-svg.zc-big { max-width: 240px; justify-self: center; }
+.zs-light { position: fixed; inset: 0; z-index: 120; background: rgba(0, 0, 0, .92); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: max(16px, env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom)); }
+.zs-light img { max-width: 100%; max-height: calc(100% - 70px); object-fit: contain; border-radius: 8px; touch-action: pinch-zoom; }
+button.zs-peek, button.zs-th { border: 0; padding: 0; cursor: zoom-in; } .zs-th img[data-zs] { cursor: zoom-in; }
+.zs-first { border-radius: 18px; padding: 16px 18px; margin-bottom: 12px; background: color-mix(in srgb, var(--c) 12%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--c) 45%, transparent); }
+.zs-first .zs-rh b { display: block; font-size: 20px; line-height: 1.2; }
+.zs-rl { display: grid; gap: 12px; } .zs-ri { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); } .zs-ri.off { opacity: .5; }
+.zs-rimg { border: 0; padding: 0; border-radius: 10px; overflow: hidden; background: #000; height: 120px; cursor: zoom-in; } .zs-rimg img { width: 100%; height: 100%; object-fit: cover; display: block; }

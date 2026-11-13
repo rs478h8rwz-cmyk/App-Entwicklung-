@@ -515,6 +515,12 @@ try {
     case 'POST zs-ai': { require_role(AB_ROLES_ALL); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(['ok' => true, 'ai' => zs_ai((array)(body()['photos'] ?? []))]); }
     case 'GET ai-cfg': { require_role(['admin']); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(zs_ai_status()); }
     case 'POST ai-cfg': { $u = require_role(['admin']); require_once LD_PRIV_DIR . '/zs-lib.php'; $o = zs_ai_key_save($u, (string)(body()['key'] ?? '')); audit((int)$u['id'], 'ki_schluessel', $o['on'] ? 'gesetzt' : 'entfernt'); json_out(['ok' => true] + $o); }
+    case 'GET zs-refs': { require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/zs-lib.php'; json_out(['refs' => zs_refs()]); }
+    case 'POST zs-ref': {
+      $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/zs-lib.php'; $b = body(); $act = (string)($b['act'] ?? '');
+      if ($act === 'add') { $o = zs_ref_add($u, (int)($b['check'] ?? 0), (string)($b['label'] ?? ''), (string)($b['note'] ?? '')); audit((int)$u['id'], 'zaehlercheck', 'Lernbild hinzugefügt'); json_out(['ok' => true, 'refs' => $o]); }
+      json_out(['ok' => true, 'refs' => zs_ref_set((int)($b['id'] ?? 0), isset($b['active']) ? !empty($b['active']) : null, $act === 'del')]);
+    }
     case 'POST zs-tabs': { $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/zs-lib.php'; $o = zs_tabs_save($u, (array)(body()['list'] ?? [])); audit((int)$u['id'], 'zaehlercheck', 'TAB-Liste gespeichert'); json_out(['ok' => true, 'tabs' => $o]); }
     /* ---------- Plantafel ---------- */
     case 'GET plan': {
