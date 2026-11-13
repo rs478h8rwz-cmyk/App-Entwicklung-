@@ -823,3 +823,5 @@ aside.sb { display: none; }
 .zs-bf i { font-style: normal; flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #fff; background: #5B8DEF; margin-top: 1px; }
 .zs-bf li.ok i { background: #2F9E44; } .zs-bf li.mangel i { background: #E5484D; }
 .zs-kib { font-size: 11px; font-weight: 700; color: var(--p); background: color-mix(in srgb, var(--p) 12%, transparent); padding: 1px 7px; border-radius: 99px; vertical-align: 2px; margin-left: 4px; }
+.zs-add { position: relative; overflow: hidden; min-width: 0; } .zs-add input.zs-file { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; font-size: 0; }
+.zs-act .btn:last-child { min-width: 0; flex: 1 1 160px; max-width: 260px; } .zs-act { flex-wrap: wrap; }
