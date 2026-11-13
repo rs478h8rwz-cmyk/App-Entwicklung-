@@ -166,11 +166,11 @@ function viewKundenStudio() {
       <div class="mt-4">${studioChart(months)}</div><div class="mono text-[12px] text-ink3 mt-1">Summe der Bruttopreise aller in diesem Monat angelegten Berechnungen, aufgeteilt nach Anlagentyp</div></div>
     <div class="mt-8">${backupBanner()}${followUpCard()}</div>
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6"><h2 class="text-[22px] font-medium tracking-[-0.01em]">Alle Kunden</h2>
-      <div class="relative sm:w-[360px]"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-10" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s" id="cust-search"></div></div>${statusFilterBar()}
+      <div class="relative sm:w-[360px]"><span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink3">${ic('search', 17)}</span><input class="inp !pl-10" placeholder="Name oder Kundennummer …" value="${esc(UI.search)}" data-b="u:search" data-t="s" id="cust-search"></div></div>${statusFilterBar()}
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5 [&>*]:min-w-0" id="cust-list">${list.length ? list.map(customerCard).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3 text-ink3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div>`}</div></div>`;
 }
 /* Suche: Name, Ort, PLZ, Straße, Telefon, E-Mail, Angebots-Nr. – auch im Archiv */
-const custSearchText = p => [p.customer.salutation, p.customer.name, p.customer.street, p.customer.zip, p.customer.city, p.customer.phone, p.customer.email, p.offer.number, p.offer.advisor].join(' ').toLowerCase();
+const custSearchText = p => [p.customer.salutation, p.customer.name, p.customer.street, p.customer.zip, p.customer.city, p.customer.phone, p.customer.email, p.offer.number, p.offer.advisor, typeof LDP === 'object' && LDP.meta[p.id] ? LDP.meta[p.id].kdnr : ''].join(' ').toLowerCase();   // auch nach Kundennummer (lumbra.desk)
 function customerCard(p) {
     const R = compute(p, 'real'), c = p.customer, nd = p.docs.length;
     return `<div class="card p-5 flex flex-col min-w-0 overflow-hidden hover:border-line2 transition-colors cursor-pointer" data-a="open" data-id="${p.id}">
@@ -210,7 +210,7 @@ function viewKunden() {
       <div class="grid grid-cols-3 gap-2 sm:gap-3">${[['Berechnungen', num(PROJECTS.length)], ['Angebotsvolumen', eur(vol)], ['Ø Amortisation', avgAm ? num(avgAm, 1) + ' J.' : '–']].map(([k, v]) => `<div class="card !rounded-[calc(var(--r)-4px)] px-3 sm:px-4 py-3"><div class="text-[12px] text-ink3 font-medium">${k}</div><div class="text-[17px] sm:text-[22px] font-semibold mt-1 whitespace-nowrap tracking-[-0.01em]" data-countup>${v}</div></div>`).join('')}</div>
       ${salesStats()}
     </div>
-    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Kunde suchen …" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
+    <div class="relative mt-5"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink4">${ic('search', 18)}</span><input class="inp !pl-11 !bg-card" placeholder="Name oder Kundennummer …" value="${esc(UI.search)}" data-b="u:search" data-t="s"></div>${statusFilterBar()}
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-5 [&>*]:min-w-0" id="cust-list">${list.length ? list.map(card).join('') : `<div class="card p-10 text-center sm:col-span-2 xl:col-span-3"><div class="w-14 h-14 rounded-full bg-p/10 text-p grid place-items-center mx-auto">${ic('users', 26)}</div><div class="font-semibold text-[17px] mt-3">${q ? 'Keine Treffer' : 'Noch keine Berechnungen'}</div><p class="text-ink3 text-[14px] mt-1">${q ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Starten Sie mit Ihrer ersten Wirtschaftlichkeitsberechnung.'}</p>${q ? '' : `<button class="btn-p mt-5" data-a="new">${ic('plus', 17)}Neue Berechnung</button>`}</div>`}</div>
   </section>`;
 }

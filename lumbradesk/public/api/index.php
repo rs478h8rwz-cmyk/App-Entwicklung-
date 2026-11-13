@@ -263,8 +263,8 @@ try {
     }
     case 'GET plist': {
       $u = require_role(['admin', 'buero', 'vertrieb']); projects_table();
-      if (sees_all($u)) $st = db()->query('SELECT id, version, owner_id, created_by, assigned_by, assigned_at, updated_at, updated_by FROM projects WHERE deleted = 0');
-      else { $st = db()->prepare('SELECT id, version, owner_id, created_by, assigned_by, assigned_at, updated_at, updated_by FROM projects WHERE deleted = 0 AND (owner_id = ? OR created_by = ?)'); $st->execute([$u['id'], $u['id']]); }
+      if (sees_all($u)) $st = db()->query('SELECT id, version, owner_id, created_by, assigned_by, assigned_at, updated_at, updated_by, kdnr FROM projects WHERE deleted = 0');
+      else { $st = db()->prepare('SELECT id, version, owner_id, created_by, assigned_by, assigned_at, updated_at, updated_by, kdnr FROM projects WHERE deleted = 0 AND (owner_id = ? OR created_by = ?)'); $st->execute([$u['id'], $u['id']]); }
       json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'projects' => array_map('project_meta', $st->fetchAll())]);
     }
     case 'POST pget': {
@@ -506,6 +506,23 @@ try {
       $team = db()->query("SELECT id, name FROM users WHERE active = 1 AND role IN ('admin','buero','vertrieb') ORDER BY name")->fetchAll();
       $people = db()->query("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name")->fetchAll();
       json_out(['me' => (int)$u['id'], 'all' => sees_all($u), 'stages' => STAGES, 'customers' => crm_list($u), 'team' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name']], $team), 'people' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => $r['name'], 'role' => $r['role']], $people)]);
+    }
+    /* ---------- Plantafel ---------- */
+    case 'GET plan': {
+      $u = require_user(); require_once LD_PRIV_DIR . '/plan-lib.php';
+      json_out(plan_get($u, (string)($_GET['from'] ?? ''), (string)($_GET['to'] ?? '')));
+    }
+    case 'POST plan-save': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/plan-lib.php';
+      json_out(['ok' => true, 'event' => plan_save($u, body())]);
+    }
+    case 'POST plan-del': {
+      $u = require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/plan-lib.php'; $id = (int)(body()['id'] ?? 0);
+      plan_del($id); audit((int)$u['id'], 'termin_geloescht', (string)$id); json_out(['ok' => true]);
+    }
+    case 'POST plan-res': {
+      $u = require_role(['admin', 'buero']); require_once LD_PRIV_DIR . '/plan-lib.php';
+      $o = plan_res_save((array)(body()['list'] ?? [])); audit((int)$u['id'], 'plantafel', 'Zeilen gespeichert'); json_out(['ok' => true, 'res' => $o]);
     }
     case 'GET kd-cfg': {
       require_role(['admin', 'buero', 'vertrieb']); require_once LD_PRIV_DIR . '/crm-lib.php'; crm_tables();

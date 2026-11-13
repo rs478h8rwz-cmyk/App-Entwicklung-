@@ -64,7 +64,7 @@ function viewNewPw(err = '') {
 function shell(inner) {
   const crm = typeof isCrm === 'function' && isCrm(), adm = ST.user.role === 'admin';
   const off = ['admin', 'buero'].includes(ST.user.role);
-  const base = [['home', 'Start']].concat(crm ? [['kunden', 'Kunden'], ['aufgaben', 'Aufgaben']] : []).concat(off ? [['protokolle', 'Protokolle']] : []);
+  const base = [['home', 'Start']].concat(crm ? [['kunden', 'Kunden'], ['aufgaben', 'Aufgaben']] : [], [['plantafel', 'Plan']]).concat(off ? [['protokolle', 'Protokolle']] : []);
   const prod = (off && (ST.features || {}).angebote ? [['produkte', 'Produkte']] : []).concat(off && (ST.features || {}).rechnungen ? [['rechnungen', 'Rechnungen']] : []);   // Produktdatenbank fürs Angebot
   const nav = base.concat(prod, adm ? [['users', 'Benutzer'], ['audit', 'Änderungen'], ['system', 'System']] : []);
   const tabs = (adm ? base.filter(x => x[0] !== 'protokolle') : base.concat(prod)).concat(adm ? [['mehr', 'Mehr']] : []);
@@ -85,7 +85,7 @@ function sideBar(cur, inMehr, crm, off, adm) {
   return `<aside class="sb"><a class="sb-brand" href="#/home"><span class="wm" role="img" aria-label="lumbra.desk"></span></a>
     ${crm ? `<form class="sb-q" id="sb-q">${ic('search', 16)}<input name="q" type="search" placeholder="Kunde suchen …" autocomplete="off" value="${esc(typeof CR === 'object' && cur === 'kunden' ? CR.q || '' : '')}"></form>` : ''}
     <nav class="sbn">
-      ${grp('Übersicht', [item('home', 'Dashboard'), ...(crm ? [item('kunden', 'Kunden'), item('aufgaben', 'Aufgaben')] : [])])}
+      ${grp('Übersicht', [item('home', 'Dashboard'), ...(crm ? [item('kunden', 'Kunden'), item('aufgaben', 'Aufgaben')] : []), item('plantafel', 'Plantafel')])}
       ${grp('Vertrieb & Büro', off ? [item('protokolle', 'Protokolle'), ...(F.angebote ? [item('produkte', 'Produkte', 'produkte'), item('artikel', 'Leistungen & Pakete', 'box'), item('assistent', 'Angebots-Assistent', 'box')] : []), ...(F.rechnungen ? [item('rechnungen', 'Rechnungen', 'offer')] : []), ...(F.angebote ? [item('belege', 'Nummern & Texte', 'offer')] : [])] : [])}
       ${grp('Verwaltung', adm ? [item('users', 'Benutzer'), item('audit', 'Änderungen'), item('system', 'System')] : [])}
       ${apps.length ? `<div class="sbg"><div class="sbt">Apps</div>${apps.map(a => `<a class="sbl sba" href="${esc(a.url)}">${typeof appIcon === 'function' ? appIcon(a.key) : ''}<span>${esc(a.name)}</span></a>`).join('')}</div>` : ''}
@@ -182,19 +182,20 @@ async function route() {
   const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/'); ST.view = parts[0]; const arg = decodeURIComponent(parts[1] || '');
   if (!ST.user) return void ($('#app').innerHTML = ST.view === 'vergessen' ? viewForgot() : viewLogin());
   if (ST.user.mustChange) return void ($('#app').innerHTML = viewNewPw());
-  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel', 'produkte', 'rechnungen', 'rechnung', 'belege', 'assistent'];
-  if (!(ST.view === 'home' || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin') || (offViews.includes(ST.view) && ['admin', 'buero'].includes(ST.user.role)))) ST.view = 'home';
+  const crmViews = ['kunden', 'kunde', 'aufgaben', 'angebot'], allViews = ['home', 'plantafel'], admViews = ['users', 'audit', 'system', 'mehr'], offViews = ['protokolle', 'artikel', 'produkte', 'rechnungen', 'rechnung', 'belege', 'assistent'];
+  if (!(allViews.includes(ST.view) || (crmViews.includes(ST.view) && isCrm()) || (admViews.includes(ST.view) && ST.user.role === 'admin') || (offViews.includes(ST.view) && ['admin', 'buero'].includes(ST.user.role)))) ST.view = 'home';
   try {
     if (isCrm() && (crmViews.includes(ST.view) || ST.view === 'home')) await crmLoad(ST.view, arg);
     if (ST.view === 'protokolle' || ST.view === 'kunde') await protLoad(ST.view, arg);
     if (['kunde', 'angebot', 'artikel', 'produkte', 'assistent'].includes(ST.view)) await offLoad(ST.view === 'assistent' ? 'artikel' : ST.view);
     if (typeof reLoad === 'function' && ['kunde', 'rechnungen', 'rechnung', 'belege'].includes(ST.view)) await reLoad(ST.view, arg);
+    if (ST.view === 'plantafel' && typeof planLoad === 'function') await planLoad();
     if (ST.view === 'users') ST.users = (await api('users')).users;
     if (ST.view === 'audit') ST.audit = (await api('audit')).entries;
     if (ST.view === 'system') { ST.sys = await api('system'); ST.mail = await api('mailcfg'); ST.bk = await api('backups'); ST.feat = (await api('features')).list; }
   } catch (e) { if (e.status === 401) { ST.user = null; return route(); } toast(e.message); }
   if (seq !== ST.seq) return;
-  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel, produkte: viewProdukte, rechnungen: viewRechnungen, rechnung: viewRechnung, belege: viewBelege, assistent: viewAssistent };
+  const V = { users: viewUsers, audit: viewAudit, system: viewSystem, kunden: viewKunden, kunde: viewKunde, aufgaben: viewAufgaben, mehr: viewMehr, protokolle: viewProtokolle, angebot: viewAngebot, artikel: viewArtikel, produkte: viewProdukte, rechnungen: viewRechnungen, rechnung: viewRechnung, belege: viewBelege, assistent: viewAssistent, plantafel: typeof viewPlan === 'function' ? viewPlan : viewHome };
   $('#app').innerHTML = shell((V[ST.view] || viewHome)());
 }
 window.addEventListener('hashchange', route);

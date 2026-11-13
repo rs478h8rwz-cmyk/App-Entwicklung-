@@ -155,7 +155,9 @@ async function ldpSync(opts = {}) {
 document.addEventListener('focusout', () => { if (LDP.renderLater) setTimeout(() => { if (LDP.renderLater && !(document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) && !$('#modal').innerHTML.trim() && !$('#roof-ed')) { LDP.renderLater = false; render(); } }, 300); });
 
 /* ---------- Anzeige: Zuständig ---------- */
-function ldpOwnerChip(p) {
+/* Kundennummer aus lumbra.desk (je Gewerk) vor dem Zuständig-Hinweis */
+function ldpOwnerChip(p) { const m = typeof LD !== 'undefined' && LD.on ? LDP.meta[p.id] : null; return (m && m.kdnr ? `<span class="badge bg-bg text-ink border border-line font-semibold">${esc(m.kdnr)}</span>` : '') + ldpOwnerChip0(p); }
+function ldpOwnerChip0(p) {
   if (typeof LD === 'undefined' || !LD.on) return '';
   const m = LDP.meta[p.id];
   if (!m) return LDP.dirty.has(p.id) ? `<span class="badge bg-bg text-ink3 border border-line">${ic('refresh', 12)}wird abgeglichen</span>` : '';

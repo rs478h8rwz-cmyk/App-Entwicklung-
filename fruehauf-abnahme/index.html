@@ -151,7 +151,7 @@ const IP = {
    Eigenständige App: Baustellen-Abnahme und Serviceeinsätze für DC, AC und SHK.
    Daten bleiben auf dem Gerät (IndexedDB), Protokolle als PDF teilen.
    ========================================================= */
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 let APP_READY = false;   // wird am Ende des App-Starts gesetzt
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -1239,10 +1239,10 @@ const STG_DE = { anfrage: 'Anfrage', termin: 'Termin', angebot: 'Angebot', auftr
 function ldaPick(r) {
   return new Promise(async res => {
     const list = await ldaCustomers();
-    const rows = q => { const s = q.trim().toLowerCase(); const l = list.filter(c => !s || `${c.name} ${c.city} ${c.street}`.toLowerCase().includes(s)).slice(0, 40);
-      return l.map(c => `<button class="opt !min-h-[58px] text-left" data-lc="${esc(c.id)}"><span class="flex-1 min-w-0"><span class="block font-semibold truncate">${esc(c.name)}</span><span class="block text-[12px] text-ink3 font-normal truncate">${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'ohne Adresse')}</span></span><span class="badge bg-raised text-ink2 border border-line shrink-0">${STG_DE[c.stage] || ''}</span></button>`).join('') || '<p class="text-ink3 text-[14px] py-3">Kein Kunde gefunden.</p>'; };
+    const rows = q => { const s = q.trim().toLowerCase(); const l = list.filter(c => !s || `${c.kdnr || ''} ${c.name} ${c.city} ${c.street}`.toLowerCase().includes(s)).slice(0, 40);
+      return l.map(c => `<button class="opt !min-h-[58px] text-left" data-lc="${esc(c.id)}"><span class="flex-1 min-w-0"><span class="block font-semibold truncate">${c.kdnr ? `<span class="text-ink3 font-medium">${esc(c.kdnr)} · </span>` : ''}${esc(c.name)}</span><span class="block text-[12px] text-ink3 font-normal truncate">${esc([c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'ohne Adresse')}</span></span><span class="badge bg-raised text-ink2 border border-line shrink-0">${STG_DE[c.stage] || ''}</span></button>`).join('') || '<p class="text-ink3 text-[14px] py-3">Kein Kunde gefunden.</p>'; };
     modal(`<h3 class="text-[20px] font-semibold pr-8">Für welchen Kunden?</h3><p class="text-ink3 text-[14px] mt-1">Kunden aus LumbraDesk – Aufträge in Montage stehen oben.</p>
-      <input class="inp mt-4" id="lc-q" placeholder="Name oder Ort suchen …" autocomplete="off"><div class="grid gap-2 mt-3 max-h-[52vh] overflow-y-auto" id="lc-list">${rows('')}</div>
+      <input class="inp mt-4" id="lc-q" placeholder="Name, Kundennummer oder Ort …" autocomplete="off"><div class="grid gap-2 mt-3 max-h-[52vh] overflow-y-auto" id="lc-list">${rows('')}</div>
       <button class="btn-s w-full mt-4" id="lc-none">Kunde ist nicht in der Liste</button>`);
     const done = c => { closeModal(); if (c) { r.projectId = c.id; r.answers.kunde = c.name; r.answers.adresse = [c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '); if (c.phone) r.answers.telefon = c.phone; } res(true); };
     $('#lc-q').oninput = e => { $('#lc-list').innerHTML = rows(e.target.value); };

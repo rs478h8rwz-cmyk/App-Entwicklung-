@@ -105,7 +105,7 @@ function ab_list(array $u, string $scope, string $pid = ''): array {
 function ab_customers(): array {
   require_once __DIR__ . '/crm-lib.php'; crm_tables();
   $rows = db()->query('SELECT ' . CRM_FIELDS . ' FROM projects p WHERE p.deleted = 0')->fetchAll();
-  $out = array_map(function ($r) { $c = crm_row_out($r); return ['id' => $c['id'], 'name' => $c['name'], 'street' => $c['street'], 'zip' => $c['zip'], 'city' => $c['city'], 'phone' => $c['phone'], 'stage' => $c['stage'], 'archived' => $c['archived'], 'type' => $c['type']]; }, $rows);
+  $out = array_map(function ($r) { $c = crm_row_out($r); return ['id' => $c['id'], 'kdnr' => $c['kdnr'], 'name' => $c['name'], 'street' => $c['street'], 'zip' => $c['zip'], 'city' => $c['city'], 'phone' => $c['phone'], 'stage' => $c['stage'], 'archived' => $c['archived'], 'type' => $c['type']]; }, $rows);
   $order = ['montage' => 0, 'auftrag' => 1, 'fertig' => 2, 'angebot' => 3, 'termin' => 4, 'anfrage' => 5, 'verloren' => 6];
   usort($out, fn($a, $b) => ($order[$a['stage']] ?? 9) <=> ($order[$b['stage']] ?? 9) ?: strcmp($a['name'], $b['name']));
   return array_values(array_filter($out, fn($c) => !$c['archived'] && $c['stage'] !== 'verloren'));

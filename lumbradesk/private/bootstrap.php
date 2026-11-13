@@ -3,7 +3,7 @@
    Datenbank, sichere Sitzung, Rollenprüfung, Protokoll, JSON-Antworten */
 declare(strict_types=1);
 
-const LD_VERSION = '4.7';
+const LD_VERSION = '4.8';
 define('LD_PRIV_DIR', __DIR__);
 const ROLES = ['admin' => 'Admin', 'buero' => 'Büro', 'vertrieb' => 'Vertrieb', 'monteur' => 'Monteur'];
 
@@ -158,6 +158,8 @@ function files_dir(): string {
 function projects_table(): void {
   static $done = false; if ($done) return; $done = true;
   db()->exec("CREATE TABLE IF NOT EXISTS projects (id VARCHAR(40) PRIMARY KEY, owner_id INT UNSIGNED NOT NULL, created_by INT UNSIGNED NOT NULL, assigned_by INT UNSIGNED NULL, assigned_at DATETIME NULL, name VARCHAR(200) NOT NULL DEFAULT '', data LONGTEXT NOT NULL, version INT UNSIGNED NOT NULL DEFAULT 1, deleted TINYINT(1) NOT NULL DEFAULT 0, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_by INT UNSIGNED NULL, INDEX (owner_id), INDEX (created_by), INDEX (deleted)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $cols = array_column(db()->query('SHOW COLUMNS FROM projects')->fetchAll(), 'Field');   // Kundennummer je Gewerk (4.7)
+  if (!in_array('kdnr', $cols, true)) db()->exec("ALTER TABLE projects ADD COLUMN kdnr VARCHAR(30) NULL, ADD COLUMN gewerk VARCHAR(12) NULL, ADD INDEX (kdnr)");
 }
 /* Wer sieht was: Admin und Büro alle Kunden, alle anderen die eigenen (zuständig oder selbst angelegt) */
 function sees_all(array $u): bool { return in_array($u['role'], ['admin', 'buero'], true); }
@@ -177,7 +179,7 @@ function user_names(): array {
 function project_meta(array $p): array {
   $n = user_names();
   return ['id' => $p['id'], 'v' => (int)$p['version'], 'owner' => (int)$p['owner_id'], 'ownerName' => $n[(int)$p['owner_id']] ?? '', 'by' => (int)$p['created_by'], 'byName' => $n[(int)$p['created_by']] ?? '',
-    'assignedBy' => $p['assigned_by'] ? (int)$p['assigned_by'] : null, 'assignedByName' => $p['assigned_by'] ? ($n[(int)$p['assigned_by']] ?? '') : '', 'assignedAt' => $p['assigned_at'], 'upd' => $p['updated_at'], 'updBy' => $n[(int)($p['updated_by'] ?? 0)] ?? ''];
+    'assignedBy' => $p['assigned_by'] ? (int)$p['assigned_by'] : null, 'assignedByName' => $p['assigned_by'] ? ($n[(int)$p['assigned_by']] ?? '') : '', 'assignedAt' => $p['assigned_at'], 'upd' => $p['updated_at'], 'updBy' => $n[(int)($p['updated_by'] ?? 0)] ?? '', 'kdnr' => (string)($p['kdnr'] ?? '')];
 }
 
 /* ---------- E-Mail (IONOS-Postfach, SMTP) ---------- */
