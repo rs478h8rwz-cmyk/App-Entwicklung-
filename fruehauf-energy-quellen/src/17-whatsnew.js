@@ -15,6 +15,9 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.6', date: '2026-11-13', items: [
+    ['roof', 'Modulbelegung und Schnellauslegung direkt öffnen', 'In lumbra.desk gibt es jetzt eigene Symbole für „Modulbelegung“ und „Schnellauslegung“. Ein Tipp darauf öffnet die Wirtschaftlichkeit und startet sofort das gewählte Werkzeug – ohne Umweg über die Kundenliste.']
+  ] },
   { version: '3.5', date: '2026-11-13', items: [
     ['crm', 'Kunden nach Kundennummer finden', 'Die Kundensuche findet jetzt auch die Kundennummer aus lumbra.desk (z. B. „PV-1125“ oder „WP-1257“). Die Nummer steht außerdem als Abzeichen auf jeder Kundenkarte.']
   ] },

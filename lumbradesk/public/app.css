@@ -757,3 +757,4 @@ aside.sb { display: none; }
 .pl-ri input, .pl-ri select { margin: 0; height: 38px; font-size: 14px; min-width: 0; } .pl-ra { display: flex; } .pl-ra .btn { padding: 0 8px; }
 @media (max-width: 640px) { .pl-ri { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .pl-ri select { grid-column: 1; } .pl-grid { --lab: 112px; } .pl-lab { font-size: 12.5px; padding: 8px; } }
 @media (max-width: 760px) { .pl-hint { display: none; } .pl-leg { font-size: 11.5px; } }
+.ai-sky { background: linear-gradient(160deg, #5AB8FF, #1F6FD1); } .ai-teal { background: linear-gradient(160deg, #3FD3C2, #0E7C66); }

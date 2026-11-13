@@ -4260,7 +4260,7 @@ plausibility = function (p, R) {
    Preise/Förderung, Finanzierungsrechner, QR-Code, E-Mail-Versand,
    kleine PDF für E-Mail, Hinweis auf neue App-Version
    ========================================================= */
-const APP_VERSION = '20261113075230';
+const APP_VERSION = '20261113120022';
 const EXTRA_DEFAULT = {
   finance: { enabled: true, rate: 4.5, years: 15, label: 'Finanzierung über Ihre Bank oder den KfW-Ergänzungskredit' },
   qrOn: false, qrMode: 'tel', qrUrl: '', qrLabel: '', qrColor: 'dark', qrCustom: '#0F2A3D', qrSize: 20, qrWhere: { contact: true, sign: true, why: true },
@@ -4678,6 +4678,9 @@ WN_IMG.roof = () => (typeof TUT_IMG !== 'undefined' && TUT_IMG.roof ? TUT_IMG.ro
 const WN_BG = { roof: '#2B3440', crm: '#12171D', sign: '#0B1118', reviews: '#F5F7FA', discount: '#141B24', house: '#CFE7FA' };
 /* Versionen – neueste zuerst. Bei jedem Update: oben eine neue Version eintragen (Nummer +0.01). */
 const RELEASES = [
+  { version: '3.6', date: '2026-11-13', items: [
+    ['roof', 'Modulbelegung und Schnellauslegung direkt öffnen', 'In lumbra.desk gibt es jetzt eigene Symbole für „Modulbelegung“ und „Schnellauslegung“. Ein Tipp darauf öffnet die Wirtschaftlichkeit und startet sofort das gewählte Werkzeug – ohne Umweg über die Kundenliste.']
+  ] },
   { version: '3.5', date: '2026-11-13', items: [
     ['crm', 'Kunden nach Kundennummer finden', 'Die Kundensuche findet jetzt auch die Kundennummer aus lumbra.desk (z. B. „PV-1125“ oder „WP-1257“). Die Nummer steht außerdem als Abzeichen auf jeder Kundenkarte.']
   ] },
@@ -9122,6 +9125,23 @@ function hpLoadStart(text) { if (++HPL_N > 1) return; clearTimeout(HPL_T); HPL_T
 function hpLoadEnd() { HPL_N = Math.max(0, HPL_N - 1); if (HPL_N) return; clearTimeout(HPL_T); const el = document.getElementById('hp-loader'); if (el) el.classList.remove('on'); }
 /* Angebot aus lumbra.desk übernehmen: Anzeige während des Ladens */
 if (typeof ldOfferTake === 'function') { const _t = ldOfferTake; ldOfferTake = async function (...a) { hpLoadStart('Angebot wird übernommen …'); try { return await _t.apply(this, a); } finally { hpLoadEnd(); } }; }
+/* ---------- Direktstart aus lumbra.desk (Wirtschaftlichkeit 3.6) ----------
+   rechner/?start=modul  → öffnet sofort „Modulplan erstellen“ (Modulbelegung)
+   rechner/?start=schnell → öffnet sofort die Wärmepumpen-Schnellauslegung */
+(function () {
+  const st = new URLSearchParams(location.search).get('start'); if (!st) return;
+  history.replaceState(null, '', location.pathname + location.hash);
+  let n = 0, ready = 0; const t = setInterval(() => {
+    if (++n > 120) return clearInterval(t);
+    const app = document.getElementById('app'), sp = document.getElementById('splash');
+    if (sp && typeof splashFinishNow === 'function' && !sp.classList.contains('s-out')) splashFinishNow(sp);   // Startanimation überspringen
+    if (document.getElementById('splash') || !app || !app.innerHTML.trim()) { ready = 0; return; }
+    if (++ready < 3) return;   // kurz warten, bis die Startseite fertig gezeichnet ist
+    clearInterval(t);
+    if (st === 'modul' && typeof roofStartDialog === 'function') roofStartDialog();
+    else if (st === 'schnell' && typeof quickDialog === 'function') quickDialog();
+  }, 250);
+})();
 
 /* =========================================================
    Router & Rendern

@@ -5,6 +5,8 @@
 const APP_LOOK = {
   calc: { cls: 'ai-sun', glyph: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>' },
   stempel: { cls: 'ai-ink', glyph: '<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 1.6M9.5 2.8h5"/>' },
+  modul: { cls: 'ai-sky', glyph: '<path d="M2.8 13.2 12 5l9.2 8.2"/><path d="M6.5 11.2h11v8.3h-11z"/><path d="M10.2 11.2v8.3M13.8 11.2v8.3M6.5 15.3h11"/>' },
+  quick: { cls: 'ai-teal', glyph: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.2"/><circle cx="10" cy="12" r="3.6"/><path d="M10 8.4v3.6l2.6 1.6M16.5 9v6"/>' },
   abnahme: { cls: 'ai-leaf', glyph: '<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 3.5h6v2.5H9zM8.8 13.2l2.2 2.2 4.4-4.6"/>' }
 };
 const appIcon = key => { const a = APP_LOOK[key] || APP_LOOK.calc; return `<span class="ai ${a.cls}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${a.glyph}</svg></span>`; };
