@@ -10,6 +10,13 @@ const LOADER_SVG = `<svg viewBox="0 0 220 150" width="190" height="130" aria-hid
   <g class="hp-side"><rect x="140" y="26" width="52" height="86" rx="6"/>${[0, 1, 2, 3, 4, 5, 6].map(i => `<path d="M148 ${38 + i * 10.5}H184"/>`).join('')}</g>
   <rect x="34" y="128" width="20" height="10" rx="2" class="hp-foot"/><rect x="166" y="128" width="20" height="10" rx="2" class="hp-foot"/>
   <circle cx="190" cy="20" r="3" class="hp-led"/></svg>`;
+/* Start-Bild 2 (ab 2,5 s): Stromspeicher, der sich von unten nach oben auflädt */
+const BATT_SVG = `<svg viewBox="0 0 220 150" width="190" height="130" aria-hidden="true" class="ldl-in">
+  <rect x="98" y="8" width="24" height="10" rx="3" class="hp-foot"/>
+  <rect x="80" y="16" width="60" height="126" rx="11" class="hp-body"/><rect x="80" y="16" width="60" height="126" rx="11" class="hp-edge"/>
+  ${[0, 1, 2, 3, 4].map(i => `<rect x="88" y="${117 - i * 23}" width="44" height="18" rx="4" class="bt-seg" style="animation-delay:${(0.15 + i * 0.42).toFixed(2)}s"/>`).join('')}
+  <path d="M113 52 101 76H111L106 98 121 70H111L116 52Z" class="bt-bolt"/>
+</svg>`;
 const LOADER = { n: 0, t: null };
 function loaderShow(text) {
   let el = document.getElementById('ld-loader');
@@ -21,3 +28,10 @@ function loaderHide() { if (LOADER.boot) return; LOADER.want = false; const el =
 function loadStart(text) { LOADER.n++; if (LOADER.n === 1) { clearTimeout(LOADER.t); LOADER.t = setTimeout(() => { if (LOADER.n > 0) loaderShow(text); }, 300); } }
 function loadEnd() { LOADER.n = Math.max(0, LOADER.n - 1); if (!LOADER.n) { clearTimeout(LOADER.t); loaderHide(); } }
 async function withLoader(p, text) { loadStart(text); try { return await p; } finally { loadEnd(); } }
+
+/* Start-Animation: nach 2,5 s von der Wärmepumpe zum Stromspeicher mit PV-Modul wechseln */
+function loaderScene2() {
+  if (!LOADER.boot) return;
+  const old = document.querySelector('#ld-loader.boot .ldl-box svg'); if (!old) return;
+  const t = document.createElement('div'); t.innerHTML = BATT_SVG; old.replaceWith(t.firstElementChild);
+}

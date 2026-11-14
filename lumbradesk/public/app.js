@@ -176,14 +176,16 @@ function mailCard() {
 async function load() {
   const tok = new URLSearchParams(location.search).get('setpw');
   if (tok) { ST.token = tok; history.replaceState(null, '', location.pathname); try { const r = await fetch('api/?r=tokeninfo&t=' + encodeURIComponent(tok), { credentials: 'same-origin', cache: 'no-store' }); ST.tokenInfo = r.ok ? await r.json() : null; } catch (e) { ST.tokenInfo = null; } return void ($('#app').innerHTML = viewSetPw(ST.tokenInfo)); }
-  /* Start: Wärmepumpe 3 Sekunden – angemeldet bleibt man über „angemeldet bleiben“ (Server, 180 Tage) */
+  /* Start: 5 Sekunden – erst die Wärmepumpe, nach genau 2,5 s der Stromspeicher, den das PV-Modul lädt.
+     Angemeldet bleibt man über „angemeldet bleiben“ (Server, 180 Tage) */
   const t0 = Date.now(); LOADER.boot = true; loaderShow('lumbra.desk startet …'); const lb = document.getElementById('ld-loader'); if (lb) lb.classList.add('boot');
+  setTimeout(() => { if (typeof loaderScene2 === 'function') loaderScene2(); }, 2500);
   const bootEnd = () => { LOADER.boot = false; loaderHide(); };
   try { const j = await api('me'); ST.user = j.user; ST.apps = j.apps || []; ST.roles = j.roles || {}; ST.features = j.features || {}; ST.unread = j.unread || 0; }
   catch (e) { bootEnd(); $('#app').innerHTML = `<main class="auth"><div class="card">${brand('')}<p class="note err">${esc(e.message)}</p></div></main>`; return; }
   if (!ST.user) { bootEnd(); return route().catch(e => ldBootFail(e)); }
   await route().catch(e => ldBootFail(e));
-  setTimeout(bootEnd, Math.max(0, 3000 - (Date.now() - t0)));
+  setTimeout(bootEnd, Math.max(0, 5000 - (Date.now() - t0)));
 }
 /* Start hängt? Statt endloser Ladeanzeige eine Meldung mit „Neu laden“ */
 function ldBootFail(e) { if (typeof LOADER === "object" && LOADER.boot) { LOADER.boot = false; loaderHide(); } const a = $("#app"); if (a && /wird geladen/.test(a.textContent)) a.innerHTML = `<main class="auth"><div class="card">${brand('')}<p class="note err">LumbraDesk konnte nicht gestartet werden${e && e.message ? ': ' + esc(e.message) : ''}.</p><button class="btn" onclick="location.reload()">Neu laden</button></div></main>`; }

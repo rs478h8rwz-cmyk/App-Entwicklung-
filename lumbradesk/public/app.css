@@ -894,3 +894,44 @@ label.cf-up input.zs-file { position: absolute; inset: 0; width: 100%; height: 1
 .chk-a .btn.sm { white-space: nowrap; }
 .chk-a .chk-clip { width: 34px; padding: 0; justify-content: center; color: var(--ink3); }
 @media (max-width: 520px) { .chk-i { flex-wrap: wrap; row-gap: 8px; } .chk-a { width: 100%; padding-left: 38px; } .chk-a .btn { flex: none; } .chk-a .btn.sm { height: 32px; } }
+
+/* 5.7.2: Handy – Seite bleibt fest in der Mitte (kein Seitwärts-Ziehen, kein Hineinzoomen beim Tippen in ein Feld),
+   untere Leiste rutscht nicht mit, wenn man über den Rand hinaus zieht */
+html, body { overscroll-behavior: none; max-width: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }   /* unter 16 px zoomt iOS beim Antippen hinein – danach lässt sich die Seite seitwärts schieben */
+}
+/* versteckte Häkchen in Auswahl-Chips: nicht 100 % breit (sonst wird die Seite breiter als das Handy) */
+label.chip { position: relative; }
+label.chip > input[type=checkbox], label.chip > input[type=radio] { width: 1px; height: 1px; margin: 0; left: 0; top: 0; }
+/* Datei-Auswahl nie als Browser-Feld anzeigen: [hidden] gilt immer, Datei-Felder in Knöpfen liegen unsichtbar über dem Knopf */
+[hidden] { display: none !important; }
+label:has(> input[type=file]) { position: relative; overflow: hidden; }
+label > input[type=file]:not([hidden]) { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; font-size: 0; }
+/* Start-Bild 2: PV-Modul lädt den Stromspeicher */
+.ldl-in { animation: ldlin .35s ease both; }
+@keyframes ldlin { from { opacity: 0; transform: scale(.94); } }
+.pv-sun circle { fill: #F5A524; } .pv-rays path { stroke: #F5A524; stroke-width: 2.4; stroke-linecap: round; }
+.pv-rays { transform-origin: 30px 24px; animation: hpspin 6s linear infinite; }
+.pv-panel { fill: #1E3A5F; stroke: #9FB2C8; stroke-width: 2.5; stroke-linejoin: round; }
+.pv-cells { fill: none; stroke: #5D86B5; stroke-width: 1.3; }
+.pv-leg { fill: none; stroke: #8A96A6; stroke-width: 3; stroke-linecap: round; }
+.pv-cable { fill: none; stroke: #8A96A6; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: .45; }
+.pv-flow { fill: none; stroke: #2F9E44; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 9; animation: pvflow .6s linear infinite; }
+@keyframes pvflow { to { stroke-dashoffset: -14; } }
+.bt-seg { fill: #2F9E44; opacity: .14; animation: btfill .4s ease forwards; }
+@keyframes btfill { 60% { opacity: 1; filter: drop-shadow(0 0 7px rgba(63, 200, 100, .95)); } to { opacity: 1; filter: drop-shadow(0 0 3px rgba(63, 200, 100, .55)); } }
+.bt-bolt { fill: #F5A524; stroke: var(--card); stroke-width: 1.5; stroke-linejoin: round; }
+@media (prefers-reduced-motion: reduce) { .pv-flow, .pv-rays { animation: none; } }
+/* Häkchen-Felder (z. B. „Pauschalpreis“): auf dem iPhone sonst schwarze Kreise – eigenes Kästchen mit Haken */
+:root { --chk-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --chk-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230A0E13' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E"); } }
+:root[data-theme="dark"] { --chk-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230A0E13' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E"); }
+input[type=checkbox]:not([style*="opacity:0"]):not(.zs-file) { -webkit-appearance: none; appearance: none; display: inline-block; flex: none; width: 22px; height: 22px; min-width: 22px; padding: 0; margin: 0; border: 2px solid var(--line2); border-radius: 6px; background: var(--field) center / 15px no-repeat; cursor: pointer; vertical-align: middle; }
+input[type=checkbox]:not([style*="opacity:0"]):checked { background-color: var(--p); border-color: var(--p); background-image: var(--chk-img); }
+input[type=checkbox]:focus-visible { outline: 2px solid var(--p); outline-offset: 2px; }
+/* Formulare: Spalten dürfen schmaler werden als ihr längster Text (sonst laufen Felder rechts aus der Karte) */
+.form-grid > * { min-width: 0; }
+.imgup .gmain, .imgup .gmain span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) { .form-grid { grid-template-columns: minmax(0, 1fr) !important; } }
